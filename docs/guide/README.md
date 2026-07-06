@@ -37,13 +37,14 @@ guide explains how the pieces fit together.
 1. [Getting Started](./getting-started.md)
 2. [Syntax](./syntax.md)
 3. [String Patterns](./string-patterns.md)
-4. [Structured Data](./structured-data.md)
-5. [Evaluation](./evaluation.md)
-6. [Patterns And Rules](./patterns-and-rules.md)
-7. [Scoping And Contexts](./scoping-and-contexts.md)
-8. [Resource Limits And Sandbox](./resource-limits-and-sandbox.md)
-9. [Embedding](./embedding.md)
-10. [Design Boundaries](./design-boundaries.md)
+4. [Text Utilities](./text-utilities.md)
+5. [Structured Data](./structured-data.md)
+6. [Evaluation](./evaluation.md)
+7. [Patterns And Rules](./patterns-and-rules.md)
+8. [Scoping And Contexts](./scoping-and-contexts.md)
+9. [Resource Limits And Sandbox](./resource-limits-and-sandbox.md)
+10. [Embedding](./embedding.md)
+11. [Design Boundaries](./design-boundaries.md)
 
 The order is intentional.
 

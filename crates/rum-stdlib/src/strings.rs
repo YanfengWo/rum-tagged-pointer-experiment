@@ -13,6 +13,7 @@ use rum_syntax::parse_expr;
 
 mod encoding;
 mod patterns;
+mod scripting;
 mod similarity;
 mod template;
 mod text;
@@ -27,6 +28,12 @@ pub(crate) use patterns::{
     eval_string_match_q, eval_string_part, eval_string_position, eval_string_replace,
     eval_string_split, eval_string_starts_q, eval_string_take, eval_string_take_drop,
     eval_string_trim,
+};
+pub(crate) use scripting::{
+    eval_align_columns, eval_file_base_name, eval_file_extension, eval_file_name_split,
+    eval_html_escape, eval_html_unescape, eval_parse_args, eval_shell_quote, eval_shell_split,
+    eval_string_dedent, eval_string_expand_tabs, eval_string_indent, eval_string_wrap,
+    eval_url_decode, eval_url_encode, eval_url_parse,
 };
 pub(crate) use similarity::{
     eval_alphabet, eval_alphabetic_sort, eval_diff, eval_edit_distance, eval_hamming_distance,

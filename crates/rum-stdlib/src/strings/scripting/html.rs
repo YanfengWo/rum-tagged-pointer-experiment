@@ -1,0 +1,104 @@
+use super::*;
+
+pub(crate) fn eval_html_escape(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [text] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("HtmlEscape", args, 1));
+    };
+    let Some(text) = expr_as_string(text) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    Ok(Expr::string(html_escape(text)))
+}
+
+pub(crate) fn eval_html_unescape(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [text] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("HtmlUnescape", args, 1));
+    };
+    let Some(text) = expr_as_string(text) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    Ok(Expr::string(html_unescape(text)))
+}
+
+fn html_escape(text: &str) -> String {
+    let mut output = String::new();
+    for ch in text.chars() {
+        match ch {
+            '&' => output.push_str("&amp;"),
+            '<' => output.push_str("&lt;"),
+            '>' => output.push_str("&gt;"),
+            '"' => output.push_str("&quot;"),
+            '\'' => output.push_str("&apos;"),
+            other => output.push(other),
+        }
+    }
+    output
+}
+
+fn html_unescape(text: &str) -> String {
+    let chars = text.chars().collect::<Vec<_>>();
+    let mut output = String::new();
+    let mut index = 0usize;
+
+    while index < chars.len() {
+        if chars[index] != '&' {
+            output.push(chars[index]);
+            index += 1;
+            continue;
+        }
+
+        let Some(end_offset) = chars[index + 1..].iter().position(|ch| *ch == ';') else {
+            output.push(chars[index]);
+            index += 1;
+            continue;
+        };
+        let end = index + 1 + end_offset;
+        let entity = chars[index + 1..end].iter().collect::<String>();
+        if let Some(decoded) = decode_entity(&entity) {
+            output.push(decoded);
+            index = end + 1;
+        } else if let Some(decoded) = decode_named_entity(&entity) {
+            output.push_str(decoded);
+            index = end + 1;
+        } else {
+            output.extend(chars[index..=end].iter());
+            index = end + 1;
+        }
+    }
+
+    output
+}
+
+fn decode_named_entity(entity: &str) -> Option<&'static str> {
+    match entity {
+        "amp" => Some("&"),
+        "lt" => Some("<"),
+        "gt" => Some(">"),
+        "quot" => Some("\""),
+        "apos" => Some("'"),
+        _ => None,
+    }
+}
+
+fn decode_entity(entity: &str) -> Option<char> {
+    let numeric = entity.strip_prefix('#')?;
+    let value = if let Some(hex) = numeric
+        .strip_prefix('x')
+        .or_else(|| numeric.strip_prefix('X'))
+    {
+        u32::from_str_radix(hex, 16).ok()?
+    } else {
+        numeric.parse::<u32>().ok()?
+    };
+    char::from_u32(value)
+}

@@ -25,25 +25,6 @@ pub fn render_to_string_expr(expr: &Expr, format: ToStringFormat) -> String {
     render_to_string_expr_with_precedence(expr, format, PREC_LOWEST)
 }
 
-fn string_form_value(template: &str, args: &[Expr]) -> String {
-    let mut remaining = template;
-    let mut output = String::new();
-    let mut replacements = args.iter();
-
-    while let Some(index) = remaining.find("``") {
-        output.push_str(&remaining[..index]);
-        if let Some(arg) = replacements.next() {
-            output.push_str(&arg.to_string());
-        } else {
-            output.push_str("``");
-        }
-        remaining = &remaining[index + 2..];
-    }
-
-    output.push_str(remaining);
-    output
-}
-
 fn render_to_string_expr_with_precedence(
     expr: &Expr,
     format: ToStringFormat,
@@ -58,15 +39,6 @@ fn render_to_string_expr_with_precedence(
         Expr::Call { head, args } => {
             if is_system_symbol_name(head, heads::messages::MESSAGE_NAME) && args.len() == 2 {
                 return expr.to_string();
-            }
-
-            if format == ToStringFormat::OutputLike
-                && is_system_symbol_name(head, "StringForm")
-                && !args.is_empty()
-            {
-                if let Some(template) = expr_as_string(&args[0]) {
-                    return string_form_value(template, &args[1..]);
-                }
             }
 
             if let Some(entries) = association_entries_from_expr(expr) {

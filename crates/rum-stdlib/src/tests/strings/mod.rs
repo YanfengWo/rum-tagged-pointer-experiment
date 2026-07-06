@@ -17,6 +17,7 @@ mod advanced_patterns;
 mod encoding;
 mod incidental_runtime;
 mod parts;
+mod scripting;
 mod search_replace;
 mod similarity;
 mod surface;

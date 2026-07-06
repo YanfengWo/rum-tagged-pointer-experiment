@@ -132,6 +132,21 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
         "Aggregates a non-empty list as Total[list] divided by Length[list] through exact arithmetic.",
         arithmetic::eval_mean,
     ),
+    BuiltinSpec::ordinary(
+        "Median",
+        "Returns the middle element of a canonically sorted non-empty list, averaging the two middle values exactly for even lengths.",
+        arithmetic::eval_median,
+    ),
+    BuiltinSpec::ordinary(
+        "Commonest",
+        "Returns the most frequent elements of a list in first-occurrence order, including all ties.",
+        arithmetic::eval_commonest,
+    ),
+    BuiltinSpec::ordinary(
+        "Quantile",
+        "Returns the nearest-rank quantile of a non-empty list using Ceiling[q * n] clamped to 1..n, with q exact in [0, 1].",
+        arithmetic::eval_quantile,
+    ),
     BuiltinSpec::ordinary_with_attributes(
         "Denominator",
         "Returns the denominator of exact integers and rationals.",

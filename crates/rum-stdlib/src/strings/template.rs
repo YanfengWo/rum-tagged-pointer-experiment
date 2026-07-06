@@ -20,12 +20,10 @@ pub(crate) fn eval_string_form(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
-    Ok(Expr::call(
-        head.clone(),
-        std::iter::once(Expr::string(template))
-            .chain(args[1..].iter().cloned())
-            .collect(),
-    ))
+    match string_form_value(template, &args[1..]) {
+        Ok(value) => Ok(Expr::string(value)),
+        Err(message) => Ok(session.invalid_call_with_message("StringForm", args, "slot", message)),
+    }
 }
 
 pub(crate) fn eval_string_template(
@@ -229,4 +227,63 @@ fn template_fragment_value(expr: &Expr) -> String {
         Expr::Atom(Atom::String(value)) => value.clone(),
         _ => expr.to_string(),
     }
+}
+
+fn string_form_value(template: &str, args: &[Expr]) -> Result<String, String> {
+    let chars = template.chars().collect::<Vec<_>>();
+    let mut output = String::new();
+    let mut index = 0usize;
+    let mut next_arg = 0usize;
+
+    while index < chars.len() {
+        match chars[index] {
+            '\\' if chars.get(index + 1) == Some(&'`') => {
+                output.push('`');
+                index += 2;
+            }
+            '`' if chars.get(index + 1) == Some(&'`') => {
+                let Some(arg) = args.get(next_arg) else {
+                    return Err(
+                        "StringForm has more sequential placeholders than arguments.".to_string(),
+                    );
+                };
+                output.push_str(&render_to_string_expr(arg, ToStringFormat::OutputLike));
+                next_arg += 1;
+                index += 2;
+            }
+            '`' => {
+                let Some(end_offset) = chars[index + 1..].iter().position(|ch| *ch == '`') else {
+                    return Err("StringForm found an unterminated placeholder.".to_string());
+                };
+                let end = index + 1 + end_offset;
+                let slot = chars[index + 1..end].iter().collect::<String>();
+                let Some(slot_index) = parse_positive_slot_index(&slot) else {
+                    return Err(format!(
+                        "StringForm placeholder `{slot}` is not a positive integer slot."
+                    ));
+                };
+                let Some(arg) = args.get(slot_index - 1) else {
+                    return Err(format!(
+                        "StringForm placeholder `{slot}` refers to a missing argument."
+                    ));
+                };
+                output.push_str(&render_to_string_expr(arg, ToStringFormat::OutputLike));
+                index = end + 1;
+            }
+            other => {
+                output.push(other);
+                index += 1;
+            }
+        }
+    }
+
+    Ok(output)
+}
+
+fn parse_positive_slot_index(slot: &str) -> Option<usize> {
+    if slot.is_empty() || !slot.chars().all(|ch| ch.is_ascii_digit()) {
+        return None;
+    }
+    let index = slot.parse::<usize>().ok()?;
+    (index > 0).then_some(index)
 }

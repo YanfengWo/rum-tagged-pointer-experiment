@@ -28,6 +28,14 @@ pub const LIMITS: &[(&str, &str)] = &[
         "renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.",
     ),
     (
+        "FileExtension",
+        "dotfiles such as .bashrc have no extension; only the final slash-separated path component is inspected.",
+    ),
+    (
+        "FileNameSplit",
+        "treats / as the documented separator, emits an absolute leading / as its own component, and skips repeated or trailing separators.",
+    ),
+    (
         "Md5",
         "intended only for interoperability and checksums; it is not collision-resistant.",
     ),
@@ -81,12 +89,40 @@ pub const LIMITS: &[(&str, &str)] = &[
         "intended only for interoperability and checksums; it is not collision-resistant.",
     ),
     (
+        "ShellSplit",
+        "implements only whitespace splitting, single and double quotes, and backslash escapes outside single quotes; expansion, globbing, command substitution, and short-option parsing are outside this text utility.",
+    ),
+    (
+        "StringDedent",
+        "computes the common leading whitespace from non-blank lines; blank and whitespace-only lines do not determine the prefix.",
+    ),
+    (
+        "StringForm",
+        "returns a String eagerly rather than a lazy display wrapper; a backslash before a backtick emits a literal backtick, and missing or malformed placeholders emit StringForm::slot and leave the call inert.",
+    ),
+    (
+        "StringIndent",
+        "does not prefix empty or whitespace-only lines.",
+    ),
+    (
+        "StringWrap",
+        "normalizes input whitespace runs to single spaces while wrapping; it does not preserve original spacing inside wrapped text.",
+    ),
+    (
         "Riffle",
         "supports only the single-separator form; cyclic and list-separator forms are outside the current contract.",
     ),
     (
         "StringLines",
         "splits only on LF and CRLF; one trailing newline is discarded while interior empty lines are preserved.",
+    ),
+    (
+        "UrlParse",
+        "accepts only a strict scheme://host[:port][/path][?query][#fragment] shape with an ASCII scheme and decimal port; scheme-less host/path strings fail closed.",
+    ),
+    (
+        "ParseArgs",
+        "recognizes only --key=value options, bare --flag flags, and -- as the end of option parsing; short-option clustering is outside the current contract.",
     ),
 ];
 

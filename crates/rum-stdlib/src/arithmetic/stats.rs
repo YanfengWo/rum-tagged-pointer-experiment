@@ -1,0 +1,141 @@
+use rum_core::{BigInt, Expr, Rational};
+use rum_runtime::kernel_api::{
+    EvalError, Session, ToPrimitive, call_items_with_head, compare_expr_canonical,
+    expr_as_exact_rational, system_expr,
+};
+
+pub(crate) fn eval_median(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [expr] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Median", args, 1));
+    };
+
+    let Some(items) = call_items_with_head(expr, &system_expr("List")) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if items.is_empty() {
+        return Ok(session.invalid_call_with_message(
+            "Median",
+            args,
+            "empty",
+            "Median cannot aggregate an empty list.",
+        ));
+    }
+
+    let mut sorted = items.to_vec();
+    sorted.sort_by(compare_expr_canonical);
+    let middle = sorted.len() / 2;
+    if sorted.len() % 2 == 1 {
+        return Ok(sorted[middle].clone());
+    }
+
+    average_pair(session, sorted[middle - 1].clone(), sorted[middle].clone())
+}
+
+pub(crate) fn eval_commonest(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [expr] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Commonest", args, 1));
+    };
+
+    let Some(items) = call_items_with_head(expr, &system_expr("List")) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    let mut counts: Vec<(Expr, usize)> = Vec::new();
+    for item in items {
+        if let Some((_, count)) = counts.iter_mut().find(|(existing, _)| existing == item) {
+            *count += 1;
+        } else {
+            counts.push((item.clone(), 1));
+        }
+    }
+
+    let max_count = counts.iter().map(|(_, count)| *count).max().unwrap_or(0);
+    Ok(Expr::call(
+        system_expr("List"),
+        counts
+            .into_iter()
+            .filter_map(|(item, count)| (count == max_count).then_some(item))
+            .collect(),
+    ))
+}
+
+pub(crate) fn eval_quantile(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [expr, q_expr] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Quantile", args, 2));
+    };
+
+    let Some(items) = call_items_with_head(expr, &system_expr("List")) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if items.is_empty() {
+        return Ok(session.invalid_call_with_message(
+            "Quantile",
+            args,
+            "empty",
+            "Quantile cannot aggregate an empty list.",
+        ));
+    }
+
+    let Some(q) = expr_as_exact_rational(q_expr) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if q.numerator() < &BigInt::from(0_u8) || q.numerator() > q.denominator() {
+        return Ok(session.invalid_call_with_message(
+            "Quantile",
+            args,
+            "range",
+            "Quantile rank parameter must be an exact number between 0 and 1.",
+        ));
+    }
+
+    let mut sorted = items.to_vec();
+    sorted.sort_by(compare_expr_canonical);
+    let rank = nearest_rank_index(&q, sorted.len());
+    Ok(sorted[rank].clone())
+}
+
+fn average_pair(session: &mut Session, lhs: Expr, rhs: Expr) -> Result<Expr, EvalError> {
+    let sum = Expr::call(system_expr("Plus"), vec![lhs, rhs]);
+    let half = Expr::call(
+        system_expr("Divide"),
+        vec![sum, Expr::integer(BigInt::from(2_u8))],
+    );
+    let evaluated = session.evaluate(half);
+    session.suspend_with_frame(evaluated, |_, value| Ok(value))
+}
+
+fn nearest_rank_index(q: &Rational, len: usize) -> usize {
+    let len_integer = BigInt::from(len);
+    let raw = q.numerator() * len_integer;
+    let mut rank = ceiling_div_non_negative(&raw, q.denominator());
+    if rank < BigInt::from(1_u8) {
+        rank = BigInt::from(1_u8);
+    }
+    if rank > BigInt::from(len) {
+        rank = BigInt::from(len);
+    }
+    rank.to_usize()
+        .expect("clamped nearest-rank index should fit usize")
+        - 1
+}
+
+fn ceiling_div_non_negative(numerator: &BigInt, denominator: &BigInt) -> BigInt {
+    let quotient = numerator / denominator;
+    if numerator % denominator == BigInt::from(0_u8) {
+        quotient
+    } else {
+        quotient + BigInt::from(1_u8)
+    }
+}

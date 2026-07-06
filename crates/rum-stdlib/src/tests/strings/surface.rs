@@ -471,11 +471,11 @@ fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
 
     assert_eq!(
         eval_to_string(&mut session, "StringForm[\"a``b``\", 1, x]"),
-        "StringForm[\"a``b``\", 1, x]"
+        "\"a1bx\""
     );
     assert_eq!(
         eval_to_string(&mut session, "ToString[StringForm[\"a``b``\", 1, x]]"),
-        "\"a1bx\""
+        "\"\\\"a1bx\\\"\""
     );
     assert_eq!(
         eval_to_string(&mut session, "TextString[StringForm[\"a``b``\", 1, x]]"),

@@ -87,6 +87,84 @@ fn mean_reports_empty_and_invalid_arity_boundaries() {
 }
 
 #[test]
+fn exact_statistics_cover_median_commonest_and_quantile_contracts() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Median[{1, 2, 3, 4}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5/2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Median[{3, 1, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("Commonest[{a, b, a, c, b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Quantile[Range[10], 1/4]")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+    assert_eq!(
+        session
+            .eval_text("Quantile[{5, 7}, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+}
+
+#[test]
+fn exact_statistics_report_empty_and_invalid_boundaries() {
+    let mut session = core_session();
+
+    let empty_median = session.eval_text("Median[{}]").unwrap();
+    assert_eq!(empty_median.value.to_string(), "Median[List[]]");
+    assert!(
+        empty_median
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Median" && message.tag == "empty")
+    );
+
+    let empty_quantile = session.eval_text("Quantile[{}, 1/2]").unwrap();
+    assert_eq!(empty_quantile.value.to_string(), "Quantile[List[], 1/2]");
+    assert!(
+        empty_quantile
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Quantile" && message.tag == "empty")
+    );
+
+    let bad_quantile = session.eval_text("Quantile[{1, 2}, 3/2]").unwrap();
+    assert_eq!(bad_quantile.value.to_string(), "Quantile[List[1, 2], 3/2]");
+    assert!(
+        bad_quantile
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Quantile" && message.tag == "range")
+    );
+}
+
+#[test]
 fn exact_denominator_and_apply_integer_reducers_keep_certificate_shape() {
     let mut session = core_session();
 

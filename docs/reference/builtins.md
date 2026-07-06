@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 563
+Builtin count: 582
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -131,6 +131,13 @@ Adds an evaluated increment to a held symbol or exact Part target and stores the
 Tests whether an expression is an exact integer in the current algebraic-integer subset.
 
 - Attributes: `Listable`
+- Capability: `Pure`
+
+### AlignColumns
+
+Formats a list of string rows as left-aligned columns separated by two spaces.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### AllTrue
@@ -563,6 +570,13 @@ Applies selected parts of a function collection to a common expression in the cu
 ### ComapApply
 
 Applies selected parts of a function collection as heads of a common expression in the current first-pass subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Commonest
+
+Returns the most frequent elements of a list in first-occurrence order, including all ties.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1238,12 +1252,35 @@ Represents an explicit file specification.
 - Attributes: `None`
 - Capability: `Pure`
 
+### FileBaseName
+
+Returns the final path component without its extension.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### FileExtension
+
+Returns the final path component extension without the dot, or an empty string when no extension is present.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: dotfiles such as .bashrc have no extension; only the final slash-separated path component is inspected.
+
 ### FileNameJoin
 
 Joins path components into a platform path string.
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### FileNameSplit
+
+Splits a slash-separated path string into components, preserving an absolute leading slash as its own component.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: treats / as the documented separator, emits an absolute leading / as its own component, and skips repeated or trailing separators.
 
 ### FileNameTake
 
@@ -1524,6 +1561,20 @@ Marks a pattern expression so it is matched without prior evaluation.
 Prevents evaluation of all but the first argument.
 
 - Attributes: `HoldRest`
+- Capability: `Pure`
+
+### HtmlEscape
+
+Escapes the five HTML text characters &, <, >, double quote, and single quote.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### HtmlUnescape
+
+Unescapes the five named HTML entities and decimal or hexadecimal numeric character references, leaving unknown entities verbatim.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### Identity
@@ -2010,6 +2061,13 @@ Aggregates a non-empty list as Total[list] divided by Length[list] through exact
 - Attributes: `None`
 - Capability: `Pure`
 
+### Median
+
+Returns the middle element of a canonically sorted non-empty list, averaging the two middle values exactly for even lengths.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### MemberQ
 
 Tests whether any subexpression matches a pattern on levels specified by a standard levelspec.
@@ -2451,6 +2509,14 @@ Returns the parent directory for an existing directory path.
 - Attributes: `None`
 - Capability: `Pure`
 
+### ParseArgs
+
+Parses long-form script arguments into positional arguments, --key=value options, and --flag names.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: recognizes only --key=value options, bare --flag flags, and -- as the end of option parsing; short-option clustering is outside the current contract.
+
 ### Part
 
 Extracts structural parts using integer positions, All, Span, and exact nested part specifications.
@@ -2667,6 +2733,13 @@ Adds the Protected attribute to one or more symbols.
 ### PunctuationCharacter
 
 Represents the current string-pattern atom for one ASCII punctuation character.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Quantile
+
+Returns the nearest-rank quantile of a non-empty list using Ceiling[q * n] clamped to 1..n, with q exact in [0, 1].
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3085,6 +3158,21 @@ Computes a SHA-512 digest over a string's UTF-8 bytes or a ByteArray, returning 
 - Attributes: `None`
 - Capability: `Pure`
 
+### ShellQuote
+
+Single-quotes a string for POSIX-style shell input, escaping embedded single quotes.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### ShellSplit
+
+Splits a POSIX-style shell word string with whitespace, quotes, and backslash escapes, returning $Failed on malformed quoting.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: implements only whitespace splitting, single and double quotes, and backslash escapes outside single quotes; expansion, globbing, command substitution, and short-option parsing are outside this text utility.
+
 ### Short
 
 Returns the current canonical-text shortened display subset for an expression.
@@ -3204,6 +3292,14 @@ Counts exact or current string-pattern matches, including the current IgnoreCase
 - Attributes: `None`
 - Capability: `Pure`
 
+### StringDedent
+
+Removes the longest common leading whitespace from the non-blank lines of a string.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: computes the common leading whitespace from non-blank lines; blank and whitespace-only lines do not determine the prefix.
+
 ### StringDelete
 
 Deletes exact or current string-pattern matches from strings in the current first-pass subset.
@@ -3225,6 +3321,13 @@ Tests whether a string or list of strings ends with an exact substring in the cu
 - Attributes: `None`
 - Capability: `Pure`
 
+### StringExpandTabs
+
+Expands tabs in a string to the next fixed-width column stop, defaulting to width 8.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### StringExpression
 
 Represents the current string-pattern sequence head produced by `~~` syntax.
@@ -3234,10 +3337,11 @@ Represents the current string-pattern sequence head produced by `~~` syntax.
 
 ### StringForm
 
-Formats a template string using the current simple `` placeholder subset.
+Formats a template string eagerly, replacing `` and `n` placeholders with ToString-rendered arguments.
 
 - Attributes: `None`
 - Capability: `Pure`
+- Limits: returns a String eagerly rather than a lazy display wrapper; a backslash before a backtick emits a literal backtick, and missing or malformed placeholders emit StringForm::slot and leave the call inert.
 
 ### StringFreeQ
 
@@ -3245,6 +3349,14 @@ Tests whether a string is free of exact or current string-pattern matches.
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### StringIndent
+
+Prefixes each non-blank line of a string with a string prefix or an exact number of spaces.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: does not prefix empty or whitespace-only lines.
 
 ### StringJoin
 
@@ -3386,6 +3498,14 @@ Trims whitespace or exact boundary substrings in the current first-pass string s
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### StringWrap
+
+Greedily word-wraps a string to a positive character width, separating output lines with LF.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: normalizes input whitespace runs to single spaces while wrapping; it does not preserve original spacing inside wrapped text.
 
 ### SubValues
 
@@ -3876,6 +3996,28 @@ Tests whether every character in a string is uppercase.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+
+### UrlDecode
+
+Decodes percent escapes in a UTF-8 URL string, returning $Failed for invalid escapes or invalid UTF-8.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### UrlEncode
+
+Percent-encodes a string using UTF-8 bytes and the RFC 3986 unreserved character set.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### UrlParse
+
+Parses scheme://host[:port][/path][?query][#fragment] into an association of string fields.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: accepts only a strict scheme://host[:port][/path][?query][#fragment] shape with an ASCII scheme and decimal port; scheme-less host/path strings fail closed.
 
 ### UuidQ
 

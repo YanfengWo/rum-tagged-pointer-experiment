@@ -122,8 +122,88 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "StringForm",
-        "Formats a template string using the current simple `` placeholder subset.",
+        "Formats a template string eagerly, replacing `` and `n` placeholders with ToString-rendered arguments.",
         strings::eval_string_form,
+    ),
+    BuiltinSpec::ordinary(
+        "StringWrap",
+        "Greedily word-wraps a string to a positive character width, separating output lines with LF.",
+        strings::eval_string_wrap,
+    ),
+    BuiltinSpec::ordinary(
+        "StringIndent",
+        "Prefixes each non-blank line of a string with a string prefix or an exact number of spaces.",
+        strings::eval_string_indent,
+    ),
+    BuiltinSpec::ordinary(
+        "StringDedent",
+        "Removes the longest common leading whitespace from the non-blank lines of a string.",
+        strings::eval_string_dedent,
+    ),
+    BuiltinSpec::ordinary(
+        "StringExpandTabs",
+        "Expands tabs in a string to the next fixed-width column stop, defaulting to width 8.",
+        strings::eval_string_expand_tabs,
+    ),
+    BuiltinSpec::ordinary(
+        "AlignColumns",
+        "Formats a list of string rows as left-aligned columns separated by two spaces.",
+        strings::eval_align_columns,
+    ),
+    BuiltinSpec::ordinary(
+        "HtmlEscape",
+        "Escapes the five HTML text characters &, <, >, double quote, and single quote.",
+        strings::eval_html_escape,
+    ),
+    BuiltinSpec::ordinary(
+        "HtmlUnescape",
+        "Unescapes the five named HTML entities and decimal or hexadecimal numeric character references, leaving unknown entities verbatim.",
+        strings::eval_html_unescape,
+    ),
+    BuiltinSpec::ordinary(
+        "ShellSplit",
+        "Splits a POSIX-style shell word string with whitespace, quotes, and backslash escapes, returning $Failed on malformed quoting.",
+        strings::eval_shell_split,
+    ),
+    BuiltinSpec::ordinary(
+        "ShellQuote",
+        "Single-quotes a string for POSIX-style shell input, escaping embedded single quotes.",
+        strings::eval_shell_quote,
+    ),
+    BuiltinSpec::ordinary(
+        "FileExtension",
+        "Returns the final path component extension without the dot, or an empty string when no extension is present.",
+        strings::eval_file_extension,
+    ),
+    BuiltinSpec::ordinary(
+        "FileBaseName",
+        "Returns the final path component without its extension.",
+        strings::eval_file_base_name,
+    ),
+    BuiltinSpec::ordinary(
+        "FileNameSplit",
+        "Splits a slash-separated path string into components, preserving an absolute leading slash as its own component.",
+        strings::eval_file_name_split,
+    ),
+    BuiltinSpec::ordinary(
+        "UrlEncode",
+        "Percent-encodes a string using UTF-8 bytes and the RFC 3986 unreserved character set.",
+        strings::eval_url_encode,
+    ),
+    BuiltinSpec::ordinary(
+        "UrlDecode",
+        "Decodes percent escapes in a UTF-8 URL string, returning $Failed for invalid escapes or invalid UTF-8.",
+        strings::eval_url_decode,
+    ),
+    BuiltinSpec::ordinary(
+        "UrlParse",
+        "Parses scheme://host[:port][/path][?query][#fragment] into an association of string fields.",
+        strings::eval_url_parse,
+    ),
+    BuiltinSpec::ordinary(
+        "ParseArgs",
+        "Parses long-form script arguments into positional arguments, --key=value options, and --flag names.",
+        strings::eval_parse_args,
     ),
     BuiltinSpec::ordinary(
         "Row",

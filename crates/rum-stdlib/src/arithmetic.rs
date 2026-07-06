@@ -3,6 +3,10 @@ use rum_runtime::kernel_api::{
     ArithmeticDataBuiltin, EvalError, Session, call_items_with_head, system_expr,
 };
 
+mod stats;
+
+pub(crate) use stats::{eval_commonest, eval_median, eval_quantile};
+
 fn dispatch(
     session: &mut Session,
     builtin: ArithmeticDataBuiltin,
