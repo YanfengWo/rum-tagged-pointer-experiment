@@ -80,12 +80,18 @@ Audit brief-161: 101 rows / 99 names, findings in
    within the case-conversion family is the worse state; inert→useful
    is the same enhancement class as the operator-form batch. rum's own
    reference is the contract authority for the nested/mixed cases.
-2. **Operator forms — the WL-documented set only** (flexibility):
-   `StringContainsQ`/`StartsQ`/`EndsQ`/`MatchQ`/`FreeQ`/`Replace`/
-   `Cases` + `StringDelete` (audit false-OK: WL documents
-   `StringDelete[patt]`). The audit's `Take`/`Drop`/`Count`/`Position`
-   operator forms are rum EXTENSIONS on error paths — deferred,
-   separate decision.
+2. **brief-164 — operator forms, the WL-documented set only**
+   (flexibility): `StringContainsQ`/`StartsQ`/`EndsQ`/`MatchQ`/
+   `FreeQ`/`Replace`/`Cases` + `StringDelete` (audit false-OK: WL
+   documents `StringDelete[patt]`). rum ALREADY has the curried
+   mechanism (`Select[f][…]`/`Map[f][…]`/`SortBy[f][…]` work) — this
+   batch extends it, no new evaluator seam. The audit's
+   `Take`/`Drop`/`Count`/`Position` operator forms are rum EXTENSIONS
+   on error paths — deferred, separate decision. `StringSplit` is
+   correctly excluded (its unary call is already a meaningful data
+   form; WL has no operator form for it either). SPILLOVER for later
+   units: `Cases[patt][…]` (unit 2) and `ReplaceAll[rules][…]`
+   (unit 4) lack their WL-documented operator forms today.
 3. **Overlaps parity + Options registration** (flexibility):
    `StringCases` `Overlaps -> True`, `StringPosition`
    `Overlaps -> False`, register `Nearest`'s `DistanceFunction`.

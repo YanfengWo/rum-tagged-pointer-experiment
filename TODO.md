@@ -47,9 +47,17 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-162b DONE (c474840): attribute hygiene — 18 `Protected`
   pattern symbols; `Listable` case conversion with kernel threading
   owning list mapping (net code reduction). Workspace 1342/0.
-- [ ] brief-163 (unit-1 crypto surface, plan A per user): remove toy
-  `Encrypt`/`Decrypt`/`EncryptedObject`; delete hand-rolled SHA-256;
-  `Hash` onto RustCrypto behind `hash` + SHA1/SHA512/MD5/CRC32 names.
+- [x] brief-163 DONE (b5e8920): crypto surface plan A — toy
+  `Encrypt`/`Decrypt`/`EncryptedObject` removed, hand-rolled SHA-256
+  deleted, `Hash` onto RustCrypto behind `hash` with
+  SHA1/SHA512/MD5/CRC32; reference 602; workspace 1343/0; NDF green.
+- [ ] brief-164 (unit-1 batch 2): operator forms for the WL-documented
+  string set (`StringContainsQ`/`StartsQ`/`EndsQ`/`MatchQ`/`FreeQ`/
+  `Replace`/`Cases`/`Delete`) via the EXISTING curried mechanism
+  (`Select`/`Map`/`SortBy` already work).
+- [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
+  for wire signing (found by brief-163's sweep; out of its scope) —
+  small brief: switch to the workspace `sha2`/RustCrypto path.
 
 ## Release Transformation — COMPLETE (2026-07-06)
 
