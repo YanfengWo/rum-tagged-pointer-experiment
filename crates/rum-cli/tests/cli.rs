@@ -1,6 +1,7 @@
 use std::fs;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -15,6 +16,27 @@ fn run_cli(args: &[&str]) -> std::process::Output {
         .args(args)
         .output()
         .expect("failed to run rum-cli test binary")
+}
+
+fn run_cli_with_stdin(args: &[&str], input: &str) -> std::process::Output {
+    let mut child = Command::new(cli_bin())
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn rum-cli test binary");
+
+    child
+        .stdin
+        .as_mut()
+        .expect("stdin should be piped")
+        .write_all(input.as_bytes())
+        .expect("should write rum-cli stdin");
+
+    child
+        .wait_with_output()
+        .expect("failed to wait for rum-cli test binary")
 }
 
 fn stdout(output: &std::process::Output) -> String {
@@ -118,6 +140,34 @@ fn format_flag_rejects_invalid_line_width() {
 }
 
 #[test]
+fn no_arg_non_tty_stdin_is_filter_program_without_repl_chatter() {
+    let output = run_cli_with_stdin(&[], "Total[{1,2,3}]\n");
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "6\n");
+    assert!(!stdout(&output).contains("rum>"));
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn filter_mode_uses_script_semantics_and_prints_final_result_only() {
+    let output = run_cli_with_stdin(&[], "x=1\nx+1\n");
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "2\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn positional_dash_reads_stdin_as_program() {
+    let output = run_cli_with_stdin(&["-"], "2 + 3\n");
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "5\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
 fn eval_flag_renders_source_aware_syntax_diagnostics() {
     // `f[1 2]` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
     let output = run_cli(&["--eval", "f[1,]"]);
@@ -136,6 +186,52 @@ fn eval_flag_renders_prints_before_final_value() {
     assert!(output.status.success());
     assert_eq!(stdout(&output), "hello\n2\n");
     assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn eval_flag_binds_piped_stdin_as_script_input() {
+    let output = run_cli_with_stdin(&["--eval", "StringLines[$ScriptInput]"], "a\nb\n");
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "List[\"a\", \"b\"]\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn script_input_preserves_quotes_and_backslashes_verbatim() {
+    let output = run_cli_with_stdin(&["--eval", "ToCharacterCode[$ScriptInput]"], "a\"\\b\n");
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "List[97, 34, 92, 98, 10]\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn script_args_after_separator_are_bound_as_strings() {
+    let output = run_cli(&["--eval", "$ScriptArgs", "--", "one", "two three"]);
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "List[\"one\", \"two three\"]\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn script_args_separator_without_args_binds_empty_list() {
+    let output = run_cli(&["--eval", "$ScriptArgs", "--"]);
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "List[]\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn runtime_messages_go_to_stderr_and_values_go_to_stdout() {
+    let output = run_cli(&["--eval", "Message[FindFile::notfound]; 42"]);
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "42\n");
+    assert!(stderr(&output).contains("! FindFile::notfound:"));
+    assert!(!stdout(&output).contains("FindFile::notfound"));
 }
 
 #[test]
@@ -210,4 +306,36 @@ fn unknown_long_flag_is_rejected() {
 
     assert!(!output.status.success());
     assert!(stderr(&output).contains("error: unknown flag `--typo`"));
+}
+
+#[test]
+fn closed_stdout_pipe_exits_successfully_without_stderr() {
+    let program = std::iter::repeat_n("Print[1]", 500)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut child = Command::new(cli_bin())
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn rum-cli test binary");
+
+    drop(child.stdout.take().expect("stdout should be piped"));
+
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(program.as_bytes());
+    }
+
+    let mut stderr = String::new();
+    child
+        .stderr
+        .take()
+        .expect("stderr should be piped")
+        .read_to_string(&mut stderr)
+        .expect("stderr should be readable");
+    let status = child.wait().expect("failed to wait for rum-cli");
+
+    assert!(status.success(), "closed-pipe status was {status:?}");
+    assert!(stderr.is_empty(), "closed-pipe stderr was {stderr:?}");
 }

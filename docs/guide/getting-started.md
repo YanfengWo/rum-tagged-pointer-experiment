@@ -38,10 +38,12 @@ The REPL keeps one session alive, so definitions entered on one line are
 available on later lines.
 
 ```text
-$ printf 'square[x_] := x * x\nsquare[6]\n' | cargo run -q -p rum-cli
-rum> Null
-rum> 36
-rum>
+$ cargo run -q -p rum-cli
+rum> square[x_] := x * x
+Null
+rum> square[6]
+36
+rum> :quit
 ```
 
 The first line stores a delayed downvalue for `square`.
@@ -70,6 +72,46 @@ A positional path works too:
 `cargo run -q -p rum-cli -- /tmp/rum-guide-start.wl`
 
 The guide examples use `--file` because it makes the command form explicit.
+
+## Pipelines And Filter Mode
+
+When stdin is not a terminal and no program argument is given, `rum-cli` reads
+all of stdin as one script and prints the final result. It does not print the
+REPL prompt.
+
+```text
+$ echo 'Total[{1,2,3}]' | cargo run -q -p rum-cli
+6
+```
+
+Multiple input forms share one session, the same as a file.
+
+```text
+$ printf 'x=1\nx+1\n' | cargo run -q -p rum-cli
+2
+```
+
+A positional `-` explicitly selects the same stdin-as-program mode.
+
+```text
+$ printf '2 + 3\n' | cargo run -q -p rum-cli -
+5
+```
+
+When a program is supplied and stdin is piped, the piped bytes are available as
+the string ``Global`$ScriptInput``.
+
+```text
+$ printf 'a\nb\nc\n' | cargo run -q -p rum-cli -- --eval 'Length[StringLines[$ScriptInput]]'
+3
+```
+
+Arguments after `--` are available as ``Global`$ScriptArgs``.
+
+```text
+$ cargo run -q -p rum-cli -- --eval '$ScriptArgs' -- alpha beta
+List["alpha", "beta"]
+```
 
 ## First Definitions
 
