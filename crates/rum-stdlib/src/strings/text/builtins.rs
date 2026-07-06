@@ -1,8 +1,8 @@
 use super::diacritics::remove_diacritics_value;
 use super::values::{
     character_code_expr, character_counts_expr, expr_as_nested_string_list,
-    single_code_point_string, string_lines_value, string_pad_left_value, string_pad_right_value,
-    text_words_value,
+    single_code_point_string, string_lines_value, string_pad_left_pieces_value,
+    string_pad_left_value, string_pad_right_pieces_value, string_pad_right_value, text_words_value,
 };
 use super::*;
 
@@ -83,17 +83,30 @@ pub(crate) fn eval_string_riffle(
     }
 
     if let Some(items) = expr_as_string_list(&args[0]) {
-        let separator = match args.get(1) {
-            Some(expr) => expr_as_string(expr).map(str::to_string),
-            None => Some(" ".to_string()),
+        let separator = match args {
+            [_] => Some(StringRiffleSeparator::Plain(" ".to_string())),
+            [_, separator] => {
+                if let Some(separator) = expr_as_string(separator) {
+                    Some(StringRiffleSeparator::Plain(separator.to_string()))
+                } else {
+                    parse_string_riffle_wrapper(separator).map(StringRiffleSeparator::Wrapped)
+                }
+            }
+            [_, _, _] => return Ok(Expr::call(head.clone(), args.to_vec())),
+            _ => unreachable!(),
         };
         let Some(separator) = separator else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        if args.len() == 3 {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-        return Ok(Expr::string(items.join(&separator)));
+        return Ok(Expr::string(match separator {
+            StringRiffleSeparator::Plain(separator) => items.join(&separator),
+            StringRiffleSeparator::Wrapped(wrapper) => {
+                let mut output = wrapper.left;
+                output.push_str(&items.join(&wrapper.separator));
+                output.push_str(&wrapper.right);
+                output
+            }
+        }));
     }
 
     if let Some(rows) = expr_as_nested_string_list(&args[0]) {
@@ -128,6 +141,29 @@ pub(crate) fn eval_string_riffle(
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+struct StringRiffleWrapper {
+    left: String,
+    separator: String,
+    right: String,
+}
+
+enum StringRiffleSeparator {
+    Plain(String),
+    Wrapped(StringRiffleWrapper),
+}
+
+fn parse_string_riffle_wrapper(expr: &Expr) -> Option<StringRiffleWrapper> {
+    let parts = expr_as_string_list(expr)?;
+    let [left, separator, right] = parts.as_slice() else {
+        return None;
+    };
+    Some(StringRiffleWrapper {
+        left: left.clone(),
+        separator: separator.clone(),
+        right: right.clone(),
+    })
 }
 
 pub(crate) fn eval_row(
@@ -173,23 +209,21 @@ pub(crate) fn eval_string_pad_left(
     let Some(width) = expr_as_non_negative_usize(&args[1]) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
-    let padding = match args.get(2) {
-        Some(expr) => expr_as_string(expr).filter(|value| !value.is_empty()),
-        None => Some(" "),
-    };
-    let Some(padding) = padding else {
+    let Some(padding) = parse_string_padding(args.get(2)) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
     if let Some(value) = expr_as_string(&args[0]) {
-        return Ok(Expr::string(string_pad_left_value(value, width, padding)));
+        return Ok(Expr::string(string_pad_left_with_spec(
+            value, width, &padding,
+        )));
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
         return Ok(string_list_expr(
             values
                 .into_iter()
-                .map(|value| string_pad_left_value(&value, width, padding))
+                .map(|value| string_pad_left_with_spec(&value, width, &padding))
                 .collect(),
         ));
     }
@@ -209,28 +243,65 @@ pub(crate) fn eval_string_pad_right(
     let Some(width) = expr_as_non_negative_usize(&args[1]) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
-    let padding = match args.get(2) {
-        Some(expr) => expr_as_string(expr).filter(|value| !value.is_empty()),
-        None => Some(" "),
-    };
-    let Some(padding) = padding else {
+    let Some(padding) = parse_string_padding(args.get(2)) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
     if let Some(value) = expr_as_string(&args[0]) {
-        return Ok(Expr::string(string_pad_right_value(value, width, padding)));
+        return Ok(Expr::string(string_pad_right_with_spec(
+            value, width, &padding,
+        )));
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
         return Ok(string_list_expr(
             values
                 .into_iter()
-                .map(|value| string_pad_right_value(&value, width, padding))
+                .map(|value| string_pad_right_with_spec(&value, width, &padding))
                 .collect(),
         ));
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+enum StringPaddingSpec<'a> {
+    Single(&'a str),
+    Pieces(Vec<String>),
+}
+
+fn parse_string_padding(expr: Option<&Expr>) -> Option<StringPaddingSpec<'_>> {
+    let Some(expr) = expr else {
+        return Some(StringPaddingSpec::Single(" "));
+    };
+
+    if let Some(padding) = expr_as_string(expr).filter(|value| !value.is_empty()) {
+        return Some(StringPaddingSpec::Single(padding));
+    }
+
+    let pieces = expr_as_string_list(expr)?;
+    if pieces.is_empty() || pieces.iter().any(String::is_empty) {
+        return None;
+    }
+    Some(StringPaddingSpec::Pieces(pieces))
+}
+
+fn string_pad_left_with_spec(value: &str, width: usize, padding: &StringPaddingSpec<'_>) -> String {
+    match padding {
+        StringPaddingSpec::Single(padding) => string_pad_left_value(value, width, padding),
+        StringPaddingSpec::Pieces(pieces) => string_pad_left_pieces_value(value, width, pieces),
+    }
+}
+
+fn string_pad_right_with_spec(
+    value: &str,
+    width: usize,
+    padding: &StringPaddingSpec<'_>,
+) -> String {
+    match padding {
+        StringPaddingSpec::Single(padding) => string_pad_right_value(value, width, padding),
+        StringPaddingSpec::Pieces(pieces) => string_pad_right_pieces_value(value, width, pieces),
+    }
 }
 
 pub(crate) fn eval_string_lines(

@@ -135,7 +135,7 @@ Tests whether an expression is an exact integer in the current algebraic-integer
 
 ### AlignColumns
 
-Formats a list of string rows as left-aligned columns separated by two spaces.
+Formats a list of string rows as left-aligned columns separated by "Separator" -> "  " by default; any string separator can be supplied.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3444,7 +3444,7 @@ Tests whether a string is free of exact or current string-pattern matches.
 
 ### StringIndent
 
-Prefixes each non-blank line of a string with a string prefix or an exact number of spaces.
+Prefixes each non-blank line of a string with a string prefix or an exact number of spaces. With "BlankLines" -> True, blank and whitespace-only lines are prefixed too; the default False leaves them unchanged.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3481,14 +3481,14 @@ Tests whether a whole string matches an exact or current string-pattern spec.
 
 ### StringPadLeft
 
-Pads strings on the left to a target width using the current simple padding subset.
+Pads strings on the left to a target width using a string pad or a non-empty list of non-empty string pads; list pads cycle from the first emitted pad character and the final pad piece is truncated to the target character width.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### StringPadRight
 
-Pads strings on the right to a target width using the current simple padding subset; values at or above width are unchanged.
+Pads strings on the right to a target width using a string pad or a non-empty list of non-empty string pads; list pads cycle from the first emitted pad character and the final pad piece is truncated to the target character width. Values at or above width are unchanged.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3537,7 +3537,7 @@ Reverses the Unicode code-point characters in a string.
 
 ### StringRiffle
 
-Riffles strings together using the current flat and nested-list separator subset.
+Riffles a flat string list with a string separator or {left, separator, right} wrapper, and riffles nested string rows with row and item separators.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3593,7 +3593,7 @@ Trims whitespace or exact boundary substrings in the current first-pass string s
 
 ### StringWrap
 
-Greedily word-wraps a string to a positive character width, separating output lines with LF.
+Greedily word-wraps a string to a positive character width, separating output lines with LF. With "PreserveNewlines" -> True, wraps each LF-delimited line independently and preserves blank or whitespace-only lines verbatim; the default False collapses all whitespace as word separators.
 
 - Attributes: `None`
 - Capability: `Pure`

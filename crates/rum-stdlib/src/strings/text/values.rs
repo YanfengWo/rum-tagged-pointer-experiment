@@ -28,6 +28,17 @@ pub(super) fn string_pad_left_value(value: &str, width: usize, padding: &str) ->
     prefix
 }
 
+pub(super) fn string_pad_left_pieces_value(value: &str, width: usize, pieces: &[String]) -> String {
+    let value_len = value.chars().count();
+    if value_len >= width {
+        return value.to_string();
+    }
+
+    let mut prefix = padding_from_pieces(width - value_len, pieces);
+    prefix.push_str(value);
+    prefix
+}
+
 pub(super) fn string_pad_right_value(value: &str, width: usize, padding: &str) -> String {
     let value_len = value.chars().count();
     if value_len >= width {
@@ -41,6 +52,40 @@ pub(super) fn string_pad_right_value(value: &str, width: usize, padding: &str) -
         padded.push(pad_chars[index % pad_chars.len()]);
     }
     padded
+}
+
+pub(super) fn string_pad_right_pieces_value(
+    value: &str,
+    width: usize,
+    pieces: &[String],
+) -> String {
+    let value_len = value.chars().count();
+    if value_len >= width {
+        return value.to_string();
+    }
+
+    let mut padded = value.to_string();
+    padded.push_str(&padding_from_pieces(width - value_len, pieces));
+    padded
+}
+
+fn padding_from_pieces(width: usize, pieces: &[String]) -> String {
+    let mut output = String::new();
+    let mut remaining = width;
+    let mut index = 0usize;
+
+    while remaining > 0 {
+        for ch in pieces[index % pieces.len()].chars() {
+            if remaining == 0 {
+                break;
+            }
+            output.push(ch);
+            remaining -= 1;
+        }
+        index += 1;
+    }
+
+    output
 }
 
 pub(super) fn string_lines_value(value: &str) -> Vec<String> {

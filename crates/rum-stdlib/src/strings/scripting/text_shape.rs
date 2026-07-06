@@ -5,8 +5,8 @@ pub(crate) fn eval_string_wrap(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [text, width] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("StringWrap", args, 2));
+    let [text, width, option_args @ ..] = args else {
+        return Ok(session.invalid_call_with_arg_range("StringWrap", args, 2, usize::MAX));
     };
     let (Some(text), Some(width)) = (expr_as_string(text), expr_as_non_negative_usize(width))
     else {
@@ -19,8 +19,15 @@ pub(crate) fn eval_string_wrap(
             "width must be a positive integer",
         ));
     }
+    let Some(options) = parse_string_wrap_options(session, option_args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-    Ok(Expr::string(string_wrap_value(text, width)))
+    Ok(Expr::string(if options.preserve_newlines {
+        string_wrap_preserving_newlines(text, width)
+    } else {
+        string_wrap_value(text, width)
+    }))
 }
 
 pub(crate) fn eval_string_indent(
@@ -28,8 +35,8 @@ pub(crate) fn eval_string_indent(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [text, prefix] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("StringIndent", args, 2));
+    let [text, prefix, option_args @ ..] = args else {
+        return Ok(session.invalid_call_with_arg_range("StringIndent", args, 2, usize::MAX));
     };
     let Some(text) = expr_as_string(text) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -41,8 +48,15 @@ pub(crate) fn eval_string_indent(
     } else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let Some(options) = parse_string_indent_options(session, option_args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-    Ok(Expr::string(indent_lines(text, &prefix)))
+    Ok(Expr::string(indent_lines(
+        text,
+        &prefix,
+        options.blank_lines,
+    )))
 }
 
 pub(crate) fn eval_string_dedent(
@@ -94,14 +108,140 @@ pub(crate) fn eval_align_columns(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [rows] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("AlignColumns", args, 1));
+    let [rows, option_args @ ..] = args else {
+        return Ok(session.invalid_call_with_arg_range("AlignColumns", args, 1, usize::MAX));
     };
     let Some(rows) = nested_string_rows(rows) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    let Some(options) = parse_align_columns_options(session, option_args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
 
-    Ok(Expr::string(align_columns(rows)))
+    Ok(Expr::string(align_columns(rows, &options.separator)))
+}
+
+struct StringWrapOptions {
+    preserve_newlines: bool,
+}
+
+struct StringIndentOptions {
+    blank_lines: bool,
+}
+
+struct AlignColumnsOptions {
+    separator: String,
+}
+
+fn parse_string_wrap_options(
+    session: &mut Session,
+    explicit: &[Expr],
+) -> Result<Option<StringWrapOptions>, EvalError> {
+    let option_exprs = session.merged_option_exprs_for_system_symbol("StringWrap", explicit)?;
+    let mut options = StringWrapOptions {
+        preserve_newlines: false,
+    };
+
+    for expr in option_exprs {
+        let Some((name, value)) = option_rule(&expr) else {
+            return Ok(None);
+        };
+        match name {
+            "PreserveNewlines" => {
+                let Some(value) = bool_option_value(value) else {
+                    return Ok(None);
+                };
+                options.preserve_newlines = value;
+            }
+            _ => return Ok(None),
+        }
+    }
+
+    Ok(Some(options))
+}
+
+fn parse_string_indent_options(
+    session: &mut Session,
+    explicit: &[Expr],
+) -> Result<Option<StringIndentOptions>, EvalError> {
+    let option_exprs = session.merged_option_exprs_for_system_symbol("StringIndent", explicit)?;
+    let mut options = StringIndentOptions { blank_lines: false };
+
+    for expr in option_exprs {
+        let Some((name, value)) = option_rule(&expr) else {
+            return Ok(None);
+        };
+        match name {
+            "BlankLines" => {
+                let Some(value) = bool_option_value(value) else {
+                    return Ok(None);
+                };
+                options.blank_lines = value;
+            }
+            _ => return Ok(None),
+        }
+    }
+
+    Ok(Some(options))
+}
+
+fn parse_align_columns_options(
+    session: &mut Session,
+    explicit: &[Expr],
+) -> Result<Option<AlignColumnsOptions>, EvalError> {
+    let option_exprs = session.merged_option_exprs_for_system_symbol("AlignColumns", explicit)?;
+    let mut options = AlignColumnsOptions {
+        separator: "  ".to_string(),
+    };
+
+    for expr in option_exprs {
+        let Some((name, value)) = option_rule(&expr) else {
+            return Ok(None);
+        };
+        match name {
+            "Separator" => {
+                let Some(value) = expr_as_string(value) else {
+                    return Ok(None);
+                };
+                options.separator = value.to_string();
+            }
+            _ => return Ok(None),
+        }
+    }
+
+    Ok(Some(options))
+}
+
+fn option_rule(expr: &Expr) -> Option<(&str, &Expr)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+    Some((option_name(&args[0])?, &args[1]))
+}
+
+fn option_name(expr: &Expr) -> Option<&str> {
+    if let Some(name) = expr_as_string(expr) {
+        return Some(name);
+    }
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => Some(symbol.name()),
+        _ => None,
+    }
+}
+
+fn bool_option_value(expr: &Expr) -> Option<bool> {
+    if is_system_symbol_name(expr, "True") {
+        Some(true)
+    } else if is_system_symbol_name(expr, "False") {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 fn string_wrap_value(text: &str, width: usize) -> String {
@@ -141,10 +281,23 @@ fn string_wrap_value(text: &str, width: usize) -> String {
     lines.join("\n")
 }
 
-fn indent_lines(text: &str, prefix: &str) -> String {
+fn string_wrap_preserving_newlines(text: &str, width: usize) -> String {
     text.split('\n')
         .map(|line| {
             if line.trim().is_empty() {
+                line.to_string()
+            } else {
+                string_wrap_value(line, width)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn indent_lines(text: &str, prefix: &str, blank_lines: bool) -> String {
+    text.split('\n')
+        .map(|line| {
+            if !blank_lines && line.trim().is_empty() {
                 line.to_string()
             } else {
                 format!("{prefix}{line}")
@@ -229,7 +382,7 @@ fn nested_string_rows(expr: &Expr) -> Option<Vec<Vec<String>>> {
         .collect()
 }
 
-fn align_columns(rows: Vec<Vec<String>>) -> String {
+fn align_columns(rows: Vec<Vec<String>>, separator: &str) -> String {
     let column_count = rows.iter().map(Vec::len).max().unwrap_or(0);
     let mut widths = vec![0usize; column_count];
     for row in &rows {
@@ -243,7 +396,7 @@ fn align_columns(rows: Vec<Vec<String>>) -> String {
             let mut line = String::new();
             for (index, cell) in row.iter().enumerate() {
                 if index > 0 {
-                    line.push_str("  ");
+                    line.push_str(separator);
                 }
                 line.push_str(cell);
                 if index + 1 < row.len() {

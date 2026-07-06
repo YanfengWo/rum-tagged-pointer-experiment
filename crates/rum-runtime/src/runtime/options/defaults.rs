@@ -67,6 +67,9 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
         | "StringDelete" | "StringReplace" | "StringSplit" => {
             vec![system_rule_option("IgnoreCase", bool_option(false))]
         }
+        "StringWrap" => vec![system_rule_option("PreserveNewlines", bool_option(false))],
+        "StringIndent" => vec![system_rule_option("BlankLines", bool_option(false))],
+        "AlignColumns" => vec![system_rule_option("Separator", Expr::string("  "))],
         "StringCases" => vec![
             system_rule_option("IgnoreCase", bool_option(false)),
             system_rule_option("Overlaps", bool_option(false)),

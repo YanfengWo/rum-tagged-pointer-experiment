@@ -155,12 +155,12 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "StringWrap",
-        "Greedily word-wraps a string to a positive character width, separating output lines with LF.",
+        "Greedily word-wraps a string to a positive character width, separating output lines with LF. With \"PreserveNewlines\" -> True, wraps each LF-delimited line independently and preserves blank or whitespace-only lines verbatim; the default False collapses all whitespace as word separators.",
         strings::eval_string_wrap,
     ),
     BuiltinSpec::ordinary(
         "StringIndent",
-        "Prefixes each non-blank line of a string with a string prefix or an exact number of spaces.",
+        "Prefixes each non-blank line of a string with a string prefix or an exact number of spaces. With \"BlankLines\" -> True, blank and whitespace-only lines are prefixed too; the default False leaves them unchanged.",
         strings::eval_string_indent,
     ),
     BuiltinSpec::ordinary(
@@ -175,7 +175,7 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "AlignColumns",
-        "Formats a list of string rows as left-aligned columns separated by two spaces.",
+        "Formats a list of string rows as left-aligned columns separated by \"Separator\" -> \"  \" by default; any string separator can be supplied.",
         strings::eval_align_columns,
     ),
     BuiltinSpec::ordinary(
@@ -245,17 +245,17 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "StringRiffle",
-        "Riffles strings together using the current flat and nested-list separator subset.",
+        "Riffles a flat string list with a string separator or {left, separator, right} wrapper, and riffles nested string rows with row and item separators.",
         strings::eval_string_riffle,
     ),
     BuiltinSpec::ordinary(
         "StringPadLeft",
-        "Pads strings on the left to a target width using the current simple padding subset.",
+        "Pads strings on the left to a target width using a string pad or a non-empty list of non-empty string pads; list pads cycle from the first emitted pad character and the final pad piece is truncated to the target character width.",
         strings::eval_string_pad_left,
     ),
     BuiltinSpec::ordinary(
         "StringPadRight",
-        "Pads strings on the right to a target width using the current simple padding subset; values at or above width are unchanged.",
+        "Pads strings on the right to a target width using a string pad or a non-empty list of non-empty string pads; list pads cycle from the first emitted pad character and the final pad piece is truncated to the target character width. Values at or above width are unchanged.",
         strings::eval_string_pad_right,
     ),
     BuiltinSpec::ordinary(

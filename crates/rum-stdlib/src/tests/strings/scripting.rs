@@ -13,6 +13,17 @@ fn text_shaping_utilities_cover_wrap_indent_dedent_tabs_and_tables() {
         "\"abcdef\\nxy\""
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringWrap[\"alpha\\n\\nbeta\", 20]"),
+        "\"alpha beta\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringWrap[\"alpha\\n  \\nbeta\", 20, \"PreserveNewlines\" -> True]"
+        ),
+        "\"alpha\\n  \\nbeta\""
+    );
+    assert_eq!(
         eval_to_string(
             &mut session,
             "StringWrap[StringWrap[\"the quick brown fox\", 10], 10]"
@@ -22,6 +33,13 @@ fn text_shaping_utilities_cover_wrap_indent_dedent_tabs_and_tables() {
     assert_eq!(
         eval_to_string(&mut session, "StringIndent[\"a\\n \\n\\nb\", \"> \"]"),
         "\"> a\\n \\n\\n> b\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringIndent[\"a\\n \\n\\nb\", \"> \", \"BlankLines\" -> True]"
+        ),
+        "\"> a\\n>  \\n> \\n> b\""
     );
     assert_eq!(
         eval_to_string(&mut session, "StringIndent[\"a\\n\\nb\", 2]"),
@@ -49,6 +67,13 @@ fn text_shaping_utilities_cover_wrap_indent_dedent_tabs_and_tables() {
             "AlignColumns[{{\"name\", \"qty\"}, {\"apple\", \"3\"}, {\"kiwi\", \"10\", \"extra\"}}]"
         ),
         "\"name   qty\\napple  3\\nkiwi   10   extra\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "AlignColumns[{{\"a\", \"b\"}, {\"long\", \"c\"}}, \"Separator\" -> \" | \"]"
+        ),
+        "\"a    | b\\nlong | c\""
     );
 
     let invalid_width = session.eval_text("StringWrap[\"abc\", 0]").unwrap();

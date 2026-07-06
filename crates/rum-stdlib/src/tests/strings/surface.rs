@@ -589,6 +589,13 @@ fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
     assert_eq!(
         eval_to_string(
             &mut session,
+            "StringRiffle[{\"a\", \"b\", \"c\"}, {\"(\", \", \", \")\"}]"
+        ),
+        "\"(a, b, c)\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
             "StringRiffle[{{\"a\", \"b\"}, {\"c\", \"d\"}}, \",\", \";\"]"
         ),
         "\"a;b,c;d\""
@@ -600,6 +607,18 @@ fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
     assert_eq!(
         eval_to_string(&mut session, "StringPadLeft[{\"7\", \"88\"}, 3, \"0\"]"),
         "List[\"007\", \"088\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPadLeft[\"x\", 4, {\"0\", \"1\"}]"),
+        "\"010x\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPadLeft[\"x\", 5, {\"ab\", \"c\"}]"),
+        "\"abcax\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPadRight[\"x\", 4, {\"ab\"}]"),
+        "\"xaba\""
     );
 }
 
