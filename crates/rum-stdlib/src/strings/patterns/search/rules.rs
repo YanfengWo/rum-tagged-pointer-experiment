@@ -24,7 +24,7 @@ struct StringCasesRuleEvalState {
     chars: Vec<char>,
     spec: ExactStringCaseSpec,
     max_matches: usize,
-    config: StringPatternMatchConfig,
+    config: StringCasesConfig,
 }
 
 #[derive(Clone)]
@@ -32,7 +32,7 @@ struct StringCasesValuesEvalState {
     values: Vec<String>,
     spec: ExactStringCaseSpec,
     max_matches: usize,
-    config: StringPatternMatchConfig,
+    config: StringCasesConfig,
 }
 
 pub(super) fn replace_string_value_with_rules(
@@ -86,7 +86,7 @@ pub(super) fn collect_string_cases_with_rule_evaluation(
     value: &str,
     spec: &ExactStringCaseSpec,
     max_matches: usize,
-    config: StringPatternMatchConfig,
+    config: StringCasesConfig,
 ) -> Result<Vec<Expr>, EvalError> {
     if max_matches == 0 {
         return Ok(Vec::new());
@@ -110,7 +110,7 @@ pub(super) fn collect_string_cases_values_with_rule_evaluation_expr(
     values: Vec<String>,
     spec: &ExactStringCaseSpec,
     max_matches: usize,
-    config: StringPatternMatchConfig,
+    config: StringCasesConfig,
 ) -> Result<Expr, EvalError> {
     let capacity = values.len();
     resume_collect_string_cases_values_from_index(
@@ -257,20 +257,24 @@ fn resume_collect_string_cases_from_index(
     while index <= state.chars.len() && matches.len() < state.max_matches {
         match &state.spec {
             ExactStringCaseSpec::Patterns(patterns) => {
-                if let Some((_pattern_index, match_state)) =
-                    best_pattern_match_at_with_bindings(patterns, &state.chars, index, state.config)
-                {
+                if let Some((_pattern_index, match_state)) = best_pattern_match_at_with_bindings(
+                    patterns,
+                    &state.chars,
+                    index,
+                    state.config.match_config,
+                ) {
                     matches.push(Expr::string(pattern_match_text(
                         &state.chars[index..match_state.end],
                     )));
-                    index = if match_state.end == index {
-                        if index == state.chars.len() {
-                            break;
-                        }
-                        index + 1
-                    } else {
-                        match_state.end
+                    let Some(next_index) = next_string_match_index(
+                        index,
+                        match_state.end,
+                        state.chars.len(),
+                        state.config.overlaps,
+                    ) else {
+                        break;
                     };
+                    index = next_index;
                 } else {
                     if index == state.chars.len() {
                         break;
@@ -280,15 +284,19 @@ fn resume_collect_string_cases_from_index(
             }
             ExactStringCaseSpec::Rules(rules) => {
                 if let Some((output_expr, end, bindings)) = rules.iter().find_map(|rule| {
-                    best_pattern_match_state(&rule.pattern, &state.chars, index, state.config).map(
-                        |match_state| {
-                            let output_expr = match &rule.output {
-                                ExactStringCaseOutput::Immediate(expr)
-                                | ExactStringCaseOutput::Delayed(expr) => expr.clone(),
-                            };
-                            (output_expr, match_state.end, match_state.bindings)
-                        },
+                    best_pattern_match_state(
+                        &rule.pattern,
+                        &state.chars,
+                        index,
+                        state.config.match_config,
                     )
+                    .map(|match_state| {
+                        let output_expr = match &rule.output {
+                            ExactStringCaseOutput::Immediate(expr)
+                            | ExactStringCaseOutput::Delayed(expr) => expr.clone(),
+                        };
+                        (output_expr, match_state.end, match_state.bindings)
+                    })
                 }) {
                     let suspended_state = state.clone();
                     let suspended_matches = matches.clone();
@@ -329,13 +337,10 @@ fn resume_collect_string_cases_with_output(
     output: Expr,
 ) -> Result<Vec<Expr>, EvalError> {
     matches.push(output);
-    let next_index = if end == index {
-        if index == state.chars.len() {
-            return Ok(matches);
-        }
-        index + 1
-    } else {
-        end
+    let Some(next_index) =
+        next_string_match_index(index, end, state.chars.len(), state.config.overlaps)
+    else {
+        return Ok(matches);
     };
 
     resume_collect_string_cases_from_index(session, state, next_index, matches)

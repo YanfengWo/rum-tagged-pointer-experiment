@@ -66,6 +66,41 @@ fn string_position_reports_overlapping_one_based_ranges() {
 }
 
 #[test]
+fn string_cases_and_position_honor_boolean_overlaps_options() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaaa\", \"aa\", Overlaps -> True]"
+        ),
+        "List[\"aa\", \"aa\", \"aa\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"aaaa\", \"aa\"]"),
+        "List[\"aa\", \"aa\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringPosition[\"aaaa\", \"aa\", Overlaps -> False]"
+        ),
+        "List[List[1, 2], List[3, 4]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"aaaa\", \"aa\"]"),
+        "List[List[1, 2], List[2, 3], List[3, 4]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"aaaa\", \"aa\", Overlaps -> All]"
+        ),
+        "StringCases[\"aaaa\", \"aa\", Rule[Overlaps, All]]"
+    );
+}
+
+#[test]
 fn string_split_trim_replace_and_cases_cover_common_text_processing_flows() {
     let mut session = core_session();
 

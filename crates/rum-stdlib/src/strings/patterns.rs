@@ -79,21 +79,42 @@ struct StringDeleteConfig {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum StringCountOverlaps {
+enum StringSearchOverlaps {
     NonOverlapping,
     Overlapping,
 }
 
-impl Default for StringCountOverlaps {
+impl Default for StringSearchOverlaps {
     fn default() -> Self {
         Self::NonOverlapping
     }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct StringCasesConfig {
+    match_config: StringPatternMatchConfig,
+    overlaps: StringSearchOverlaps,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct StringPositionConfig {
+    match_config: StringPatternMatchConfig,
+    overlaps: StringSearchOverlaps,
+}
+
+impl Default for StringPositionConfig {
+    fn default() -> Self {
+        Self {
+            match_config: StringPatternMatchConfig::default(),
+            overlaps: StringSearchOverlaps::Overlapping,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct StringCountConfig {
     ignore_case: bool,
-    overlaps: StringCountOverlaps,
+    overlaps: StringSearchOverlaps,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -558,11 +579,42 @@ fn parse_string_match_limit_and_options(
     Some((limit, config))
 }
 
-fn parse_string_position_args(
-    extras: &[Expr],
-) -> Option<(Option<usize>, StringPatternMatchConfig)> {
+fn parse_string_cases_limit_and_options(extras: &[Expr]) -> Option<(usize, StringCasesConfig)> {
+    let mut limit = usize::MAX;
+    let mut config = StringCasesConfig::default();
+
+    for extra in extras {
+        if let Some(value) = expr_as_non_negative_usize(extra) {
+            if limit != usize::MAX {
+                return None;
+            }
+            limit = value;
+            continue;
+        }
+
+        let Expr::Call { head, args } = extra else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Rule") || args.len() != 2 {
+            return None;
+        }
+        if is_system_symbol_name(&args[0], "IgnoreCase") {
+            config.match_config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+        if is_system_symbol_name(&args[0], "Overlaps") {
+            config.overlaps = parse_boolean_overlaps(&args[1])?;
+            continue;
+        }
+        return None;
+    }
+
+    Some((limit, config))
+}
+
+fn parse_string_position_args(extras: &[Expr]) -> Option<(Option<usize>, StringPositionConfig)> {
     let mut max_results = None;
-    let mut config = StringPatternMatchConfig::default();
+    let mut config = StringPositionConfig::default();
 
     for extra in extras {
         if let Some(value) = expr_as_non_negative_usize(extra) {
@@ -580,7 +632,11 @@ fn parse_string_position_args(
             return None;
         }
         if is_system_symbol_name(&args[0], "IgnoreCase") {
-            config.ignore_case = truthiness_symbol(&args[1])?;
+            config.match_config.ignore_case = truthiness_symbol(&args[1])?;
+            continue;
+        }
+        if is_system_symbol_name(&args[0], "Overlaps") {
+            config.overlaps = parse_boolean_overlaps(&args[1])?;
             continue;
         }
         return None;
@@ -609,9 +665,9 @@ fn parse_string_count_options(options: &[Expr]) -> Option<StringCountConfig> {
             config.overlaps = if is_system_symbol_name(&args[1], heads::structure::ALL)
                 || matches!(truthiness_symbol(&args[1]), Some(true))
             {
-                StringCountOverlaps::Overlapping
+                StringSearchOverlaps::Overlapping
             } else if matches!(truthiness_symbol(&args[1]), Some(false)) {
-                StringCountOverlaps::NonOverlapping
+                StringSearchOverlaps::NonOverlapping
             } else {
                 return None;
             };
@@ -622,6 +678,34 @@ fn parse_string_count_options(options: &[Expr]) -> Option<StringCountConfig> {
     }
 
     Some(config)
+}
+
+fn parse_boolean_overlaps(expr: &Expr) -> Option<StringSearchOverlaps> {
+    if truthiness_symbol(expr)? {
+        Some(StringSearchOverlaps::Overlapping)
+    } else {
+        Some(StringSearchOverlaps::NonOverlapping)
+    }
+}
+
+fn next_string_match_index(
+    index: usize,
+    end: usize,
+    haystack_len: usize,
+    overlaps: StringSearchOverlaps,
+) -> Option<usize> {
+    if end == index {
+        if index == haystack_len {
+            None
+        } else {
+            Some(index + 1)
+        }
+    } else {
+        Some(match overlaps {
+            StringSearchOverlaps::NonOverlapping => end,
+            StringSearchOverlaps::Overlapping => index + 1,
+        })
+    }
 }
 
 fn parse_string_repetition_bounds(expr: &Expr) -> Option<(usize, Option<usize>)> {

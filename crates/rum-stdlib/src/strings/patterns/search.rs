@@ -239,7 +239,7 @@ pub(crate) fn eval_string_cases(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
     let option_exprs = session.merged_option_exprs_for_system_symbol("StringCases", &args[2..])?;
-    let Some((max_matches, config)) = parse_string_match_limit_and_options(&option_exprs) else {
+    let Some((max_matches, config)) = parse_string_cases_limit_and_options(&option_exprs) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 

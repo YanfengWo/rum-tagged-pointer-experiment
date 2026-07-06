@@ -72,17 +72,12 @@ pub(in crate::strings::patterns) fn string_count_matches(
             best_pattern_match_at_with_bindings(patterns, &chars, index, match_config)
         {
             matches += 1;
-            index = if state.end == index {
-                if index == chars.len() {
-                    break;
-                }
-                index + 1
-            } else {
-                match config.overlaps {
-                    StringCountOverlaps::NonOverlapping => state.end,
-                    StringCountOverlaps::Overlapping => index + 1,
-                }
+            let Some(next_index) =
+                next_string_match_index(index, state.end, chars.len(), config.overlaps)
+            else {
+                break;
             };
+            index = next_index;
         } else {
             if index == chars.len() {
                 break;
@@ -155,7 +150,7 @@ pub(in crate::strings::patterns) fn collect_string_cases(
     value: &str,
     spec: &ExactStringCaseSpec,
     max_matches: usize,
-    config: StringPatternMatchConfig,
+    config: StringCasesConfig,
 ) -> Vec<Expr> {
     if max_matches == 0 {
         return Vec::new();
@@ -169,17 +164,15 @@ pub(in crate::strings::patterns) fn collect_string_cases(
         match spec {
             ExactStringCaseSpec::Patterns(patterns) => {
                 if let Some((_pattern_index, end)) =
-                    best_pattern_match_at(patterns, &chars, index, config)
+                    best_pattern_match_at(patterns, &chars, index, config.match_config)
                 {
                     matches.push(Expr::string(pattern_match_text(&chars[index..end])));
-                    index = if end == index {
-                        if index == chars.len() {
-                            break;
-                        }
-                        index + 1
-                    } else {
-                        end
+                    let Some(next_index) =
+                        next_string_match_index(index, end, chars.len(), config.overlaps)
+                    else {
+                        break;
                     };
+                    index = next_index;
                 } else {
                     if index == chars.len() {
                         break;
@@ -189,7 +182,7 @@ pub(in crate::strings::patterns) fn collect_string_cases(
             }
             ExactStringCaseSpec::Rules(rules) => {
                 if let Some((rule, end)) = rules.iter().find_map(|rule| {
-                    best_pattern_match_end(&rule.pattern, &chars, index, config)
+                    best_pattern_match_end(&rule.pattern, &chars, index, config.match_config)
                         .map(|end| (rule, end))
                 }) {
                     let output = match &rule.output {
@@ -199,14 +192,12 @@ pub(in crate::strings::patterns) fn collect_string_cases(
                         }
                     };
                     matches.push(output);
-                    index = if end == index {
-                        if index == chars.len() {
-                            break;
-                        }
-                        index + 1
-                    } else {
-                        end
+                    let Some(next_index) =
+                        next_string_match_index(index, end, chars.len(), config.overlaps)
+                    else {
+                        break;
                     };
+                    index = next_index;
                 } else {
                     if index == chars.len() {
                         break;
@@ -224,7 +215,7 @@ pub(in crate::strings::patterns) fn string_position_expr(
     value: &str,
     pattern: &StringPattern,
     max_results: Option<usize>,
-    config: StringPatternMatchConfig,
+    config: StringPositionConfig,
 ) -> Expr {
     let haystack = value.chars().collect::<Vec<_>>();
     let positions = string_pattern_positions(&haystack, pattern, max_results, config)
@@ -242,7 +233,7 @@ fn string_pattern_positions<'a>(
     haystack: &'a [char],
     pattern: &'a StringPattern,
     max_results: Option<usize>,
-    config: StringPatternMatchConfig,
+    config: StringPositionConfig,
 ) -> impl Iterator<Item = (usize, usize)> + 'a {
     let max_results = max_results.unwrap_or(usize::MAX);
 
@@ -251,12 +242,25 @@ fn string_pattern_positions<'a>(
     }
 
     let mut positions = Vec::new();
-    for start in 0..=haystack.len() {
-        if let Some(state) = best_pattern_match_state(pattern, haystack, start, config) {
+    let mut start = 0usize;
+    while start <= haystack.len() {
+        if let Some(state) = best_pattern_match_state(pattern, haystack, start, config.match_config)
+        {
             positions.push((start + 1, state.end));
             if positions.len() >= max_results {
                 break;
             }
+            let Some(next_start) =
+                next_string_match_index(start, state.end, haystack.len(), config.overlaps)
+            else {
+                break;
+            };
+            start = next_start;
+        } else {
+            if start == haystack.len() {
+                break;
+            }
+            start += 1;
         }
     }
 

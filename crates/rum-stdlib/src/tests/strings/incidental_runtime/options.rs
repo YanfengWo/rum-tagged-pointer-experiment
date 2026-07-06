@@ -130,6 +130,30 @@ fn system_default_options_cover_current_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Options[StringCases]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[IgnoreCase, False], Rule[Overlaps, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[StringPosition]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[IgnoreCase, False], Rule[Overlaps, True]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[Nearest]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[DistanceFunction, Automatic]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Options[CheckAbort]")
             .unwrap()
             .value

@@ -59,10 +59,22 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("ResolveContextAliases", bool_option(true)),
             system_rule_option("SpellingCorrection", bool_option(false)),
         ],
+        "Nearest" => vec![system_rule_option(
+            "DistanceFunction",
+            system_expr("Automatic"),
+        )],
         "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ" | "StringFreeQ"
-        | "StringDelete" | "StringReplace" | "StringCases" | "StringPosition" | "StringSplit" => {
+        | "StringDelete" | "StringReplace" | "StringSplit" => {
             vec![system_rule_option("IgnoreCase", bool_option(false))]
         }
+        "StringCases" => vec![
+            system_rule_option("IgnoreCase", bool_option(false)),
+            system_rule_option("Overlaps", bool_option(false)),
+        ],
+        "StringPosition" => vec![
+            system_rule_option("IgnoreCase", bool_option(false)),
+            system_rule_option("Overlaps", bool_option(true)),
+        ],
         "StringCount" => vec![
             system_rule_option("IgnoreCase", bool_option(false)),
             system_rule_option("Overlaps", bool_option(false)),
