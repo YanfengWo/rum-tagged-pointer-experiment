@@ -82,6 +82,30 @@ install, are retained by cloned `HostConfig` values, and are re-applied by
 sandboxed session can run a downstream `Pure` builtin while denying a
 downstream `FileRead` or `FileWrite` builtin.
 
+## Adoption Cost
+
+Measured on Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz, rustc 1.85.0,
+release, 2026-07-06.
+
+The normal `rum-host` dependency graph is 257 `cargo tree --no-dedupe` lines:
+three direct `rum` crates (`rum-core`, `rum-runtime`, `rum-stdlib`) and 23
+unique external crates.
+
+A scratch `println!("hi")` binary was 379 KiB unstripped and 317 KiB stripped.
+Adding `HostSession::new()`, `eval("1 + 1")`, and result printing made it
+8.2 MiB unstripped and 6.9 MiB stripped, a delta of 7.8 MiB and 6.5 MiB.
+
+In one release process with ten fresh sessions, `HostSession::new()` took
+0.38 ms for the first iteration, then 0.09 ms min and 0.09 ms median. The
+first `eval("1 + 1")` took 0.13 ms for the first iteration, then 4.4 us min
+and 4.5 us median.
+
+Immediately after install, `MemoryInUse[]` reported 46,607 bytes (~45.5 KiB).
+This is the cooperative session memory-proxy byte count, not RSS.
+
+A host that links `rum-host` but does not construct a session pays only the
+link cost. Refresh these numbers when the workspace changes materially.
+
 ## Evaluating
 
 `HostSession::eval(source)` returns `HostEvalOutcome`.
