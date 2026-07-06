@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 600
+Builtin count: 605
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -166,6 +166,13 @@ Compares two strings alphabetically in the current string-order subset.
 Sorts strings using the current English alphabet subset with simple diacritic folding.
 
 - Attributes: `None`
+- Capability: `Pure`
+
+### Alphanumeric
+
+Evaluates to the uppercase, lowercase, and digit character-class string.
+
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Alternatives
@@ -955,6 +962,13 @@ Returns successive differences for plain lists, including the current non-negati
 Represents the current string-pattern atom for one ASCII decimal digit.
 
 - Attributes: `None`
+- Capability: `Pure`
+
+### DigitCharacters
+
+Evaluates to the ASCII digit character-class string.
+
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### DigitCount
@@ -2017,6 +2031,13 @@ Tests whether every character in a string is lowercase.
 - Attributes: `Protected`
 - Capability: `Pure`
 
+### LowercaseLetters
+
+Evaluates to the lowercase ASCII letter character-class string.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+
 ### MachineNumberQ
 
 Tests whether an expression is a machine number; currently always False because only exact numbers exist.
@@ -2790,6 +2811,13 @@ Adds the Protected attribute to one or more symbols.
 Represents the current string-pattern atom for one ASCII punctuation character.
 
 - Attributes: `None`
+- Capability: `Pure`
+
+### PunctuationCharacters
+
+Evaluates to the ASCII punctuation character-class string.
+
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Quantile
@@ -4125,6 +4153,13 @@ Lists stored tagged upvalue definitions for a symbol.
 ### UpperCaseQ
 
 Tests whether every character in a string is uppercase.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+
+### UppercaseLetters
+
+Evaluates to the uppercase ASCII letter character-class string.
 
 - Attributes: `Protected`
 - Capability: `Pure`

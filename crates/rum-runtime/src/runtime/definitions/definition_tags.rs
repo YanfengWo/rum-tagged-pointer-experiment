@@ -278,6 +278,7 @@ impl Session {
             }
         };
 
+        self.installed_system_own_values.remove(&symbol);
         self.bump_evaluation_epoch_for_symbol(&symbol);
     }
 }

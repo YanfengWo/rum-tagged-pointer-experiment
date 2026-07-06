@@ -1,7 +1,7 @@
 use crate::install_core;
 use rum_runtime::{
     Session,
-    kernel_api::{EntropyError, EntropyProvider, EntropySource},
+    kernel_api::{EntropyError, EntropyProvider, EntropySource, expr_as_string},
 };
 use std::collections::VecDeque;
 use std::sync::Mutex;
@@ -20,6 +20,13 @@ fn core_session_with_entropy(bytes: &[u8]) -> Session {
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
+}
+
+fn eval_string_value(session: &mut Session, source: &str) -> String {
+    let value = session.eval_text(source).unwrap().value;
+    expr_as_string(&value)
+        .expect("expression should evaluate to a string")
+        .to_string()
 }
 
 fn assert_password_failed(source: &str, expected_message: &str) {
@@ -62,6 +69,112 @@ impl EntropySource for SequentialEntropy {
         }
         Ok(())
     }
+}
+
+#[test]
+fn character_class_constants_have_pinned_values_and_compose() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_string_value(&mut session, "UppercaseLetters"),
+        crate::character_classes::UPPERCASE_LETTERS
+    );
+    assert_eq!(
+        eval_string_value(&mut session, "LowercaseLetters"),
+        crate::character_classes::LOWERCASE_LETTERS
+    );
+    assert_eq!(
+        eval_string_value(&mut session, "DigitCharacters"),
+        crate::character_classes::DIGIT_CHARACTERS
+    );
+    assert_eq!(
+        eval_string_value(&mut session, "PunctuationCharacters"),
+        crate::character_classes::PUNCTUATION_CHARACTERS
+    );
+    assert_eq!(
+        eval_string_value(&mut session, "Alphanumeric"),
+        crate::character_classes::ALPHANUMERIC
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Alphanumeric === UppercaseLetters <> LowercaseLetters <> DigitCharacters"
+        ),
+        "True"
+    );
+
+    let punctuation = format!(
+        "PunctuationCharacters === StringJoin[StringCases[{:?}, PunctuationCharacter]]",
+        crate::character_classes::PUNCTUATION_CHARACTERS
+    );
+    assert_eq!(eval_to_string(&mut session, &punctuation), "True");
+}
+
+#[test]
+fn character_class_constants_are_protected() {
+    let mut session = core_session();
+
+    for (name, value) in crate::character_classes::CHARACTER_CLASS_CONSTANTS {
+        let outcome = session
+            .eval_text(&format!("{name} = \"x\""))
+            .expect("assignment should evaluate");
+        assert_eq!(outcome.value.to_string(), "\"x\"");
+        assert!(
+            outcome.messages.iter().any(|message| {
+                message.symbol == "Set"
+                    && message.tag == "wrsym"
+                    && message.text.contains("Protected")
+            }),
+            "{name} messages={:?}",
+            outcome.messages
+        );
+        assert_eq!(eval_string_value(&mut session, name), *value);
+    }
+}
+
+#[test]
+fn random_text_composes_with_character_class_constants() {
+    let mut password_session = core_session_with_entropy(&[
+        0, 26, 52, 62, 1, 27, 53, 63, 2, 28, 54, 64, 3, 29, 55, 65, 4, 30, 56, 66,
+    ]);
+    let password_outcome = password_session
+        .eval_text(
+            "RandomPassword[Alphanumeric <> PunctuationCharacters, 20, \"Require\" -> {UppercaseLetters, LowercaseLetters, DigitCharacters, PunctuationCharacters}]",
+        )
+        .expect("RandomPassword should evaluate");
+    let password = expr_as_string(&password_outcome.value)
+        .expect("RandomPassword should return a string")
+        .to_string();
+
+    assert_eq!(password.chars().count(), 20);
+    assert!(
+        password
+            .chars()
+            .any(|ch| crate::character_classes::UPPERCASE_LETTERS.contains(ch))
+    );
+    assert!(
+        password
+            .chars()
+            .any(|ch| crate::character_classes::LOWERCASE_LETTERS.contains(ch))
+    );
+    assert!(
+        password
+            .chars()
+            .any(|ch| crate::character_classes::DIGIT_CHARACTERS.contains(ch))
+    );
+    assert!(
+        password
+            .chars()
+            .any(crate::character_classes::is_punctuation_character)
+    );
+
+    let mut string_session = core_session();
+    let digits = eval_string_value(
+        &mut string_session,
+        "SeedRandom[42]; RandomString[DigitCharacters, 6]",
+    );
+    assert_eq!(digits.chars().count(), 6);
+    assert!(digits.chars().all(|ch| ch.is_ascii_digit()));
 }
 
 #[test]

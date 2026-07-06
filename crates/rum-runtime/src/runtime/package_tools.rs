@@ -343,14 +343,19 @@ impl Session {
         include_attributes: bool,
     ) -> String {
         let mut blocks = Vec::new();
+        let symbols = symbols
+            .iter()
+            .copied()
+            .filter(|symbol| !self.is_installed_protected_builtin_own_value_symbol(symbol))
+            .collect::<Vec<_>>();
 
         if textual_dump {
-            if let Some(block) = self.render_dump_save_package_restore(symbols) {
+            if let Some(block) = self.render_dump_save_package_restore(&symbols) {
                 blocks.push(block);
             }
         }
 
-        for symbol in symbols {
+        for symbol in &symbols {
             let symbol_block = self.render_saved_symbol(symbol, include_attributes);
             if !symbol_block.is_empty() {
                 blocks.push(symbol_block);
@@ -669,6 +674,7 @@ impl Session {
         symbols
             .into_iter()
             .filter(|symbol| self.persist_context_is_included(symbol.context(), filters))
+            .filter(|symbol| !self.is_installed_protected_builtin_own_value_symbol(symbol))
             .collect()
     }
 

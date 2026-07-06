@@ -166,6 +166,16 @@ impl Session {
     }
 
     #[doc(hidden)]
+    pub fn install_system_own_value(&mut self, name: &str, value: Expr) {
+        let symbol = Symbol::system(name);
+        let definition = self.definitions.entry(symbol).or_default();
+        definition.own_value = Some(value);
+        definition.delayed_own_value = None;
+        self.installed_system_own_values.insert(symbol);
+        self.bump_evaluation_epoch_for_symbol(&symbol);
+    }
+
+    #[doc(hidden)]
     pub fn registered_builtin_specs(&self) -> impl Iterator<Item = &BuiltinSpec> {
         self.builtins.values()
     }
@@ -182,6 +192,7 @@ impl Session {
         let mut summaries = self
             .definitions
             .iter()
+            .filter(|(symbol, _)| !self.is_installed_protected_builtin_own_value_symbol(symbol))
             .map(|(symbol, definition)| SessionDefinitionSummary {
                 name: symbol.fully_qualified_name(),
                 has_own_value: definition.own_value.is_some()
@@ -204,9 +215,33 @@ impl Session {
     /// gensym counter, PRNG state, or contexts beyond what the generated source
     /// re-establishes. This is a text image, not a binary `.mx` dump.
     pub fn snapshot_definitions_source(&self) -> String {
-        let mut symbols = self.definitions.keys().cloned().collect::<Vec<_>>();
+        let mut symbols = self
+            .definitions
+            .keys()
+            .filter(|symbol| !self.is_installed_protected_builtin_own_value_symbol(symbol))
+            .cloned()
+            .collect::<Vec<_>>();
         symbols.sort();
         self.render_saved_symbols(&symbols, true, true)
+    }
+
+    pub(in crate::runtime) fn is_installed_protected_builtin_own_value_symbol(
+        &self,
+        symbol: &Symbol,
+    ) -> bool {
+        let Some(definition) = self.definitions.get(symbol) else {
+            return false;
+        };
+
+        symbol.is_system()
+            && self.installed_system_own_values.contains(symbol)
+            && self.builtin_spec_for_symbol(symbol).is_some()
+            && self.symbol_is_protected(symbol)
+            && definition.own_value.is_some()
+            && definition.delayed_own_value.is_none()
+            && definition.up_values.is_empty()
+            && definition.down_values.is_empty()
+            && definition.sub_values.is_empty()
     }
 
     pub fn context_names(&self) -> Vec<String> {

@@ -126,9 +126,11 @@ fn pattern_match_end_positions(
         StringPattern::WordCharacter => {
             single_char_match_end_positions(chars, start, is_string_word_character)
         }
-        StringPattern::PunctuationCharacter => {
-            single_char_match_end_positions(chars, start, |ch| ch.is_ascii_punctuation())
-        }
+        StringPattern::PunctuationCharacter => single_char_match_end_positions(
+            chars,
+            start,
+            crate::character_classes::is_punctuation_character,
+        ),
         StringPattern::RegularExpression(pattern) => {
             regex_pattern_match_ends(pattern, chars, start)
         }

@@ -223,6 +223,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::PREDICATE_BUILTINS,
         catalog::ASSOCIATION_BUILTINS,
         catalog::BYTE_BUILTINS,
+        catalog::CHARACTER_CLASS_BUILTINS,
         catalog::COMBINATORICS_BUILTINS,
         catalog::CONTROL_BUILTINS,
         catalog::CSV_BUILTINS,

@@ -55,6 +55,7 @@ pub struct Session {
     pub(in crate::runtime) entropy_source: Option<EntropyProvider>,
     pub(in crate::runtime) prng_state: PrngState,
     pub(in crate::runtime) definitions: DefinitionMap,
+    pub(in crate::runtime) installed_system_own_values: SymbolSet,
     pub(in crate::runtime) has_up_value_definitions: bool,
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(in crate::runtime) message_symbol_counts: SymbolCountMap,

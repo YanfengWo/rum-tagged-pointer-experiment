@@ -6,8 +6,7 @@ use rum_runtime::kernel_api::{
 
 mod password_policy;
 
-const DEFAULT_RANDOM_ALPHABET: &str =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const DEFAULT_RANDOM_ALPHABET: &str = crate::character_classes::ALPHANUMERIC;
 
 pub(crate) fn eval_seed_random(
     session: &mut Session,

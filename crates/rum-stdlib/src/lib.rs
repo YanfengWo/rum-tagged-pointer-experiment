@@ -10,6 +10,7 @@ mod associations;
 mod bytes;
 mod calculus;
 mod catalog;
+mod character_classes;
 mod combinatorics;
 mod control_flow;
 mod csv;
@@ -51,6 +52,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::BYTE_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::CHARACTER_CLASS_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::COMBINATORICS_BUILTINS {
@@ -110,6 +114,7 @@ pub fn install_core(session: &mut Session) {
     for spec in catalog::YAML_BUILTINS {
         session.register_builtin(*spec);
     }
+    character_classes::install(session);
 }
 
 #[cfg(test)]
