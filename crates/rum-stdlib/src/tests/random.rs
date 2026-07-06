@@ -22,6 +22,22 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
 }
 
+fn assert_password_failed(source: &str, expected_message: &str) {
+    let mut session = core_session();
+    let response = session.eval_text(source).unwrap();
+
+    assert_eq!(response.value.to_string(), "$Failed");
+    assert!(
+        response.messages.iter().any(|message| {
+            message.symbol == "RandomPassword"
+                && message.tag == "password"
+                && message.text.contains(expected_message)
+        }),
+        "messages={:?}",
+        response.messages
+    );
+}
+
 #[derive(Debug)]
 struct SequentialEntropy {
     bytes: Mutex<VecDeque<u8>>,
@@ -173,6 +189,114 @@ fn random_password_respects_custom_alphabet_membership() {
     assert_eq!(
         eval_to_string(&mut session, "RandomPassword[\"abc\", 6]"),
         "\"abcabc\""
+    );
+}
+
+#[test]
+fn random_password_require_policy_resamples_until_groups_are_present() {
+    let mut single = core_session_with_entropy(&[0, 0, 0, 1]);
+    let mut multiple = core_session_with_entropy(&[0, 0, 0, 0, 2, 0, 5, 1]);
+
+    assert_eq!(
+        eval_to_string(
+            &mut single,
+            "RandomPassword[\"ab\", 2, \"Require\" -> {\"b\"}]"
+        ),
+        "\"ab\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut multiple,
+            "RandomPassword[\"abc123\", 4, \"Require\" -> {\"c\", \"3\"}]"
+        ),
+        "\"ca3b\""
+    );
+}
+
+#[test]
+fn random_password_require_policy_rejects_malformed_groups() {
+    assert_password_failed(
+        "RandomPassword[\"abc\", 8, \"Require\" -> {\"xyz\"}]",
+        "required group \"xyz\" is not a subset",
+    );
+    assert_password_failed(
+        "RandomPassword[8, \"Require\" -> {\"!\"}]",
+        "required group \"!\" is not a subset",
+    );
+    assert_password_failed(
+        "RandomPassword[\"abc\", 8, \"Require\" -> {\"\"}]",
+        "required groups cannot be empty",
+    );
+}
+
+#[test]
+fn random_password_no_adjacent_repeats_policy_resamples() {
+    let mut session = core_session_with_entropy(&[0, 0, 1, 0, 0, 1, 0, 1]);
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "RandomPassword[\"ab\", 4, \"NoAdjacentRepeats\" -> True]"
+        ),
+        "\"abab\""
+    );
+}
+
+#[test]
+fn random_password_exclude_policy_resamples_and_can_ignore_case() {
+    let mut exact = core_session_with_entropy(&[0, 1, 2, 2, 0, 2, 0, 2]);
+    let mut ignore_case = core_session_with_entropy(&[0, 1, 2, 3, 2, 3, 0, 2]);
+
+    assert_eq!(
+        eval_to_string(
+            &mut exact,
+            "RandomPassword[\"abc\", 4, \"Exclude\" -> {\"ab\"}]"
+        ),
+        "\"acac\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut ignore_case,
+            "RandomPassword[\"aBcd\", 4, \"Exclude\" -> {\"ab\"}, \"IgnoreCase\" -> True]"
+        ),
+        "\"cdac\""
+    );
+}
+
+#[test]
+fn random_password_exclude_policy_rejects_empty_substrings() {
+    assert_password_failed(
+        "RandomPassword[\"abc\", 8, \"Exclude\" -> {\"\"}]",
+        "excluded substrings cannot be empty",
+    );
+}
+
+#[test]
+fn random_password_combined_policy_uses_whole_password_rejection() {
+    let mut session = core_session_with_entropy(&[0, 3, 1, 2, 0, 0, 3, 1, 0, 2, 1, 3]);
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "RandomPassword[\"ab12\", 4, \"Require\" -> {\"a\", \"2\"}, \"NoAdjacentRepeats\" -> True, \"Exclude\" -> {\"a2\"}]"
+        ),
+        "\"a1b2\""
+    );
+}
+
+#[test]
+fn random_password_policy_cap_exhaustion_fails_closed() {
+    assert_password_failed(
+        "RandomPassword[\"a\", 2, \"NoAdjacentRepeats\" -> True]",
+        "could not satisfy the password policy within 10000 attempts",
+    );
+}
+
+#[test]
+fn random_password_policy_rejects_non_positive_length() {
+    assert_password_failed(
+        "RandomPassword[0, \"Require\" -> {\"A\"}]",
+        "requires a positive length",
     );
 }
 

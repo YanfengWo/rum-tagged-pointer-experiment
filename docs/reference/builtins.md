@@ -2839,11 +2839,11 @@ Draws exact integers uniformly from the deterministic session PRNG.
 
 ### RandomPassword
 
-Draws an entropy-backed string of characters from an alphabet.
+Draws an entropy-backed password string from an alphabet, optionally enforcing policy constraints.
 
 - Attributes: `None`
 - Capability: `Random`
-- Limits: uses the host entropy provider directly with rejection sampling over the alphabet size to avoid modulo bias; it is not affected by SeedRandom or BlockRandom. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw.
+- Limits: uses the host entropy provider directly with rejection sampling over the alphabet size to avoid modulo bias; it is not affected by SeedRandom or BlockRandom. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw. RandomPassword[n, opts...] and RandomPassword[alphabet, n, opts...] accept string-keyed policy rules "Require" -> {group, ...}, "NoAdjacentRepeats" -> True|False, "Exclude" -> {substr, ...}, and "IgnoreCase" -> True|False. Require groups are exact character sets and must be non-empty subsets of the alphabet; IgnoreCase affects only Exclude matching. NoAdjacentRepeats forbids identical adjacent characters only, not sequential runs. Policy sampling draws whole candidate passwords uniformly from alphabet^n and accepts only candidates satisfying every constraint, so accepted outputs are uniform over the satisfying set. Unsatisfied policies fail closed after 10000 attempts.
 
 ### RandomSample
 

@@ -52,7 +52,7 @@ pub(crate) const RANDOM_BUILTINS: &[BuiltinSpec] = &[
     .with_capability(Capability::Random),
     BuiltinSpec::ordinary(
         "RandomPassword",
-        "Draws an entropy-backed string of characters from an alphabet.",
+        "Draws an entropy-backed password string from an alphabet, optionally enforcing policy constraints.",
         random::eval_random_password,
     )
     .with_capability(Capability::Random),

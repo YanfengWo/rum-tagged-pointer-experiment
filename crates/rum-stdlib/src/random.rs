@@ -4,6 +4,8 @@ use rum_runtime::kernel_api::{
     expr_as_exact_integer, expr_as_string, list_items, system_expr,
 };
 
+mod password_policy;
+
 const DEFAULT_RANDOM_ALPHABET: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -165,9 +167,19 @@ pub(crate) fn eval_random_password(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    if !(1..=2).contains(&args.len()) {
-        return Ok(session.invalid_call_with_arg_range("RandomPassword", args, 1, 2));
+    if args.is_empty() {
+        return Ok(session.invalid_call_with_arg_form(
+            "RandomPassword",
+            args,
+            "expected RandomPassword[n, opts...] or RandomPassword[alphabet, n, opts...]",
+        ));
     }
+
+    let no_option_call = args.len() == 1 || (args.len() == 2 && expr_as_string(&args[0]).is_some());
+    if !no_option_call {
+        return password_policy::eval_random_password_with_policy(session, head, args);
+    }
+
     let Some((alphabet, count)) = parse_random_text_args(session, args)? else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
