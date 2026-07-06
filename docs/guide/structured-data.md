@@ -549,3 +549,62 @@ $Failed
 ```
 
 INI encoding errors use `ToIni::ini`.
+
+## Validating Configuration
+
+`SchemaErrors[value, schema]` and `ConformSchema[value, schema]` validate
+nested configuration data after decoding. A schema is ordinary symbolic data:
+Association schemas describe required keys, `{spec}` describes a homogeneous
+List, and leaf specs are existing `rum` patterns checked through `MatchQ`.
+There is no separate type language.
+
+Both schema builtins hold their schema and option arguments. The value argument
+evaluates normally, so codec calls such as `FromYaml[...]` run before
+validation. Pattern leaves are held until the matcher resolves them. Defaults in
+`Optional[spec, default]` are evaluated only when the key is absent, then
+validated against `spec`.
+
+Required keys are strict by default: absent keys, extra keys, malformed schema
+shapes, and values that fail their leaf patterns all fail closed. `Optional`
+marks an Association key as absent-ok, and the two-argument form fills a default
+when `ConformSchema` succeeds.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ConformSchema[<|"name" -> "web", "port" -> 8080|>, <|"name" -> _String, "port" -> x_Integer /; x > 0, "debug" -> Optional[True | False, False]|>]'
+Association[Rule["name", "web"], Rule["port", 8080], Rule["debug", False]]
+```
+
+`SchemaErrors` returns plain data, one Association per error. Paths use dots for
+Association keys and one-based bracket indices for Lists.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'SchemaErrors[<|"port" -> "x", "extra" -> 1|>, <|"name" -> _String, "port" -> _Integer|>]'
+List[Association[Rule["Path", "name"], Rule["Message", "missing required key"]], Association[Rule["Path", "port"], Rule["Message", "expected to match _Integer, got \"x\""]], Association[Rule["Path", "extra"], Rule["Message", "extra key is not allowed"]]]
+```
+
+Extra keys can be allowed explicitly. They pass through unvalidated.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ConformSchema[<|"port" -> 8080, "extra" -> "kept"|>, <|"port" -> _Integer|>, "AllowExtraKeys" -> True]'
+Association[Rule["port", 8080], Rule["extra", "kept"]]
+```
+
+Decoded structured data composes directly with schemas:
+
+```text
+$ printf 'db:\n  host: h\n  port: 5432\n' | cargo run -q -p rum-cli -- --eval 'ConformSchema[FromYaml[$ScriptInput], <|"db" -> <|"host" -> _String, "port" -> _Integer|>|>]'
+Association[Rule["db", Association[Rule["host", "h"], Rule["port", 5432]]]]
+```
+
+Malformed schemas do not guess. They emit `::schema` and return `$Failed` from
+both schema builtins.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ConformSchema[<|"a" -> 1|>, <|"a" -> {_Integer, _Integer}|>]'
+$Failed
+! ConformSchema::schema: Schema path a: list schema must contain exactly one element; got 2
+```
+
+Validation errors are capped at 64 entries with a final summary entry, and
+`ConformSchema` emits one `ConformSchema::schema` message per capped error
+before returning `$Failed`.

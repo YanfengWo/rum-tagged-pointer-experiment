@@ -144,6 +144,8 @@ mod predicates;
 mod predicates_part2;
 #[path = "tests/random.rs"]
 mod random;
+#[path = "tests/schema.rs"]
+mod schema;
 #[path = "tests/session_requests/functional_iteration_resume.rs"]
 mod session_requests_functional_iteration_resume;
 #[path = "tests/session_requests/functional_sequence_resume.rs"]
@@ -234,6 +236,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::POLYNOMIAL_BUILTINS,
         catalog::RANDOM_BUILTINS,
         catalog::REWRITE_BUILTINS,
+        catalog::SCHEMA_BUILTINS,
         catalog::STRING_BUILTINS,
         catalog::STRUCTURE_BUILTINS,
         catalog::TOML_BUILTINS,

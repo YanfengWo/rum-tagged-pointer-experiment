@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 596
+Builtin count: 598
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -642,6 +642,13 @@ Confirms that an expression matches a held pattern in the current first-pass sub
 Confirms that an evaluation emits no matching messages in the current first-pass subset.
 
 - Attributes: `HoldAll`
+- Capability: `Pure`
+
+### ConformSchema
+
+Validates a value against a symbolic schema and returns the normalized value with defaults filled.
+
+- Attributes: `HoldRest`
 - Capability: `Pure`
 
 ### ConstantArray
@@ -3111,6 +3118,13 @@ Appends a textual first-pass serialization of selected symbols to a file.
 Evaluates a function across selected levels for side effects in the current first-pass subset.
 
 - Attributes: `None`
+- Capability: `Pure`
+
+### SchemaErrors
+
+Returns path-keyed validation errors for a value checked against a symbolic schema.
+
+- Attributes: `HoldRest`
 - Capability: `Pure`
 
 ### SeedRandom

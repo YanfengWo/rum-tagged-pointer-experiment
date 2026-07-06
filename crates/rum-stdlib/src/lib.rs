@@ -24,6 +24,7 @@ mod polynomials;
 mod predicates;
 mod random;
 mod rewrite_builtins;
+mod schema;
 mod strings;
 mod structure_ops;
 mod toml;
@@ -89,6 +90,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::REWRITE_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::SCHEMA_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::STRING_BUILTINS {
