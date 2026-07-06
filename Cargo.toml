@@ -22,7 +22,11 @@ keywords = ["symbolic", "term-rewriting", "sandbox", "scripting", "embedded"]
 categories = ["mathematics", "compilers"]
 
 [workspace.dependencies]
+crc32fast = { version = "1", default-features = false }
+md-5 = { version = "0.10", default-features = false }
 num-bigint = { version = "0.4", features = ["serde"] }
+sha1 = { version = "0.10", default-features = false }
+sha2 = { version = "0.10", default-features = false }
 num-integer = "0.1"
 num-traits = "0.2"
 serde = { version = "1", features = ["derive", "rc"] }

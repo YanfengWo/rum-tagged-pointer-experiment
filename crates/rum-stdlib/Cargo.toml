@@ -9,6 +9,10 @@ categories.workspace = true
 description = "Standard library builtin implementations and catalog specs for rum sessions."
 
 [dependencies]
+crc32fast.workspace = true
+md-5.workspace = true
 rum-core = { path = "../rum-core" }
 rum-runtime = { path = "../rum-runtime" }
 rum-syntax = { path = "../rum-syntax" }
+sha1.workspace = true
+sha2.workspace = true
