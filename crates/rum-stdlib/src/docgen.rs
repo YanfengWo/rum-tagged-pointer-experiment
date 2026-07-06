@@ -64,6 +64,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "implements rum's documented TOML 1.0 folk subset only: tables, arrays-of-tables, inline tables, strings, exact integers/decimals, booleans, and date/time tokens; inf/nan and unsupported TOML surface fail closed. Offset date-times decode as exact Unix-second instants, while local dates/times decode as Lists.",
     ),
     (
+        "FromXml",
+        "parses a value-oriented XML element tree only: declaration syntax is validated but not represented, comments are dropped, CDATA becomes text, namespaces remain verbatim, whitespace-only runs around element content are dropped, and DTD/DOCTYPE declarations are deliberately rejected.",
+    ),
+    (
         "Prime",
         "uses a bounded integer-work budget and sieve-based prime generation for supported exact positive integer indices.",
     ),
@@ -115,6 +119,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "ToToml",
         "renders only top-level Associations with String keys, exact integers, terminating rationals, booleans, strings, Lists, nested Associations, and Lists of Associations; nested Associations use sub-table headers unless inline form is required to preserve same-level key order. It never synthesizes TOML datetime syntax, so date Lists and timestamps encode as arrays or numbers.",
+    ),
+    (
+        "ToXml",
+        "renders only well-formed XmlElement[tag_String, attrs_Association, children_List] trees with String attributes and String/XmlElement children; names use the documented ASCII XML-name subset, compact output is default, and Indent pretty-prints only element-only content.",
     ),
     (
         "StringDedent",

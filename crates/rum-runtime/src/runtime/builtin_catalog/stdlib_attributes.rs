@@ -313,6 +313,7 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "FromIni",
     "FromJson",
     "FromToml",
+    "FromXml",
     "FullForm",
     "Greater",
     "GatherBy",
@@ -505,6 +506,7 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "ToIni",
     "ToJson",
     "ToToml",
+    "ToXml",
     "TokenizeWith",
     "ToString",
     "ToUpperCase",
@@ -525,6 +527,7 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "WhitespaceCharacter",
     "WordBoundary",
     "WordCharacter",
+    "XmlElement",
 ];
 
 pub(super) fn stdlib_builtin_attribute_specs() -> &'static [BuiltinAttributeSpec] {

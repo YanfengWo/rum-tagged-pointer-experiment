@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 590
+Builtin count: 593
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1439,6 +1439,14 @@ Parses rum's documented fail-closed TOML subset into exact rum values.
 - Attributes: `None`
 - Capability: `Pure`
 - Limits: implements rum's documented TOML 1.0 folk subset only: tables, arrays-of-tables, inline tables, strings, exact integers/decimals, booleans, and date/time tokens; inf/nan and unsupported TOML surface fail closed. Offset date-times decode as exact Unix-second instants, while local dates/times decode as Lists.
+
+### FromXml
+
+Parses XML text into a symbolic XmlElement tree, rejecting DTDs and unsupported XML surface.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: parses a value-oriented XML element tree only: declaration syntax is validated but not represented, comments are dropped, CDATA becomes text, namespaces remain verbatim, whitespace-only runs around element content are dropped, and DTD/DOCTYPE declarations are deliberately rejected.
 
 ### FullForm
 
@@ -3898,6 +3906,14 @@ Converts a string or list of strings to uppercase using the current Unicode-awar
 - Attributes: `None`
 - Capability: `Pure`
 
+### ToXml
+
+Renders a well-formed XmlElement tree as XML text.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: renders only well-formed XmlElement[tag_String, attrs_Association, children_List] trees with String attributes and String/XmlElement children; names use the documented ASCII XML-name subset, compact output is default, and Indent pretty-prints only element-only content.
+
 ### Together
 
 Combines rational-function terms over a common polynomial denominator.
@@ -4161,6 +4177,13 @@ Represents the current string-pattern anchor at a transition between word and no
 ### WordCharacter
 
 Represents the current string-pattern atom for one alphabetic, ASCII digit, or underscore character.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### XmlElement
+
+Represents an inert XML element as XmlElement[tag, attrs, children].
 
 - Attributes: `None`
 - Capability: `Pure`

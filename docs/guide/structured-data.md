@@ -1,8 +1,9 @@
 # Structured Data
 
-`FromJson`/`ToJson`, `FromToml`/`ToToml`, `FromCsv`/`ToCsv`, and
-`FromIni`/`ToIni` convert between common structured-data text formats and the
-representable subset of `rum` expressions.
+`FromJson`/`ToJson`, `FromXml`/`ToXml`, `FromToml`/`ToToml`,
+`FromCsv`/`ToCsv`, and `FromIni`/`ToIni` convert between common
+structured-data text formats and the representable subset of `rum`
+expressions.
 
 They are pure string codecs. They do not read or write files, do not consult
 host capabilities beyond `Pure`, and fail closed with `$Failed` plus a runtime
@@ -165,6 +166,93 @@ with standard library functions before encoding again:
 ```text
 $ cargo run -q -p rum-cli -- --eval 'ToJson[Mean[Map[Lookup[#, "v"] &, First[GatherBy[FromJson["[{\"g\":\"a\",\"v\":1},{\"g\":\"a\",\"v\":3},{\"g\":\"b\",\"v\":5}]"], Lookup[#, "g"] &]]]]]'
 "2"
+```
+
+## XML Mapping
+
+`FromXml[str]` parses XML into a symbolic element tree:
+
+```text
+XmlElement[tag_String, attrs_Association, children_List]
+```
+
+Attribute keys and values are Strings, with attribute order preserved by the
+Association. Children are `XmlElement[...]` values and String text nodes.
+`XmlElement` is an inert constructor head; it has no evaluator behavior.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromXml["<cfg env=\"dev\"><db host=\"h\" port=\"5432\"/><note>a &amp; b</note><![CDATA[<raw>]]></cfg>"]'
+XmlElement["cfg", Association[Rule["env", "dev"]], List[XmlElement["db", Association[Rule["host", "h"], Rule["port", "5432"]], List[]], XmlElement["note", Association[], List["a & b"]], "<raw>"]]
+```
+
+The decoder supports an optional XML declaration, ordinary elements,
+single-quoted or double-quoted attributes, self-closing elements, the five
+predefined XML entities, decimal and hexadecimal numeric entities, CDATA
+sections, and comments. XML declarations are validated but not represented.
+CDATA becomes text, and comments are dropped because these codecs are
+value-oriented; span-oriented token workflows belong in `TokenizeWith`.
+
+Whitespace-only text runs around element content are dropped as formatting.
+Text containing any non-whitespace is kept verbatim, with no trimming.
+Adjacent text and CDATA runs merge into one String.
+
+Namespaces are not resolved. Prefixed element and attribute names such as
+`ns:item` and `ns:id` are kept verbatim as Strings.
+
+DTD processing is deliberately unsupported. `FromXml` rejects `<!DOCTYPE`
+outright and never processes external or parameter entities.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromXml["<!DOCTYPE x><x/>"]'
+$Failed
+! FromXml::xml: Invalid XML at byte offset 0: DTD/DOCTYPE declarations are deliberately unsupported; FromXml never processes DTDs or external entities.
+```
+
+XML parse errors use `FromXml::xml` and name the byte offset. Mismatched or
+unclosed tags, duplicate attributes, unknown named entities, bare `&` or `<`
+in text, multiple root elements, non-whitespace after the root, unquoted
+attribute values, and processing instructions other than the XML declaration
+fail closed.
+
+## XML Output
+
+`ToXml[element]` renders a well-formed `XmlElement` tree. Tag and attribute
+names use the documented ASCII XML-name subset: an ASCII letter, `_`, or `:`
+first, followed by ASCII letters, digits, `_`, `-`, `.`, or `:`. Text and
+attribute values are entity-escaped. Empty child lists self-close. Attributes
+emit in Association order.
+Empty text nodes fail closed because XML has no representation that can
+round-trip them as distinct children. Whitespace-only text nodes next to element
+children also fail closed because `FromXml` drops inter-element whitespace.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToXml[XmlElement["a", <|"x" -> "1<2"|>, {XmlElement["b", <||>, {}], "t&t"}]]'
+"<a x=\"1&lt;2\"><b/>t&amp;t</a>"
+```
+
+Default output is compact. `ToXml[element, "Indent" -> n]` pretty-prints only
+element-only content. Mixed content, where element and text siblings appear
+together, is never reformatted because inserting indentation would change the
+round-trip value.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToXml[XmlElement["r", <||>, {XmlElement["a", <||>, {"x"}]}], "Indent" -> 2]'
+"<r>\n  <a>x</a>\n</r>"
+```
+
+The accepted compact subset round-trips exactly:
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromXml[ToXml[XmlElement["r", <||>, {"mixed ", XmlElement["i", <||>, {"x"}], " tail"}]]]'
+XmlElement["r", Association[], List["mixed ", XmlElement["i", Association[], List["x"]], " tail"]]
+```
+
+Because XML text nodes are ordinary Strings, XML values compose with the other
+structured-data codecs:
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToJson[<|"port" -> FromXml["<c><p>8080</p></c>"][[3, 1, 3, 1]]|>]'
+"{\"port\":\"8080\"}"
 ```
 
 ## TOML Mapping
