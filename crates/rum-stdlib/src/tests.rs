@@ -16,6 +16,8 @@ mod calculus;
 mod catalog_capabilities;
 #[path = "tests/combinatorics.rs"]
 mod combinatorics;
+#[path = "tests/datetime.rs"]
+mod datetime;
 #[path = "tests/debug_tools_evaluation.rs"]
 mod debug_tools_evaluation;
 #[path = "tests/debug_tools_reports.rs"]
@@ -206,6 +208,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::ASSOCIATION_BUILTINS,
         catalog::COMBINATORICS_BUILTINS,
         catalog::CONTROL_BUILTINS,
+        catalog::DATETIME_BUILTINS,
         catalog::FUNCTIONAL_BUILTINS,
         catalog::INTEGER_DIGITS_BUILTINS,
         catalog::JSON_BUILTINS,

@@ -8,12 +8,36 @@ pub const REGEN_COMMAND: &str = "cargo run -p rum-stdlib --bin generate-builtin-
 
 pub const LIMITS: &[(&str, &str)] = &[
     (
+        "AbsoluteTime",
+        "the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z; date-list conversion uses UTC, the proleptic Gregorian calendar, and no leap seconds.",
+    ),
+    (
+        "DateDifference",
+        "supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.",
+    ),
+    (
+        "DateList",
+        "uses UTC, the proleptic Gregorian calendar, and no leap seconds; the zero-argument current-time form requires Capability::Clock.",
+    ),
+    (
+        "DatePlus",
+        "supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.",
+    ),
+    (
+        "DateString",
+        "renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.",
+    ),
+    (
         "DumpSave",
         "writes a textual dump format; it is not a binary image.",
     ),
     (
         "Factor",
         "handles rational-coefficient polynomial expressions; current factorization extracts monomial factors and recursively splits discovered linear factors.",
+    ),
+    (
+        "FromDateString",
+        "accepts only the documented ISO 8601 subset with optional Z or fixed +/-HH:MM offsets; there is no time-zone database and no leap-second support.",
     ),
     (
         "Prime",

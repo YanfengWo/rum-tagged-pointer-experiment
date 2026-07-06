@@ -33,3 +33,23 @@ fn random_catalog_capabilities_match_dispatch_surface() {
     assert_eq!(capability("SeedRandom"), Capability::Pure);
     assert_eq!(capability("RandomBytes"), Capability::Random);
 }
+
+#[test]
+fn datetime_catalog_capabilities_match_dual_form_surface() {
+    fn capability(name: &str) -> Capability {
+        crate::catalog::DATETIME_BUILTINS
+            .iter()
+            .find(|spec| spec.name == name)
+            .expect("datetime builtin should be cataloged")
+            .capability
+    }
+
+    assert_eq!(capability("DateList"), Capability::Pure);
+    assert_eq!(capability("DateString"), Capability::Pure);
+    assert_eq!(capability("FromDateString"), Capability::Pure);
+    assert_eq!(capability("DatePlus"), Capability::Pure);
+    assert_eq!(capability("DateDifference"), Capability::Pure);
+    assert_eq!(capability("DayOfWeek"), Capability::Pure);
+    assert_eq!(capability("LeapYearQ"), Capability::Pure);
+    assert_eq!(capability("DaysInMonth"), Capability::Pure);
+}

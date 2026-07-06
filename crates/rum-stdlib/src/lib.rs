@@ -11,6 +11,7 @@ mod calculus;
 mod catalog;
 mod combinatorics;
 mod control_flow;
+mod datetime;
 mod functional_ops;
 mod integer_digits;
 mod json;
@@ -46,6 +47,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::CONTROL_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::DATETIME_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::FUNCTIONAL_BUILTINS {

@@ -151,6 +151,29 @@ There is no `RandomReal` in the current exact-number boundary. A script that
 needs a rational value in `[0, 1)` should draw
 `RandomInteger[{0, d - 1}]/d` explicitly.
 
+## Date And Time Boundary
+
+`AbsoluteTime[]` returns rum's timestamp value: exact rational seconds since
+the Unix epoch, `1970-01-01T00:00:00Z`.
+
+The folk date/time subset is UTC-first and exact. Date lists have the form
+`{y, mo, d, h, mi, s}`; shorter lists fill omitted fields with Jan 1 and
+midnight defaults, and `s` may be an exact rational so sub-second values round
+trip through `DateList` and `AbsoluteTime`.
+
+Civil-calendar conversion uses the proleptic Gregorian calendar for all years,
+including negative years. There is no leap-second model.
+
+String parsing and rendering are deliberately narrow. `DateString` renders ISO
+8601 UTC strings ending in `Z`, and `FromDateString` accepts the documented ISO
+subset with optional `Z` or fixed `+/-HH:MM` offsets. There is no time-zone
+database, daylight-saving rule table, locale calendar, or named-zone support.
+
+`DatePlus` and `DateDifference` support only fixed-duration units: Seconds,
+Minutes, Hours, Days, and Weeks. Calendar units such as Months and Years are
+outside the current folk subset because they require additional civil-calendar
+policy.
+
 This is not a claim of functional-programming referential transparency. The
 language has session state by design.
 

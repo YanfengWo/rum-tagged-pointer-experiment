@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 544
+Builtin count: 552
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -99,10 +99,11 @@ Returns the absolute value of exact integers and rationals.
 
 ### AbsoluteTime
 
-Returns the current Unix time or converts a first-pass DateObject to exact seconds.
+Returns the current exact rational Unix timestamp, or converts a valid UTC date list to exact seconds since 1970-01-01T00:00:00Z.
 
 - Attributes: `None`
 - Capability: `Clock`
+- Limits: the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z; date-list conversion uses UTC, the proleptic Gregorian calendar, and no leap seconds.
 
 ### AbsoluteTiming
 
@@ -727,9 +728,55 @@ Differentiates exact arithmetic, rational-function, and abstract-function expres
 - Attributes: `HoldRest`
 - Capability: `Pure`
 
+### DateDifference
+
+Returns the exact fixed-duration difference between two timestamps or date lists.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.
+
+### DateList
+
+Converts an exact Unix timestamp to a UTC date list, or reads the current UTC date list in the zero-argument form.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses UTC, the proleptic Gregorian calendar, and no leap seconds; the zero-argument current-time form requires Capability::Clock.
+
 ### DateObjectQ
 
 Tests whether an expression has a DateObject head in the current structural subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### DatePlus
+
+Adds an exact fixed-duration offset to an exact timestamp or date list.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.
+
+### DateString
+
+Formats an exact timestamp or date list as an ISO 8601 UTC string.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.
+
+### DayOfWeek
+
+Returns the ISO weekday symbol for an exact timestamp or date list.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### DaysInMonth
+
+Returns the number of days in a proleptic Gregorian month.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1275,6 +1322,14 @@ Tests whether no subexpression matches a pattern on levels specified by a standa
 - Attributes: `None`
 - Capability: `Pure`
 
+### FromDateString
+
+Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timestamp.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: accepts only the documented ISO 8601 subset with optional Z or fixed +/-HH:MM offsets; there is no time-zone database and no leap-second support.
+
 ### FromDigits
 
 Constructs an exact integer from a list or string of digits.
@@ -1707,6 +1762,13 @@ Returns the last structural element, with an optional held default.
 Counts atomic leaves in an expression's full structural tree, including heads.
 
 - Attributes: `Protected`
+- Capability: `Pure`
+
+### LeapYearQ
+
+Tests whether an exact integer year is a leap year in the proleptic Gregorian calendar.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### Length

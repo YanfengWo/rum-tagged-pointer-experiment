@@ -321,6 +321,48 @@ fn capability_policy_can_allow_clock_without_filesystem() {
 }
 
 #[test]
+fn sandboxed_host_config_blocks_datetime_current_readers_but_allows_pure_forms() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_sandbox_denied(&mut session, "DateList[]");
+    assert_sandbox_denied(&mut session, "DateString[]");
+
+    let date_list = successful_eval(session.eval("DateList[0]"));
+    assert_eq!(date_list.value.text, "List[1970, 1, 1, 0, 0, 0]");
+    assert!(date_list.messages.is_empty(), "{:?}", date_list.messages);
+
+    let date_string = successful_eval(session.eval("DateString[0]"));
+    assert_eq!(date_string.value.text, "\"1970-01-01T00:00:00Z\"");
+    assert!(
+        date_string.messages.is_empty(),
+        "{:?}",
+        date_string.messages
+    );
+}
+
+#[test]
+fn clock_policy_allows_datetime_current_readers() {
+    let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Clock]);
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_capability_policy(policy))
+        .build();
+
+    let date_list = successful_eval(session.eval("DateList[]"));
+    assert_ne!(date_list.value.text, "$Failed");
+    assert!(date_list.messages.is_empty(), "{:?}", date_list.messages);
+
+    let date_string = successful_eval(session.eval("DateString[]"));
+    assert_ne!(date_string.value.text, "$Failed");
+    assert!(
+        date_string.messages.is_empty(),
+        "{:?}",
+        date_string.messages
+    );
+}
+
+#[test]
 fn permissive_policy_without_file_provider_returns_noio_failed() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::default().without_file_io())
