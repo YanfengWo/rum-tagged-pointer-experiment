@@ -692,3 +692,15 @@ consistency, Shortest/MatchQ fix; the whole pattern language incl. the
 pre-existing undocumented RegularExpression subset cataloged in reference +
 new guide chapter with real transcripts; matrix all-W. Workspace 1151/0.
 Pipeline-citizenship brief planned as 139 (Random→140, date/time→141).
+
+## 2026-07-07 — briefs 138-139 gated: JSON codec + pipeline citizenship
+
+brief-138 (a067bda): FromJson/ToJson, zero deps, all numbers exact
+(decimals→rationals), fail-closed discipline with offset-bearing messages,
+guide chapter structured-data.md; reference 536. brief-139 (8c11068):
+filter mode on non-TTY stdin, $ScriptInput verbatim data binding,
+$ScriptArgs, stream discipline pinned by tests, quiet EPIPE exit; the
+config-conversion shell one-liner works end to end. Workspace 1166/0.
+Python-stdlib sweep candidates and the TokenizeWith/RumTokens mechanism
+(highlighting for dun as rum-package grammars, no grammar zoo) recorded in
+TODO. Next: brief-140 Random family.

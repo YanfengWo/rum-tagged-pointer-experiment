@@ -60,7 +60,7 @@ string-pattern surface. Batches, evidence-ranked:
   round out the byte toolbox. Hex-string default output; `Md5`/`Sha1`
   limits-noted as non-collision-resistant. Hashing yes, encryption/signing
   never in kernel. One-time network step (cargo fetch) done by Claude.
-- [ ] brief-139 (S): rum-cli pipeline citizenship (host-side only, zero
+- [x] brief-139 DONE (8c11068): rum-cli pipeline citizenship (host-side only, zero
   kernel impact): non-TTY stdin enters filter mode (no banner/prompt; `-`
   reads the program from stdin); piped DATA reaches `--eval` scripts as a
   host-bound `$ScriptInput` string; stream discipline pinned by tests
@@ -76,6 +76,16 @@ string-pattern surface. Batches, evidence-ranked:
   honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
 - [ ] brief-141 (M): date/time folk subset — pure parse/format/arithmetic
   on timestamp values; current-time readers are `Clock`.
+- [ ] Tokenizer mechanism for highlighting and text tooling (S/M):
+  `TokenizeWith[rules, str]` — an error-tolerant span driver over the
+  (brief-137) string-pattern language: rules as symbolic data
+  (`{"class" -> pattern, …}`), longest-match + rule priority, unmatched
+  input becomes `"text"` spans, output `{class, {start, end}}` with the
+  `StringPosition` 1-based convention; plus `RumTokens[str]` exposing
+  rum-syntax's own span/trivia lexer. Grammar DEFINITIONS are rum packages
+  (dun highlighting plugins), never stdlib code — no grammar zoo. Codec
+  family stays fail-closed/value-oriented; this is the tolerant/span-
+  oriented counterpart.
 - [ ] Python-stdlib sweep candidates (2026-07-06, pure/safe filter over
   docs.python.org/3/library): tier-1 small batch — `textwrap`-style
   `StringWrap`/`StringIndent`/`StringDedent`; `html` escape/unescape;
