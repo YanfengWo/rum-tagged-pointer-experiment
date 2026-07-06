@@ -3,6 +3,29 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
+## Usability Pass (deferred — after breadth "works")
+
+Current focus is the "works" layer: get every intended capability
+functional. Once breadth is in, a distinct pass raises the "works well"
+layer. The `RandomPassword` arc (briefs 157-159) is the worked example —
+"works" (157) then three usability axes layered on: flexibility (158's
+policy constraints), convenience (159's named constants), safety (159's
+`Protected`). The usability axes, as checkable review lenses (more may be
+added later):
+
+- **Flexibility** — can it meet complex real-world needs? (options,
+  composability, escape hatches for the non-default case).
+- **Convenience** — can a user turn intent into code easily? (named
+  constants over literals, sensible defaults, readable option surfaces,
+  the common case being short).
+- **Safety** — does the design prevent foot-guns? (`Protected` constants,
+  fail-closed defaults, capability gating, determinism where surprising
+  non-determinism would bite).
+
+Method when the pass starts: sweep the builtin catalog family by family
+against these axes; each gap becomes a small brief (the 158/159 shape).
+Not started — breadth first.
+
 ## Release Transformation — COMPLETE (2026-07-06)
 
 - [x] The whole line (M0 + briefs 124-131 + M1/M1.5/M2): differential-testing
