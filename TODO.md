@@ -173,6 +173,17 @@ string-pattern surface. Batches, evidence-ranked:
   the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic
   capability.
 
+## Pre-Release Fixes (found by the brief-151 stress corpus)
+
+- [ ] **Legal large-list pipeline dies by native stack overflow** (escapes
+  the brief-131 guard): `Fold[Plus, 0, Map[Length, GatherBy[Select[
+  Range[50000], EvenQ], Function[Mod[#, 10]]]]]` aborts the process.
+  Kernel-internal recursion that never passes the eval-loop poll point.
+  Fix = brief-152.
+- [ ] **snapshot/restore aborts at ~100-500 generated definitions** by the
+  same mechanism (host-critical: snapshot is an embedding feature).
+  Fix = brief-152.
+
 ## Standing Engineering Debt
 
 - [ ] Matcher: three known gaps in `Flat`+`Orderless`+`Optional` combinations

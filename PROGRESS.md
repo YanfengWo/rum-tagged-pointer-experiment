@@ -780,3 +780,14 @@ highest risk — the suspension continuation serializers at 0% (never-run
 deserializers). Contract note: MemoryConstraintExceeded deliberately has no
 TerminatedEvaluation mapping (MemoryConstrained consumes it) — to be made
 explicit in docs at M1. brief-150 (test-only buildout) dispatched.
+
+## 2026-07-07 — brief-151: the stress corpus earned its keep immediately
+
+Corpus landed (guard-adjacent pins incl. exact MAX_PARSE_DEPTH boundary,
+exact-result rewriting workloads, cancel/timeout under load, battered
+session, snapshot at scale; 1289/0, 9 ignored) and DISCOVERED TWO real
+bugs: a legal 50k-element list pipeline and 100-500-definition
+snapshot/restore both die by native stack overflow — kernel-internal
+recursion that never reaches the eval-loop poll point where the
+native_stack_limit check lives. brief-152 (diagnose + extend the guard)
+dispatched.
