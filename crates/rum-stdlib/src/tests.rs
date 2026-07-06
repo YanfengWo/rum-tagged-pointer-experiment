@@ -22,6 +22,8 @@ mod codecs_text;
 mod codecs_toml;
 #[path = "tests/codecs_xml.rs"]
 mod codecs_xml;
+#[path = "tests/codecs_yaml.rs"]
+mod codecs_yaml;
 #[path = "tests/combinatorics.rs"]
 mod combinatorics;
 #[path = "tests/datetime.rs"]
@@ -232,6 +234,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::STRUCTURE_BUILTINS,
         catalog::TOML_BUILTINS,
         catalog::XML_BUILTINS,
+        catalog::YAML_BUILTINS,
     ]
     .into_iter()
     .flatten()

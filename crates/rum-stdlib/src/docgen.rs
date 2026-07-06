@@ -68,6 +68,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "parses a value-oriented XML element tree only: declaration syntax is validated but not represented, comments are dropped, CDATA becomes text, namespaces remain verbatim, whitespace-only runs around element content are dropped, and DTD/DOCTYPE declarations are deliberately rejected.",
     ),
     (
+        "FromYaml",
+        "implements rum's documented YAML sane block subset only: block mappings and sequences, plain and quoted scalars, literal | and |- blocks, comments, and empty flow {} / []; anchors, aliases, tags, directives, document markers, merge keys, folded blocks, non-empty flow collections, duplicate keys, tabs in indentation, and ambiguous same-indent collection mixes fail closed.",
+    ),
+    (
         "Prime",
         "uses a bounded integer-work budget and sieve-based prime generation for supported exact positive integer indices.",
     ),
@@ -123,6 +127,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "ToXml",
         "renders only well-formed XmlElement[tag_String, attrs_Association, children_List] trees with String attributes and String/XmlElement children; names use the documented ASCII XML-name subset, compact output is default, and Indent pretty-prints only element-only content.",
+    ),
+    (
+        "ToYaml",
+        "renders only Associations with String keys, Lists, exact integers, terminating rationals, True, False, Null, and Strings; safe plain strings use the documented Norway-safe rule, other strings are double-quoted or literal blocks, and unsupported YAML surface is never synthesized.",
     ),
     (
         "StringDedent",

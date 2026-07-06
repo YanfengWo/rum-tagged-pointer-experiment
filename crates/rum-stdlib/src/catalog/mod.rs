@@ -20,6 +20,7 @@ mod strings;
 mod structure;
 mod toml;
 mod xml;
+mod yaml;
 
 pub(crate) use arithmetic::ARITHMETIC_BUILTINS;
 pub(crate) use associations::ASSOCIATION_BUILTINS;
@@ -43,3 +44,4 @@ pub(crate) use strings::STRING_BUILTINS;
 pub(crate) use structure::STRUCTURE_BUILTINS;
 pub(crate) use toml::TOML_BUILTINS;
 pub(crate) use xml::XML_BUILTINS;
+pub(crate) use yaml::YAML_BUILTINS;

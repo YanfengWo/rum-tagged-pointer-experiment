@@ -28,6 +28,7 @@ mod strings;
 mod structure_ops;
 mod toml;
 mod xml;
+mod yaml;
 
 #[doc(hidden)]
 pub mod docgen;
@@ -100,6 +101,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::XML_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::YAML_BUILTINS {
         session.register_builtin(*spec);
     }
 }

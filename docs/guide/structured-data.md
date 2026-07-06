@@ -1,7 +1,7 @@
 # Structured Data
 
 `FromJson`/`ToJson`, `FromXml`/`ToXml`, `FromToml`/`ToToml`,
-`FromCsv`/`ToCsv`, and `FromIni`/`ToIni` convert between common
+`FromYaml`/`ToYaml`, `FromCsv`/`ToCsv`, and `FromIni`/`ToIni` convert between common
 structured-data text formats and the representable subset of `rum`
 expressions.
 
@@ -328,6 +328,74 @@ The TOML-representable subset round-trips through `FromToml[ToToml[x]]`.
 ```text
 $ cargo run -q -p rum-cli -- --eval 'FromToml[ToToml[<|"k" -> <|"x" -> 1|>, "arr" -> {1, 1/4, True}|>]]'
 Association[Rule["arr", List[1, 1/4, True]], Rule["k", Association[Rule["x", 1]]]]
+```
+
+## YAML Mapping
+
+`FromYaml[str]` parses rum's YAML sane subset only. Full YAML is a permanent
+non-goal for this codec; unsupported YAML features fail closed instead of being
+guessed.
+
+| YAML subset | `rum` value |
+| --- | --- |
+| block mapping | `Association` with String keys and insertion order preserved |
+| block sequence | `List` |
+| plain scalar `true`, `false` | `True`, `False` |
+| plain scalar `null`, `~`, or an empty value | `Null` |
+| decimal integer | exact `Integer` |
+| decimal or exponent number | exact base-10 value; `0.1` becomes `1/10` |
+| other plain scalar | String |
+| single-quoted or double-quoted scalar | String |
+| literal block `|` / `|-` | String with clip / strip chomping |
+| `{}` / `[]` in scalar position | empty `Association` / empty `List` |
+
+Only lowercase `true`, `false`, and `null` are typed. `yes`, `no`, `on`, and
+`off` stay Strings, including the common Norway-shaped value:
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromYaml["country: no\npi: 3.14\nempty:\n"]'
+Association[Rule["country", "no"], Rule["pi", 157/50], Rule["empty", Null]]
+```
+
+Supported syntax is block mappings and sequences with spaces-only indentation,
+plain scalars, single quotes with doubled `''`, double quotes with JSON-style
+escapes, comments, blank lines, literal blocks `|` and `|-`, and the two empty
+flow forms `{}` and `[]`. Anchors, aliases, tags, directives, document markers,
+merge keys, folded blocks, non-empty flow collections, duplicate mapping keys,
+tabs in indentation, inconsistent indentation, and same-indent sequence/mapping
+mixes fail closed with `FromYaml::yaml` and a byte offset.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromYaml["a: &x 1"]'
+$Failed
+! FromYaml::yaml: Invalid YAML at byte offset 3: YAML anchors are unsupported.
+```
+
+## YAML Output
+
+`ToYaml[value]` renders Associations with String keys, Lists, exact Integers,
+terminating Rationals, `True`, `False`, `Null`, and Strings. Mappings and
+sequences use 2-space indentation. Empty nested Associations and Lists use the
+two documented flow forms `{}` and `[]`.
+
+Strings use plain style only when they are nonempty ASCII, start with a letter,
+contain only letters, digits, spaces, `_`, `.`, `/`, and `-`, have no leading
+or trailing space, are not case-insensitively one of
+`true/false/null/yes/no/on/off/~`, and do not parse as a number. Other
+single-line strings are double-quoted. Multiline strings emit as `|-` when they
+do not end in a newline and `|` when they end in one newline; strings that need
+YAML's unsupported keep-chomping mode fail closed.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToYaml[<|"a" -> {1, "no", "3.14"}, "b" -> <||>|>]'
+"a:\n  - 1\n  - \"no\"\n  - \"3.14\"\nb: {}"
+```
+
+The YAML-representable subset round-trips through exact values:
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromYaml[ToYaml[<|"k" -> {"null", "x y", 1/4}|>]]'
+Association[Rule["k", List["null", "x y", 1/4]]]
 ```
 
 ## CSV Mapping

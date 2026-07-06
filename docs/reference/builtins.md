@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 593
+Builtin count: 595
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1447,6 +1447,14 @@ Parses XML text into a symbolic XmlElement tree, rejecting DTDs and unsupported 
 - Attributes: `None`
 - Capability: `Pure`
 - Limits: parses a value-oriented XML element tree only: declaration syntax is validated but not represented, comments are dropped, CDATA becomes text, namespaces remain verbatim, whitespace-only runs around element content are dropped, and DTD/DOCTYPE declarations are deliberately rejected.
+
+### FromYaml
+
+Parses rum's documented fail-closed YAML block subset into exact rum values.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: implements rum's documented YAML sane block subset only: block mappings and sequences, plain and quoted scalars, literal | and |- blocks, comments, and empty flow {} / []; anchors, aliases, tags, directives, document markers, merge keys, folded blocks, non-empty flow collections, duplicate keys, tabs in indentation, and ambiguous same-indent collection mixes fail closed.
 
 ### FullForm
 
@@ -3913,6 +3921,14 @@ Renders a well-formed XmlElement tree as XML text.
 - Attributes: `None`
 - Capability: `Pure`
 - Limits: renders only well-formed XmlElement[tag_String, attrs_Association, children_List] trees with String attributes and String/XmlElement children; names use the documented ASCII XML-name subset, compact output is default, and Indent pretty-prints only element-only content.
+
+### ToYaml
+
+Renders the YAML-representable subset of rum values as YAML text.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: renders only Associations with String keys, Lists, exact integers, terminating rationals, True, False, Null, and Strings; safe plain strings use the documented Norway-safe rule, other strings are double-quoted or literal blocks, and unsupported YAML surface is never synthesized.
 
 ### Together
 
