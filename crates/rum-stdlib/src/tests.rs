@@ -16,6 +16,8 @@ mod bytes;
 mod calculus;
 #[path = "tests/catalog_capabilities.rs"]
 mod catalog_capabilities;
+#[path = "tests/codecs_matrix.rs"]
+mod codecs_matrix;
 #[path = "tests/codecs_text.rs"]
 mod codecs_text;
 #[path = "tests/codecs_toml.rs"]
