@@ -64,10 +64,14 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   workspace 1345/0. (Hygiene note from its assess-on-touch:
   `text_shape.rs` in warning range; split boundaries recorded in the
   report — option parsing / format helpers / catalog subfamilies.)
-- [ ] brief-167 (unit-1 batch 4b, url/argv/encoding): `UrlEncode`/
-  `UrlDecode` symmetric `"FormEncoding"` option, `UrlParse`
-  `"DefaultScheme"`/`"DecodeQuery"`, `ParseArgs` `"ShortOptions"`,
-  `ToCharacterCode` encoding arg, `StringToByteArray` `"UTF-8"` alias.
+- [x] brief-167 DONE (46f6e96): url/argv/encoding ergonomics; workspace
+  1345/0. Gate lesson: reference LIMITS notes live in `docgen.rs` —
+  include it in MAY when a brief changes documented limits.
+- [ ] brief-168 (unit-1 batch 5, FINAL): fail-closed strict modes —
+  `TemplateApply`/`Uncompress`/`HtmlUnescape` gain `"Strict" -> False`
+  (message + `$Failed` on missing slots / bad envelope / malformed
+  entity); `HammingDistance` unequal lengths gains the WL-parity
+  message (stays inert). Unit 1 closes after this.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
