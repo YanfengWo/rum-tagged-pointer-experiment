@@ -116,6 +116,8 @@ mod incidental_structure_ops_surface;
 mod incidental_thread_and_dispatch;
 #[path = "tests/integer_digits.rs"]
 mod integer_digits;
+#[path = "tests/json.rs"]
+mod json;
 #[path = "tests/logic/mod.rs"]
 mod logic;
 #[path = "tests/number_theory.rs"]
@@ -204,6 +206,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::CONTROL_BUILTINS,
         catalog::FUNCTIONAL_BUILTINS,
         catalog::INTEGER_DIGITS_BUILTINS,
+        catalog::JSON_BUILTINS,
         catalog::NUMBER_THEORY_BUILTINS,
         catalog::CALCULUS_BUILTINS,
         catalog::POLYNOMIAL_BUILTINS,

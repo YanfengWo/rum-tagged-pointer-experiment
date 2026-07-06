@@ -13,6 +13,7 @@ mod combinatorics;
 mod control_flow;
 mod functional_ops;
 mod integer_digits;
+mod json;
 mod logic;
 mod number_theory;
 mod polynomials;
@@ -50,6 +51,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::INTEGER_DIGITS_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::JSON_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::NUMBER_THEORY_BUILTINS {

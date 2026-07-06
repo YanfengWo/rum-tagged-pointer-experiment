@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 534
+Builtin count: 536
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1273,6 +1273,13 @@ Tests whether no subexpression matches a pattern on levels specified by a standa
 Constructs an exact integer from a list or string of digits.
 
 - Attributes: `Protected`
+- Capability: `Pure`
+
+### FromJson
+
+Parses an RFC 8259 JSON text string into exact rum values, failing closed on invalid JSON.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### FullForm
@@ -3488,6 +3495,13 @@ Returns Unicode scalar values for strings in the current first-pass subset.
 ### ToExpression
 
 Parses and evaluates input strings using the current InputForm/StandardForm-compatible subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### ToJson
+
+Renders the JSON-representable subset of rum values as a JSON text string.
 
 - Attributes: `None`
 - Capability: `Pure`

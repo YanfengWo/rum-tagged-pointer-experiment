@@ -37,20 +37,21 @@ guide explains how the pieces fit together.
 1. [Getting Started](./getting-started.md)
 2. [Syntax](./syntax.md)
 3. [String Patterns](./string-patterns.md)
-4. [Evaluation](./evaluation.md)
-5. [Patterns And Rules](./patterns-and-rules.md)
-6. [Scoping And Contexts](./scoping-and-contexts.md)
-7. [Resource Limits And Sandbox](./resource-limits-and-sandbox.md)
-8. [Embedding](./embedding.md)
-9. [Design Boundaries](./design-boundaries.md)
+4. [Structured Data](./structured-data.md)
+5. [Evaluation](./evaluation.md)
+6. [Patterns And Rules](./patterns-and-rules.md)
+7. [Scoping And Contexts](./scoping-and-contexts.md)
+8. [Resource Limits And Sandbox](./resource-limits-and-sandbox.md)
+9. [Embedding](./embedding.md)
+10. [Design Boundaries](./design-boundaries.md)
 
 The order is intentional.
 
 Start with command-line evaluation, then syntax, then string patterns, then
-evaluation. Patterns and rules depend on that evaluation model. Scoping and
-contexts explain how names are resolved and persisted. Resource limits and
-sandboxing explain how callers bound work. The embedding chapter then shows
-the Rust host facade.
+structured data, then evaluation. Patterns and rules depend on that evaluation
+model. Scoping and contexts explain how names are resolved and persisted.
+Resource limits and sandboxing explain how callers bound work. The embedding
+chapter then shows the Rust host facade.
 
 ## Who This Is For
 
