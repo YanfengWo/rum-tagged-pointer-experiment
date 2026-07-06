@@ -56,9 +56,17 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   chain; microbench A/B twice — no reproducible delta (noise floor
   13-53% on this machine's sub-ms labels; structural cost = one
   fast-fail branch).
-- [ ] brief-165 (unit-1 batch 3): Overlaps parity (`StringCases`
-  `Overlaps -> True`, `StringPosition` `Overlaps -> False`) + register
-  `Nearest`'s `DistanceFunction` in `Options`.
+- [x] brief-165 DONE (f762e2d): Overlaps parity + options registration;
+  workspace 1345/0. (Watch item: one transient rum-jupyter test failure
+  in Codex's first workspace pass, green on rerun — if it recurs, brief
+  it together with the signature.rs sha256 debt.)
+- [ ] brief-166 (unit-1 batch 4a, text shaping): `StringWrap`
+  `"PreserveNewlines"`, `StringIndent` `"BlankLines"`, `AlignColumns`
+  `"Separator"`, `StringRiffle` `{left, sep, right}` form,
+  `StringPadLeft`/`Right` list/cyclic padding.
+- [ ] brief-167 (unit-1 batch 4b, url/argv/encoding): `UrlEncode`/
+  `UrlDecode` form mode, `UrlParse` options, `ParseArgs` short options,
+  `ToCharacterCode` encoding arg, `StringToByteArray` `"UTF-8"` alias.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
