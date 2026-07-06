@@ -41,7 +41,25 @@ string-pattern surface. Batches, evidence-ranked:
   MatchQ). No regex engine — symbolic string patterns are the rum way.
 - [ ] brief-138 (M/L): in-language JSON codec, Pure, rum-native names
   (string↔expr; objects→Association, JSON decimals→exact rationals; folk
-  scope with documented limits). CSV-from-string decided after JSON lands.
+  scope with documented limits). This is the CORNERSTONE of the codec
+  family — it sets the family conventions: `From*`/`To*` named pairs,
+  fail-closed parsing (reject loudly what the folk subset does not support,
+  never misparse silently), error style, option shapes.
+- [ ] Codec family after JSON (config-format conversion is a target
+  application; one shared value model makes conversion compositional, e.g.
+  `ToToml[FromJson[s]]`): `FromIni`/`ToIni` (document one dialect),
+  `FromToml`/`ToToml` (after the date/time batch — TOML has first-class
+  datetimes), `FromXml`/`ToXml` (symbolic `XmlElement[tag, attrs, children]`
+  tree; no DTD), `FromYaml`/`ToYaml` LAST (sane block subset only,
+  fail-closed; full YAML is a non-goal). CSV-from-string alongside.
+- [ ] Hash/encoding family (S/M): `Sha256`/`Sha512`/`Sha1`/`Md5` via the
+  RustCrypto crates (never hand-rolled; deps allowed by the dependency
+  policy's security/format clause; live in rum-stdlib, Pure — hashes are
+  deterministic byte functions), `Crc32` via `crc32fast`; self-implemented
+  `ToHexString`/`FromHexString`/`ToBase64`/`FromBase64` + `ByteArrayQ` to
+  round out the byte toolbox. Hex-string default output; `Md5`/`Sha1`
+  limits-noted as non-collision-resistant. Hashing yes, encryption/signing
+  never in kernel. One-time network step (cargo fetch) done by Claude.
 - [ ] brief-139 (M): Random family — kernel PRNG in session state with a
   FIXED default seed (Pure by the audit rule; deterministic by default),
   `SeedRandom`/`RandomInteger`/`RandomChoice`/`RandomSample`; entropy tap
@@ -53,6 +71,15 @@ string-pattern surface. Batches, evidence-ranked:
 - [ ] Candidates parked: raw multiline string literals (parser-level, real
   friction in every task, bigger blast radius — decide separately);
   schema/validation helpers; `ByteArray` depth audit.
+- [ ] Downstream `rum-os` (process/env; post-launch, alongside `rum-fs`):
+  process execution is the maximal ambient authority and never enters the
+  kernel — kernel only reserves a `Capability::Process` variant (do this in
+  a nearby brief). Design sketch recorded: structured
+  `RunCommand[{argv…}]` → `<|"exit", "stdout", "stderr"|>` with capped
+  capture; argv-first (anti-injection), explicit `RunShell` for shell
+  semantics; stdin via `"Input"` option; folk pipelines by materialized
+  stdout→stdin, OS-level fd pipes only on demand; child processes wired to
+  eval cancel/timeout (kill process group).
 
 ## After the Release Cut
 

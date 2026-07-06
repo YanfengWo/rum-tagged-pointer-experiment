@@ -670,3 +670,16 @@ character classes, Except, Shortest/Longest, named binding across all six
 string functions — almost none of it cataloged (dark surface); inert:
 PunctuationCharacter, StartOfLine, EndOfLine, WordBoundary; StringSplit lacks
 IgnoreCase; four bug-like edges recorded. Batches 136-140 planned in TODO.
+
+## 2026-07-06 — brief-136 gated (12 builtins); codec/hash/rum-os planned
+
+brief-136 (ba4ad60): Tally, MaxBy, MinBy, TakeLargestBy, TakeSmallestBy,
+ReverseSort, ReverseSortBy, GatherBy, Riffle, exact Mean, StringPadRight,
+StringLines. Codex stop-lossed correctly on the kernel attribute-vocabulary
+registration (fenced out by the brief); completed at the gate, plus
+attribute alignment to the family norm (ordinary, not Protected — the brief
+was wrong). Reference 518; workspace 1151/0. TODO gains: codec family plan
+(JSON cornerstone conventions: From*/To* pairs, fail-closed parsing; then
+INI/TOML/XML/YAML-subset), hash/encoding family (RustCrypto + self-impl
+hex/base64 + ByteArrayQ; hashing yes, encryption never), and the downstream
+rum-os sketch (RunCommand design, Capability::Process reservation).
