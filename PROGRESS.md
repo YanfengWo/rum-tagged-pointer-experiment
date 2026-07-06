@@ -742,3 +742,11 @@ Workspace 1212/0. Process briefs archived. Parked: multiline string
 literals (parser-level), schema helpers, ByteArray depth, compression
 codecs, unicode normalization, ipaddress. Next mainline: user's call
 (coverage rebuild is the standing debt).
+
+## 2026-07-07 — CODEC FAMILY LINE STARTED
+
+User picked the codec continuation as the next mainline. Plan committed
+(docs/dev/codec-family-plan.md): 145 CSV+INI, 146 TOML (datetimes on the
+brief-141 exact timestamps), 147 XML (XmlElement symbolic tree), 148 YAML
+sane-subset (aggressively fail-closed; full YAML a permanent non-goal),
+M1 conversion-matrix closure.

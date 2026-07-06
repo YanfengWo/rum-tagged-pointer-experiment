@@ -45,7 +45,7 @@ string-pattern surface. Batches, evidence-ranked:
   family — it sets the family conventions: `From*`/`To*` named pairs,
   fail-closed parsing (reject loudly what the folk subset does not support,
   never misparse silently), error style, option shapes.
-- [ ] Codec family after JSON (config-format conversion is a target
+- [ ] ACTIVE LINE (2026-07-07, docs/dev/codec-family-plan.md): Codec family after JSON (config-format conversion is a target
   application; one shared value model makes conversion compositional, e.g.
   `ToToml[FromJson[s]]`): `FromIni`/`ToIni` (document one dialect),
   `FromToml`/`ToToml` (after the date/time batch — TOML has first-class
