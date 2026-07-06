@@ -17,7 +17,7 @@ pub(crate) use search::{
 use self::regex::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum StringPattern {
+pub(in crate::strings) enum StringPattern {
     Literal(Vec<char>),
     AnyCharacter,
     AnySequence {
@@ -69,7 +69,7 @@ enum StringSplitLimit {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct StringPatternMatchConfig {
+pub(in crate::strings) struct StringPatternMatchConfig {
     ignore_case: bool,
 }
 
@@ -156,7 +156,7 @@ fn parse_string_patterns(expr: &Expr) -> Option<Vec<StringPattern>> {
         .collect::<Option<Vec<_>>>()
 }
 
-fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
+pub(in crate::strings) fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
     if let Some(value) = expr_as_string(expr).filter(|value| !value.is_empty()) {
         return Some(parse_string_literal_pattern(value));
     }
@@ -342,6 +342,15 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
     }
 
     None
+}
+
+pub(in crate::strings) fn string_pattern_match_end(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    config: StringPatternMatchConfig,
+) -> Option<usize> {
+    matcher::best_pattern_match_end(pattern, chars, start, config)
 }
 
 fn parse_string_literal_pattern(value: &str) -> StringPattern {

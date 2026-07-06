@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 582
+Builtin count: 584
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -3030,6 +3030,13 @@ Internal diagnostic hook: prints rum runtime profile counters when profiling is 
 - Attributes: `None`
 - Capability: `Diagnostic`
 
+### RumTokens
+
+Tokenizes rum source text into total, trivia-preserving lexer spans.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### SameAs
 
 Represents a unary comparison operator equivalent to SameQ[#, bound] when applied.
@@ -3846,6 +3853,13 @@ Converts a string or list of strings to uppercase using the current Unicode-awar
 ### Together
 
 Combines rational-function terms over a common polynomial denominator.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### TokenizeWith
+
+Scans a string with string-pattern rules and returns total 1-based token spans.
 
 - Attributes: `None`
 - Capability: `Pure`

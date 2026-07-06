@@ -303,6 +303,16 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         strings::eval_syntax_q,
     ),
     BuiltinSpec::ordinary(
+        "RumTokens",
+        "Tokenizes rum source text into total, trivia-preserving lexer spans.",
+        strings::eval_rum_tokens,
+    ),
+    BuiltinSpec::ordinary(
+        "TokenizeWith",
+        "Scans a string with string-pattern rules and returns total 1-based token spans.",
+        strings::eval_tokenize_with,
+    ),
+    BuiltinSpec::ordinary(
         "TextString",
         "Converts expressions to the current canonical text subset, leaving raw strings unquoted.",
         strings::eval_text_string,

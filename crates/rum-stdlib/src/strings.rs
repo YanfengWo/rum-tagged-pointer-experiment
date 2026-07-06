@@ -17,6 +17,7 @@ mod scripting;
 mod similarity;
 mod template;
 mod text;
+mod tokenize;
 
 pub(crate) use encoding::{
     eval_compress, eval_decrypt, eval_encrypt, eval_hash, eval_string_to_byte_array,
@@ -48,6 +49,7 @@ pub(crate) use text::{
     eval_syntax_q, eval_text_string, eval_text_words, eval_to_character_code, eval_to_expression,
     eval_to_lower_case, eval_to_string, eval_to_upper_case, eval_upper_case_q,
 };
+pub(crate) use tokenize::{eval_rum_tokens, eval_tokenize_with};
 
 fn bool_expr(value: bool) -> Expr {
     system_expr(if value {

@@ -106,3 +106,50 @@ List[True, True]
 $ cargo run -q -p rum-cli -- --eval 'StringSplit["AxbXc", "x", IgnoreCase -> True]'
 List["A", "b", "c"]
 ```
+
+## Tokenization
+
+`TokenizeWith[rules, str]` scans a string left to right using a list of
+`"class" -> pattern` string-pattern rules. At each position every rule is
+tried, the longest non-empty match wins, and ties go to the earliest rule in
+the list. Zero-width matches are skipped so an anchor-only rule cannot stall
+the scan. Input characters that no rule matches are coalesced into `"text"`
+spans.
+
+The result is a list of `{class, {start, end}}` spans. Positions are 1-based
+inclusive code-point positions, the same convention as `StringPosition`.
+Spans are strictly ascending, non-overlapping, and cover the entire string.
+Invalid rule lists, non-string classes, invalid string patterns, and non-string
+input fail closed with a message and `$Failed`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'TokenizeWith[{"comment" -> (";" ~~ Except["\n"]...), "section" -> ("[" ~~ Except["]"]... ~~ "]"), "key" -> (LetterCharacter ~~ WordCharacter... ~~ "="), "number" -> NumberString, "value" -> (WordCharacter..)}, ";top\n[main]\nname=rum\nport=42"]'
+List[List["comment", List[1, 4]], List["text", List[5, 5]], List["section", List[6, 11]], List["text", List[12, 12]], List["key", List[13, 17]], List["value", List[18, 20]], List["text", List[21, 21]], List["key", List[22, 26]], List["number", List[27, 28]]]
+```
+
+Tokenizer rule sets are ordinary rum data meant to live in packages; grammar
+definitions are not stdlib code.
+
+`RumTokens[str]` exposes rum's own lexer as `{kind, {start, end}}` spans. It
+is total on string input: whitespace and comments are emitted as tokens,
+unrecognized input is emitted as `"error"`, and the span union always covers
+the whole input. The token kind taxonomy follows `rum-syntax` and may grow;
+the contract is the result shape, total coverage, and the 1-based inclusive
+code-point span convention.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'RumTokens["f[x_] := x + 1 (* c *)"]'
+List[List["symbol", List[1, 1]], List["[", List[2, 2]], List["symbol", List[3, 3]], List["_", List[4, 4]], List["]", List[5, 5]], List["whitespace", List[6, 6]], List[":=", List[7, 8]], List["whitespace", List[9, 9]], List["symbol", List[10, 10]], List["whitespace", List[11, 11]], List["+", List[12, 12]], List["whitespace", List[13, 13]], List["integer", List[14, 14]], List["whitespace", List[15, 15]], List["comment", List[16, 22]]]
+```
+
+The current `RumTokens` token-kind taxonomy is `"integer"`, `"string"`,
+`"symbol"`, `"whitespace"`, `"comment"`, `"error"`, and these punctuation or
+operator labels: `"["`, `"]"`, `"[["`, `"]]"`, `"{"`, `"}"`, `"<|"`, `"|>"`,
+`"("`, `")"`, `","`, `";"`, `";;"`, `"@"`, `"@@"`, `"@@@"`, `"@*"`, `"+"`,
+`"++"`, `"+="`, `"-"`, `"--"`, `"-="`, `"*"`, `"**"`, `"*="`, `"/"`, `"/@"`,
+`"/="`, `"//"`, `"//@"`, `"//="`, `"/*"`, `"~~"`, `"~"`, `"^"`, `"^="`,
+`"^:="`, `"!"`, `"'"`, `"&&"`, `"||"`, `"==="`, `"=!="`, `"=="`, `"!="`,
+`"<"`, `">"`, `"<="`, `">="`, `"<>"`, `":"`, `"::"`, `"/:"`, `"->"`, `":>"`,
+`"="`, `"=."`, `":="`, `"/."`, `"//."`, `"/;"`, `"."`, `".."`, `"..."`,
+`"&"`, `"|"`, `"|->"`, `"?"`, `"#"`, `"_"`, `"__"`, and `"___"`. The
+internal end-of-input marker is not emitted.

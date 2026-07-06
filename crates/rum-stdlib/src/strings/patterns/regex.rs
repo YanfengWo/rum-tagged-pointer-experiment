@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct RegexPattern {
+pub(in crate::strings) struct RegexPattern {
     branches: Vec<Vec<RegexToken>>,
 }
 

@@ -16,5 +16,6 @@ pub(super) use api::{
     string_starts_q, trim_string_value,
 };
 pub(super) use engine::{
-    best_pattern_match_at_with_bindings, best_pattern_match_state, pattern_match_text,
+    best_pattern_match_at_with_bindings, best_pattern_match_end, best_pattern_match_state,
+    pattern_match_text,
 };
