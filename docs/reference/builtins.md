@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 605
+Builtin count: 602
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -859,13 +859,6 @@ Decrements a held symbol or exact Part target and returns its previous value.
 - Attributes: `HoldFirst`
 - Capability: `Pure`
 
-### Decrypt
-
-Decrypts the current first-pass encrypted object subset using string or ByteArray keys.
-
-- Attributes: `None`
-- Capability: `Pure`
-
 ### DefaultValues
 
 Lists stored Default[...] definitions for a symbol in the current optional-pattern subset.
@@ -1103,20 +1096,6 @@ Computes unit-cost Levenshtein distance for strings or lists in the current firs
 Evaluates an expression and catches confirmation failures in the current first-pass subset.
 
 - Attributes: `HoldAll`
-- Capability: `Pure`
-
-### Encrypt
-
-Wraps values in the current first-pass encrypted object subset using string keys.
-
-- Attributes: `None`
-- Capability: `Pure`
-
-### EncryptedObject
-
-Represents the current first-pass encrypted object envelope returned by Encrypt.
-
-- Attributes: `None`
 - Capability: `Pure`
 
 ### End
@@ -1564,7 +1543,7 @@ Computes mismatch counts for equal-length strings or lists in the current first-
 
 ### Hash
 
-Computes SHA256 hashes over the current string/expression subset.
+Computes SHA256, SHA1, SHA512, MD5, or CRC32 hashes over the current string/expression subset.
 
 - Attributes: `None`
 - Capability: `Pure`

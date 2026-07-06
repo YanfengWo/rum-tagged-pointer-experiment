@@ -295,9 +295,10 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "Converts strings to ByteArray objects using the current UTF-8 subset.",
         strings::eval_string_to_byte_array,
     ),
+    #[cfg(feature = "hash")]
     BuiltinSpec::ordinary(
         "Hash",
-        "Computes SHA256 hashes over the current string/expression subset.",
+        "Computes SHA256, SHA1, SHA512, MD5, or CRC32 hashes over the current string/expression subset.",
         strings::eval_hash,
     ),
     BuiltinSpec::ordinary(
@@ -309,16 +310,6 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "Uncompress",
         "Recovers values from the current project-local compressed string envelope.",
         strings::eval_uncompress,
-    ),
-    BuiltinSpec::ordinary(
-        "Encrypt",
-        "Wraps values in the current first-pass encrypted object subset using string keys.",
-        strings::eval_encrypt,
-    ),
-    BuiltinSpec::ordinary(
-        "Decrypt",
-        "Decrypts the current first-pass encrypted object subset using string or ByteArray keys.",
-        strings::eval_decrypt,
     ),
     BuiltinSpec::ordinary(
         "Nearest",

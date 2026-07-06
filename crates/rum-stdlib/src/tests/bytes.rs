@@ -22,7 +22,7 @@ fn eval_with_messages(session: &mut Session, source: &str) -> (Expr, Vec<Runtime
 fn no_default_features_drop_digest_builtins_but_keep_codecs() {
     let session = core_session();
 
-    for name in ["Sha256", "Sha512", "Sha1", "Md5", "Crc32"] {
+    for name in ["Sha256", "Sha512", "Sha1", "Md5", "Crc32", "Hash"] {
         assert!(
             !session.inspect(name).is_some_and(|info| info.is_builtin),
             "{name} should not be registered without the hash feature"

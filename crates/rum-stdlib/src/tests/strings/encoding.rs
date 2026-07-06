@@ -1,23 +1,20 @@
 use super::*;
 
+#[cfg(feature = "hash")]
 #[test]
-fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
+fn hash_byte_identity_and_formats_extend_cl07() {
     let mut session = core_session();
 
     assert_eq!(
-        eval_to_string(&mut session, "StringToByteArray[\"abc\"]"),
-        "ByteArray[\"YWJj\"]"
-    );
-    assert_eq!(
-        eval_to_string(&mut session, "StringToByteArray[\"abc\", \"UTF8\"]"),
-        "ByteArray[\"YWJj\"]"
-    );
-    assert_eq!(
-        eval_to_string(&mut session, "StringToByteArray[\"🙂\"]"),
-        "ByteArray[\"8J+Zgg==\"]"
-    );
-    assert_eq!(
         eval_to_string(&mut session, "Hash[\"abc\"]"),
+        "84342368487090800366523834928142263660104883695016514377462985829716817089965"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\"]"),
+        "84342368487090800366523834928142263660104883695016514377462985829716817089965"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"Integer\"]"),
         "84342368487090800366523834928142263660104883695016514377462985829716817089965"
     );
     assert_eq!(
@@ -42,6 +39,52 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "Hash[1/2 + x, \"SHA256\", \"HexString\"]"),
         "\"e697c4f396641d09562ff62b6d49d4de1d6e852d0101b44f8c2959542984dbb5\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA1\", \"HexString\"]"),
+        "\"a9993e364706816aba3e25717850c26c9cd0d89d\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA512\", \"HexString\"]"),
+        "\"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"MD5\", \"HexString\"]"),
+        "\"900150983cd24fb0d6963f7d28e17f72\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"CRC32\"]"),
+        "891568578"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"CRC32\", \"HexString\"]"),
+        "\"352441c2\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"NoSuchMethod\"]"),
+        "Hash[\"abc\", \"NoSuchMethod\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Hash[\"abc\", \"SHA256\", \"NoSuchFormat\"]"),
+        "Hash[\"abc\", \"SHA256\", \"NoSuchFormat\"]"
+    );
+}
+
+#[test]
+fn byte_arrays_transport_and_nearest_extend_cl07() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"abc\"]"),
+        "ByteArray[\"YWJj\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"abc\", \"UTF8\"]"),
+        "ByteArray[\"YWJj\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringToByteArray[\"🙂\"]"),
+        "ByteArray[\"8J+Zgg==\"]"
     );
     assert_eq!(
         eval_to_string(&mut session, "Compress[1 + 1]"),
@@ -84,88 +127,6 @@ fn byte_arrays_hashing_transport_and_nearest_extend_cl07() {
     assert_eq!(
         eval_to_string(&mut session, "ToString[Uncompress[Compress[1 + 1], Hold]]"),
         "\"Hold[2]\""
-    );
-    assert_eq!(
-        eval_to_string(&mut session, "Head[Encrypt[\"secret\", \"abc\"]]"),
-        "EncryptedObject"
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "StringContainsQ[ToString[Encrypt[\"secret\", StringToByteArray[\"abc\"]]], \"ByteArray\"]"
-        ),
-        "True"
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "Head[Encrypt[StringToByteArray[\"secret\"], StringToByteArray[\"abc\"]]]"
-        ),
-        "EncryptedObject"
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "Decrypt[\"abc\", Encrypt[\"abc\", \"secret\"]]"
-        ),
-        "\"secret\""
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "Decrypt[StringToByteArray[\"abc\"], Encrypt[StringToByteArray[\"abc\"], StringToByteArray[\"secret\"]]]"
-        ),
-        "ByteArray[\"c2VjcmV0\"]"
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "ToString[Decrypt[\"abc\", Encrypt[\"abc\", 1/2 + x]]]"
-        ),
-        "\"1/2 + x\""
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "ToString[Decrypt[\"abc\", Encrypt[\"abc\", f[x_]]]]"
-        ),
-        "\"f[x_]\""
-    );
-    assert_eq!(
-        eval_to_string(
-            &mut session,
-            "ToString[Decrypt[\"abc\", Encrypt[\"abc\", <|a -> 1, b -> 2|>]]]"
-        ),
-        "\"<|a -> 1, b -> 2|>\""
-    );
-    let structured_expr = Expr::call(
-        system_expr("f"),
-        vec![Expr::call(
-            system_expr("Condition"),
-            vec![
-                Expr::call(
-                    system_expr("Pattern"),
-                    vec![system_expr("x"), Expr::call(system_expr("Blank"), vec![])],
-                ),
-                system_expr("True"),
-            ],
-        )],
-    );
-    let decrypted = session
-        .evaluate(Expr::call(
-            system_expr("Decrypt"),
-            vec![
-                Expr::string("abc"),
-                Expr::call(
-                    system_expr("Encrypt"),
-                    vec![Expr::string("abc"), structured_expr.clone()],
-                ),
-            ],
-        ))
-        .unwrap();
-    assert_eq!(
-        crate::strings::render_input_like_expr(&decrypted),
-        "f[x_ /; True]"
     );
     assert_eq!(
         eval_to_string(&mut session, "Nearest[{1, 2, 5}, 3]"),

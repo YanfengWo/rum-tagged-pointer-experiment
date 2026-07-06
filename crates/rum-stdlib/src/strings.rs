@@ -19,10 +19,9 @@ mod template;
 mod text;
 mod tokenize;
 
-pub(crate) use encoding::{
-    eval_compress, eval_decrypt, eval_encrypt, eval_hash, eval_string_to_byte_array,
-    eval_uncompress,
-};
+#[cfg(feature = "hash")]
+pub(crate) use encoding::eval_hash;
+pub(crate) use encoding::{eval_compress, eval_string_to_byte_array, eval_uncompress};
 pub(crate) use patterns::{
     eval_string_apply, eval_string_cases, eval_string_contains_q, eval_string_count,
     eval_string_delete, eval_string_drop, eval_string_ends_q, eval_string_free_q,

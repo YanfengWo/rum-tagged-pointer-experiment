@@ -115,10 +115,6 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
         "Represents raw byte payloads using base64 text in the current first-pass subset.",
     ),
     BuiltinSpec::new(
-        "EncryptedObject",
-        "Represents the current first-pass encrypted object envelope returned by Encrypt.",
-    ),
-    BuiltinSpec::new(
         "InputForm",
         "Represents the current formatting symbol accepted by the current ToExpression subset.",
     ),

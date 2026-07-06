@@ -1,5 +1,14 @@
 use super::*;
 
+#[cfg(feature = "hash")]
+use crc32fast::Hasher as Crc32Hasher;
+#[cfg(feature = "hash")]
+use md5::Md5;
+#[cfg(feature = "hash")]
+use sha1::Sha1;
+#[cfg(feature = "hash")]
+use sha2::{Digest, Sha256, Sha512};
+
 pub(crate) fn eval_string_to_byte_array(
     session: &mut Session,
     head: &Expr,
@@ -33,6 +42,7 @@ pub(crate) fn eval_string_to_byte_array(
     Ok(Expr::call(head.clone(), args.to_vec()))
 }
 
+#[cfg(feature = "hash")]
 pub(crate) fn eval_hash(
     session: &mut Session,
     head: &Expr,
@@ -42,23 +52,29 @@ pub(crate) fn eval_hash(
         return Ok(session.invalid_call_with_arg_range("Hash", args, 1, 3));
     }
 
-    if let Some(algorithm_expr) = args.get(1) {
-        let Some(algorithm) = expr_as_string(algorithm_expr) else {
+    let algorithm = if let Some(algorithm_expr) = args.get(1) {
+        let Some(name) = expr_as_string(algorithm_expr) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        if algorithm != "SHA256" {
+        let Some(algorithm) = HashAlgorithm::from_name(name) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
-        }
-    }
+        };
+        algorithm
+    } else {
+        HashAlgorithm::Sha256
+    };
 
-    let digest = sha256_bytes(&hash_input_bytes(&args[0]));
-    let integer_value = sha256_integer(&digest);
+    let digest = hash_digest_bytes(algorithm, &hash_input_bytes(&args[0]));
+    let integer_value = digest_integer(&digest);
 
     match args.get(2).and_then(|format| expr_as_string(format)) {
         None => Ok(Expr::integer(integer_value)),
         Some("Integer") => Ok(Expr::integer(integer_value)),
         Some("HexString") => Ok(Expr::string(bytes_to_hex(&digest))),
-        Some("DecimalString") => Ok(Expr::string(sha256_decimal_string(&integer_value))),
+        Some("DecimalString") => Ok(Expr::string(digest_decimal_string(
+            &integer_value,
+            algorithm.output_len(),
+        ))),
         Some("ByteArray") => Ok(byte_array_expr(&digest)),
         Some(_) => Ok(Expr::call(head.clone(), args.to_vec())),
     }
@@ -103,55 +119,6 @@ pub(crate) fn eval_uncompress(
     Ok(restored)
 }
 
-pub(crate) fn eval_encrypt(
-    session: &mut Session,
-    head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    if args.len() != 2 {
-        return Ok(session.invalid_call_with_exact_arg_count("Encrypt", args, 2));
-    }
-
-    let Some(key) = encryption_key_bytes(&args[0]) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
-
-    let (payload, original_form) = expr_transport_bytes(&args[1]);
-    let ciphertext = xor_with_sha256_keystream(&key, &payload);
-    Ok(encrypted_object_expr(
-        &ciphertext,
-        &sha256_bytes(&key),
-        original_form,
-    ))
-}
-
-pub(crate) fn eval_decrypt(
-    session: &mut Session,
-    head: &Expr,
-    args: &[Expr],
-) -> Result<Expr, EvalError> {
-    if args.len() != 2 {
-        return Ok(session.invalid_call_with_exact_arg_count("Decrypt", args, 2));
-    }
-
-    let Some(key) = encryption_key_bytes(&args[0]) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
-    let Some((ciphertext, key_hash, original_form)) = encrypted_object_payload(&args[1]) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
-
-    if sha256_bytes(&key).as_slice() != key_hash.as_slice() {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    }
-
-    let decrypted = xor_with_sha256_keystream(&key, &ciphertext);
-    let Some(restored) = session.restore_transport_expr(&decrypted, original_form) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
-    Ok(restored)
-}
-
 fn byte_array_expr(bytes: &[u8]) -> Expr {
     Expr::call(
         system_expr("ByteArray"),
@@ -159,6 +126,7 @@ fn byte_array_expr(bytes: &[u8]) -> Expr {
     )
 }
 
+#[cfg(feature = "hash")]
 fn hash_input_bytes(expr: &Expr) -> Vec<u8> {
     if let Some(value) = expr_as_string(expr) {
         value.as_bytes().to_vec()
@@ -169,15 +137,78 @@ fn hash_input_bytes(expr: &Expr) -> Vec<u8> {
     }
 }
 
-fn sha256_integer(digest: &[u8; SHA256_OUTPUT_LEN]) -> BigInt {
-    BigInt::parse_bytes(bytes_to_hex(digest).as_bytes(), 16)
-        .expect("sha256 digests always parse as hexadecimal integers")
+#[cfg(feature = "hash")]
+#[derive(Clone, Copy)]
+enum HashAlgorithm {
+    Sha256,
+    Sha1,
+    Sha512,
+    Md5,
+    Crc32,
 }
 
-fn sha256_decimal_string(value: &BigInt) -> String {
-    const SHA256_DECIMAL_WIDTH: usize = 78;
+#[cfg(feature = "hash")]
+impl HashAlgorithm {
+    fn from_name(name: &str) -> Option<Self> {
+        match name {
+            "SHA256" => Some(Self::Sha256),
+            "SHA1" => Some(Self::Sha1),
+            "SHA512" => Some(Self::Sha512),
+            "MD5" => Some(Self::Md5),
+            "CRC32" => Some(Self::Crc32),
+            _ => None,
+        }
+    }
+
+    fn output_len(self) -> usize {
+        match self {
+            Self::Sha256 => 32,
+            Self::Sha1 => 20,
+            Self::Sha512 => 64,
+            Self::Md5 => 16,
+            Self::Crc32 => 4,
+        }
+    }
+}
+
+#[cfg(feature = "hash")]
+fn hash_digest_bytes(algorithm: HashAlgorithm, bytes: &[u8]) -> Vec<u8> {
+    match algorithm {
+        HashAlgorithm::Sha256 => Sha256::digest(bytes).to_vec(),
+        HashAlgorithm::Sha1 => Sha1::digest(bytes).to_vec(),
+        HashAlgorithm::Sha512 => Sha512::digest(bytes).to_vec(),
+        HashAlgorithm::Md5 => Md5::digest(bytes).to_vec(),
+        HashAlgorithm::Crc32 => {
+            let mut hasher = Crc32Hasher::new();
+            hasher.update(bytes);
+            hasher.finalize().to_be_bytes().to_vec()
+        }
+    }
+}
+
+#[cfg(feature = "hash")]
+fn digest_integer(digest: &[u8]) -> BigInt {
+    BigInt::parse_bytes(bytes_to_hex(digest).as_bytes(), 16)
+        .expect("digest bytes always parse as hexadecimal integers")
+}
+
+#[cfg(feature = "hash")]
+fn digest_decimal_string(value: &BigInt, digest_len: usize) -> String {
     let decimal = value.to_str_radix(10);
-    format!("{decimal:0>SHA256_DECIMAL_WIDTH$}")
+    let width = decimal_width_for_digest_len(digest_len);
+    format!("{decimal:0>width$}")
+}
+
+#[cfg(feature = "hash")]
+fn decimal_width_for_digest_len(digest_len: usize) -> usize {
+    match digest_len {
+        4 => 10,
+        16 => 39,
+        20 => 49,
+        32 => 78,
+        64 => 155,
+        _ => 0,
+    }
 }
 
 fn compress_envelope(expr: &Expr) -> String {
@@ -218,14 +249,6 @@ fn expr_transport_bytes(expr: &Expr) -> (Vec<u8>, Expr) {
     }
 }
 
-fn encryption_key_bytes(expr: &Expr) -> Option<Vec<u8>> {
-    if let Some(value) = expr_as_string(expr) {
-        Some(value.as_bytes().to_vec())
-    } else {
-        expr_as_byte_array_bytes(expr)
-    }
-}
-
 fn expr_as_byte_array_bytes(expr: &Expr) -> Option<Vec<u8>> {
     let Expr::Call { head, args } = expr else {
         return None;
@@ -236,64 +259,6 @@ fn expr_as_byte_array_bytes(expr: &Expr) -> Option<Vec<u8>> {
     let encoded = expr_as_string(&args[0])?;
     base64_decode(encoded)
 }
-
-fn encrypted_object_expr(ciphertext: &[u8], key_hash: &[u8], original_form: Expr) -> Expr {
-    Expr::call(
-        system_expr("EncryptedObject"),
-        vec![render_association(vec![
-            (Expr::string("Cipher"), Expr::string("XOR-SHA256")),
-            (Expr::string("KeyHash"), byte_array_expr(key_hash)),
-            (Expr::string("Data"), byte_array_expr(ciphertext)),
-            (Expr::string("OriginalForm"), original_form),
-        ])],
-    )
-}
-
-fn encrypted_object_payload(expr: &Expr) -> Option<(Vec<u8>, Vec<u8>, Expr)> {
-    let payload_items = call_items_with_head(expr, &system_expr("EncryptedObject"))?;
-    if payload_items.len() != 1 {
-        return None;
-    }
-    let entries = association_entries_from_expr(&payload_items[0])?;
-    let data = entries
-        .iter()
-        .find(|(key, _)| expr_as_string(key).is_some_and(|name| name == "Data"))?
-        .1
-        .clone();
-    let key_hash = entries
-        .iter()
-        .find(|(key, _)| expr_as_string(key).is_some_and(|name| name == "KeyHash"))?
-        .1
-        .clone();
-    let original_form = entries
-        .iter()
-        .find(|(key, _)| expr_as_string(key).is_some_and(|name| name == "OriginalForm"))?
-        .1
-        .clone();
-
-    Some((
-        expr_as_byte_array_bytes(&data)?,
-        expr_as_byte_array_bytes(&key_hash)?,
-        original_form,
-    ))
-}
-
-const SHA256_OUTPUT_LEN: usize = 32;
-
-const SHA256_INITIAL_STATE: [u32; 8] = [
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
-];
-
-const SHA256_ROUND_CONSTANTS: [u32; 64] = [
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
-];
 
 fn base64_decode(encoded: &str) -> Option<Vec<u8>> {
     let bytes = encoded.as_bytes();
@@ -348,6 +313,7 @@ fn decode_base64_nibble(byte: u8) -> Option<u8> {
     }
 }
 
+#[cfg(feature = "hash")]
 fn bytes_to_hex(bytes: &[u8]) -> String {
     let mut rendered = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
@@ -357,115 +323,7 @@ fn bytes_to_hex(bytes: &[u8]) -> String {
     rendered
 }
 
-fn xor_with_sha256_keystream(key: &[u8], payload: &[u8]) -> Vec<u8> {
-    let mut output = Vec::with_capacity(payload.len());
-    let mut counter = 0u64;
-    while output.len() < payload.len() {
-        let mut counter_bytes = [0u8; 8];
-        counter_bytes.copy_from_slice(&counter.to_be_bytes());
-        let block = sha256_many([key, &counter_bytes]);
-        for byte in block {
-            if output.len() == payload.len() {
-                break;
-            }
-            let index = output.len();
-            output.push(payload[index] ^ byte);
-        }
-        counter += 1;
-    }
-    output
-}
-
-fn sha256_bytes(bytes: &[u8]) -> [u8; SHA256_OUTPUT_LEN] {
-    sha256_many([bytes])
-}
-
-fn sha256_many<const N: usize>(chunks: [&[u8]; N]) -> [u8; SHA256_OUTPUT_LEN] {
-    let total_len = chunks.iter().map(|chunk| chunk.len()).sum::<usize>();
-    let bit_len = (total_len as u64) * 8;
-    let padded_len = ((total_len + 9 + 63) / 64) * 64;
-    let mut message = Vec::with_capacity(padded_len);
-    for chunk in chunks {
-        message.extend_from_slice(chunk);
-    }
-    message.push(0x80);
-    while message.len() % 64 != 56 {
-        message.push(0);
-    }
-    message.extend_from_slice(&bit_len.to_be_bytes());
-
-    let mut state = SHA256_INITIAL_STATE;
-    for block in message.chunks_exact(64) {
-        sha256_compress(&mut state, block);
-    }
-
-    let mut digest = [0u8; SHA256_OUTPUT_LEN];
-    for (index, word) in state.into_iter().enumerate() {
-        digest[index * 4..(index + 1) * 4].copy_from_slice(&word.to_be_bytes());
-    }
-    digest
-}
-
-fn sha256_compress(state: &mut [u32; 8], block: &[u8]) {
-    let mut schedule = [0u32; 64];
-    for (index, chunk) in block.chunks_exact(4).take(16).enumerate() {
-        schedule[index] = u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
-    }
-
-    for index in 16..64 {
-        let s0 = schedule[index - 15].rotate_right(7)
-            ^ schedule[index - 15].rotate_right(18)
-            ^ (schedule[index - 15] >> 3);
-        let s1 = schedule[index - 2].rotate_right(17)
-            ^ schedule[index - 2].rotate_right(19)
-            ^ (schedule[index - 2] >> 10);
-        schedule[index] = schedule[index - 16]
-            .wrapping_add(s0)
-            .wrapping_add(schedule[index - 7])
-            .wrapping_add(s1);
-    }
-
-    let mut a = state[0];
-    let mut b = state[1];
-    let mut c = state[2];
-    let mut d = state[3];
-    let mut e = state[4];
-    let mut f = state[5];
-    let mut g = state[6];
-    let mut h = state[7];
-
-    for index in 0..64 {
-        let sum1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
-        let choice = (e & f) ^ ((!e) & g);
-        let temp1 = h
-            .wrapping_add(sum1)
-            .wrapping_add(choice)
-            .wrapping_add(SHA256_ROUND_CONSTANTS[index])
-            .wrapping_add(schedule[index]);
-        let sum0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
-        let majority = (a & b) ^ (a & c) ^ (b & c);
-        let temp2 = sum0.wrapping_add(majority);
-
-        h = g;
-        g = f;
-        f = e;
-        e = d.wrapping_add(temp1);
-        d = c;
-        c = b;
-        b = a;
-        a = temp1.wrapping_add(temp2);
-    }
-
-    state[0] = state[0].wrapping_add(a);
-    state[1] = state[1].wrapping_add(b);
-    state[2] = state[2].wrapping_add(c);
-    state[3] = state[3].wrapping_add(d);
-    state[4] = state[4].wrapping_add(e);
-    state[5] = state[5].wrapping_add(f);
-    state[6] = state[6].wrapping_add(g);
-    state[7] = state[7].wrapping_add(h);
-}
-
+#[cfg(feature = "hash")]
 fn nibble_to_hex(nibble: u8) -> char {
     match nibble {
         0..=9 => char::from(b'0' + nibble),
