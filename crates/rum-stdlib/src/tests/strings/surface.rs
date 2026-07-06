@@ -466,6 +466,40 @@ fn string_helper_builtins_cover_surface_edges() {
 }
 
 #[test]
+fn case_conversion_list_mapping_does_not_thread_nested_or_mixed_lists() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        (
+            "ToUpperCase[{{\"a\"}, {\"b\"}}]",
+            "ToUpperCase[List[List[\"a\"], List[\"b\"]]]",
+        ),
+        (
+            "ToUpperCase[{\"a\", 1}]",
+            "ToUpperCase[List[\"a\", 1]]",
+        ),
+        (
+            "Capitalize[{{\"ab\"}, {\"cd\"}}]",
+            "Capitalize[List[List[\"ab\"], List[\"cd\"]]]",
+        ),
+        (
+            "Capitalize[{\"ab\", 1}]",
+            "Capitalize[List[\"ab\", 1]]",
+        ),
+        (
+            "Decapitalize[{{\"Ab\"}, {\"Cd\"}}]",
+            "Decapitalize[List[List[\"Ab\"], List[\"Cd\"]]]",
+        ),
+        (
+            "Decapitalize[{\"Ab\", 1}]",
+            "Decapitalize[List[\"Ab\", 1]]",
+        ),
+    ] {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
 fn string_formatting_padding_and_riffle_cover_the_next_surface_wave() {
     let mut session = core_session();
 

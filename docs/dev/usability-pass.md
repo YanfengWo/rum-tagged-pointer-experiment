@@ -69,11 +69,17 @@ catalog) and are enumerated exactly when their audit brief is written.
 Audit brief-161: 101 rows / 99 names, findings in
 `usability-pass/strings-findings.md`. Fix batches, dispatch order:
 
-1. **brief-162 — attribute hygiene** (safety, all S): `Protected` on
-   the 18 string-pattern symbols (Evidence E1); case-conversion
+1. **brief-162/162b — attribute hygiene** (safety, all S): `Protected`
+   on the 18 string-pattern symbols (Evidence E1); case-conversion
    alignment (`ToUpperCase` gains `Listable`+`Protected`;
-   `Capitalize`/`Decapitalize` gain `Listable`). List results already
-   match — the change is the advertised attributes.
+   `Capitalize`/`Decapitalize` gain `Listable`). 162 stop-lossed
+   correctly: `Listable` upgrades nested/mixed-list INERT forms to
+   threading (flat string lists and plain strings stay byte-identical).
+   RESOLVED (162b): align upward — rum already committed to `Listable`
+   threading via `ToLowerCase`/`StringReverse`; a split semantics
+   within the case-conversion family is the worse state; inert→useful
+   is the same enhancement class as the operator-form batch. rum's own
+   reference is the contract authority for the nested/mixed cases.
 2. **Operator forms — the WL-documented set only** (flexibility):
    `StringContainsQ`/`StartsQ`/`EndsQ`/`MatchQ`/`FreeQ`/`Replace`/
    `Cases` + `StringDelete` (audit false-OK: WL documents

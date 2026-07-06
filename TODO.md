@@ -41,8 +41,13 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   the tracker (crypto batch BLOCKED on a user decision: hand-rolled
   SHA-256 in `strings/encoding.rs` + toy `Encrypt` vs the
   no-kernel-crypto policy).
-- [ ] brief-162 (unit-1 fixes, batch 1): attribute hygiene — `Protected`
-  string-pattern symbols; case-conversion `Listable` alignment.
+- [x] brief-162: correct stop-loss (Listable would change nested/mixed
+  inert forms; pinned current behavior in a test). Resolution in the
+  tracker: align upward.
+- [ ] brief-162b (unit-1 fixes, batch 1 v2): attribute hygiene with the
+  threading upgrade decided — `Protected` string-pattern symbols;
+  `Listable` case-conversion alignment (nested/mixed inert forms now
+  thread).
 
 ## Release Transformation — COMPLETE (2026-07-06)
 
