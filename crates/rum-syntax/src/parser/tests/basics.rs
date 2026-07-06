@@ -31,6 +31,27 @@ fn parses_lists_and_nested_calls() {
 }
 
 #[test]
+fn parses_multiline_string_literals_as_string_atoms() {
+    assert_eq!(
+        parse_expr("\"\"\"\nab\"\"\"").unwrap(),
+        SyntaxExpr::string("ab", z())
+    );
+    assert_eq!(
+        parse_expr("\"\"\"a \" b \"\" c\"\"\"").unwrap(),
+        SyntaxExpr::string("a \" b \"\" c", z())
+    );
+    assert_eq!(
+        parse_expr("x = '''\nC:\\path \\t raw\n'''").unwrap(),
+        SyntaxExpr::binary(
+            BinaryOp::Set,
+            SyntaxExpr::symbol("x", z()),
+            SyntaxExpr::string("C:\\path \\t raw\n", z()),
+            z(),
+        )
+    );
+}
+
+#[test]
 fn rejects_too_deep_nested_call_without_panicking() {
     let depth = MAX_PARSE_DEPTH + 1;
     let mut input = String::with_capacity(depth * 3 + 1);

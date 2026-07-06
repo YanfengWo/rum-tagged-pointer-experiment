@@ -598,6 +598,43 @@ fn host_parse_inspect_complete_and_is_complete_cover_editor_flows() {
     let incomplete = session.is_complete("f[\n  1");
     assert_eq!(incomplete.status, HostCompletenessStatus::Incomplete);
     assert_eq!(incomplete.indent.as_deref(), Some("    "));
+
+    let open_multiline_string = session.is_complete("x = \"\"\"\nabc");
+    assert_eq!(
+        open_multiline_string.status,
+        HostCompletenessStatus::Incomplete
+    );
+
+    let open_raw_multiline_string = session.is_complete("x = '''\nabc");
+    assert_eq!(
+        open_raw_multiline_string.status,
+        HostCompletenessStatus::Incomplete
+    );
+}
+
+#[test]
+fn host_evaluates_multiline_string_literals_as_ordinary_strings() {
+    let mut session = HostSession::new();
+
+    let escaped = successful_eval(session.eval("\"\"\"\nab\"\"\" === \"ab\""));
+    assert_eq!(escaped.value.text, "True");
+
+    let raw =
+        successful_eval(session.eval("'''\nC:\\path \\t raw\n''' === \"C:\\\\path \\\\t raw\\n\""));
+    assert_eq!(raw.value.text, "True");
+}
+
+#[test]
+fn host_processes_inline_multiline_csv_data() {
+    let mut session = HostSession::new();
+    let source = "data = \"\"\"\na,1\nb,2\"\"\"; {StringLines[data], FromCsv[data]}";
+
+    let success = successful_eval(session.eval(source));
+
+    assert_eq!(
+        success.value.text,
+        "List[List[\"a,1\", \"b,2\"], List[List[\"a\", \"1\"], List[\"b\", \"2\"]]]"
+    );
 }
 
 #[test]

@@ -2,7 +2,11 @@ use super::*;
 
 impl<'a> Lexer<'a> {
     pub(super) fn new(input: &'a str) -> Self {
-        Self { input, offset: 0 }
+        Self {
+            input,
+            offset: 0,
+            can_start_raw_string: true,
+        }
     }
     pub(super) fn single(&mut self, kind: TokenKind) -> TokenKind {
         self.bump_char();

@@ -4,6 +4,10 @@ use super::*;
 impl<'a> Lexer<'a> {
     pub(super) fn lex_string(&mut self) -> Result<TokenKind, SyntaxError> {
         let start = self.offset;
+        if self.consume_str("\"\"\"") {
+            return self.lex_escaped_multiline_string(start);
+        }
+
         self.bump_char();
         let mut value = String::new();
 
@@ -14,52 +18,7 @@ impl<'a> Lexer<'a> {
                     return Ok(TokenKind::String(value));
                 }
                 '\\' => {
-                    self.bump_char();
-
-                    let escaped = self.peek_char().ok_or(SyntaxError::UnterminatedString {
-                        span: Span::new(start, self.offset),
-                    })?;
-
-                    match escaped {
-                        '"' | '\\' => {
-                            value.push(escaped);
-                            self.bump_char();
-                        }
-                        '[' => {
-                            let escape_start = self.offset - 1;
-                            let Some((decoded, end)) =
-                                self.named_character_escape_at(escape_start)?
-                            else {
-                                unreachable!("string escape branch checked '['");
-                            };
-                            value.push(decoded);
-                            self.offset = end;
-                        }
-                        'n' => {
-                            value.push('\n');
-                            self.bump_char();
-                        }
-                        't' => {
-                            value.push('\t');
-                            self.bump_char();
-                        }
-                        'r' => {
-                            value.push('\r');
-                            self.bump_char();
-                        }
-                        'u' => {
-                            if let Some(unicode) = self.try_lex_unicode_escape() {
-                                value.push(unicode);
-                            } else {
-                                value.push('u');
-                                self.bump_char();
-                            }
-                        }
-                        other => {
-                            value.push(other);
-                            self.bump_char();
-                        }
-                    }
+                    self.lex_string_escape(start, &mut value)?;
                 }
                 other => {
                     value.push(other);
@@ -71,6 +30,114 @@ impl<'a> Lexer<'a> {
         Err(SyntaxError::UnterminatedString {
             span: Span::new(start, self.offset),
         })
+    }
+
+    pub(super) fn lex_raw_multiline_string(&mut self) -> Result<TokenKind, SyntaxError> {
+        let start = self.offset;
+        self.offset += 3;
+        self.consume_initial_multiline_newline();
+
+        let mut value = String::new();
+
+        while let Some(ch) = self.peek_char() {
+            if self.input[self.offset..].starts_with("'''") {
+                self.offset += 3;
+                return Ok(TokenKind::String(value));
+            }
+
+            value.push(ch);
+            self.bump_char();
+        }
+
+        Err(SyntaxError::UnterminatedString {
+            span: Span::new(start, self.offset),
+        })
+    }
+
+    fn lex_escaped_multiline_string(&mut self, start: usize) -> Result<TokenKind, SyntaxError> {
+        self.consume_initial_multiline_newline();
+
+        let mut value = String::new();
+
+        while let Some(ch) = self.peek_char() {
+            if self.input[self.offset..].starts_with("\"\"\"") {
+                self.offset += 3;
+                return Ok(TokenKind::String(value));
+            }
+
+            match ch {
+                '\\' => self.lex_string_escape(start, &mut value)?,
+                other => {
+                    value.push(other);
+                    self.bump_char();
+                }
+            }
+        }
+
+        Err(SyntaxError::UnterminatedString {
+            span: Span::new(start, self.offset),
+        })
+    }
+
+    fn consume_initial_multiline_newline(&mut self) {
+        if self.input[self.offset..].starts_with("\r\n") {
+            self.offset += 2;
+        } else if self.input[self.offset..].starts_with('\n') {
+            self.offset += 1;
+        }
+    }
+
+    fn lex_string_escape(
+        &mut self,
+        string_start: usize,
+        value: &mut String,
+    ) -> Result<(), SyntaxError> {
+        self.bump_char();
+
+        let escaped = self.peek_char().ok_or(SyntaxError::UnterminatedString {
+            span: Span::new(string_start, self.offset),
+        })?;
+
+        match escaped {
+            '"' | '\\' => {
+                value.push(escaped);
+                self.bump_char();
+            }
+            '[' => {
+                let escape_start = self.offset - 1;
+                let Some((decoded, end)) = self.named_character_escape_at(escape_start)? else {
+                    unreachable!("string escape branch checked '['");
+                };
+                value.push(decoded);
+                self.offset = end;
+            }
+            'n' => {
+                value.push('\n');
+                self.bump_char();
+            }
+            't' => {
+                value.push('\t');
+                self.bump_char();
+            }
+            'r' => {
+                value.push('\r');
+                self.bump_char();
+            }
+            'u' => {
+                if let Some(unicode) = self.try_lex_unicode_escape() {
+                    value.push(unicode);
+                } else {
+                    value.push('u');
+                    self.bump_char();
+                }
+            }
+            other => {
+                value.push(other);
+                self.bump_char();
+            }
+        }
+
+        Ok(())
     }
 
     pub(super) fn lex_named_character_token(

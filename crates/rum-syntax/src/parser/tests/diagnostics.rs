@@ -62,6 +62,19 @@ fn reports_incomplete_rhs_after_binary_operator() {
 }
 
 #[test]
+fn reports_unterminated_multiline_string_as_incomplete_input() {
+    let err = parse_expr("x = \"\"\"\nabc").unwrap_err();
+
+    assert_eq!(
+        err,
+        SyntaxError::UnterminatedString {
+            span: Span::new(4, 11),
+        }
+    );
+    assert!(err.is_incomplete());
+}
+
+#[test]
 fn reports_missing_closing_tilde_in_infix_application() {
     let err = parse_expr("a ~ f").unwrap_err();
 

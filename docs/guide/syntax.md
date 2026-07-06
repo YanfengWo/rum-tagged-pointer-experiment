@@ -70,6 +70,57 @@ They evaluate to themselves, so `"rum"` remains a string value.
 String builtins such as `StringLength`, `StringSplit`, `StringJoin`, and
 `StringReplace` are cataloged in the generated reference.
 
+`rum` also accepts two multiline string input forms. Both forms lower to the
+same ordinary string atom as a single-line string.
+
+An escaped multiline string starts and ends with `"""`. It uses the same escape
+forms as ordinary `"..."` strings, including `\n`, `\r`, `\t`, `\"`, `\\`,
+`\u{...}`, and named characters such as `\[Alpha]`. Single `"` and doubled `""`
+characters may appear directly in the body. The literal ends at the first
+unescaped `"""`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval '"""line1\nline2"""'
+"line1\nline2"
+```
+
+A raw multiline string starts and ends with `'''`. It performs no escape
+processing: backslashes, `\t`, quotes, and newlines are literal content.
+
+```text
+$ cargo run -q -p rum-cli -- --eval $'x = \'\'\'\nC:\\path \\t raw\n\'\'\'; {StringLength[x], ToCharacterCode[x]}'
+List[15, List[67, 58, 92, 112, 97, 116, 104, 32, 92, 116, 32, 114, 97, 119, 10]]
+```
+
+If the first character after either opening delimiter is `\n` or `\r\n`, that
+first newline is dropped. No automatic dedent is applied. Pair multiline
+literals with `StringDedent` when indented source text should become
+flush-left string content.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'StringLines["""
+a,1
+b,2"""]'
+List["a,1", "b,2"]
+```
+
+The raw form cannot contain `'''` in its body; there is no raw-string escape
+hatch in this version.
+
+Apostrophe is also postfix derivative syntax. To preserve that syntax, `'''`
+opens a raw string only where a non-juxtaposition operand is expected, such as
+at the start of input or after `=`, `,`, `(`, `[`, `{`, and infix operators.
+After an expression, consecutive apostrophes remain postfix derivative tokens.
+
+```text
+$ cargo run -q -p rum-cli -- --eval "FullForm[HoldComplete[f'''[x]]]"
+"HoldComplete[Derivative[3][f][x]]"
+```
+
+Multiline literals are input syntax only. Value printing and `ToString` use the
+canonical single-line escaped string form, as shown in the examples above. The
+formatter preserves the original multiline literal text when formatting source.
+
 ## Calls
 
 Ordinary calls preserve their head during lowering:

@@ -42,4 +42,5 @@ pub(crate) fn lex(input: &str) -> Result<Vec<Token>, SyntaxError> {
 struct Lexer<'a> {
     input: &'a str,
     offset: usize,
+    can_start_raw_string: bool,
 }

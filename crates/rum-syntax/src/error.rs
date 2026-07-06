@@ -38,6 +38,7 @@ impl SyntaxError {
             self,
             Self::Incomplete { .. }
                 | Self::UnclosedDelimiter { .. }
+                | Self::UnterminatedString { .. }
                 | Self::UnterminatedComment { .. }
         )
     }

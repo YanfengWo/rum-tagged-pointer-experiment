@@ -454,3 +454,86 @@ fn lexes_string_literals_with_basic_and_unicode_escapes() {
         TokenKind::String(value) if value == "a\n\r\t🙂"
     ));
 }
+
+#[test]
+fn lexes_escaped_multiline_string_literals() {
+    let tokens = lex("\"\"\"\nab\\n\\t\\\"quote\"\"\"").unwrap();
+
+    assert!(matches!(
+        &tokens[0].kind,
+        TokenKind::String(value) if value == "ab\n\t\"quote"
+    ));
+
+    let tokens = lex("\"\"\"\r\nab\"c\"\"d\"\"\"").unwrap();
+    assert!(matches!(
+        &tokens[0].kind,
+        TokenKind::String(value) if value == "ab\"c\"\"d"
+    ));
+
+    let tokens = lex("\"\"\"\"\"\"").unwrap();
+    assert!(matches!(&tokens[0].kind, TokenKind::String(value) if value.is_empty()));
+}
+
+#[test]
+fn lexes_raw_multiline_string_literals_only_in_operand_position() {
+    let tokens = lex("x = '''\nC:\\path \\t raw\n'''").unwrap();
+    assert!(matches!(
+        &tokens[2].kind,
+        TokenKind::String(value) if value == "C:\\path \\t raw\n"
+    ));
+
+    let tokens = lex("x = '''\r\nraw'''").unwrap();
+    assert!(matches!(&tokens[2].kind, TokenKind::String(value) if value == "raw"));
+
+    let tokens = lex("''''''").unwrap();
+    assert!(matches!(&tokens[0].kind, TokenKind::String(value) if value.is_empty()));
+
+    let tokens = lex("f'''[x]").unwrap();
+    assert!(matches!(&tokens[0].kind, TokenKind::Symbol(value) if value == "f"));
+    assert!(matches!(tokens[1].kind, TokenKind::Prime));
+    assert!(matches!(tokens[2].kind, TokenKind::Prime));
+    assert!(matches!(tokens[3].kind, TokenKind::Prime));
+    assert!(matches!(tokens[4].kind, TokenKind::LBracket));
+}
+
+#[test]
+fn reports_unterminated_multiline_string_literals_with_spans() {
+    let err = lex("\"\"\"raw").unwrap_err();
+    assert_eq!(
+        err,
+        SyntaxError::UnterminatedString {
+            span: Span::new(0, 6),
+        }
+    );
+    assert!(err.is_incomplete());
+
+    let err = lex("x = '''raw").unwrap_err();
+    assert_eq!(
+        err,
+        SyntaxError::UnterminatedString {
+            span: Span::new(4, 10),
+        }
+    );
+    assert!(err.is_incomplete());
+}
+
+#[test]
+fn pins_multiline_string_delimiter_greedy_edges() {
+    let err = lex("\"\"\"\"").unwrap_err();
+    assert_eq!(
+        err,
+        SyntaxError::UnterminatedString {
+            span: Span::new(0, 4),
+        }
+    );
+
+    let tokens = lex("\"\"\"\"\"\"").unwrap();
+    assert!(matches!(&tokens[0].kind, TokenKind::String(value) if value.is_empty()));
+    assert!(matches!(tokens[1].kind, TokenKind::End));
+
+    let tokens = lex(concat!("\"\"\"", r#"a\"""b"#, "\"\"\"")).unwrap();
+    assert!(matches!(
+        &tokens[0].kind,
+        TokenKind::String(value) if value == "a\"\"\"b"
+    ));
+}

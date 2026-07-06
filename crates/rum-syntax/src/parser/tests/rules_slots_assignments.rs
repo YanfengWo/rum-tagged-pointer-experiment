@@ -310,6 +310,14 @@ fn parses_factorial_derivative_and_repeated_postfix_forms() {
         SyntaxExpr::postfix(PostfixOp::Derivative(3), SyntaxExpr::symbol("f", z()), z(),)
     );
     assert_eq!(
+        parse_expr("f'''[x]").unwrap(),
+        SyntaxExpr::call(
+            SyntaxExpr::postfix(PostfixOp::Derivative(3), SyntaxExpr::symbol("f", z()), z()),
+            vec![SyntaxExpr::symbol("x", z())],
+            z(),
+        )
+    );
+    assert_eq!(
         parse_expr("{a ..}").unwrap(),
         SyntaxExpr::list(
             vec![SyntaxExpr::postfix(

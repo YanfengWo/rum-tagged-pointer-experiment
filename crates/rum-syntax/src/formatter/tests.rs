@@ -247,6 +247,15 @@ fn formatter_preserves_outer_comment_trivia() {
 }
 
 #[test]
+fn formatter_preserves_multiline_string_literals_verbatim() {
+    let source = "escaped =\n\"\"\"\na,\"b\"\n\"\"\";\n(* note *)\nraw =\n'''\nC:\\path \\t raw\n''';\nplain = \"ok\"";
+
+    let formatted = format_source(source).unwrap();
+
+    assert_eq!(formatted, source);
+}
+
+#[test]
 fn formatter_preserves_inline_comments_inside_calls_and_binary_ops() {
     let formatted = format_source("f[x(* inner *)+y,(* note *)z]").unwrap();
     assert_eq!(formatted, "f[x (* inner *) + y, (* note *) z]");

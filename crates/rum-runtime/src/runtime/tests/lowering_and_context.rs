@@ -46,6 +46,18 @@ fn lowers_message_name_syntax_into_core_expr() {
 
     assert_eq!(lowered.to_string(), "FindFile::notfound");
 }
+
+#[test]
+fn lowers_multiline_string_literals_like_ordinary_strings() {
+    let escaped = lower_syntax_expr(&parse_expr("\"\"\"\nab\"\"\"").unwrap()).unwrap();
+    let escaped_equivalent = lower_syntax_expr(&parse_expr("\"ab\"").unwrap()).unwrap();
+    assert_eq!(escaped, escaped_equivalent);
+
+    let raw = lower_syntax_expr(&parse_expr("'''\nC:\\path \\t raw\n'''").unwrap()).unwrap();
+    let raw_equivalent =
+        lower_syntax_expr(&parse_expr("\"C:\\\\path \\\\t raw\\n\"").unwrap()).unwrap();
+    assert_eq!(raw, raw_equivalent);
+}
 #[test]
 fn lowers_tagset_and_unset_syntax_into_core_expr() {
     let tagged_assignment = parse_expr("f /: g[x_] := rhs").unwrap();

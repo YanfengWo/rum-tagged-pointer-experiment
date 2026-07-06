@@ -20,6 +20,8 @@ impl<'a> Lexer<'a> {
         let start = self.offset;
         let ch = self.peek_char().expect("checked eof above");
 
+        let can_start_raw_string_before_token = self.can_start_raw_string;
+
         let token = match ch {
             '[' => {
                 if self.consume_str("[[") {
@@ -122,7 +124,13 @@ impl<'a> Lexer<'a> {
                     self.single(TokenKind::Bang)
                 }
             }
-            '\'' => self.single(TokenKind::Prime),
+            '\'' => {
+                if self.can_start_raw_string && self.input[self.offset..].starts_with("'''") {
+                    self.lex_raw_multiline_string()?
+                } else {
+                    self.single(TokenKind::Prime)
+                }
+            }
             '.' => self.lex_dot_prefixed_token(),
             '?' => self.single(TokenKind::Question),
             '#' => self.single(TokenKind::Hash),
@@ -218,10 +226,98 @@ impl<'a> Lexer<'a> {
             }
         };
 
+        self.can_start_raw_string =
+            token_can_be_followed_by_raw_string_operand(&token, can_start_raw_string_before_token);
+
         Ok(Some(Token::new(
             token,
             Span::new(start, self.offset),
             leading_trivia,
         )))
+    }
+}
+
+fn token_can_be_followed_by_raw_string_operand(
+    token: &TokenKind,
+    token_started_operand_position: bool,
+) -> bool {
+    match token {
+        TokenKind::End => false,
+        TokenKind::LBracket
+        | TokenKind::DoubleLBracket
+        | TokenKind::LBrace
+        | TokenKind::LAssociation
+        | TokenKind::LParen
+        | TokenKind::Comma
+        | TokenKind::Semicolon
+        | TokenKind::Span
+        | TokenKind::At
+        | TokenKind::AtAt
+        | TokenKind::AtAtAt
+        | TokenKind::AtStar
+        | TokenKind::Plus
+        | TokenKind::PlusEqual
+        | TokenKind::Minus
+        | TokenKind::MinusEqual
+        | TokenKind::Star
+        | TokenKind::StarStar
+        | TokenKind::StarEqual
+        | TokenKind::Slash
+        | TokenKind::SlashAt
+        | TokenKind::SlashEqual
+        | TokenKind::SlashSlash
+        | TokenKind::SlashSlashAt
+        | TokenKind::SlashSlashEqual
+        | TokenKind::SlashStar
+        | TokenKind::TildeTilde
+        | TokenKind::Tilde
+        | TokenKind::Caret
+        | TokenKind::CaretEqual
+        | TokenKind::CaretColonEqual
+        | TokenKind::And
+        | TokenKind::Or
+        | TokenKind::Same
+        | TokenKind::Unsame
+        | TokenKind::Equal
+        | TokenKind::Unequal
+        | TokenKind::Less
+        | TokenKind::Greater
+        | TokenKind::LessEqual
+        | TokenKind::GreaterEqual
+        | TokenKind::StringJoin
+        | TokenKind::Colon
+        | TokenKind::MessageName
+        | TokenKind::TagSet
+        | TokenKind::Arrow
+        | TokenKind::RuleDelayed
+        | TokenKind::Set
+        | TokenKind::SetDelayed
+        | TokenKind::ReplaceAll
+        | TokenKind::ReplaceRepeated
+        | TokenKind::Condition
+        | TokenKind::Dot
+        | TokenKind::Bar
+        | TokenKind::BarMinusGreater
+        | TokenKind::Question
+        | TokenKind::Underscore
+        | TokenKind::DoubleUnderscore
+        | TokenKind::TripleUnderscore => true,
+        TokenKind::PlusPlus | TokenKind::MinusMinus | TokenKind::Bang => {
+            token_started_operand_position
+        }
+        TokenKind::Integer(_)
+        | TokenKind::String(_)
+        | TokenKind::Symbol(_)
+        | TokenKind::RBracket
+        | TokenKind::DoubleRBracket
+        | TokenKind::RBrace
+        | TokenKind::RAssociation
+        | TokenKind::RParen
+        | TokenKind::Prime
+        | TokenKind::Unset
+        | TokenKind::Repeated
+        | TokenKind::RepeatedNull
+        | TokenKind::Ampersand
+        | TokenKind::Hash => false,
     }
 }
