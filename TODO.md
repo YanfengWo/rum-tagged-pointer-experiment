@@ -67,11 +67,11 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-167 DONE (46f6e96): url/argv/encoding ergonomics; workspace
   1345/0. Gate lesson: reference LIMITS notes live in `docgen.rs` —
   include it in MAY when a brief changes documented limits.
-- [ ] brief-168 (unit-1 batch 5, FINAL): fail-closed strict modes —
-  `TemplateApply`/`Uncompress`/`HtmlUnescape` gain `"Strict" -> False`
-  (message + `$Failed` on missing slots / bad envelope / malformed
-  entity); `HammingDistance` unequal lengths gains the WL-parity
-  message (stays inert). Unit 1 closes after this.
+- [x] brief-168 DONE (944a6de): strict modes; workspace 1345/0.
+  **UNIT 1 (strings) CLOSED** — deferred/debt ledger in the tracker.
+- [ ] brief-169 (unit 2 audit): structure + functional families
+  (47 + 42 = 89 builtins), all-rows findings table; pre-seeded check:
+  `Cases` operator form (spillover from 164's recon).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

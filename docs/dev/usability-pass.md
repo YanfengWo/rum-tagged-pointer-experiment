@@ -49,7 +49,7 @@ first (157), then flexibility (158), convenience + safety (159).
 
 | # | Unit | Count | Audit | Fixes |
 |---|------|-------|-------|-------|
-| 1 | strings | 99 | brief-161 ✓ | 162… (see triage below) |
+| 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
 | 2 | structure + functional | 89 | | |
 | 3 | predicates + associations | 83 | | |
 | 4 | control + logic + rewrite | 63 | | |
@@ -113,6 +113,20 @@ Audit brief-161: 101 rows / 99 names, findings in
    SHA-256, re-plumb `Hash` onto the RustCrypto digests behind the
    `hash` feature, and extend its method names to
    SHA1/SHA512/MD5/CRC32.
+
+**UNIT 1 CLOSED (2026-07-07).** Landed: 161 audit + 162b/163/164/165/
+166/167/168 (plus 162's correct stop-loss). Workspace 1339/0 →
+1345/0; reference 605 → 602 (plan A removed three). Left on purpose:
+`Take`/`Drop`/`Count`/`Position` operator forms (deferred until the
+perf-measurement freeze lifts — they graze call planning);
+`LongestCommonSequence` sibling name (small later batch);
+`Alphabet`/`RemoveDiacritics`/`SequenceAlignment` escape hatches
+(future unicode line). Debts: rum-jupyter `signature.rs` hand-rolled
+SHA-256 (TODO); rum-jupyter transient test failure (watch). Spillover:
+`Cases`/`ReplaceAll` operator forms → units 2/4. Brief-craft lessons
+now standing: MAY lists pre-include `docgen.rs` (LIMITS notes) and
+`options/defaults.rs`; probes feed stdin; audits get an all-rows
+coverage check.
 
 Corrections to audit findings (so fix briefs do not inherit them):
 `LongestCommonSubsequence`'s contiguous behavior IS the WL contract
