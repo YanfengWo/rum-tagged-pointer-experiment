@@ -7,6 +7,7 @@ use rum_runtime::{Session, core_builtin_specs};
 
 mod arithmetic;
 mod associations;
+mod bytes;
 mod calculus;
 mod catalog;
 mod combinatorics;
@@ -41,6 +42,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::ASSOCIATION_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::BYTE_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::COMBINATORICS_BUILTINS {

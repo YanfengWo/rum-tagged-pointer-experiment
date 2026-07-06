@@ -7,6 +7,65 @@ They are pure string codecs. They do not read or write files, do not consult
 host capabilities beyond `Pure`, and fail closed with `$Failed` plus a runtime
 message when the input is outside the documented subset.
 
+## Bytes, Digests, And Encodings
+
+`ByteArray` represents raw byte payloads as base64 text. `StringToByteArray`
+encodes a string as UTF-8 bytes, and `ByteArrayToString` decodes a `ByteArray`
+back to a string only when the bytes are valid UTF-8.
+
+Hashing yes, encryption never: digests and encodings are pure deterministic
+byte functions and belong in the standard library. Encryption, signing, and key
+handling do not enter the kernel; if they are ever needed, they belong in a
+downstream capability crate. `Md5` and `Sha1` are present for interoperability
+and checksums only, not for collision-resistant use.
+
+Digest and encoding functions accept either a string, hashed or encoded as its
+UTF-8 bytes, or a `ByteArray`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Sha256["abc"]'
+"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+```
+
+`Sha256`, `Sha512`, `Sha1`, and `Md5` return lowercase hexadecimal strings by
+default. The second form with `"Bytes"` returns a `ByteArray`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Sha256[FromHexString["00ff"], "Bytes"]'
+ByteArray["But9amnuGeX733SQGNPSq/oEvL0TZdsxLrhtxxaTibg="]
+```
+
+`Crc32` returns an unsigned exact integer.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Crc32["123456789"]'
+3421780262
+```
+
+`ToHexString` and `FromHexString` provide lowercase hex encoding and
+case-insensitive decoding. `ToBase64` and `FromBase64` use standard RFC 4648
+base64 with padding.
+
+```text
+$ cargo run -q -p rum-cli -- --eval '{ToHexString[StringToByteArray["ab"]], FromHexString["6162"] // ByteArrayToString}'
+List["6162", "ab"]
+```
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromBase64[ToBase64["héllo, 世界"]] // ByteArrayToString'
+"héllo, 世界"
+```
+
+Malformed encoded text fails closed with `$Failed` and a runtime message.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromHexString["6"]'
+! FromHexString::hex: expected an even-length hexadecimal string
+$Failed
+```
+
+`ByteArrayQ` tests for a syntactically valid `ByteArray` payload.
+
 ## JSON Mapping
 
 `FromJson[str]` parses RFC 8259 JSON into these values:

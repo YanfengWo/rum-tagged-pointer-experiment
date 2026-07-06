@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 552
+Builtin count: 563
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -413,6 +413,20 @@ Represents raw byte payloads using base64 text in the current first-pass subset.
 - Attributes: `None`
 - Capability: `Pure`
 
+### ByteArrayQ
+
+Tests whether an expression is a ByteArray with a valid base64 payload.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### ByteArrayToString
+
+Converts a ByteArray to a string when its payload is valid UTF-8, failing closed otherwise.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### ByteCount
 
 Returns the current canonical-text byte count for an expression in the first-pass resource subset.
@@ -710,6 +724,13 @@ Counts repeated elements and returns an association in the current first-pass su
 ### CountsBy
 
 Counts transformed elements and returns an association in the current first-pass subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Crc32
+
+Computes the IEEE CRC-32 checksum over a string's UTF-8 bytes or a ByteArray.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1322,6 +1343,13 @@ Tests whether no subexpression matches a pattern on levels specified by a standa
 - Attributes: `None`
 - Capability: `Pure`
 
+### FromBase64
+
+Decodes standard RFC 4648 base64 with padding into a ByteArray, failing closed on malformed input.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### FromDateString
 
 Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timestamp.
@@ -1335,6 +1363,13 @@ Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timest
 Constructs an exact integer from a list or string of digits.
 
 - Attributes: `Protected`
+- Capability: `Pure`
+
+### FromHexString
+
+Decodes even-length hexadecimal text into a ByteArray, failing closed on malformed input.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### FromJson
@@ -1959,6 +1994,14 @@ Returns the peak session memory-proxy byte count high-water mark subset.
 
 - Attributes: `None`
 - Capability: `Diagnostic`
+
+### Md5
+
+Computes an MD5 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: intended only for interoperability and checksums; it is not collision-resistant.
 
 ### Mean
 
@@ -3020,6 +3063,28 @@ Updates known default options for a symbol.
 - Attributes: `HoldFirst`
 - Capability: `Pure`
 
+### Sha1
+
+Computes a SHA-1 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: intended only for interoperability and checksums; it is not collision-resistant.
+
+### Sha256
+
+Computes a SHA-256 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Sha512
+
+Computes a SHA-512 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### Short
 
 Returns the current canonical-text shortened display subset for an expression.
@@ -3602,6 +3667,13 @@ Evaluates an expression and returns {elapsed, value} using the current wall-cloc
 - Attributes: `HoldAll`
 - Capability: `Clock`
 
+### ToBase64
+
+Encodes a string's UTF-8 bytes or a ByteArray as standard RFC 4648 base64 with padding.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### ToCharacterCode
 
 Returns Unicode scalar values for strings in the current first-pass subset.
@@ -3612,6 +3684,13 @@ Returns Unicode scalar values for strings in the current first-pass subset.
 ### ToExpression
 
 Parses and evaluates input strings using the current InputForm/StandardForm-compatible subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### ToHexString
+
+Encodes a string's UTF-8 bytes or a ByteArray as lowercase hexadecimal text.
 
 - Attributes: `None`
 - Capability: `Pure`

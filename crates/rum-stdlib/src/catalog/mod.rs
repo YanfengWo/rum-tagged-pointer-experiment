@@ -1,5 +1,6 @@
 mod arithmetic;
 mod associations;
+mod bytes;
 mod calculus;
 mod combinatorics;
 mod control;
@@ -18,6 +19,7 @@ mod structure;
 
 pub(crate) use arithmetic::ARITHMETIC_BUILTINS;
 pub(crate) use associations::ASSOCIATION_BUILTINS;
+pub(crate) use bytes::BYTE_BUILTINS;
 pub(crate) use calculus::CALCULUS_BUILTINS;
 pub(crate) use combinatorics::COMBINATORICS_BUILTINS;
 pub(crate) use control::CONTROL_BUILTINS;

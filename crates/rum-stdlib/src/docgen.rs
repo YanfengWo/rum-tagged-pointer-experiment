@@ -28,6 +28,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.",
     ),
     (
+        "Md5",
+        "intended only for interoperability and checksums; it is not collision-resistant.",
+    ),
+    (
         "DumpSave",
         "writes a textual dump format; it is not a binary image.",
     ),
@@ -71,6 +75,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "SeedRandom",
         "uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds. The zero-argument entropy form requires Capability::Random.",
+    ),
+    (
+        "Sha1",
+        "intended only for interoperability and checksums; it is not collision-resistant.",
     ),
     (
         "Riffle",

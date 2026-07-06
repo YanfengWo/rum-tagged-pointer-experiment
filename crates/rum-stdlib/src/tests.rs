@@ -10,6 +10,8 @@ mod associations;
 mod associations_missing_surface;
 #[path = "tests/builtin_reference_docgen.rs"]
 mod builtin_reference_docgen;
+#[path = "tests/bytes.rs"]
+mod bytes;
 #[path = "tests/calculus.rs"]
 mod calculus;
 #[path = "tests/catalog_capabilities.rs"]
@@ -206,6 +208,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::LOGIC_BUILTINS,
         catalog::PREDICATE_BUILTINS,
         catalog::ASSOCIATION_BUILTINS,
+        catalog::BYTE_BUILTINS,
         catalog::COMBINATORICS_BUILTINS,
         catalog::CONTROL_BUILTINS,
         catalog::DATETIME_BUILTINS,
