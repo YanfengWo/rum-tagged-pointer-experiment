@@ -45,6 +45,45 @@ fn exact_aggregation_shapes_reduce_arithmetic_terms() {
             .to_string(),
         "Association[Rule[x, 2], Rule[y, 0]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Mean[{1, 2, 1/2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "7/6"
+    );
+    assert_eq!(
+        session
+            .eval_text("Mean[{2, 4, 6, 8}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+}
+
+#[test]
+fn mean_reports_empty_and_invalid_arity_boundaries() {
+    let mut session = core_session();
+
+    let empty = session.eval_text("Mean[{}]").unwrap();
+    assert_eq!(empty.value.to_string(), "Mean[List[]]");
+    assert!(
+        empty
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Mean" && message.tag == "empty")
+    );
+
+    let invalid_arity = session.eval_text("Mean[]").unwrap();
+    assert_eq!(invalid_arity.value.to_string(), "Mean[]");
+    assert!(
+        invalid_arity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Mean" && message.tag == "argx")
+    );
 }
 
 #[test]

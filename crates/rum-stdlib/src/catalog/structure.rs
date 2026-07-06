@@ -167,6 +167,16 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         structure_ops::eval_delete_duplicates_by,
     ),
     BuiltinSpec::ordinary(
+        "Tally",
+        "Tallies structurally same top-level elements in first-occurrence order.",
+        structure_ops::eval_tally,
+    ),
+    BuiltinSpec::ordinary(
+        "GatherBy",
+        "Groups top-level elements by an evaluated key in first-occurrence key order.",
+        structure_ops::eval_gather_by,
+    ),
+    BuiltinSpec::ordinary(
         "Sort",
         "Sorts top-level elements using the current structural ordering subset.",
         structure_ops::eval_sort,
@@ -175,6 +185,41 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         "SortBy",
         "Sorts top-level elements by an evaluated key in the current unary-function subset.",
         structure_ops::eval_sort_by,
+    ),
+    BuiltinSpec::ordinary(
+        "ReverseSort",
+        "Sorts top-level elements using the current structural ordering subset, then reverses the result.",
+        structure_ops::eval_reverse_sort,
+    ),
+    BuiltinSpec::ordinary(
+        "ReverseSortBy",
+        "Sorts top-level elements by an evaluated key, then reverses the result.",
+        structure_ops::eval_reverse_sort_by,
+    ),
+    BuiltinSpec::ordinary(
+        "MaxBy",
+        "Returns the first top-level element attaining the maximum evaluated key under Sort ordering.",
+        structure_ops::eval_max_by,
+    ),
+    BuiltinSpec::ordinary(
+        "MinBy",
+        "Returns the first top-level element attaining the minimum evaluated key under Sort ordering.",
+        structure_ops::eval_min_by,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeLargestBy",
+        "Takes top-level elements with largest evaluated keys in descending key order, preserving tie order.",
+        structure_ops::eval_take_largest_by,
+    ),
+    BuiltinSpec::ordinary(
+        "TakeSmallestBy",
+        "Takes top-level elements with smallest evaluated keys in ascending key order, preserving tie order.",
+        structure_ops::eval_take_smallest_by,
+    ),
+    BuiltinSpec::ordinary(
+        "Riffle",
+        "Inserts one separator between adjacent top-level elements of a normal expression.",
+        structure_ops::eval_riffle,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Union",

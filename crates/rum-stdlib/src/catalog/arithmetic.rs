@@ -127,6 +127,11 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
         "Totals list elements through the current exact Plus semantics.",
         arithmetic::eval_total,
     ),
+    BuiltinSpec::ordinary(
+        "Mean",
+        "Aggregates a non-empty list as Total[list] divided by Length[list] through exact arithmetic.",
+        arithmetic::eval_mean,
+    ),
     BuiltinSpec::ordinary_with_attributes(
         "Denominator",
         "Returns the denominator of exact integers and rationals.",

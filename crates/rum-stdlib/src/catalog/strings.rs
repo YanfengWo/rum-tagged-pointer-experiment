@@ -72,6 +72,16 @@ pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
         strings::eval_string_pad_left,
     ),
     BuiltinSpec::ordinary(
+        "StringPadRight",
+        "Pads strings on the right to a target width using the current simple padding subset; values at or above width are unchanged.",
+        strings::eval_string_pad_right,
+    ),
+    BuiltinSpec::ordinary(
+        "StringLines",
+        "Splits a string on LF or CRLF newlines, preserving interior empty lines.",
+        strings::eval_string_lines,
+    ),
+    BuiltinSpec::ordinary(
         "StringTemplate",
         "Builds a simple TemplateObject wrapper from a template string in the current first-pass subset.",
         strings::eval_string_template,

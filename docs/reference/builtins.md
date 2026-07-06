@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 506
+Builtin count: 518
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1247,6 +1247,13 @@ Computes the greatest common divisor of exact integers.
 - Attributes: `Listable`
 - Capability: `Pure`
 
+### GatherBy
+
+Groups top-level elements by an evaluated key in first-occurrence key order.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### Get
 
 Reads a file or package and evaluates the expressions it contains.
@@ -1807,12 +1814,26 @@ Returns the maximum exact integer or rational operand.
 - Attributes: `None`
 - Capability: `Pure`
 
+### MaxBy
+
+Returns the first top-level element attaining the maximum evaluated key under Sort ordering.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### MaxMemoryUsed
 
 Returns the peak session memory-proxy byte count high-water mark subset.
 
 - Attributes: `None`
 - Capability: `Diagnostic`
+
+### Mean
+
+Aggregates a non-empty list as Total[list] divided by Length[list] through exact arithmetic.
+
+- Attributes: `None`
+- Capability: `Pure`
 
 ### MemberQ
 
@@ -1880,6 +1901,13 @@ Lists message names defined for the whole session, a symbol, or one message quer
 ### Min
 
 Returns the minimum exact integer or rational operand.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### MinBy
+
+Returns the first top-level element attaining the minimum evaluated key under Sort ordering.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -2622,6 +2650,28 @@ Represents a wrapper that reverses current call arguments before application in 
 - Attributes: `None`
 - Capability: `Pure`
 
+### ReverseSort
+
+Sorts top-level elements using the current structural ordering subset, then reverses the result.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### ReverseSortBy
+
+Sorts top-level elements by an evaluated key, then reverses the result.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Riffle
+
+Inserts one separator between adjacent top-level elements of a normal expression.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: supports only the single-separator form; cyclic and list-separator forms are outside the current contract.
+
 ### RightComposition
 
 Represents a right composition of functions in the current first-pass subset.
@@ -2930,6 +2980,14 @@ Returns the Unicode code-point length of a string.
 - Attributes: `Listable`
 - Capability: `Pure`
 
+### StringLines
+
+Splits a string on LF or CRLF newlines, preserving interior empty lines.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: splits only on LF and CRLF; one trailing newline is discarded while interior empty lines are preserved.
+
 ### StringMatchQ
 
 Tests whether a whole string matches an exact or current string-pattern spec.
@@ -2940,6 +2998,13 @@ Tests whether a whole string matches an exact or current string-pattern spec.
 ### StringPadLeft
 
 Pads strings on the left to a target width using the current simple padding subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### StringPadRight
+
+Pads strings on the right to a target width using the current simple padding subset; values at or above width are unchanged.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3182,6 +3247,13 @@ Returns both the taken and dropped structural elements using the current standar
 - Attributes: `None`
 - Capability: `Pure`
 
+### TakeLargestBy
+
+Takes top-level elements with largest evaluated keys in descending key order, preserving tie order.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### TakeList
 
 Splits a normal expression into sequential chunks by non-negative counts.
@@ -3189,9 +3261,23 @@ Splits a normal expression into sequential chunks by non-negative counts.
 - Attributes: `None`
 - Capability: `Pure`
 
+### TakeSmallestBy
+
+Takes top-level elements with smallest evaluated keys in ascending key order, preserving tie order.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### TakeWhile
 
 Takes the longest prefix satisfying a criterion in the current first-pass subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Tally
+
+Tallies structurally same top-level elements in first-occurrence order.
 
 - Attributes: `None`
 - Capability: `Pure`

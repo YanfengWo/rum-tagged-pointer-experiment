@@ -1,7 +1,8 @@
 use super::diacritics::remove_diacritics_value;
 use super::values::{
     character_code_expr, character_counts_expr, expr_as_nested_string_list,
-    single_code_point_string, string_pad_left_value, text_words_value,
+    single_code_point_string, string_lines_value, string_pad_left_value, string_pad_right_value,
+    text_words_value,
 };
 use super::*;
 
@@ -203,6 +204,58 @@ pub(crate) fn eval_string_pad_left(
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+pub(crate) fn eval_string_pad_right(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !(2..=3).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("StringPadRight", args, 2, 3));
+    }
+
+    let Some(width) = expr_as_non_negative_usize(&args[1]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let padding = match args.get(2) {
+        Some(expr) => expr_as_string(expr).filter(|value| !value.is_empty()),
+        None => Some(" "),
+    };
+    let Some(padding) = padding else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    if let Some(value) = expr_as_string(&args[0]) {
+        return Ok(Expr::string(string_pad_right_value(value, width, padding)));
+    }
+
+    if let Some(values) = expr_as_string_list(&args[0]) {
+        return Ok(string_list_expr(
+            values
+                .into_iter()
+                .map(|value| string_pad_right_value(&value, width, padding))
+                .collect(),
+        ));
+    }
+
+    Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+pub(crate) fn eval_string_lines(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if args.len() != 1 {
+        return Ok(session.invalid_call_with_exact_arg_count("StringLines", args, 1));
+    }
+
+    let Some(value) = expr_as_string(&args[0]) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    Ok(string_list_expr(string_lines_value(value)))
 }
 
 pub(crate) fn eval_text_words(

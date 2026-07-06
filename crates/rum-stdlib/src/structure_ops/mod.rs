@@ -9,6 +9,7 @@ use rum_runtime::kernel_api::{
     render_association_entry_forms_preserving_heads, system_expr,
 };
 
+mod collection_stats;
 mod combinatorial_lists;
 mod dedup;
 mod flatten;
@@ -21,6 +22,10 @@ mod sequence;
 mod surface;
 
 pub(crate) use self::{
+    collection_stats::{
+        eval_gather_by, eval_max_by, eval_min_by, eval_reverse_sort, eval_reverse_sort_by,
+        eval_riffle, eval_take_largest_by, eval_take_smallest_by, eval_tally,
+    },
     combinatorial_lists::{eval_partition, eval_subsets, eval_tuples},
     dedup::{eval_delete_duplicates, eval_delete_duplicates_by},
     flatten::eval_flatten,

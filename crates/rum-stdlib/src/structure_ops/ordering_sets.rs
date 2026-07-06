@@ -440,7 +440,7 @@ fn sort_by_comparator_table(expr_head: Expr, items: Vec<Expr>, before: &[Vec<boo
     )
 }
 
-fn compare_structural_order(lhs: &Expr, rhs: &Expr) -> Ordering {
+pub(super) fn compare_structural_order(lhs: &Expr, rhs: &Expr) -> Ordering {
     match (lhs, rhs) {
         (Expr::Atom(lhs), Expr::Atom(rhs)) => compare_atom_order(lhs, rhs),
         (Expr::Atom(_), Expr::Call { .. }) => Ordering::Less,

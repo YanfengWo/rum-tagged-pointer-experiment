@@ -24,6 +24,14 @@ pub const LIMITS: &[(&str, &str)] = &[
         "uses a bounded integer-work budget and sieve-based counting after flooring exact rational inputs.",
     ),
     ("PrimeQ", "uses direct trial division over exact integers."),
+    (
+        "Riffle",
+        "supports only the single-separator form; cyclic and list-separator forms are outside the current contract.",
+    ),
+    (
+        "StringLines",
+        "splits only on LF and CRLF; one trailing newline is discarded while interior empty lines are preserved.",
+    ),
 ];
 
 #[derive(Clone, Debug, PartialEq, Eq)]

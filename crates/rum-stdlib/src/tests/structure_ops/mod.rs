@@ -7,6 +7,7 @@ fn core_session() -> Session {
     session
 }
 
+mod collection_stats;
 mod dedup;
 mod join;
 mod list_plumbing;

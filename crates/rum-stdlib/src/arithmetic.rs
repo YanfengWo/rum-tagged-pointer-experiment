@@ -1,5 +1,7 @@
-use rum_core::Expr;
-use rum_runtime::kernel_api::{ArithmeticDataBuiltin, EvalError, Session};
+use rum_core::{BigInt, Expr};
+use rum_runtime::kernel_api::{
+    ArithmeticDataBuiltin, EvalError, Session, call_items_with_head, system_expr,
+};
 
 fn dispatch(
     session: &mut Session,
@@ -144,6 +146,34 @@ pub(crate) fn eval_total(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Total, head, args)
+}
+
+pub(crate) fn eval_mean(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [expr] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Mean", args, 1));
+    };
+
+    let Some(items) = call_items_with_head(expr, &system_expr("List")) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if items.is_empty() {
+        return Ok(session.invalid_call_with_message(
+            "Mean",
+            args,
+            "empty",
+            "Mean cannot aggregate an empty list.",
+        ));
+    }
+
+    let total = Expr::call(system_expr("Total"), vec![expr.clone()]);
+    let length = Expr::integer(BigInt::from(items.len()));
+    let quotient = Expr::call(system_expr("Divide"), vec![total, length]);
+    let evaluated = session.evaluate(quotient);
+    session.suspend_with_frame(evaluated, |_, value| Ok(value))
 }
 
 pub(crate) fn eval_denominator(

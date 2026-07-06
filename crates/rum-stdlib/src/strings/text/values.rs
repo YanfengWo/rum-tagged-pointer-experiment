@@ -28,6 +28,44 @@ pub(super) fn string_pad_left_value(value: &str, width: usize, padding: &str) ->
     prefix
 }
 
+pub(super) fn string_pad_right_value(value: &str, width: usize, padding: &str) -> String {
+    let value_len = value.chars().count();
+    if value_len >= width {
+        return value.to_string();
+    }
+
+    let needed = width - value_len;
+    let pad_chars = padding.chars().collect::<Vec<_>>();
+    let mut padded = value.to_string();
+    for index in 0..needed {
+        padded.push(pad_chars[index % pad_chars.len()]);
+    }
+    padded
+}
+
+pub(super) fn string_lines_value(value: &str) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    let mut chars = value.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\n' {
+            lines.push(std::mem::take(&mut current));
+        } else if ch == '\r' && chars.peek() == Some(&'\n') {
+            chars.next();
+            lines.push(std::mem::take(&mut current));
+        } else {
+            current.push(ch);
+        }
+    }
+
+    lines.push(current);
+    if value.ends_with('\n') {
+        lines.pop();
+    }
+    lines
+}
+
 pub(super) fn text_words_value(value: &str) -> Vec<String> {
     let mut words = Vec::new();
     let mut current = String::new();

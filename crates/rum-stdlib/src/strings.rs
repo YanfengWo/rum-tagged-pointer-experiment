@@ -36,10 +36,10 @@ pub(crate) use template::{eval_string_form, eval_string_template, eval_template_
 pub(crate) use text::{
     eval_capitalize, eval_character_counts, eval_character_range, eval_characters,
     eval_decapitalize, eval_digit_q, eval_letter_q, eval_lower_case_q, eval_remove_diacritics,
-    eval_row, eval_string_join, eval_string_length, eval_string_pad_left, eval_string_repeat,
-    eval_string_reverse, eval_string_riffle, eval_syntax_q, eval_text_string, eval_text_words,
-    eval_to_character_code, eval_to_expression, eval_to_lower_case, eval_to_string,
-    eval_to_upper_case, eval_upper_case_q,
+    eval_row, eval_string_join, eval_string_length, eval_string_lines, eval_string_pad_left,
+    eval_string_pad_right, eval_string_repeat, eval_string_reverse, eval_string_riffle,
+    eval_syntax_q, eval_text_string, eval_text_words, eval_to_character_code, eval_to_expression,
+    eval_to_lower_case, eval_to_string, eval_to_upper_case, eval_upper_case_q,
 };
 
 fn bool_expr(value: bool) -> Expr {
