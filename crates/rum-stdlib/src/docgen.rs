@@ -97,8 +97,16 @@ pub const LIMITS: &[(&str, &str)] = &[
         "uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary.",
     ),
     (
+        "RandomPassword",
+        "uses the host entropy provider directly with rejection sampling over the alphabet size to avoid modulo bias; it is not affected by SeedRandom or BlockRandom. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw.",
+    ),
+    (
         "RandomSample",
         "uses the deterministic session PRNG; it is not cryptographic.",
+    ),
+    (
+        "RandomString",
+        "uses the deterministic session PRNG with rejection sampling over the alphabet size; it is not cryptographic. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw.",
     ),
     (
         "RandomUuid",

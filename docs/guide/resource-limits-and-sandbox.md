@@ -181,9 +181,9 @@ inside their handlers. Their argumentful forms (`DateList[ts]` and
 `DateString[ts]` or `DateString[{y, mo, d, h, mi, s}]`) are pure UTC calendar
 conversions and remain available under a `{Pure}` policy.
 
-Entropy-effect builtins are `Random`: `RandomBytes` draws directly from the
-host entropy provider, and `SeedRandom[]` reseeds the deterministic session
-PRNG from that provider.
+Entropy-effect builtins are `Random`: `RandomBytes` and `RandomPassword` draw
+directly from the host entropy provider, and `SeedRandom[]` reseeds the
+deterministic session PRNG from that provider.
 
 General file utilities are deliberately outside the kernel; the filesystem
 surface is the module system and session persistence only.

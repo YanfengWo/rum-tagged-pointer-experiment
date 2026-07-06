@@ -27,11 +27,13 @@ fn random_catalog_capabilities_match_dispatch_surface() {
     assert_eq!(capability("RandomInteger"), Capability::Pure);
     assert_eq!(capability("RandomChoice"), Capability::Pure);
     assert_eq!(capability("RandomSample"), Capability::Pure);
+    assert_eq!(capability("RandomString"), Capability::Pure);
     assert_eq!(capability("BlockRandom"), Capability::Pure);
     assert_eq!(capability("RandomUuid"), Capability::Pure);
     assert_eq!(capability("UuidQ"), Capability::Pure);
     assert_eq!(capability("SeedRandom"), Capability::Pure);
     assert_eq!(capability("RandomBytes"), Capability::Random);
+    assert_eq!(capability("RandomPassword"), Capability::Random);
 }
 
 #[test]

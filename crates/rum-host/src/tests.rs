@@ -77,6 +77,10 @@ fn byte_array_payload(text: &str) -> Option<&str> {
     text.strip_prefix("ByteArray[\"")?.strip_suffix("\"]")
 }
 
+fn string_payload(text: &str) -> Option<&str> {
+    text.strip_prefix('"')?.strip_suffix('"')
+}
+
 fn assert_sandbox_denied(session: &mut HostSession, source: &str) {
     let success = successful_eval(session.eval(source));
     assert_eq!(success.value.text, "$Failed", "source {source}");
@@ -389,9 +393,10 @@ fn sandboxed_host_config_blocks_entropy_builtins_but_allows_prng_builtins() {
 
     assert_sandbox_denied(&mut session, "SeedRandom[]");
     assert_sandbox_denied(&mut session, "RandomBytes[8]");
+    assert_sandbox_denied(&mut session, "RandomPassword[8]");
 
     let pure = successful_eval(session.eval(
-        "SeedRandom[42]; {RandomInteger[10], RandomChoice[{a,b}], RandomSample[{a,b}], BlockRandom[RandomInteger[10]], UuidQ[RandomUuid[]]}",
+        "SeedRandom[42]; {RandomInteger[10], RandomChoice[{a,b}], RandomSample[{a,b}], RandomString[8], BlockRandom[RandomInteger[10]], UuidQ[RandomUuid[]]}",
     ));
     assert_ne!(pure.value.text, "$Failed");
     assert!(pure.messages.is_empty(), "messages={:?}", pure.messages);
@@ -403,7 +408,7 @@ fn permissive_policy_without_entropy_provider_returns_noentropy_failed() {
         .with_config(HostConfig::default().without_entropy_source())
         .build();
 
-    for source in ["RandomBytes[8]", "SeedRandom[]"] {
+    for source in ["RandomBytes[8]", "RandomPassword[8]", "SeedRandom[]"] {
         let success = successful_eval(session.eval(source));
 
         assert_eq!(success.value.text, "$Failed", "source {source}");
@@ -428,6 +433,36 @@ fn default_host_config_installs_entropy_provider_for_random_bytes() {
     assert_eq!(first_payload.len(), 12);
     assert_eq!(second_payload.len(), 12);
     assert_ne!(first.value.text, second.value.text);
+}
+
+#[test]
+fn default_host_config_installs_entropy_provider_for_random_password() {
+    let mut session = HostSession::new();
+    let default_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let custom_alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+
+    let first = successful_eval(session.eval("RandomPassword[16]"));
+    let second = successful_eval(session.eval("RandomPassword[16]"));
+    let custom_source = format!("RandomPassword[{custom_alphabet:?}, 20]");
+    let custom = successful_eval(session.eval(custom_source.as_str()));
+
+    let first_text = string_payload(&first.value.text).expect("RandomPassword should return text");
+    let second_text =
+        string_payload(&second.value.text).expect("RandomPassword should return text");
+    let custom_text =
+        string_payload(&custom.value.text).expect("RandomPassword should return text");
+
+    assert_eq!(first_text.len(), 16);
+    assert_eq!(second_text.len(), 16);
+    assert!(first_text.chars().all(|ch| default_alphabet.contains(ch)));
+    assert!(second_text.chars().all(|ch| default_alphabet.contains(ch)));
+    assert_ne!(first.value.text, second.value.text);
+
+    assert_eq!(custom_text.len(), 20);
+    assert!(custom_text.chars().all(|ch| custom_alphabet.contains(ch)));
+    assert!(first.messages.is_empty(), "messages={:?}", first.messages);
+    assert!(second.messages.is_empty(), "messages={:?}", second.messages);
+    assert!(custom.messages.is_empty(), "messages={:?}", custom.messages);
 }
 
 #[test]

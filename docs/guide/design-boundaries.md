@@ -122,12 +122,12 @@ capabilities. Evaluation results therefore depend only on session state and
 source unless the host grants more capability.
 
 Randomness follows that same boundary. `RandomInteger`, `RandomChoice`,
-`RandomSample`, `BlockRandom`, `RandomUuid`, and `UuidQ` use a deterministic
-session PRNG and are `Pure`. The algorithm is xoshiro256** with splitmix64 seed
-expansion. A fresh session starts from default seed `0`, and `reset()` restores
-that same default seed. The same seed yields the same sequence on every
-platform and rum version; changing this algorithm or seed expansion would be a
-documented breaking change.
+`RandomSample`, `RandomString`, `BlockRandom`, `RandomUuid`, and `UuidQ` use a
+deterministic session PRNG and are `Pure`. The algorithm is xoshiro256** with
+splitmix64 seed expansion. A fresh session starts from default seed `0`, and
+`reset()` restores that same default seed. The same seed yields the same
+sequence on every platform and rum version; changing this algorithm or seed
+expansion would be a documented breaking change.
 
 `SeedRandom[n]` accepts an exact integer. The integer seed is folded by reading
 little-endian magnitude bytes through splitmix64; negative seeds add a sign tag
@@ -140,10 +140,12 @@ Restoring a snapshot starts from the session configuration's current PRNG
 state after reset, not from the source session's random stream position.
 
 The session PRNG is not cryptographic. It is for reproducible symbolic scripts,
-sampling, and session-local identifiers. `RandomUuid[]` returns a version-4
-format UUID string from that deterministic stream; use an entropy reseed first
-when global uniqueness matters. Password-grade bytes come from `RandomBytes`,
-which uses the host entropy provider directly and requires `Capability::Random`.
+sampling, and session-local identifiers. Never generate secrets with
+`RandomInteger`, `RandomChoice`, `RandomSample`, `RandomString`, or
+`RandomUuid`. `RandomPassword` is the string path for secrets: it draws each
+character directly from the host entropy provider and requires
+`Capability::Random`. Password-grade bytes come from `RandomBytes`, which also
+uses the host entropy provider directly and requires `Capability::Random`.
 `SeedRandom[]` also requires `Capability::Random` because it reseeds the session
 PRNG from host entropy.
 

@@ -1,8 +1,11 @@
 use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{
-    Capability, EvalError, Session, ToPrimitive, base64_encode, expr_as_exact_integer,
-    expr_as_string, list_items, system_expr,
+    Capability, EntropyError, EvalError, Session, ToPrimitive, base64_encode,
+    expr_as_exact_integer, expr_as_string, list_items, system_expr,
 };
+
+const DEFAULT_RANDOM_ALPHABET: &str =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 pub(crate) fn eval_seed_random(
     session: &mut Session,
@@ -138,6 +141,50 @@ pub(crate) fn eval_random_sample(
     Ok(list_expr(sampled))
 }
 
+pub(crate) fn eval_random_string(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !(1..=2).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("RandomString", args, 1, 2));
+    }
+    let Some((alphabet, count)) = parse_random_text_args(session, args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    let mut out = String::with_capacity(random_string_projected_bytes(&alphabet, count));
+    for _ in 0..count {
+        out.push(alphabet[random_usize_below(session, alphabet.len())]);
+    }
+    Ok(Expr::string(out))
+}
+
+pub(crate) fn eval_random_password(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !(1..=2).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("RandomPassword", args, 1, 2));
+    }
+    let Some((alphabet, count)) = parse_random_text_args(session, args)? else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+
+    let mut out = String::with_capacity(random_string_projected_bytes(&alphabet, count));
+    for _ in 0..count {
+        match entropy_usize_below(session, alphabet.len()) {
+            Ok(index) => out.push(alphabet[index]),
+            Err(error) => {
+                push_entropy_error(session, "RandomPassword", error.message());
+                return Ok(system_expr("$Failed"));
+            }
+        }
+    }
+    Ok(Expr::string(out))
+}
+
 pub(crate) fn eval_block_random(
     session: &mut Session,
     _head: &Expr,
@@ -248,6 +295,88 @@ fn random_usize_below(session: &mut Session, upper: usize) -> usize {
     random_bigint_below(session, &BigInt::from(upper))
         .to_usize()
         .expect("usize upper bound produces usize random values")
+}
+
+fn entropy_usize_below(session: &Session, upper: usize) -> Result<usize, EntropyError> {
+    debug_assert!(upper > 0);
+    if upper == 1 {
+        return Ok(0);
+    }
+    if upper <= 256 {
+        return entropy_byte_below(session, upper);
+    }
+
+    let upper = BigInt::from(upper);
+    let max = &upper - BigInt::from(1_u8);
+    let (_, max_bytes) = max.to_bytes_le();
+    let bit_count = significant_bits(&max_bytes);
+    let byte_count = bit_count.div_ceil(8);
+    let high_mask = 0xff_u8 >> (byte_count * 8 - bit_count);
+
+    loop {
+        let mut bytes = vec![0_u8; byte_count];
+        session.fill_entropy(&mut bytes)?;
+        if let Some(last) = bytes.last_mut() {
+            *last &= high_mask;
+        }
+
+        let value = bigint_from_unsigned_le_bytes(&bytes);
+        if value < upper {
+            return Ok(value
+                .to_usize()
+                .expect("usize upper bound produces usize random values"));
+        }
+    }
+}
+
+fn entropy_byte_below(session: &Session, upper: usize) -> Result<usize, EntropyError> {
+    let accept_bound = (256 / upper) * upper;
+    loop {
+        let mut byte = [0_u8; 1];
+        session.fill_entropy(&mut byte)?;
+        let value = usize::from(byte[0]);
+        if value < accept_bound {
+            return Ok(value % upper);
+        }
+    }
+}
+
+fn parse_random_text_args(
+    session: &Session,
+    args: &[Expr],
+) -> Result<Option<(Vec<char>, usize)>, EvalError> {
+    let (alphabet, count) = match args {
+        [count] => (DEFAULT_RANDOM_ALPHABET, count),
+        [alphabet, count] => {
+            let Some(alphabet) = expr_as_string(alphabet) else {
+                return Ok(None);
+            };
+            (alphabet, count)
+        }
+        _ => unreachable!("random text arity checked by caller"),
+    };
+
+    let alphabet = alphabet_chars(alphabet);
+    let Some(alphabet) = alphabet else {
+        return Ok(None);
+    };
+    let Some(count) = parse_output_count(session, count)? else {
+        return Ok(None);
+    };
+    session.enforce_active_memory_limit_for_projected_bytes(random_string_projected_bytes(
+        &alphabet, count,
+    ))?;
+    Ok(Some((alphabet, count)))
+}
+
+fn alphabet_chars(alphabet: &str) -> Option<Vec<char>> {
+    let chars = alphabet.chars().collect::<Vec<_>>();
+    (!chars.is_empty()).then_some(chars)
+}
+
+fn random_string_projected_bytes(alphabet: &[char], count: usize) -> usize {
+    let max_char_bytes = alphabet.iter().map(|ch| ch.len_utf8()).max().unwrap_or(0);
+    count.saturating_mul(max_char_bytes)
 }
 
 fn parse_output_count(session: &Session, expr: &Expr) -> Result<Option<usize>, EvalError> {

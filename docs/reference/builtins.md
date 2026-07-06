@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 598
+Builtin count: 600
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2837,6 +2837,14 @@ Draws exact integers uniformly from the deterministic session PRNG.
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary.
 
+### RandomPassword
+
+Draws an entropy-backed string of characters from an alphabet.
+
+- Attributes: `None`
+- Capability: `Random`
+- Limits: uses the host entropy provider directly with rejection sampling over the alphabet size to avoid modulo bias; it is not affected by SeedRandom or BlockRandom. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw.
+
 ### RandomSample
 
 Samples distinct positions from a list using the deterministic session PRNG.
@@ -2844,6 +2852,14 @@ Samples distinct positions from a list using the deterministic session PRNG.
 - Attributes: `None`
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG; it is not cryptographic.
+
+### RandomString
+
+Draws a string of characters from an alphabet using the deterministic session PRNG.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: uses the deterministic session PRNG with rejection sampling over the alphabet size; it is not cryptographic. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw.
 
 ### RandomUuid
 
