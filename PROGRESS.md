@@ -714,3 +714,15 @@ Capability::Random gating RandomBytes and zero-arg SeedRandom (in-handler
 dual-form check); Capability::Process reserved. Workspace 1177/0. Perl-core
 /CPAN-River scan recorded (4 net-new candidates + StringForm inertness
 audit; ecosystem scans closed). Next: brief-141 date/time.
+
+## 2026-07-07 — briefs 141-142 gated: date/time + hash/encoding
+
+brief-141 (d672a79): exact rational Unix-second timestamps (epoch as rum's
+contract), ISO 8601 fail-closed parsing with offset folding, exact calendar
+arithmetic, Clock dual-form readers; 1/3-second round-trip pinned. brief-142
+prep (d8a957f): sha2/sha1/md-5/crc32fast pinned + cached (first external
+deps under the security/format clause). brief-142 (98da945): digests with
+KAT pins, self-implemented hex/base64, ByteArrayQ/ByteArrayToString;
+hashing-yes-encryption-never boundary in the guide. Reference 563; workspace
+1196/0. Next: brief-143 (Python/Perl tier-1 utilities + StringForm
+contract), then the TokenizeWith mechanism batch closes the expansion line.

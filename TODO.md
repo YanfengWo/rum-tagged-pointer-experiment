@@ -52,7 +52,7 @@ string-pattern surface. Batches, evidence-ranked:
   datetimes), `FromXml`/`ToXml` (symbolic `XmlElement[tag, attrs, children]`
   tree; no DTD), `FromYaml`/`ToYaml` LAST (sane block subset only,
   fail-closed; full YAML is a non-goal). CSV-from-string alongside.
-- [ ] Hash/encoding family (S/M): `Sha256`/`Sha512`/`Sha1`/`Md5` via the
+- [x] Hash/encoding family DONE (98da945, brief-142): `Sha256`/`Sha512`/`Sha1`/`Md5` via the
   RustCrypto crates (never hand-rolled; deps allowed by the dependency
   policy's security/format clause; live in rum-stdlib, Pure — hashes are
   deterministic byte functions), `Crc32` via `crc32fast`; self-implemented
@@ -74,7 +74,7 @@ string-pattern surface. Batches, evidence-ranked:
   via `Capability::Random` + an `EntropySource` provider in rum-host
   (FileIo-seam pattern); `RandomBytes` for password-grade material with
   honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
-- [ ] brief-141 (M): date/time folk subset — pure parse/format/arithmetic
+- [x] brief-141 DONE (d672a79): date/time folk subset — pure parse/format/arithmetic
   on timestamp values; current-time readers are `Clock`.
 - [ ] Tokenizer mechanism for highlighting and text tooling (S/M):
   `TokenizeWith[rules, str]` — an error-tolerant span driver over the
