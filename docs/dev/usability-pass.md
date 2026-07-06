@@ -49,7 +49,7 @@ first (157), then flexibility (158), convenience + safety (159).
 
 | # | Unit | Count | Audit | Fixes |
 |---|------|-------|-------|-------|
-| 1 | strings | 99 | brief-161 | |
+| 1 | strings | 99 | brief-161 ✓ | 162… (see triage below) |
 | 2 | structure + functional | 89 | | |
 | 3 | predicates + associations | 83 | | |
 | 4 | control + logic + rewrite | 63 | | |
@@ -63,3 +63,49 @@ first (157), then flexibility (158), convenience + safety (159).
 Counts for units 1-7 are exact (catalog arrays, 445 total); units 8-10
 split the 160-name kernel list (installed reference minus stdlib
 catalog) and are enumerated exactly when their audit brief is written.
+
+## Unit 1 (strings) triage — 2026-07-07
+
+Audit brief-161: 101 rows / 99 names, findings in
+`usability-pass/strings-findings.md`. Fix batches, dispatch order:
+
+1. **brief-162 — attribute hygiene** (safety, all S): `Protected` on
+   the 18 string-pattern symbols (Evidence E1); case-conversion
+   alignment (`ToUpperCase` gains `Listable`+`Protected`;
+   `Capitalize`/`Decapitalize` gain `Listable`). List results already
+   match — the change is the advertised attributes.
+2. **Operator forms — the WL-documented set only** (flexibility):
+   `StringContainsQ`/`StartsQ`/`EndsQ`/`MatchQ`/`FreeQ`/`Replace`/
+   `Cases` + `StringDelete` (audit false-OK: WL documents
+   `StringDelete[patt]`). The audit's `Take`/`Drop`/`Count`/`Position`
+   operator forms are rum EXTENSIONS on error paths — deferred,
+   separate decision.
+3. **Overlaps parity + Options registration** (flexibility):
+   `StringCases` `Overlaps -> True`, `StringPosition`
+   `Overlaps -> False`, register `Nearest`'s `DistanceFunction`.
+4. **Scripting ergonomics options** (convenience): `StringWrap`
+   preserve-newlines, `StringIndent` blank-lines, `AlignColumns`
+   separator, `UrlEncode`/`UrlDecode` form mode, `UrlParse` options,
+   `ParseArgs` short options, `StringRiffle` 3-arg form,
+   `StringPadLeft`/`Right` list padding, `ToCharacterCode` encoding
+   arg, `StringToByteArray` `"UTF-8"` alias.
+5. **Fail-closed strict modes** (safety): `TemplateApply`,
+   `Uncompress`, `HtmlUnescape`, `HammingDistance`.
+6. **Crypto surface — BLOCKED on a user decision.** The audit flagged
+   `Encrypt`'s toy XOR-SHA256 as a hazard; triage found more:
+   `strings/encoding.rs` HAND-ROLLS SHA-256 (violates the digest
+   policy: RustCrypto, never hand-rolled) and duplicates
+   `bytes/digest.rs`. Candidate resolutions: remove
+   `Encrypt`/`Decrypt`/`EncryptedObject` (policy: encryption/signing
+   never in kernel) and re-plumb `Hash` onto the feature-gated
+   RustCrypto digests; or keep-and-document loudly. Not dispatched
+   until decided.
+
+Corrections to audit findings (so fix briefs do not inherit them):
+`LongestCommonSubsequence`'s contiguous behavior IS the WL contract
+(the non-contiguous classic is WL's `LongestCommonSequence` — a
+sibling-name candidate for a later batch); the `Encrypt` "add a real
+authenticated method" proposal is rejected (policy);
+language/normalization escape hatches (`Alphabet` beyond English,
+`RemoveDiacritics` combining marks, `SequenceAlignment` scoring) defer
+to a future unicode line (unblocked by the feature skeleton).

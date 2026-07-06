@@ -36,7 +36,13 @@ WL-conformant defaults; improvements land as new options or rum-native
 siblings). Method: audit briefs produce all-rows findings tables per
 unit; gaps triage into small fix briefs (the 158/159 shape).
 
-- [ ] brief-161 (unit 1): audit the strings family (99 builtins).
+- [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
+  `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in
+  the tracker (crypto batch BLOCKED on a user decision: hand-rolled
+  SHA-256 in `strings/encoding.rs` + toy `Encrypt` vs the
+  no-kernel-crypto policy).
+- [ ] brief-162 (unit-1 fixes, batch 1): attribute hygiene — `Protected`
+  string-pattern symbols; case-conversion `Listable` alignment.
 
 ## Release Transformation — COMPLETE (2026-07-06)
 
