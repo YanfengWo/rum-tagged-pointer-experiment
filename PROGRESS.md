@@ -820,3 +820,14 @@ ConformSchema defaults/strict-extras; FromYaml→ConformSchema pipeline).
 156: multiline string literals \"\"\"/''' (TOML-mirror), formatter-verbatim
 round-trip, ' derivative pinned both sides, is_complete aware. Workspace
 1315/0; reference 598. Process briefs archived.
+
+## 2026-07-07 — random family + character-class constants complete (157-159)
+
+157 RandomString/RandomPassword, 158 password policy options, 159 named
+Protected character-class constants (UppercaseLetters/LowercaseLetters/
+DigitCharacters/PunctuationCharacters/Alphanumeric — sharing brief-137's
+punctuation definition; new install_system_own_value kernel hook installs
+them as system ownvalues excluded from DumpSave/snapshot). Password policy
+usage reads Require -> {UppercaseLetters, DigitCharacters}; constants are
+Protected so reassignment fails (Set::wrsym). Reference 605; workspace
+1339/0. Briefs 153-159 archived.
