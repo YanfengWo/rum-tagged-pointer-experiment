@@ -96,9 +96,14 @@ rather than duplicating them.
   ReplaceRepeated limit-as-value. Removed material lives in the private
   archive `/Users/fft/Developments/Archive/rum-history/` (MANIFEST.md maps
   each item to its removal commit; recycling candidates flagged). Memory:
-  `release-transformation-line.md`. Next mainline candidates: post-cut queue
-  in `TODO.md` (coverage rebuild first; dun is the first downstream
-  embedder).
+  `release-transformation-line.md`.
+- **PUBLICATION DEFERRED INDEFINITELY (user directive 2026-07-06) — do not
+  steer toward release.** rum publishes only after sufficient divergence.
+  Direction: embedded scripting + sandbox safety + rapid script development
+  (elisp/guile/lua/python family). ACTIVE mainline: stdlib expansion for
+  scripting, evidence-first (TODO §Stdlib Expansion). The FS-purity line
+  (briefs 132-134) landed the three mechanical kernel hard lines: zero
+  unsafe, zero std::fs (non-test), Pure = deterministic.
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-

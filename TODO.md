@@ -14,8 +14,24 @@ operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
   rustdoc + Cargo metadata, the two guide-surfaced bugs fixed (native stack
   guard; ReplaceRepeated limit-as-value), final sweep green, bundle cold
   backup taken. Process docs live in git history and the private archive.
-- [ ] Publication mechanics (hosting, repo name, first tag) — a separate
-  later decision; add `repository` metadata and CI at that point.
+- [ ] Publication — **deferred indefinitely (2026-07-06)**: rum publishes
+  only after it has diverged far enough from its notation-family origins.
+  Growth happens in rum's own namespace and directions (embedded scripting,
+  sandbox safety, rapid script development — the elisp/guile/lua/python
+  family). Mechanics (hosting, name, tag, `repository` metadata, CI) decided
+  then.
+
+## Stdlib Expansion For Scripting (ACTIVE)
+
+Evidence-first: a diagnostic pass writes real embedded-scripting tasks in
+current rum and harvests the friction list; expansion batches follow the
+evidence. Candidate directions (pre-evidence ranking): in-language JSON
+(`JsonDecode`/`JsonEncode`, Pure, rum-native names); string-pattern language
+contract + depth (audit the undocumented surface first — e.g.
+`DigitCharacter` works but is uncataloged; no regex engine); a date/time
+folk subset (pure parse/format/arithmetic; current-time readers are
+`Clock`); collection odds-and-ends (`Tally`, `MaxBy`/`MinBy`, `Riffle`,
+`GatherBy`); `ByteArray` depth audit (deferred unless a host needs it).
 
 ## After the Release Cut
 
