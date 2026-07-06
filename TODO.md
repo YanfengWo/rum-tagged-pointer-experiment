@@ -137,7 +137,7 @@ string-pattern surface. Batches, evidence-ranked:
   the public MSRV. Post-`1.85` language features are not used;
   `cargo-llvm-cov` stays at the matching `0.6.21`. If an upgrade is ever
   reconsidered, re-baseline both microbench suites in the same session.
-- [ ] ACTIVE LINE A-half (2026-07-07, docs/dev/hardening-coverage-plan.md; stdlib-breadth half DEFERRED to the stdlib plateau): **Coverage rebuild** (the integration-depth gap left by removing the
+- [x] HARDENING COVERAGE LINE (A-half) COMPLETE 2026-07-07 (briefs 149-152): **Coverage rebuild** (the integration-depth gap left by removing the
   external acceptance corpus): `cargo-llvm-cov`-driven buildout prioritizing
   the host lifecycle (interrupt/cancel, wall-clock timeout, poison recovery,
   `reset()`, snapshot/restore round-trips, typed `HostValue`, capability
@@ -172,17 +172,6 @@ string-pattern surface. Batches, evidence-ranked:
   gate/delete/keep). The profiling/debug_tools fate is settled: they stay in
   the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic
   capability.
-
-## Pre-Release Fixes (found by the brief-151 stress corpus)
-
-- [ ] **Legal large-list pipeline dies by native stack overflow** (escapes
-  the brief-131 guard): `Fold[Plus, 0, Map[Length, GatherBy[Select[
-  Range[50000], EvenQ], Function[Mod[#, 10]]]]]` aborts the process.
-  Kernel-internal recursion that never passes the eval-loop poll point.
-  Fix = brief-152.
-- [ ] **snapshot/restore aborts at ~100-500 generated definitions** by the
-  same mechanism (host-critical: snapshot is an embedding feature).
-  Fix = brief-152.
 
 ## Standing Engineering Debt
 

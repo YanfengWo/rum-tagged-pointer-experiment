@@ -791,3 +791,19 @@ snapshot/restore both die by native stack overflow — kernel-internal
 recursion that never reaches the eval-loop poll point where the
 native_stack_limit check lives. brief-152 (diagnose + extend the guard)
 dispatched.
+
+## 2026-07-07 — HARDENING COVERAGE LINE (A-half) COMPLETE (briefs 149-152)
+
+149 baseline: region 79.00%/line 82.30%; all 12 TerminatedEvaluation tags
+already exercised; verified hole list. 150: test-only buildout (+31),
+error-mapping tables and the 0% suspension serializers covered (unit +
+real suspend/snapshot/resume), focus files reproduced at gate (outcome.rs
+21→97.7%, suspension 0→83-92%). 151: stress corpus (+11) — and it caught
+two real bugs: per-element native recursion in Select/DecorateBy resume
+helpers (died at 2668 elements) and restore_from_bytes evaluating the whole
+snapshot as one nested expression (overflow at ~75 defs; silent definition
+loss on big main-thread restores). 152: loops for normal progression
+(continuations only on InputRequired), restore through the script/form
+splitter; bug stubs are real tests (50k pipeline = exact 25000;
+500-definition snapshot round-trip); A/B in the noise band. Workspace
+1291/0. MemoryConstrained consume-contract now explicit in the guide.

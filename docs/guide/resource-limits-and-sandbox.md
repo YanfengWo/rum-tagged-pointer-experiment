@@ -235,6 +235,12 @@ hosts.
 `MemoryConstrained` exists as a cooperative memory-proxy subset, but a host
 RSS watchdog is the hardening pattern for embedding.
 
+Deliberate contract note: a tripped memory constraint is CONSUMED by
+`MemoryConstrained` itself (it returns its fallback or `$Aborted` with
+`General::memlim`). It is the one limit that does not surface as a
+top-level `TerminatedEvaluation[...]` value — unlike the budgets listed
+above — because the construct that requested the bound is also its handler.
+
 ## Poison Recovery
 
 Public `HostSession` entrypoints catch panics from guest execution.
