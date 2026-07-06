@@ -1,7 +1,7 @@
 # Builtin Reference
 
-`builtins.md` is generated from the installed `rum` builtin registry. Do not
-edit it by hand.
+`builtins.md` is generated from the installed `rum` builtin registry under the
+default Cargo feature set. Do not edit it by hand.
 
 Regenerate it with:
 

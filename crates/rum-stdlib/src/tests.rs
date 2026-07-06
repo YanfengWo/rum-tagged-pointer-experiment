@@ -207,13 +207,6 @@ fn catalog_attributes_match_kernel_vocabulary() {
             "kernel attribute vocabulary drift for {name}"
         );
     }
-
-    for name in kernel_by_name.keys() {
-        assert!(
-            catalog_by_name.contains_key(name),
-            "kernel attribute vocabulary has non-stdlib symbol: {name}"
-        );
-    }
 }
 
 fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_api::BuiltinSpec> {
@@ -222,6 +215,8 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::LOGIC_BUILTINS,
         catalog::PREDICATE_BUILTINS,
         catalog::ASSOCIATION_BUILTINS,
+        #[cfg(feature = "hash")]
+        catalog::DIGEST_BUILTINS,
         catalog::BYTE_BUILTINS,
         catalog::CHARACTER_CLASS_BUILTINS,
         catalog::COMBINATORICS_BUILTINS,

@@ -2,7 +2,8 @@ use rum_runtime::kernel_api::BuiltinSpec;
 
 use crate::bytes;
 
-pub(crate) const BYTE_BUILTINS: &[BuiltinSpec] = &[
+#[cfg(feature = "hash")]
+pub(crate) const DIGEST_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "Sha256",
         "Computes a SHA-256 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.",
@@ -28,6 +29,9 @@ pub(crate) const BYTE_BUILTINS: &[BuiltinSpec] = &[
         "Computes the IEEE CRC-32 checksum over a string's UTF-8 bytes or a ByteArray.",
         bytes::eval_crc32,
     ),
+];
+
+pub(crate) const BYTE_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "ToHexString",
         "Encodes a string's UTF-8 bytes or a ByteArray as lowercase hexadecimal text.",

@@ -51,6 +51,10 @@ pub fn install_core(session: &mut Session) {
     for spec in catalog::ASSOCIATION_BUILTINS {
         session.register_builtin(*spec);
     }
+    #[cfg(feature = "hash")]
+    for spec in catalog::DIGEST_BUILTINS {
+        session.register_builtin(*spec);
+    }
     for spec in catalog::BYTE_BUILTINS {
         session.register_builtin(*spec);
     }

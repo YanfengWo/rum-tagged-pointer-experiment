@@ -8,11 +8,15 @@ keywords.workspace = true
 categories.workspace = true
 description = "Standard library builtin implementations and catalog specs for rum sessions."
 
+[features]
+default = ["hash"]
+hash = ["dep:sha2", "dep:sha1", "dep:md-5", "dep:crc32fast"]
+
 [dependencies]
-crc32fast.workspace = true
-md-5.workspace = true
+crc32fast = { workspace = true, optional = true }
+md-5 = { workspace = true, optional = true }
 rum-core = { path = "../rum-core" }
 rum-runtime = { path = "../rum-runtime" }
 rum-syntax = { path = "../rum-syntax" }
-sha1.workspace = true
-sha2.workspace = true
+sha1 = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }

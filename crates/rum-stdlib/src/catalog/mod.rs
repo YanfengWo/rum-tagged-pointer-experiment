@@ -27,6 +27,8 @@ mod yaml;
 pub(crate) use arithmetic::ARITHMETIC_BUILTINS;
 pub(crate) use associations::ASSOCIATION_BUILTINS;
 pub(crate) use bytes::BYTE_BUILTINS;
+#[cfg(feature = "hash")]
+pub(crate) use bytes::DIGEST_BUILTINS;
 pub(crate) use calculus::CALCULUS_BUILTINS;
 pub(crate) use character_classes::CHARACTER_CLASS_BUILTINS;
 pub(crate) use combinatorics::COMBINATORICS_BUILTINS;

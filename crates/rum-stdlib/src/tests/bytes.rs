@@ -17,6 +17,25 @@ fn eval_with_messages(session: &mut Session, source: &str) -> (Expr, Vec<Runtime
     (outcome.value, outcome.messages)
 }
 
+#[cfg(not(feature = "hash"))]
+#[test]
+fn no_default_features_drop_digest_builtins_but_keep_codecs() {
+    let session = core_session();
+
+    for name in ["Sha256", "Sha512", "Sha1", "Md5", "Crc32"] {
+        assert!(
+            !session.inspect(name).is_some_and(|info| info.is_builtin),
+            "{name} should not be registered without the hash feature"
+        );
+    }
+    for name in ["ToHexString", "FromBase64", "ByteArrayQ"] {
+        assert!(
+            session.inspect(name).is_some_and(|info| info.is_builtin),
+            "{name} should stay registered without the hash feature"
+        );
+    }
+}
+
 fn assert_failed_with_message(source: &str, symbol: &str, tag: &str) {
     let mut session = core_session();
     let (value, messages) = eval_with_messages(&mut session, source);
@@ -29,6 +48,7 @@ fn assert_failed_with_message(source: &str, symbol: &str, tag: &str) {
     );
 }
 
+#[cfg(feature = "hash")]
 fn assert_digest_vectors(algorithm: &str, vectors: &[(&str, &str)]) {
     let mut session = core_session();
 
@@ -66,6 +86,7 @@ fn assert_digest_vectors(algorithm: &str, vectors: &[(&str, &str)]) {
     }
 }
 
+#[cfg(feature = "hash")]
 #[test]
 fn digest_known_answer_vectors_cover_string_and_byte_array_inputs() {
     let long = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
@@ -125,6 +146,7 @@ fn digest_known_answer_vectors_cover_string_and_byte_array_inputs() {
     );
 }
 
+#[cfg(feature = "hash")]
 #[test]
 fn crc32_known_vectors_are_unsigned_integers() {
     let mut session = core_session();
@@ -236,8 +258,11 @@ fn unsupported_argument_types_remain_inert() {
     let mut session = core_session();
 
     for source in [
+        #[cfg(feature = "hash")]
         "Sha256[123]",
+        #[cfg(feature = "hash")]
         "Sha256[\"abc\", \"HexString\"]",
+        #[cfg(feature = "hash")]
         "Crc32[123]",
         "ToHexString[123]",
         "FromHexString[123]",
@@ -255,6 +280,7 @@ fn unsupported_argument_types_remain_inert() {
     }
 }
 
+#[cfg(feature = "hash")]
 #[test]
 fn digest_json_end_to_end_is_pinned() {
     let mut session = core_session();
@@ -267,6 +293,15 @@ fn digest_json_end_to_end_is_pinned() {
 
 #[test]
 fn byte_catalog_entries_are_pure() {
+    #[cfg(feature = "hash")]
+    for spec in crate::catalog::DIGEST_BUILTINS {
+        assert_eq!(
+            spec.capability,
+            rum_runtime::Capability::Pure,
+            "{}",
+            spec.name
+        );
+    }
     for spec in crate::catalog::BYTE_BUILTINS {
         assert_eq!(
             spec.capability,

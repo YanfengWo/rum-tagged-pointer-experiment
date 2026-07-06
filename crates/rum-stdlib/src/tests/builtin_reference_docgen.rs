@@ -1,5 +1,7 @@
+#[cfg(feature = "hash")]
 use crate::docgen;
 
+#[cfg(feature = "hash")]
 #[test]
 fn builtin_reference_is_in_sync() {
     let generated =
