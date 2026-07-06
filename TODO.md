@@ -11,12 +11,17 @@ always-on; small pure-Rust dep → default-on Cargo feature; heavy/C-lib dep
 → non-default feature; OS-touching/very-heavy → downstream crate via the
 `with_builtin_installer` hook.
 
-- [ ] brief-160 (in flight): establish the feature skeleton in `rum-stdlib`
-  and retroactively gate the digest family behind a default-on `hash`
-  feature (`sha2`/`sha1`/`md-5`/`crc32fast` optional). Keep hex/base64/
-  ByteArray always-on (self-implemented). Reference/drift defined at
-  default features; `--no-default-features` must build without the digest
-  crates.
+- [x] brief-160 DONE (3d60497): feature skeleton in `rum-stdlib`; digest
+  family behind default-on `hash` (`sha2`/`sha1`/`md-5`/`crc32fast`
+  optional). Hex/base64/ByteArray stay always-on. Reference/drift defined
+  at default features; `--no-default-features` builds and tests green with
+  none of the digest crates in the dependency graph.
+- Measured size context (2026-07-07, local A/B, `rum-cli` defaults):
+  plain release 8.53 MiB → +strip 7.24 MiB → +lto+codegen-units=1
+  6.19 MiB (env-var profile overrides; repo untouched). For comparison:
+  libpython3.14 core 5.26 MiB + 60 MB stdlib dir; Lua ~0.3 MiB (no
+  batteries). Candidate follow-up: rum-cli feature forwarding so the CLI
+  binary itself is feature-trimmable.
 - Compression = downstream `rum-compress` crate, AFTER `rum-fs` (C-library
   deps; never in `rum-stdlib`). Heavy encryption beyond hashing = non-
   default feature or downstream.
