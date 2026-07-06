@@ -750,3 +750,15 @@ User picked the codec continuation as the next mainline. Plan committed
 brief-141 exact timestamps), 147 XML (XmlElement symbolic tree), 148 YAML
 sane-subset (aggressively fail-closed; full YAML a permanent non-goal),
 M1 conversion-matrix closure.
+
+## 2026-07-07 — CODEC FAMILY LINE COMPLETE (briefs 145-148 + M1)
+
+FromCsv/ToCsv + FromIni/ToIni (d2ab264), FromToml/ToToml (aea144d,
+offset-datetime folding onto exact timestamps; encode never synthesizes
+datetime syntax), FromXml/ToXml (3a22c5e, XmlElement inert head, no-DTD
+security stance), FromYaml/ToYaml (4d49c0d, block-only sane subset,
+Norway-safe typing, safe-plain encode quoting). M1 (411d684): six-test
+cross-codec matrix incl. the JSON→TOML→YAML→JSON grand-tour identity.
+Six formats, one value model, all fail-closed with byte offsets, zero new
+dependencies. Reference 595; workspace 1247/0. The config-conversion story
+is complete: cat a.json | rum-cli -e 'ToYaml[FromJson[$ScriptInput]]'.
