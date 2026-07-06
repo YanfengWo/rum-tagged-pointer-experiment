@@ -202,6 +202,10 @@ string-pattern surface. Batches, evidence-ranked:
   (ThrowException/CatchExceptions-style, folk scope) — design-first
   candidate, pending user green light. (c) Incremental/lazy
   collections — parked (stateful handles vs snapshot/reset).
+  (d) Structured Package Format: loader half = rum-fs territory
+  (never kernel); scoping half (declarative Public/Package/Private,
+  private-by-default per source unit) = required design input for the
+  unit-10 package-surface audit; relevant to dun plugins.
 - [ ] Downstream `rum-os` (process/env; post-launch, alongside `rum-fs`):
   process execution is the maximal ambient authority and never enters the
   kernel — kernel only reserves a `Capability::Process` variant (do this in

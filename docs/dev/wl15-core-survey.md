@@ -62,7 +62,42 @@ handles interact with snapshot/reset/cancel exactly like streams/ports
 (deferred for the same reason). Revisit only with a concrete
 downstream use case.
 
-## 4. Noted, low value for rum
+## 4. Structured Package Format — split verdict; scoping half is a unit-10 design input
+
+WL 15's SPF layers a declarative model on top of classic contexts:
+three scopes per symbol — Public (`PackageExported[sym]`, lands in
+``Pkg` ``), Package-internal (`PackageScoped[sym]`, lands in
+``Pkg`PackageScope` ``), and Private-BY-DEFAULT (undeclared symbols
+land in a per-file ``Pkg`File`Private` `` context, so cross-file name
+collisions are impossible). A loader file calls
+`PackageInitialize[ctx, …]`, which two-passes the package's source
+files (scan declarations unevaluated, then `Get` each file with a
+reset `$ContextPath` — imports never leak across files; load order
+controllable). Classic `BeginPackage` rituals disappear from authored
+code but remain the substrate.
+
+Assessment for rum — two halves with different fates:
+
+- The **loader half** (directory scanning, `init.wl`, file ordering)
+  is ambient-authority territory: kernel has no filesystem by hard
+  line; this belongs to the future downstream `rum-fs` loader story,
+  if anywhere. rum's embedded "packages" today are host-provided
+  source strings, not directories.
+- The **scoping half** (declarative Public/Package/Private with
+  private-by-default and no context sandwich) is capability-free pure
+  language surface and scores on BOTH usability axes we care about:
+  safety (no context leakage, collisions impossible by construction)
+  and convenience (intent-level declarations). It is directly relevant
+  to dun plugins as rum packages (brief-144's decision) and to the
+  Module-as-trust-boundary discipline. A rum adaptation would replace
+  "file" with "source unit" (host-provided).
+
+Verdict: not now — record as a REQUIRED DESIGN INPUT for the unit-10
+kernel audit (contexts/packages surface), where the existing
+`BeginPackage`/`Needs`/`DeclarePackage` story gets its three-axis
+sweep anyway. Loader mechanics stay out of the kernel regardless.
+
+## 5. Noted, low value for rum
 
 - One-argument `Monitor[expr]` (auto progress for top-level iteration):
   rum's `Monitor` is a best-effort display concern; skip.
