@@ -32,6 +32,7 @@ enum StringPattern {
     LetterCharacter,
     DigitCharacter,
     WordCharacter,
+    PunctuationCharacter,
     RegularExpression(RegexPattern),
     NumberString,
     Except {
@@ -40,6 +41,9 @@ enum StringPattern {
     },
     StartOfString,
     EndOfString,
+    StartOfLine,
+    EndOfLine,
+    WordBoundary,
     Repeated {
         pattern: Box<StringPattern>,
         min: usize,
@@ -189,6 +193,10 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
         return Some(StringPattern::WordCharacter);
     }
 
+    if is_system_symbol_name(expr, "PunctuationCharacter") {
+        return Some(StringPattern::PunctuationCharacter);
+    }
+
     if is_system_symbol_name(expr, "NumberString") {
         return Some(StringPattern::NumberString);
     }
@@ -203,6 +211,18 @@ fn parse_string_pattern(expr: &Expr) -> Option<StringPattern> {
 
     if is_system_symbol_name(expr, "EndOfString") {
         return Some(StringPattern::EndOfString);
+    }
+
+    if is_system_symbol_name(expr, "StartOfLine") {
+        return Some(StringPattern::StartOfLine);
+    }
+
+    if is_system_symbol_name(expr, "EndOfLine") {
+        return Some(StringPattern::EndOfLine);
+    }
+
+    if is_system_symbol_name(expr, "WordBoundary") {
+        return Some(StringPattern::WordBoundary);
     }
 
     let Expr::Call { head, args } = expr else {

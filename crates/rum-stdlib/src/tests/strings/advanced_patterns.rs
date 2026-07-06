@@ -57,6 +57,28 @@ fn repeated_anchors_and_shortest_longest_extend_string_patterns() {
         "List[List[4, 3]]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"abc\", StartOfString]"),
+        "List[List[1, 0]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringReplace[\"abc\", EndOfString -> \"$\"]"),
+        "\"abc$\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringCases[\"\", \"a\"...], StringReplace[\"\", \"a\"... -> \"x\"]}"
+        ),
+        "List[List[\"\"], \"x\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringMatchQ[\"aaa\", Shortest[\"a\"..]], StringMatchQ[\"aaa\", Longest[\"a\"..]]}"
+        ),
+        "List[True, True]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "StringCount[\"abc\", RepeatedNull[\"a\"]]"),
         "4"
     );
@@ -155,6 +177,35 @@ fn character_class_pattern_atoms_extend_the_current_string_pattern_subset() {
     assert_eq!(
         eval_to_string(&mut session, "StringCases[\" \\t\", WhitespaceCharacter]"),
         "List[\" \", \"\\t\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"ab, cd! ef\", PunctuationCharacter]"
+        ),
+        "List[\",\", \"!\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"x\\ny\", StartOfLine]"),
+        "List[List[1, 0], List[3, 2]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringPosition[\"x\\ny\", EndOfLine]"),
+        "List[List[2, 1], List[4, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"x\\ny\", StartOfLine -> \"> \"]"
+        ),
+        "\"> x\\n> y\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"one two\", WordBoundary ~~ WordCharacter]"
+        ),
+        "List[\"o\", \"t\"]"
     );
 }
 

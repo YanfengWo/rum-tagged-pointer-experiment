@@ -242,4 +242,11 @@ fn string_apply_delete_and_count_options_cover_the_next_wave() {
         ),
         "List[List[2, 2], List[3, 3]]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringSplit[\"AxbXc\", \"x\", IgnoreCase -> True]"
+        ),
+        "List[\"A\", \"b\", \"c\"]"
+    );
 }

@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 518
+Builtin count: 534
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -156,6 +156,13 @@ Compares two strings alphabetically in the current string-order subset.
 ### AlphabeticSort
 
 Sorts strings using the current English alphabet subset with simple diacritic folding.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Alternatives
+
+Represents the current pattern alternative head.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -333,6 +340,27 @@ Tests interval inclusion in the current exact numeric subset.
 Computes exact binomial coefficients for integer arguments.
 
 - Attributes: `Listable`, `NumericFunction`, `Protected`
+- Capability: `Pure`
+
+### Blank
+
+Represents the current single-element pattern atom; in string patterns it matches one character.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### BlankNullSequence
+
+Represents the current zero-or-more sequence pattern atom; in string patterns it matches zero or more characters.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### BlankSequence
+
+Represents the current one-or-more sequence pattern atom; in string patterns it matches one or more characters.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### Block
@@ -818,6 +846,13 @@ Returns successive differences for plain lists, including the current non-negati
 - Attributes: `NonThreadable`, `Protected`
 - Capability: `Pure`
 
+### DigitCharacter
+
+Represents the current string-pattern atom for one ASCII decimal digit.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### DigitCount
 
 Counts digits in the absolute value of an exact integer.
@@ -973,6 +1008,13 @@ Restores the previous context after a matching Begin.
 - Attributes: `None`
 - Capability: `Pure`
 
+### EndOfLine
+
+Represents the current string-pattern anchor for the end of a string or a position before LF.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### EndOfString
 
 Represents the current string-pattern anchor for the end of a string.
@@ -1034,6 +1076,13 @@ Evaluates an expression and returns a first-pass association of result and diagn
 Tests whether an expression is currently an even exact integer.
 
 - Attributes: `Listable`
+- Capability: `Pure`
+
+### Except
+
+Represents the current pattern exclusion head.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### Exit
@@ -1688,6 +1737,13 @@ Represents a unary comparison operator equivalent to Less[#, bound] when applied
 - Attributes: `None`
 - Capability: `Pure`
 
+### LetterCharacter
+
+Represents the current string-pattern atom for one alphabetic character.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### LetterQ
 
 Tests whether all characters in a string belong to the current letter subset.
@@ -2304,6 +2360,13 @@ Computes the number of partitions into distinct parts.
 - Attributes: `Listable`, `Protected`
 - Capability: `Pure`
 
+### Pattern
+
+Represents the current named pattern-binding head.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### Pause
 
 Pauses for at least a nonnegative exact number of seconds in the current first-pass subset.
@@ -2482,6 +2545,13 @@ Adds the Protected attribute to one or more symbols.
 - Attributes: `HoldAll`
 - Capability: `Pure`
 
+### PunctuationCharacter
+
+Represents the current string-pattern atom for one ASCII punctuation character.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### Quiet
 
 Evaluates an expression while suppressing matching runtime messages it emits.
@@ -2529,6 +2599,13 @@ Tests whether an expression is real-valued and numeric in the current exact-numb
 Evaluates an expression and collects values emitted by Sow in the current first-pass grouping subset.
 
 - Attributes: `HoldFirst`
+- Capability: `Pure`
+
+### RegularExpression
+
+Represents the current regular-expression string-pattern wrapper.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### ReleaseHold
@@ -2882,6 +2959,13 @@ Represents the current formatting symbol accepted by the current ToExpression su
 - Attributes: `None`
 - Capability: `Pure`
 
+### StartOfLine
+
+Represents the current string-pattern anchor for the start of a string or a position after LF.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### StartOfString
 
 Represents the current string-pattern anchor for the start of a string.
@@ -2948,6 +3032,13 @@ Drops a substring using integer counts or inclusive 1-based ranges.
 ### StringEndsQ
 
 Tests whether a string or list of strings ends with an exact substring in the current first-pass string subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### StringExpression
+
+Represents the current string-pattern sequence head produced by `~~` syntax.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3618,6 +3709,13 @@ Represents the current string-pattern atom for one or more whitespace characters
 - Attributes: `None`
 - Capability: `Pure`
 
+### WhitespaceCharacter
+
+Represents the current string-pattern atom for one whitespace character.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### With
 
 Lexically substitutes local constants into a body.
@@ -3630,6 +3728,20 @@ Lexically substitutes local constants into a body.
 Evaluates cleanup code even when the main expression exits abnormally in the current first-pass subset.
 
 - Attributes: `HoldAll`
+- Capability: `Pure`
+
+### WordBoundary
+
+Represents the current string-pattern anchor at a transition between word and non-word text.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### WordCharacter
+
+Represents the current string-pattern atom for one alphabetic, ASCII digit, or underscore character.
+
+- Attributes: `None`
 - Capability: `Pure`
 
 ### Xor

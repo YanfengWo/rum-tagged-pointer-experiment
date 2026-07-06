@@ -3,6 +3,75 @@ use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
 use crate::strings;
 
 pub(crate) const STRING_BUILTINS: &[BuiltinSpec] = &[
+    BuiltinSpec::new(
+        "Alternatives",
+        "Represents the current pattern alternative head.",
+    ),
+    BuiltinSpec::new(
+        "Blank",
+        "Represents the current single-element pattern atom; in string patterns it matches one character.",
+    ),
+    BuiltinSpec::new(
+        "BlankNullSequence",
+        "Represents the current zero-or-more sequence pattern atom; in string patterns it matches zero or more characters.",
+    ),
+    BuiltinSpec::new(
+        "BlankSequence",
+        "Represents the current one-or-more sequence pattern atom; in string patterns it matches one or more characters.",
+    ),
+    BuiltinSpec::new(
+        "DigitCharacter",
+        "Represents the current string-pattern atom for one ASCII decimal digit.",
+    ),
+    BuiltinSpec::new(
+        "EndOfLine",
+        "Represents the current string-pattern anchor for the end of a string or a position before LF.",
+    ),
+    BuiltinSpec::new(
+        "EndOfString",
+        "Represents the current string-pattern anchor for the end of a string.",
+    ),
+    BuiltinSpec::new("Except", "Represents the current pattern exclusion head."),
+    BuiltinSpec::new(
+        "LetterCharacter",
+        "Represents the current string-pattern atom for one alphabetic character.",
+    ),
+    BuiltinSpec::new(
+        "Pattern",
+        "Represents the current named pattern-binding head.",
+    ),
+    BuiltinSpec::new(
+        "PunctuationCharacter",
+        "Represents the current string-pattern atom for one ASCII punctuation character.",
+    ),
+    BuiltinSpec::new(
+        "RegularExpression",
+        "Represents the current regular-expression string-pattern wrapper.",
+    ),
+    BuiltinSpec::new(
+        "StartOfLine",
+        "Represents the current string-pattern anchor for the start of a string or a position after LF.",
+    ),
+    BuiltinSpec::new(
+        "StartOfString",
+        "Represents the current string-pattern anchor for the start of a string.",
+    ),
+    BuiltinSpec::new(
+        "StringExpression",
+        "Represents the current string-pattern sequence head produced by `~~` syntax.",
+    ),
+    BuiltinSpec::new(
+        "WhitespaceCharacter",
+        "Represents the current string-pattern atom for one whitespace character.",
+    ),
+    BuiltinSpec::new(
+        "WordBoundary",
+        "Represents the current string-pattern anchor at a transition between word and non-word text.",
+    ),
+    BuiltinSpec::new(
+        "WordCharacter",
+        "Represents the current string-pattern atom for one alphabetic, ASCII digit, or underscore character.",
+    ),
     BuiltinSpec::ordinary(
         "StringJoin",
         "Concatenates strings or a list of strings into a single string.",

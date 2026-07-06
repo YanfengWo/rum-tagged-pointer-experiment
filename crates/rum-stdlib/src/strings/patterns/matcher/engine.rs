@@ -82,6 +82,18 @@ pub(in crate::strings::patterns) fn best_pattern_match_state(
     }
 }
 
+pub(in crate::strings::patterns) fn pattern_can_match_through_end(
+    pattern: &StringPattern,
+    chars: &[char],
+    start: usize,
+    end: usize,
+    config: StringPatternMatchConfig,
+) -> bool {
+    pattern_match_states(pattern, chars, start, config)
+        .into_iter()
+        .any(|state| state.end == end)
+}
+
 fn pattern_match_end_positions(
     pattern: &StringPattern,
     chars: &[char],
@@ -111,9 +123,12 @@ fn pattern_match_end_positions(
         StringPattern::DigitCharacter => {
             single_char_match_end_positions(chars, start, |ch| ch.is_ascii_digit())
         }
-        StringPattern::WordCharacter => single_char_match_end_positions(chars, start, |ch| {
-            ch.is_alphabetic() || ch.is_ascii_digit() || ch == '_'
-        }),
+        StringPattern::WordCharacter => {
+            single_char_match_end_positions(chars, start, is_string_word_character)
+        }
+        StringPattern::PunctuationCharacter => {
+            single_char_match_end_positions(chars, start, |ch| ch.is_ascii_punctuation())
+        }
         StringPattern::RegularExpression(pattern) => {
             regex_pattern_match_ends(pattern, chars, start)
         }
@@ -136,6 +151,9 @@ fn pattern_match_end_positions(
             .then_some(start)
             .into_iter()
             .collect(),
+        StringPattern::StartOfLine => start_of_line_match_end_positions(chars, start),
+        StringPattern::EndOfLine => end_of_line_match_end_positions(chars, start),
+        StringPattern::WordBoundary => word_boundary_match_end_positions(chars, start),
         StringPattern::Repeated { pattern, min, max } => {
             repeated_pattern_end_positions(pattern, chars, start, *min, *max, config)
         }
@@ -201,11 +219,15 @@ fn pattern_match_states(
         | StringPattern::LetterCharacter
         | StringPattern::DigitCharacter
         | StringPattern::WordCharacter
+        | StringPattern::PunctuationCharacter
         | StringPattern::RegularExpression(_)
         | StringPattern::NumberString
         | StringPattern::Except { .. }
         | StringPattern::StartOfString
-        | StringPattern::EndOfString => pattern_match_end_positions(pattern, chars, start, config)
+        | StringPattern::EndOfString
+        | StringPattern::StartOfLine
+        | StringPattern::EndOfLine
+        | StringPattern::WordBoundary => pattern_match_end_positions(pattern, chars, start, config)
             .into_iter()
             .map(empty_match_state)
             .collect(),
@@ -429,6 +451,39 @@ fn single_char_match_end_positions(
     }
 
     vec![start + 1]
+}
+
+fn start_of_line_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    (start == 0 || start.checked_sub(1).and_then(|index| chars.get(index)) == Some(&'\n'))
+        .then_some(start)
+        .into_iter()
+        .collect()
+}
+
+fn end_of_line_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    (start == chars.len() || chars.get(start) == Some(&'\n'))
+        .then_some(start)
+        .into_iter()
+        .collect()
+}
+
+fn word_boundary_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    let previous_is_word = start
+        .checked_sub(1)
+        .and_then(|index| chars.get(index))
+        .is_some_and(|ch| is_string_word_character(*ch));
+    let next_is_word = chars
+        .get(start)
+        .is_some_and(|ch| is_string_word_character(*ch));
+
+    (previous_is_word != next_is_word)
+        .then_some(start)
+        .into_iter()
+        .collect()
+}
+
+fn is_string_word_character(ch: char) -> bool {
+    ch.is_alphabetic() || ch.is_ascii_digit() || ch == '_'
 }
 
 fn number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {

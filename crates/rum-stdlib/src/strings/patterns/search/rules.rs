@@ -133,7 +133,7 @@ fn resume_replace_string_value_from_index(
     replacements: usize,
     mut output: String,
 ) -> Result<String, EvalError> {
-    while index < state.chars.len() {
+    while index <= state.chars.len() {
         if replacements >= state.max_replacements {
             output.extend(state.chars[index..].iter());
             return Ok(output);
@@ -170,6 +170,9 @@ fn resume_replace_string_value_from_index(
             );
         }
 
+        if index == state.chars.len() {
+            break;
+        }
         output.push(state.chars[index]);
         index += 1;
     }
@@ -192,6 +195,9 @@ fn resume_replace_string_value_with_output(
     output.push_str(&rendered);
 
     let next_index = if end == index {
+        if index == state.chars.len() {
+            return Ok(output);
+        }
         output.push(state.chars[index]);
         index + 1
     } else {

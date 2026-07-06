@@ -1,6 +1,6 @@
 use super::engine::{
     best_pattern_match_at, best_pattern_match_at_with_bindings, best_pattern_match_end,
-    best_pattern_match_state, pattern_match_text,
+    best_pattern_match_state, pattern_can_match_through_end, pattern_match_text,
 };
 use super::split_trim::{
     split_by_string_patterns, split_by_whitespace, trim_string_patterns, trim_whitespace_chars,
@@ -40,8 +40,9 @@ pub(in crate::strings::patterns) fn string_match_q(
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
 ) -> bool {
-    best_pattern_match_at_with_bindings(patterns, haystack, 0, config)
-        .is_some_and(|(_, state)| state.end == haystack.len())
+    patterns
+        .iter()
+        .any(|pattern| pattern_can_match_through_end(pattern, haystack, 0, haystack.len(), config))
 }
 
 pub(in crate::strings::patterns) fn string_free_q(
@@ -128,11 +129,14 @@ pub(in crate::strings::patterns) fn split_string_value(
     value: &str,
     spec: &StringBoundarySpec,
     limit: StringSplitLimit,
+    config: StringPatternMatchConfig,
 ) -> Vec<String> {
     let chars = value.chars().collect::<Vec<_>>();
     match spec {
         StringBoundarySpec::Whitespace => split_by_whitespace(&chars, limit),
-        StringBoundarySpec::Patterns(patterns) => split_by_string_patterns(&chars, patterns, limit),
+        StringBoundarySpec::Patterns(patterns) => {
+            split_by_string_patterns(&chars, patterns, limit, config)
+        }
     }
 }
 

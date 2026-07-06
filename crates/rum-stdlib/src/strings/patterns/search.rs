@@ -76,23 +76,16 @@ pub(crate) fn eval_string_split(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    if !(1..=3).contains(&args.len()) {
-        return Ok(session.invalid_call_with_arg_range("StringSplit", args, 1, 3));
+    if !(1..=4).contains(&args.len()) {
+        return Ok(session.invalid_call_with_arg_range("StringSplit", args, 1, 4));
     }
 
-    let delimiter_spec = match args.get(1) {
-        Some(expr) => parse_string_boundary_spec(expr),
-        None => Some(StringBoundarySpec::Whitespace),
-    };
-    let Some(delimiter_spec) = delimiter_spec else {
+    let Some((delimiter_spec, limit, option_exprs)) = parse_string_split_args(args) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
-
-    let limit = match args.get(2) {
-        Some(expr) => parse_string_split_limit(expr),
-        None => Some(StringSplitLimit::Unlimited),
-    };
-    let Some(limit) = limit else {
+    let option_exprs =
+        session.merged_option_exprs_for_system_symbol("StringSplit", option_exprs)?;
+    let Some(config) = parse_string_match_config(&option_exprs) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
@@ -101,6 +94,7 @@ pub(crate) fn eval_string_split(
             value,
             &delimiter_spec,
             limit,
+            config,
         )));
     }
 
@@ -108,12 +102,49 @@ pub(crate) fn eval_string_split(
         return Ok(list_expr(
             values
                 .into_iter()
-                .map(|value| string_list_expr(split_string_value(&value, &delimiter_spec, limit)))
+                .map(|value| {
+                    string_list_expr(split_string_value(&value, &delimiter_spec, limit, config))
+                })
                 .collect(),
         ));
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+fn parse_string_split_args(
+    args: &[Expr],
+) -> Option<(StringBoundarySpec, StringSplitLimit, &[Expr])> {
+    let mut index = 1usize;
+
+    let delimiter_spec = match args.get(index) {
+        Some(expr) if is_string_split_option_expr(expr) => StringBoundarySpec::Whitespace,
+        Some(expr) => {
+            index += 1;
+            parse_string_boundary_spec(expr)?
+        }
+        None => StringBoundarySpec::Whitespace,
+    };
+
+    let limit = match args.get(index) {
+        Some(expr) if is_string_split_option_expr(expr) => StringSplitLimit::Unlimited,
+        Some(expr) => {
+            index += 1;
+            parse_string_split_limit(expr)?
+        }
+        None => StringSplitLimit::Unlimited,
+    };
+
+    Some((delimiter_spec, limit, &args[index..]))
+}
+
+fn is_string_split_option_expr(expr: &Expr) -> bool {
+    let Expr::Call { head, args } = expr else {
+        return false;
+    };
+
+    (is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        && args.len() == 2
 }
 
 pub(crate) fn eval_string_trim(

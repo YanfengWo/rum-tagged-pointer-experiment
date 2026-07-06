@@ -60,7 +60,7 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("SpellingCorrection", bool_option(false)),
         ],
         "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ" | "StringFreeQ"
-        | "StringDelete" | "StringReplace" | "StringCases" | "StringPosition" => {
+        | "StringDelete" | "StringReplace" | "StringCases" | "StringPosition" | "StringSplit" => {
             vec![system_rule_option("IgnoreCase", bool_option(false))]
         }
         "StringCount" => vec![

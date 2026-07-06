@@ -58,6 +58,7 @@ pub(super) fn split_by_string_patterns(
     chars: &[char],
     patterns: &[StringPattern],
     limit: StringSplitLimit,
+    config: StringPatternMatchConfig,
 ) -> Vec<String> {
     if chars.is_empty() {
         return if matches!(limit, StringSplitLimit::All) {
@@ -72,23 +73,30 @@ pub(super) fn split_by_string_patterns(
     let mut index = 0usize;
     let include_edge_empties = matches!(limit, StringSplitLimit::All);
 
-    while index < chars.len() {
+    while index <= chars.len() {
         if matches!(limit, StringSplitLimit::MaxSubstrings(max) if parts.len() + 1 >= max) {
             break;
         }
 
-        let Some(end) = best_pattern_match_at_with_bindings(
-            patterns,
-            chars,
-            index,
-            StringPatternMatchConfig::default(),
-        )
-        .map(|(_, state)| state.end) else {
+        let Some(end) = best_pattern_match_at_with_bindings(patterns, chars, index, config)
+            .map(|(_, state)| state.end)
+        else {
+            if index == chars.len() {
+                break;
+            }
             index += 1;
             continue;
         };
 
         if end == index {
+            let segment = chars[segment_start..index].iter().collect::<String>();
+            if include_edge_empties || !segment.is_empty() || !parts.is_empty() {
+                parts.push(segment);
+            }
+            segment_start = index;
+            if index == chars.len() {
+                break;
+            }
             index += 1;
             continue;
         }

@@ -236,8 +236,8 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             optional_blank_expr(),
             system_expr("OptionsPattern"),
         ])],
-        "StringPosition" | "StringCases" | "StringReplace" | "Cases" | "Count" | "MemberQ"
-        | "FreeQ" => vec![syntax_argument_pattern(vec![
+        "StringPosition" | "StringCases" | "StringReplace" | "StringSplit" | "Cases" | "Count"
+        | "MemberQ" | "FreeQ" => vec![syntax_argument_pattern(vec![
             blank_expr(),
             optional_blank_expr(),
             optional_blank_expr(),

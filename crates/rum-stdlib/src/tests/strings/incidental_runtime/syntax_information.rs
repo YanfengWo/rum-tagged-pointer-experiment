@@ -232,6 +232,14 @@ fn syntax_information_includes_current_system_default_subset() {
     );
     assert_eq!(
         session
+            .eval_text("SyntaxInformation[StringSplit]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]], Optional[Blank[]], OptionsPattern]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("SyntaxInformation[Cases]")
             .unwrap()
             .value
