@@ -762,3 +762,10 @@ cross-codec matrix incl. the JSON→TOML→YAML→JSON grand-tour identity.
 Six formats, one value model, all fail-closed with byte offsets, zero new
 dependencies. Reference 595; workspace 1247/0. The config-conversion story
 is complete: cat a.json | rum-cli -e 'ToYaml[FromJson[$ScriptInput]]'.
+
+## 2026-07-07 — HARDENING COVERAGE LINE STARTED (A-half)
+
+User decision: the coverage-rebuild debt splits — the infrastructure half
+(host lifecycle, limit paths, stress corpus) runs NOW as briefs 149-151;
+stdlib-breadth coverage is deferred until stdlib growth plateaus (batch
+discipline already covers new code). Plan: docs/dev/hardening-coverage-plan.md.

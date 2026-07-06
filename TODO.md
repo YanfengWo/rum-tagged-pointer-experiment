@@ -137,7 +137,7 @@ string-pattern surface. Batches, evidence-ranked:
   the public MSRV. Post-`1.85` language features are not used;
   `cargo-llvm-cov` stays at the matching `0.6.21`. If an upgrade is ever
   reconsidered, re-baseline both microbench suites in the same session.
-- [ ] **Coverage rebuild** (the integration-depth gap left by removing the
+- [ ] ACTIVE LINE A-half (2026-07-07, docs/dev/hardening-coverage-plan.md; stdlib-breadth half DEFERRED to the stdlib plateau): **Coverage rebuild** (the integration-depth gap left by removing the
   external acceptance corpus): `cargo-llvm-cov`-driven buildout prioritizing
   the host lifecycle (interrupt/cancel, wall-clock timeout, poison recovery,
   `reset()`, snapshot/restore round-trips, typed `HostValue`, capability
