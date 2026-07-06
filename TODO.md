@@ -195,6 +195,13 @@ string-pattern surface. Batches, evidence-ranked:
   ConformSchema — patterns are the type language.
 - [ ] Candidates parked: `ByteArray` depth audit; compression codecs;
   unicode normalization; ipaddress folk; fuzzing; codec follow-ons.
+- [ ] WL15 survey outcomes (2026-07-07, docs/dev/wl15-core-survey.md):
+  (a) `SubValuesHoldAll`-equivalent — worth doing, FROZEN until the
+  perf moratorium lifts (argument-evaluation path); design with the
+  kernel units 8-10 audit. (b) Structured-exceptions line
+  (ThrowException/CatchExceptions-style, folk scope) — design-first
+  candidate, pending user green light. (c) Incremental/lazy
+  collections — parked (stateful handles vs snapshot/reset).
 - [ ] Downstream `rum-os` (process/env; post-launch, alongside `rum-fs`):
   process execution is the maximal ambient authority and never enters the
   kernel — kernel only reserves a `Capability::Process` variant (do this in
