@@ -200,15 +200,49 @@ fn snapshot_restore_preserves_20_generated_definitions_and_attributes() {
 }
 
 /// Run with:
-/// `cargo test -p rum-host --test stress bug_snapshot_restore_500_generated_definitions_overflows_native_stack -- --ignored --nocapture`
+/// `cargo test -p rum-host --test stress bug_snapshot_restore_500_generated_definitions_overflows_native_stack -- --nocapture`
 #[test]
-#[ignore]
 fn bug_snapshot_restore_500_generated_definitions_overflows_native_stack() {
-    // BUG: Evaluating and snapshot/restoring the exact brief scale of 500
-    // generated definitions aborts the test process with a native stack
-    // overflow before rum-host can return a recoverable failure.
-    let documented_failing_definition_count = 500;
-    assert_eq!(documented_failing_definition_count, 500);
+    let mut source = HostSession::new();
+    install_snapshot_definitions(&mut source, 500);
+
+    let source_definitions = source.definitions();
+    assert_eq!(source_definitions.len(), 500);
+    assert_eq!(
+        definition_summary(&source_definitions, "Global`snap499"),
+        HostDefinitionSummary {
+            name: "Global`snap499".to_string(),
+            has_own_value: false,
+            down_value_count: 1,
+            up_value_count: 0,
+            sub_value_count: 0,
+        }
+    );
+
+    let bytes = source.snapshot_to_bytes();
+    assert!(!bytes.is_empty());
+
+    let mut restored = HostSession::new();
+    assert_success_text(restored.eval("stale = 99"), "99");
+    restored
+        .restore_from_bytes(&bytes)
+        .expect("500-definition snapshot bytes should restore");
+
+    let restored_definitions = restored.definitions();
+    assert_eq!(restored_definitions.len(), source_definitions.len());
+    for index in [0usize, 1, 17, 250, 499] {
+        assert_eq!(
+            definition_summary(&restored_definitions, &format!("Global`snap{index}"))
+                .down_value_count,
+            1
+        );
+        assert_success_text(
+            restored.eval(format!("snap{index}[10]")),
+            &(10 + index).to_string(),
+        );
+    }
+    assert_success_text(restored.eval("Attributes[snap499]"), "List[Orderless]");
+    assert_success_text(restored.eval("stale"), "stale");
 }
 
 fn runtime_core_session() -> Session {

@@ -257,29 +257,30 @@ fn eval_take_by(
 fn resume_decorate_by_from_index(
     session: &mut Session,
     state: DecorateByState,
-    index: usize,
-    decorated: Vec<KeyedEntry>,
+    mut index: usize,
+    mut decorated: Vec<KeyedEntry>,
 ) -> Result<Expr, EvalError> {
-    let Some(item) = state.items.get(index).cloned() else {
-        return finish_decorated(state, decorated);
-    };
+    loop {
+        let Some(item) = state.items.get(index).cloned() else {
+            return finish_decorated(state, decorated);
+        };
 
-    let key_result = session.evaluate(Expr::call(state.function.clone(), vec![item.clone()]));
-    let suspended_state = state.clone();
-    let suspended_decorated = decorated.clone();
-    let suspended_item = item.clone();
-    let key = session.suspend_with_frame(key_result, move |session, key| {
-        resume_decorate_by_with_key(
-            session,
-            suspended_state,
-            index,
-            suspended_decorated,
-            suspended_item,
-            key,
-        )
-    })?;
+        let key = match session.evaluate(Expr::call(state.function.clone(), vec![item.clone()])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, key| {
+                        resume_decorate_by_with_key(session, state, index, decorated, item, key)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_decorate_by_with_key(session, state, index, decorated, item, key)
+        decorated.push(KeyedEntry { item, key, index });
+        index += 1;
+    }
 }
 
 fn resume_decorate_by_with_key(

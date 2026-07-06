@@ -176,11 +176,19 @@ impl HostSession {
             return Ok(());
         }
 
-        match self.eval(source) {
-            HostEvalOutcome::Success(_) => Ok(()),
-            HostEvalOutcome::Failure(failure) => Err(failure),
-            HostEvalOutcome::InputRequired(suspension) => Err(snapshot_input_failure(suspension)),
-        }
+        self.guard(
+            |session| match session.session.eval_script_request(source) {
+                Ok(_) => Ok(()),
+                Err(failure) => match eval_failure_from_runtime(failure) {
+                    HostEvalOutcome::Failure(failure) => Err(failure),
+                    HostEvalOutcome::InputRequired(suspension) => {
+                        Err(snapshot_input_failure(suspension))
+                    }
+                    HostEvalOutcome::Success(_) => unreachable!("request failure cannot succeed"),
+                },
+            },
+            |message| Err(panic_failure(message)),
+        )
     }
 
     /// Returns the current session configuration.

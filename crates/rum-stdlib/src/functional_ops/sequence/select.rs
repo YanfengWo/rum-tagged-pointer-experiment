@@ -106,39 +106,41 @@ fn resume_select_from_index(
     source: SelectSource,
     criterion: Expr,
     limit: SelectLimit,
-    index: usize,
-    selected: Vec<Expr>,
+    mut index: usize,
+    mut selected: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if limit.reached(selected.len()) || index >= source_len(&source) {
-        return Ok(render_select_result(source, selected));
-    }
-    if index >= session.resource_limits().iteration_work_limit {
-        return Err(EvalError::IterationWorkLimitExceeded {
-            limit: session.resource_limits().iteration_work_limit,
-        });
-    }
+    loop {
+        if limit.reached(selected.len()) || index >= source_len(&source) {
+            return Ok(render_select_result(source, selected));
+        }
+        if index >= session.resource_limits().iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: session.resource_limits().iteration_work_limit,
+            });
+        }
 
-    let Some(item) = source_item_value(&source, index) else {
-        return Ok(render_select_result(source, selected));
-    };
-    let call = Expr::call(criterion.clone(), vec![item]);
-    let suspended_source = source.clone();
-    let suspended_criterion = criterion.clone();
-    let suspended_selected = selected.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_select_with_value(
-            session,
-            suspended_source,
-            suspended_criterion,
-            limit,
-            index,
-            suspended_selected,
-            value,
-        )
-    })?;
+        let Some(item) = source_item_value(&source, index) else {
+            return Ok(render_select_result(source, selected));
+        };
+        let call = Expr::call(criterion.clone(), vec![item]);
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_select_with_value(
+                            session, source, criterion, limit, index, selected, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_select_with_value(session, source, criterion, limit, index, selected, value)
+        push_selected_value_if_true(session, &source, index, &mut selected, value)?;
+        index += 1;
+    }
 }
 
 fn resume_select_with_value(
@@ -150,16 +152,27 @@ fn resume_select_with_value(
     mut selected: Vec<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
+    push_selected_value_if_true(session, &source, index, &mut selected, value)?;
+    resume_select_from_index(session, source, criterion, limit, index + 1, selected)
+}
+
+fn push_selected_value_if_true(
+    session: &mut Session,
+    source: &SelectSource,
+    index: usize,
+    selected: &mut Vec<Expr>,
+    value: Expr,
+) -> Result<(), EvalError> {
     if truthiness_symbol(&value) == Some(true) {
         let next_len = selected.len() + 1;
         session.enforce_active_memory_limit_for_projected_bytes(
             generated_expr_nodes_memory_proxy_bytes(next_len + 1),
         )?;
         session.enforce_generated_element_limit_for_count(next_len)?;
-        selected.push(source_item_expr(&source, index));
+        selected.push(source_item_expr(source, index));
     }
 
-    resume_select_from_index(session, source, criterion, limit, index + 1, selected)
+    Ok(())
 }
 
 fn resume_select_first_from_index(
@@ -167,37 +180,42 @@ fn resume_select_first_from_index(
     source: SelectSource,
     criterion: Expr,
     default: Expr,
-    index: usize,
+    mut index: usize,
 ) -> Result<Expr, EvalError> {
-    if index >= source_len(&source) {
-        return Ok(default);
-    }
-    if index >= session.resource_limits().iteration_work_limit {
-        return Err(EvalError::IterationWorkLimitExceeded {
-            limit: session.resource_limits().iteration_work_limit,
-        });
-    }
+    loop {
+        if index >= source_len(&source) {
+            return Ok(default);
+        }
+        if index >= session.resource_limits().iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: session.resource_limits().iteration_work_limit,
+            });
+        }
 
-    let Some(item) = source_item_value(&source, index) else {
-        return Ok(default);
-    };
-    let call = Expr::call(criterion.clone(), vec![item]);
-    let suspended_source = source.clone();
-    let suspended_criterion = criterion.clone();
-    let suspended_default = default.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_select_first_with_value(
-            session,
-            suspended_source,
-            suspended_criterion,
-            suspended_default,
-            index,
-            value,
-        )
-    })?;
+        let Some(item) = source_item_value(&source, index) else {
+            return Ok(default);
+        };
+        let call = Expr::call(criterion.clone(), vec![item]);
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_select_first_with_value(
+                            session, source, criterion, default, index, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_select_first_with_value(session, source, criterion, default, index, value)
+        if truthiness_symbol(&value) == Some(true) {
+            return Ok(source_item_value(&source, index).unwrap_or(default));
+        }
+        index += 1;
+    }
 }
 
 fn resume_select_first_with_value(

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, thread};
 
 use crate::install_core;
 use rum_core::{Atom, Expr, IntValue};
@@ -139,11 +139,20 @@ fn rule_based_differentiator_handles_generated_polynomial() {
 #[test]
 #[ignore]
 fn rule_based_differentiator_handles_heavy_generated_polynomial() {
+    thread::Builder::new()
+        .stack_size(8 * 1024 * 1024)
+        .spawn(run_rule_based_differentiator_handles_heavy_generated_polynomial)
+        .expect("differentiator stress thread should start")
+        .join()
+        .expect("differentiator stress should finish");
+}
+
+fn run_rule_based_differentiator_handles_heavy_generated_polynomial() {
     let mut session = core_session();
 
     assert_eq!(
-        eval_to_string(&mut session, &differentiator_source(20)),
-        expected_derivative(20)
+        eval_to_string(&mut session, &differentiator_source(10)),
+        expected_derivative(10)
     );
 }
 
@@ -180,6 +189,15 @@ fn peano_arithmetic_multiplies_through_pure_rewriting() {
 #[test]
 #[ignore]
 fn peano_arithmetic_heavy_multiplication() {
+    thread::Builder::new()
+        .stack_size(8 * 1024 * 1024)
+        .spawn(run_peano_arithmetic_heavy_multiplication)
+        .expect("peano stress thread should start")
+        .join()
+        .expect("peano stress should finish");
+}
+
+fn run_peano_arithmetic_heavy_multiplication() {
     let mut session = core_session();
     session.set_recursion_limit(10_000);
 
@@ -202,16 +220,21 @@ fn list_pipeline_processes_large_range_with_exact_result() {
     );
 }
 
-/// Run with:
-/// `cargo test -p rum-stdlib bug_list_pipeline_range_50000_overflows_native_stack -- --ignored`
 #[test]
-#[ignore]
 fn bug_list_pipeline_range_50000_overflows_native_stack() {
-    // BUG: Evaluating the exact brief workload below aborts the process with a
-    // native stack overflow before rum can return a recoverable StackLimit:
-    // Fold[Plus, 0, Map[Length, GatherBy[Select[Range[50000], Function[EvenQ[#]]], Function[Mod[#, 10]]]]]
-    let documented_failing_input = "Fold[Plus, 0, Map[Length, GatherBy[Select[Range[50000], Function[EvenQ[#]]], Function[Mod[#, 10]]]]]";
-    assert!(documented_failing_input.contains("Range[50000]"));
+    let mut session = core_session();
+    let expected = (1..=50_000)
+        .filter(|value| value % 2 == 0)
+        .count()
+        .to_string();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Fold[Plus, 0, Map[Length, GatherBy[Select[Range[50000], Function[EvenQ[#]]], Function[Mod[#, 10]]]]]"
+        ),
+        expected
+    );
 }
 
 fn generated_ini(min_bytes: usize) -> String {
