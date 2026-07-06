@@ -23,15 +23,36 @@ operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
 ## Stdlib Expansion For Scripting (ACTIVE)
 
-Evidence-first: a diagnostic pass writes real embedded-scripting tasks in
-current rum and harvests the friction list; expansion batches follow the
-evidence. Candidate directions (pre-evidence ranking): in-language JSON
-(`JsonDecode`/`JsonEncode`, Pure, rum-native names); string-pattern language
-contract + depth (audit the undocumented surface first — e.g.
-`DigitCharacter` works but is uncataloged; no regex engine); a date/time
-folk subset (pure parse/format/arithmetic; current-time readers are
-`Clock`); collection odds-and-ends (`Tally`, `MaxBy`/`MinBy`, `Riffle`,
-`GatherBy`); `ByteArray` depth audit (deferred unless a host needs it).
+Evidence base: brief-135 (2026-07-06) wrote six real scripting tasks in
+current rum (all six completed, with workarounds) and mapped the
+string-pattern surface. Batches, evidence-ranked:
+
+- [ ] brief-136 (S/M): collection/text odds-and-ends the tasks reached for —
+  `Tally`, `MaxBy`/`MinBy`, `TakeLargestBy`/`TakeSmallestBy`, `ReverseSort`/
+  `ReverseSortBy`, `GatherBy`, `Riffle`, exact `Mean`, `StringPadRight`,
+  `StringLines`.
+- [ ] brief-137 (M): string-pattern CONTRACT + fixes. The engine already
+  supports far more than documented (`~~`, alternatives, blanks, `..`,
+  character classes, `Except`, `Shortest`/`Longest`, named binding — all
+  work, none cataloged). Catalog + guide section; implement the four inert
+  atoms (`PunctuationCharacter`, `StartOfLine`, `EndOfLine`, `WordBoundary`);
+  `StringSplit` `IgnoreCase`; fix four bug-like edges (`EndOfString` in
+  Replace/Position, empty-string `RepeatedNull` cases, `Shortest[".."]`
+  MatchQ). No regex engine — symbolic string patterns are the rum way.
+- [ ] brief-138 (M/L): in-language JSON codec, Pure, rum-native names
+  (string↔expr; objects→Association, JSON decimals→exact rationals; folk
+  scope with documented limits). CSV-from-string decided after JSON lands.
+- [ ] brief-139 (M): Random family — kernel PRNG in session state with a
+  FIXED default seed (Pure by the audit rule; deterministic by default),
+  `SeedRandom`/`RandomInteger`/`RandomChoice`/`RandomSample`; entropy tap
+  via `Capability::Random` + an `EntropySource` provider in rum-host
+  (FileIo-seam pattern); `RandomBytes` for password-grade material with
+  honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
+- [ ] brief-140 (M): date/time folk subset — pure parse/format/arithmetic
+  on timestamp values; current-time readers are `Clock`.
+- [ ] Candidates parked: raw multiline string literals (parser-level, real
+  friction in every task, bigger blast radius — decide separately);
+  schema/validation helpers; `ByteArray` depth audit.
 
 ## After the Release Cut
 

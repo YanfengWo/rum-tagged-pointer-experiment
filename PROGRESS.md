@@ -657,3 +657,16 @@ shell; sandboxed() is now deterministic by construction; docs adopt the two
 claims (no ambient authority; deterministic by default). Reference 506;
 workspace 1141/0. Process docs archived; kernel hard lines now three: zero
 unsafe, zero std::fs (non-test), Pure=deterministic.
+
+## 2026-07-06 — brief-135: scripting-ergonomics probe (diagnostic, no source change)
+
+Six embedded-scripting tasks all completed in current rum (log summary, text
+transform, quoted-CSV munging via a hand-written character parser, config
+validation, template report, word frequency). Friction: no raw multiline
+string literals; CSV needs a hand parser; reached-for-but-missing: Mean,
+Tally, MaxBy/TakeLargestBy, ReverseSort, StringPadRight, StringLines.
+String-pattern matrix: the engine supports ~~, alternatives, blanks, .., 
+character classes, Except, Shortest/Longest, named binding across all six
+string functions — almost none of it cataloged (dark surface); inert:
+PunctuationCharacter, StartOfLine, EndOfLine, WordBoundary; StringSplit lacks
+IgnoreCase; four bug-like edges recorded. Batches 136-140 planned in TODO.
