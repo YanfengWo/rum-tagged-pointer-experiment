@@ -27,11 +27,11 @@ Evidence base: brief-135 (2026-07-06) wrote six real scripting tasks in
 current rum (all six completed, with workarounds) and mapped the
 string-pattern surface. Batches, evidence-ranked:
 
-- [ ] brief-136 (S/M): collection/text odds-and-ends the tasks reached for —
+- [x] brief-136 DONE (ba4ad60): collection/text odds-and-ends the tasks reached for —
   `Tally`, `MaxBy`/`MinBy`, `TakeLargestBy`/`TakeSmallestBy`, `ReverseSort`/
   `ReverseSortBy`, `GatherBy`, `Riffle`, exact `Mean`, `StringPadRight`,
   `StringLines`.
-- [ ] brief-137 (M): string-pattern CONTRACT + fixes. The engine already
+- [x] brief-137 DONE (d233622): string-pattern CONTRACT + fixes. The engine already
   supports far more than documented (`~~`, alternatives, blanks, `..`,
   character classes, `Except`, `Shortest`/`Longest`, named binding — all
   work, none cataloged). Catalog + guide section; implement the four inert
