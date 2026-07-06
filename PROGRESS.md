@@ -726,3 +726,19 @@ KAT pins, self-implemented hex/base64, ByteArrayQ/ByteArrayToString;
 hashing-yes-encryption-never boundary in the guide. Reference 563; workspace
 1196/0. Next: brief-143 (Python/Perl tier-1 utilities + StringForm
 contract), then the TokenizeWith mechanism batch closes the expansion line.
+
+## 2026-07-07 — STDLIB EXPANSION LINE COMPLETE (briefs 135-144)
+
+From the brief-135 diagnostic to brief-144, the scripting stdlib went
+506 → 584 builtins, every addition contract-documented (reference drift
+enforced) and transcript-verified: collection odds-and-ends, the
+string-pattern contract (dark surface cataloged, four atoms implemented,
+edges fixed), FromJson/ToJson (fail-closed cornerstone), rum-cli pipeline
+citizenship ($ScriptInput/$ScriptArgs/EPIPE), the deterministic Random
+family with the entropy capability, exact date/time, digests + hex/base64,
+the 19-builtin utilities batch with the StringForm contract, and
+TokenizeWith/RumTokens (highlighting mechanism; grammars stay packages).
+Workspace 1212/0. Process briefs archived. Parked: multiline string
+literals (parser-level), schema helpers, ByteArray depth, compression
+codecs, unicode normalization, ipaddress. Next mainline: user's call
+(coverage rebuild is the standing debt).

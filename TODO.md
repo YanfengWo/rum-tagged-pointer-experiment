@@ -21,7 +21,7 @@ operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
   family). Mechanics (hosting, name, tag, `repository` metadata, CI) decided
   then.
 
-## Stdlib Expansion For Scripting (ACTIVE)
+## Stdlib Expansion For Scripting — COMPLETE (2026-07-07)
 
 Evidence base: brief-135 (2026-07-06) wrote six real scripting tasks in
 current rum (all six completed, with workarounds) and mapped the
@@ -76,7 +76,7 @@ string-pattern surface. Batches, evidence-ranked:
   honest non-CSPRNG-in-kernel boundaries; no `RandomReal` (rationals only).
 - [x] brief-141 DONE (d672a79): date/time folk subset — pure parse/format/arithmetic
   on timestamp values; current-time readers are `Clock`.
-- [ ] brief-144 (in flight): Tokenizer mechanism for highlighting and text tooling (S/M):
+- [x] brief-144 DONE (53292ac): Tokenizer mechanism for highlighting and text tooling (S/M):
   `TokenizeWith[rules, str]` — an error-tolerant span driver over the
   (brief-137) string-pattern language: rules as symbolic data
   (`{"class" -> pattern, …}`), longest-match + rule priority, unmatched
