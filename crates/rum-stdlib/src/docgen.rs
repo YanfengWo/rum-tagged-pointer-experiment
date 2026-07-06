@@ -60,6 +60,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "implements rum's documented INI dialect only: whole-line ;/# comments, [section] headers, key = value lines, trimmed keys/values, verbatim values, no nesting, no multiline values, and no inline comments.",
     ),
     (
+        "FromToml",
+        "implements rum's documented TOML 1.0 folk subset only: tables, arrays-of-tables, inline tables, strings, exact integers/decimals, booleans, and date/time tokens; inf/nan and unsupported TOML surface fail closed. Offset date-times decode as exact Unix-second instants, while local dates/times decode as Lists.",
+    ),
+    (
         "Prime",
         "uses a bounded integer-work budget and sieve-based prime generation for supported exact positive integer indices.",
     ),
@@ -107,6 +111,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "ToIni",
         "renders only Association-of-Associations with String section names, keys, and values; unrepresentable names, multiline values, whitespace-trimming value loss, and an empty default section fail closed.",
+    ),
+    (
+        "ToToml",
+        "renders only top-level Associations with String keys, exact integers, terminating rationals, booleans, strings, Lists, nested Associations, and Lists of Associations; nested Associations use sub-table headers unless inline form is required to preserve same-level key order. It never synthesizes TOML datetime syntax, so date Lists and timestamps encode as arrays or numbers.",
     ),
     (
         "StringDedent",

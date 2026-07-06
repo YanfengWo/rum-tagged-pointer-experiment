@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 588
+Builtin count: 590
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1431,6 +1431,14 @@ Parses an RFC 8259 JSON text string into exact rum values, failing closed on inv
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### FromToml
+
+Parses rum's documented fail-closed TOML subset into exact rum values.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: implements rum's documented TOML 1.0 folk subset only: tables, arrays-of-tables, inline tables, strings, exact integers/decimals, booleans, and date/time tokens; inf/nan and unsupported TOML surface fail closed. Offset date-times decode as exact Unix-second instants, while local dates/times decode as Lists.
 
 ### FullForm
 
@@ -3874,6 +3882,14 @@ Renders an evaluated expression into the current canonical kernel text form.
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### ToToml
+
+Renders the TOML-representable subset of rum Associations as TOML text.
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: renders only top-level Associations with String keys, exact integers, terminating rationals, booleans, strings, Lists, nested Associations, and Lists of Associations; nested Associations use sub-table headers unless inline form is required to preserve same-level key order. It never synthesizes TOML datetime syntax, so date Lists and timestamps encode as arrays or numbers.
 
 ### ToUpperCase
 

@@ -1,8 +1,8 @@
 # Structured Data
 
-`FromJson`/`ToJson`, `FromCsv`/`ToCsv`, and `FromIni`/`ToIni` convert between
-common structured-data text formats and the representable subset of `rum`
-expressions.
+`FromJson`/`ToJson`, `FromToml`/`ToToml`, `FromCsv`/`ToCsv`, and
+`FromIni`/`ToIni` convert between common structured-data text formats and the
+representable subset of `rum` expressions.
 
 They are pure string codecs. They do not read or write files, do not consult
 host capabilities beyond `Pure`, and fail closed with `$Failed` plus a runtime
@@ -165,6 +165,81 @@ with standard library functions before encoding again:
 ```text
 $ cargo run -q -p rum-cli -- --eval 'ToJson[Mean[Map[Lookup[#, "v"] &, First[GatherBy[FromJson["[{\"g\":\"a\",\"v\":1},{\"g\":\"a\",\"v\":3},{\"g\":\"b\",\"v\":5}]"], Lookup[#, "g"] &]]]]]'
 "2"
+```
+
+## TOML Mapping
+
+`FromToml[str]` parses rum's fail-closed TOML 1.0 folk subset into an
+`Association` with insertion order preserved.
+
+| TOML | `rum` value |
+| --- | --- |
+| table, dotted key, inline table | `Association` |
+| array | `List` |
+| array-of-tables | `List` of `Association`s |
+| string | string atom |
+| integer | exact `Integer` |
+| decimal or exponent float | exact base-10 value; `0.1` becomes `1/10` |
+| boolean | `True` or `False` |
+| offset date-time | exact rational Unix-second timestamp |
+| local date-time | `{y, mo, d, h, mi, s}` |
+| local date | `{y, mo, d}` |
+| local time | `{h, mi, s}` |
+
+Only offset date-times are instants. Local TOML date/time values are decoded as
+plain date lists because they do not carry an offset. `inf`, `-inf`, and `nan`
+fail closed because rum has no inexact float value in this codec family.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromToml["title = \"x\"\n[db]\nports = [1, 2]\npi = 3.14\nwhen = 1970-01-01T01:00:00+01:00\n"]'
+Association[Rule["title", "x"], Rule["db", Association[Rule["ports", List[1, 2]], Rule["pi", 157/50], Rule["when", 0]]]]
+```
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromToml["d = 2026-07-06\nt = 12:13:14.5\n"]'
+Association[Rule["d", List[2026, 7, 6]], Rule["t", List[12, 13, 29/2]]]
+```
+
+TOML decoding rejects duplicate keys or table definitions, dotted-key conflicts,
+attempts to extend inline tables, invalid string escapes, invalid dates, and
+unsupported TOML surface.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromToml["a = inf"]'
+$Failed
+! FromToml::toml: Invalid TOML at byte offset 4: inf and nan are outside rum's exact TOML number subset.
+```
+
+## TOML Output
+
+`ToToml[assoc]` accepts a top-level Association with String keys. Nested
+Associations emit as sub-tables, non-empty Lists of Associations emit as
+arrays-of-tables, and other Lists emit as inline arrays. Scalars are exact
+integers, terminating rationals, `True`/`False`, and Strings. Keys are quoted
+when needed; keys containing `.` are quoted and are not split.
+
+When a same-level scalar key follows a nested Association, `ToToml` uses an
+inline table or inline array for that earlier nested value so
+`FromToml[ToToml[x]]` preserves Association order.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToToml[<|"srv" -> <|"port" -> 8080|>|>]'
+"[srv]\nport = 8080"
+```
+
+`ToToml` never guesses that a number or date-shaped List should become TOML
+datetime syntax. Timestamps encode as numbers, and date lists encode as arrays.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'ToToml[<|"d" -> {2026, 7, 6}, "t" -> 0|>]'
+"d = [2026, 7, 6]\nt = 0"
+```
+
+The TOML-representable subset round-trips through `FromToml[ToToml[x]]`.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'FromToml[ToToml[<|"k" -> <|"x" -> 1|>, "arr" -> {1, 1/4, True}|>]]'
+Association[Rule["arr", List[1, 1/4, True]], Rule["k", Association[Rule["x", 1]]]]
 ```
 
 ## CSV Mapping

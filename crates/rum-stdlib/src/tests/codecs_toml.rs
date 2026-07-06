@@ -1,0 +1,206 @@
+use crate::install_core;
+use rum_core::{Atom, Expr};
+use rum_runtime::kernel_api::system_expr;
+use rum_runtime::{RuntimeMessage, Session};
+
+fn core_session() -> Session {
+    let mut session = Session::new();
+    install_core(&mut session);
+    session
+}
+
+fn eval_to_string(session: &mut Session, source: &str) -> String {
+    session.eval_text(source).unwrap().value.to_string()
+}
+
+fn eval_string_atom(session: &mut Session, source: &str) -> String {
+    match session.eval_text(source).unwrap().value {
+        Expr::Atom(Atom::String(value)) => value,
+        other => panic!("expected string atom, got {other}"),
+    }
+}
+
+fn from_toml_call(source: &str) -> Expr {
+    Expr::call(system_expr("FromToml"), vec![Expr::string(source)])
+}
+
+fn from_toml_to_string(session: &mut Session, source: &str) -> String {
+    let value = session.evaluate(from_toml_call(source)).unwrap();
+    let messages = session.take_messages();
+    assert!(messages.is_empty(), "{source}: {messages:?}");
+    value.to_string()
+}
+
+fn assert_failed_with_message(
+    value: Expr,
+    messages: Vec<RuntimeMessage>,
+    symbol: &str,
+    tag: &str,
+    needle: &str,
+) {
+    assert_eq!(value.to_string(), "$Failed");
+    assert!(
+        messages.iter().any(|message| {
+            message.symbol == symbol && message.tag == tag && message.text.contains(needle)
+        }),
+        "missing {symbol}::{tag} containing {needle:?}; messages: {messages:?}"
+    );
+}
+
+#[test]
+fn from_toml_parses_realistic_config() {
+    let mut session = core_session();
+    let source = r#"
+title = "rum service"
+
+[server]
+owner.name = "ops"
+ports = [8000, 8001]
+meta = { role = "primary", weight = 0.5 }
+note = """
+line\nwrap \"ok\""""
+when = 1970-01-01T01:00:00+01:00
+date = 2026-07-06
+
+[[servers]]
+name = "edge"
+port = 8080
+
+[[servers]]
+name = "batch"
+port = 9090
+"#;
+
+    assert_eq!(
+        from_toml_to_string(&mut session, source),
+        "Association[Rule[\"title\", \"rum service\"], Rule[\"server\", Association[Rule[\"owner\", Association[Rule[\"name\", \"ops\"]]], Rule[\"ports\", List[8000, 8001]], Rule[\"meta\", Association[Rule[\"role\", \"primary\"], Rule[\"weight\", 1/2]]], Rule[\"note\", \"line\\nwrap \\\"ok\\\"\"], Rule[\"when\", 0], Rule[\"date\", List[2026, 7, 6]]]], Rule[\"servers\", List[Association[Rule[\"name\", \"edge\"], Rule[\"port\", 8080]], Association[Rule[\"name\", \"batch\"], Rule[\"port\", 9090]]]]]"
+    );
+}
+
+#[test]
+fn from_toml_numbers_are_exact() {
+    let mut session = core_session();
+    let source = "\
+decimal = 0.1
+million = 1_000_000
+hex = 0x10
+oct = 0o10
+bin = 0b1010
+exp = 1.5e3
+neg = -2
+";
+
+    assert_eq!(
+        from_toml_to_string(&mut session, source),
+        "Association[Rule[\"decimal\", 1/10], Rule[\"million\", 1000000], Rule[\"hex\", 16], Rule[\"oct\", 8], Rule[\"bin\", 10], Rule[\"exp\", 1500], Rule[\"neg\", -2]]"
+    );
+}
+
+#[test]
+fn from_toml_maps_datetime_forms() {
+    let mut session = core_session();
+    let source = "\
+offset = 1970-01-01T01:00:00+01:00
+localDateTime = 2026-07-06T12:13:14.5
+localDate = 2026-07-06
+localTime = 12:13:14.5
+";
+
+    assert_eq!(
+        from_toml_to_string(&mut session, source),
+        "Association[Rule[\"offset\", 0], Rule[\"localDateTime\", List[2026, 7, 6, 12, 13, 29/2]], Rule[\"localDate\", List[2026, 7, 6]], Rule[\"localTime\", List[12, 13, 29/2]]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "List[Lookup[FromToml[\"offset = 1970-01-01T01:00:00+01:00\"], \"offset\"], FromDateString[\"1970-01-01T00:00:00Z\"]]"
+        ),
+        "List[0, 0]"
+    );
+}
+
+#[test]
+fn from_toml_multiline_strings_trim_and_continue_lines() {
+    let mut session = core_session();
+    let source = "a = \"\"\"\nfirst\\\n    second\"\"\"\nb = '''\ntrimmed'''\n";
+
+    assert_eq!(
+        from_toml_to_string(&mut session, source),
+        "Association[Rule[\"a\", \"firstsecond\"], Rule[\"b\", \"trimmed\"]]"
+    );
+}
+
+#[test]
+fn from_toml_rejects_invalid_input_fail_closed() {
+    let mut session = core_session();
+
+    for (source, needle) in [
+        ("a = 1\na = 2\n", "duplicate key"),
+        ("a = 1\na.b = 2\n", "dotted-key conflict"),
+        ("a = inf\n", "inf and nan"),
+        ("d = 2026-02-30\n", "day must be"),
+        ("s = \"\\x\"\n", "invalid string escape"),
+        ("[a]\n[a]\n", "duplicate table"),
+        ("a = { b = 1 }\na.c = 2\n", "inline table"),
+    ] {
+        let value = session.evaluate(from_toml_call(source)).unwrap();
+        let messages = session.take_messages();
+        assert_failed_with_message(value, messages, "FromToml", "toml", needle);
+    }
+}
+
+#[test]
+fn to_toml_selects_tables_quotes_keys_and_preserves_assignment_order() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_string_atom(
+            &mut session,
+            "ToToml[<|\"root\" -> 1, \"a.b\" -> 2, \"child\" -> <|\"x\" -> True|>, \"servers\" -> {<|\"name\" -> \"edge\"|>, <|\"name\" -> \"batch\"|>}|>]"
+        ),
+        "root = 1\n\"a.b\" = 2\n\n[child]\nx = true\n\n[[servers]]\nname = \"edge\"\n\n[[servers]]\nname = \"batch\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "FromToml[ToToml[<|\"k\" -> <|\"x\" -> 1|>, \"arr\" -> {1, 1/4, True, \"z\"}|>]]"
+        ),
+        "Association[Rule[\"k\", Association[Rule[\"x\", 1]]], Rule[\"arr\", List[1, 1/4, True, \"z\"]]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SameQ[FromToml[ToToml[<|\"k\" -> <|\"x\" -> 1|>, \"arr\" -> {1, 1/4, True, \"z\"}|>]], <|\"k\" -> <|\"x\" -> 1|>, \"arr\" -> {1, 1/4, True, \"z\"}|>]"
+        ),
+        "True"
+    );
+
+    let outcome = session.eval_text("ToToml[<|\"x\" -> 1/3|>]").unwrap();
+    assert_failed_with_message(
+        outcome.value,
+        outcome.messages,
+        "ToToml",
+        "toml",
+        "non-terminating Rational",
+    );
+}
+
+#[test]
+fn toml_codecs_compose_with_json() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_string_atom(
+            &mut session,
+            "ToJson[FromToml[\"title = \\\"x\\\"\\n[server]\\nports = [1, 2]\\n\"]]"
+        ),
+        "{\"title\":\"x\",\"server\":{\"ports\":[1,2]}}"
+    );
+    assert_eq!(
+        eval_string_atom(
+            &mut session,
+            "ToToml[FromJson[\"{\\\"srv\\\":{\\\"port\\\":8080}}\"]]"
+        ),
+        "[srv]\nport = 8080"
+    );
+}

@@ -18,6 +18,7 @@ mod random;
 mod rewrite;
 mod strings;
 mod structure;
+mod toml;
 
 pub(crate) use arithmetic::ARITHMETIC_BUILTINS;
 pub(crate) use associations::ASSOCIATION_BUILTINS;
@@ -39,3 +40,4 @@ pub(crate) use random::RANDOM_BUILTINS;
 pub(crate) use rewrite::REWRITE_BUILTINS;
 pub(crate) use strings::STRING_BUILTINS;
 pub(crate) use structure::STRUCTURE_BUILTINS;
+pub(crate) use toml::TOML_BUILTINS;

@@ -26,6 +26,7 @@ mod random;
 mod rewrite_builtins;
 mod strings;
 mod structure_ops;
+mod toml;
 
 #[doc(hidden)]
 pub mod docgen;
@@ -92,6 +93,9 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     for spec in catalog::STRUCTURE_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::TOML_BUILTINS {
         session.register_builtin(*spec);
     }
 }

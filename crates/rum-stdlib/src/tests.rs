@@ -18,6 +18,8 @@ mod calculus;
 mod catalog_capabilities;
 #[path = "tests/codecs_text.rs"]
 mod codecs_text;
+#[path = "tests/codecs_toml.rs"]
+mod codecs_toml;
 #[path = "tests/combinatorics.rs"]
 mod combinatorics;
 #[path = "tests/datetime.rs"]
@@ -226,6 +228,7 @@ fn stdlib_catalog_specs() -> impl Iterator<Item = &'static rum_runtime::kernel_a
         catalog::REWRITE_BUILTINS,
         catalog::STRING_BUILTINS,
         catalog::STRUCTURE_BUILTINS,
+        catalog::TOML_BUILTINS,
     ]
     .into_iter()
     .flatten()
