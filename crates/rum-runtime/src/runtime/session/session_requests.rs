@@ -448,3 +448,29 @@ fn session_request_error_from_eval_error_with_source(
         },
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn eval_error_mapper_preserves_non_request_surface_limit_codes() {
+        let memory = session_request_error_from_eval_error_with_source(
+            &EvalError::MemoryConstraintExceeded { limit: 20 },
+            Some("MemoryConstrained[Table[x, 100], 20]"),
+        );
+        assert!(matches!(
+            memory,
+            SessionRequestError::MemoryConstraintExceeded { limit: 20 }
+        ));
+
+        let pass = session_request_error_from_eval_error_with_source(
+            &EvalError::EvaluationPassLimitExceeded { limit: 2 },
+            Some("loopA"),
+        );
+        assert!(matches!(
+            pass,
+            SessionRequestError::EvaluationPassLimitExceeded { limit: 2 }
+        ));
+    }
+}

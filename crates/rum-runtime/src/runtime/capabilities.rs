@@ -145,6 +145,29 @@ mod tests {
     }
 
     #[test]
+    fn capability_policy_builder_can_allow_and_deny_individual_capabilities() {
+        let policy = CapabilityPolicy::builder()
+            .allow(Capability::Pure)
+            .allow(Capability::FileRead)
+            .deny(Capability::FileRead)
+            .allow(Capability::Random)
+            .build();
+
+        assert!(!policy.is_unrestricted());
+        assert!(policy.allows(Capability::Pure));
+        assert!(!policy.allows(Capability::FileRead));
+        assert!(!policy.allows(Capability::FileWrite));
+        assert!(!policy.allows(Capability::Clock));
+        assert!(policy.allows(Capability::Random));
+        assert!(!policy.allows(Capability::Diagnostic));
+        assert!(!policy.allows(Capability::Process));
+        assert_eq!(
+            CapabilityPolicyBuilder::default().build(),
+            CapabilityPolicy::allow([])
+        );
+    }
+
+    #[test]
     fn capability_policy_can_explicitly_allow_diagnostics() {
         let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Diagnostic]);
 

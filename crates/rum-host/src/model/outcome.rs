@@ -489,3 +489,105 @@ fn structured_outputs(
 
     outputs
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rum_runtime::{RuntimeInputRequest, Session};
+
+    #[test]
+    fn failure_code_maps_runtime_request_errors_to_host_codes() {
+        let syntax = Session::new()
+            .parse_request("f[1,]")
+            .expect_err("malformed source should produce a syntax request error")
+            .error;
+
+        let cases = vec![
+            (syntax, HostFailureCode::Syntax),
+            (
+                SessionRequestError::InvalidInteger {
+                    literal: "bad".to_string(),
+                },
+                HostFailureCode::InvalidInteger,
+            ),
+            (
+                SessionRequestError::Io {
+                    path: "missing.rum".to_string(),
+                    message: "missing".to_string(),
+                },
+                HostFailureCode::Io,
+            ),
+            (
+                SessionRequestError::LoadPathNotFound {
+                    target: "Nope`".to_string(),
+                    searched: vec![".".to_string()],
+                },
+                HostFailureCode::LoadPathNotFound,
+            ),
+            (
+                SessionRequestError::EvaluationCycleDetected {
+                    expr: "f[1]".to_string(),
+                },
+                HostFailureCode::EvaluationCycleDetected,
+            ),
+            (
+                SessionRequestError::RecursionLimitExceeded { limit: 7 },
+                HostFailureCode::RecursionLimitExceeded,
+            ),
+            (
+                SessionRequestError::StackLimitExceeded { limit: 1024 },
+                HostFailureCode::Other,
+            ),
+            (
+                SessionRequestError::MatchRecursionLimitExceeded { limit: 8 },
+                HostFailureCode::MatchRecursionLimitExceeded,
+            ),
+            (SessionRequestError::Cancelled, HostFailureCode::Cancelled),
+            (
+                SessionRequestError::TimeConstraintExceeded,
+                HostFailureCode::TimeConstraintExceeded,
+            ),
+            (
+                SessionRequestError::MemoryConstraintExceeded { limit: 9 },
+                HostFailureCode::MemoryConstraintExceeded,
+            ),
+            (
+                SessionRequestError::GeneratedElementLimitExceeded { limit: 10 },
+                HostFailureCode::GeneratedElementLimitExceeded,
+            ),
+            (
+                SessionRequestError::IntegerWorkLimitExceeded { limit: 11 },
+                HostFailureCode::IntegerWorkLimitExceeded,
+            ),
+            (
+                SessionRequestError::IterationWorkLimitExceeded { limit: 12 },
+                HostFailureCode::IterationWorkLimitExceeded,
+            ),
+            (
+                SessionRequestError::IterationLimitExceeded { limit: 13 },
+                HostFailureCode::IterationLimitExceeded,
+            ),
+            (
+                SessionRequestError::EvaluationPassLimitExceeded { limit: 14 },
+                HostFailureCode::EvaluationPassLimitExceeded,
+            ),
+            (SessionRequestError::Exit { code: 5 }, HostFailureCode::Exit),
+            (
+                SessionRequestError::InputRequired {
+                    request: RuntimeInputRequest::new("name: "),
+                },
+                HostFailureCode::Other,
+            ),
+            (
+                SessionRequestError::Other {
+                    message: "misc".to_string(),
+                },
+                HostFailureCode::Other,
+            ),
+        ];
+
+        for (error, expected) in cases {
+            assert_eq!(failure_code(&error), expected, "{error:?}");
+        }
+    }
+}

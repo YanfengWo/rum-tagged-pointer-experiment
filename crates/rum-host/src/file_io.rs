@@ -75,3 +75,73 @@ fn normalize_path(path: &Path) -> PathBuf {
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_temp_path(name: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        env::temp_dir().join(format!("rum-host-file-io-{name}-{unique}"))
+    }
+
+    #[test]
+    fn std_file_io_probe_distinguishes_files_directories_and_missing_paths() {
+        let root = unique_temp_path("probe");
+        fs::create_dir_all(&root).unwrap();
+        let file = root.join("source.rum");
+        fs::write(&file, "1").unwrap();
+
+        let file_probe = StdFileIo.probe(&file);
+        assert!(file_probe.exists);
+        assert!(file_probe.is_file);
+        assert_eq!(
+            file_probe.resolved_path,
+            Some(fs::canonicalize(&file).unwrap())
+        );
+
+        let dir_probe = StdFileIo.probe(&root);
+        assert!(dir_probe.exists);
+        assert!(!dir_probe.is_file);
+        assert!(dir_probe.resolved_path.is_none());
+
+        let missing_probe = StdFileIo.probe(&root.join("missing.rum"));
+        assert!(!missing_probe.exists);
+        assert!(!missing_probe.is_file);
+        assert!(missing_probe.resolved_path.is_none());
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn normalize_path_falls_back_to_current_dir_for_missing_relative_paths() {
+        let relative = Path::new("rum-host-missing-relative-file.rum");
+        let normalized = normalize_path(relative);
+
+        assert!(normalized.is_absolute());
+        assert!(normalized.ends_with(relative));
+    }
+
+    #[test]
+    fn std_file_io_converts_read_and_write_errors() {
+        let root = unique_temp_path("errors");
+        fs::create_dir_all(&root).unwrap();
+
+        let read_error = StdFileIo
+            .read_to_string(&root.join("missing.rum"))
+            .expect_err("missing file read should fail");
+        assert!(!read_error.message().is_empty());
+
+        let write_error = StdFileIo
+            .write_string(&root, "contents", FileWriteMode::Replace)
+            .expect_err("writing contents to a directory should fail");
+        assert!(!write_error.message().is_empty());
+
+        fs::remove_dir_all(root).unwrap();
+    }
+}

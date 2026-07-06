@@ -57,7 +57,7 @@ fn inspect_rewrite_rules_can_suspend_and_resume_with_host_input() {
     let expr = lower_syntax_expr(&syntax).unwrap();
 
     let failure = session
-        .inspect_rewrite_rules(expr)
+        .inspect_rewrite_rules(expr.clone())
         .expect_err("rewrite-rule inspection should suspend on InputString");
 
     match failure {
@@ -79,4 +79,28 @@ fn inspect_rewrite_rules_can_suspend_and_resume_with_host_input() {
     assert_eq!(rules[1].lhs.to_string(), "Pattern[y, Blank[String]]");
     assert_eq!(rules[1].rhs.to_string(), "y");
     assert!(rules[1].delayed);
+
+    let mut uninterrupted = Session::new();
+    uninterrupted
+        .eval_text("ruleSource[\"Alice\"] := {x_Integer -> 1, y_String :> y}")
+        .unwrap();
+    uninterrupted
+        .eval_text("rules := ruleSource[InputString[\"name: \"]]")
+        .unwrap();
+    uninterrupted.queue_input_response("Alice");
+    let uninterrupted_rules = uninterrupted
+        .inspect_rewrite_rules(expr)
+        .expect("queued input should complete rewrite-rule inspection")
+        .expect("rule source should produce normalized rules");
+
+    assert_eq!(
+        rules
+            .iter()
+            .map(|rule| (rule.lhs.to_string(), rule.rhs.to_string(), rule.delayed))
+            .collect::<Vec<_>>(),
+        uninterrupted_rules
+            .iter()
+            .map(|rule| (rule.lhs.to_string(), rule.rhs.to_string(), rule.delayed))
+            .collect::<Vec<_>>()
+    );
 }

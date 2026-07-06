@@ -35,6 +35,80 @@ fn sum_and_product_reuse_concrete_iterator_specs() {
 }
 
 #[test]
+fn iterator_spec_matrix_covers_counts_lists_ranges_steps_and_rejections() {
+    let cases = [
+        ("x = 0; Do[x = x + 1, {3}]; x", "3"),
+        ("Table[x, {3}]", "List[x, x, x]"),
+        ("Sum[x, {3}]", "Times[3, x]"),
+        ("Product[x, {3}]", "Power[x, 3]"),
+        ("x = 0; Do[x = x + i, {i, {2, 4}}]; x", "6"),
+        ("Table[i, {i, {2, 4}}]", "List[2, 4]"),
+        ("Sum[i, {i, {2, 4}}]", "6"),
+        ("Product[i, {i, {2, 4}}]", "8"),
+        ("x = 0; Do[x = x + i, {i, 3}]; x", "6"),
+        ("Table[i, {i, 3}]", "List[1, 2, 3]"),
+        ("Sum[i, {i, 3}]", "6"),
+        ("Product[i, {i, 3}]", "6"),
+        ("x = 0; Do[x = x + i, {i, 2, 6, 2}]; x", "12"),
+        ("Table[i, {i, 2, 6, 2}]", "List[2, 4, 6]"),
+        ("Sum[i, {i, 2, 6, 2}]", "12"),
+        ("Product[i, {i, 2, 6, 2}]", "48"),
+        ("x = 0; Do[x = x + i, {i, Times[-1, 3], 1, 2}]; x", "-3"),
+        ("Table[i, {i, Times[-1, 3], 1, 2}]", "List[-3, -1, 1]"),
+        ("Sum[i, {i, Times[-1, 3], 1, 2}]", "-3"),
+        ("Product[i, {i, Times[-1, 3], 1, 2}]", "3"),
+    ];
+
+    for (source, expected) in cases {
+        let mut session = core_session();
+        assert_eq!(
+            session.eval_text(source).unwrap().value.to_string(),
+            expected,
+            "{source}"
+        );
+    }
+
+    for (source, symbol, expected) in [
+        ("Do[x, {i, 1, 3, 0}]", "Do", "Do[x, List[i, 1, 3, 0]]"),
+        (
+            "Table[i, {i, 1, 3, 0}]",
+            "Table",
+            "Table[i, List[i, 1, 3, 0]]",
+        ),
+        ("Do[x, {i, 1.5}]", "Do", "Do[x, List[i, 3/2]]"),
+        ("Table[i, {i, 1.5}]", "Table", "Table[i, List[i, 3/2]]"),
+    ] {
+        let mut session = core_session();
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == symbol && message.tag == "argform"),
+            "{source} messages {:?}",
+            outcome.messages
+        );
+    }
+
+    for (source, expected) in [
+        ("Sum[i, {i, 1, 3, 0}]", "Sum[i, List[i, 1, 3, 0]]"),
+        ("Product[i, {i, 1, 3, 0}]", "Product[i, List[i, 1, 3, 0]]"),
+        ("Sum[i, {i, 1.5}]", "Sum[i, List[i, 3/2]]"),
+        ("Product[i, {i, 1.5}]", "Product[i, List[i, 3/2]]"),
+    ] {
+        let mut session = core_session();
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome.messages.is_empty(),
+            "{source}: {:?}",
+            outcome.messages
+        );
+    }
+}
+
+#[test]
 fn sum_and_product_leave_symbolic_bounds_unevaluated() {
     let mut session = core_session();
 
@@ -156,6 +230,20 @@ fn do_and_table_respect_resource_limits() {
     assert_eq!(
         memory_session
             .eval_text("MemoryConstrained[Table[x, 100], 20, memfail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "memfail"
+    );
+}
+
+#[test]
+fn table_memory_constraint_uses_projected_list_size_before_materialization() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("MemoryConstrained[Table[x, {1000000}], 64, memfail]")
             .unwrap()
             .value
             .to_string(),

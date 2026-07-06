@@ -1,5 +1,72 @@
 use super::*;
 
+fn eval_with_queued_inputs(source: &str, inputs: &[&str]) -> String {
+    let mut session = session_with_test_control_builtins();
+    for input in inputs {
+        session.queue_input_response(*input);
+    }
+
+    session
+        .eval_request(source)
+        .expect("queued inputs should complete evaluation")
+        .value
+        .to_string()
+}
+
+fn eval_by_suspending_and_resuming(source: &str, inputs: &[&str]) -> String {
+    let mut session = session_with_test_control_builtins();
+    let mut failure = session
+        .eval_request(source)
+        .expect_err("source should suspend for host input");
+
+    for (index, input) in inputs.iter().enumerate() {
+        assert!(matches!(
+            failure.error,
+            SessionRequestError::InputRequired { .. }
+        ));
+
+        if index + 1 == inputs.len() {
+            return session
+                .resume_eval_request_with_input(*input)
+                .expect("final resume should complete evaluation")
+                .value
+                .to_string();
+        }
+
+        failure = session
+            .resume_eval_request_with_input(*input)
+            .expect_err("intermediate resume should suspend again");
+    }
+
+    panic!("at least one input is required");
+}
+
+fn assert_suspend_resume_matches_queued(source: &str, inputs: &[&str], expected: &str) {
+    let queued = eval_with_queued_inputs(source, inputs);
+    let resumed = eval_by_suspending_and_resuming(source, inputs);
+
+    assert_eq!(queued, expected);
+    assert_eq!(resumed, queued);
+}
+
+#[test]
+fn replace_levelspec_option_continuation_roundtrip_matches_uninterrupted_run() {
+    assert_suspend_resume_matches_queued(
+        "Replace[f[1, g[2]], _Integer -> x, If[MatchQ[InputString[\"lvl: \"], \"yes\"], Infinity, 0]]",
+        &["yes"],
+        "f[x, g[x]]",
+    );
+}
+
+#[test]
+fn normalized_rule_expr_vec_continuation_roundtrip_matches_uninterrupted_run() {
+    assert_suspend_resume_matches_queued(
+        "Replace[1, If[MatchQ[InputString[\"rules: \"], \"yes\"], x_Integer -> hit, y_String -> miss]]",
+        &["yes"],
+        "hit",
+    );
+}
+
 #[test]
 fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed_rhs() {
     let mut session = session_with_test_control_builtins();

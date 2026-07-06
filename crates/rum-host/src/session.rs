@@ -533,3 +533,36 @@ fn poisoned_is_complete_response() -> HostIsCompleteResponse {
         diagnostic: Some("host session is poisoned after a previously caught panic".to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::HostCompletenessStatus;
+
+    #[test]
+    fn panic_is_complete_response_marks_session_poisoned_and_invalid() {
+        let mut session = HostSession::new();
+
+        let response = session.guard(
+            |_session| panic!("host completeness panic boundary test"),
+            |_| panic_is_complete_response(),
+        );
+
+        assert_eq!(response.status, HostCompletenessStatus::Invalid);
+        assert!(response.indent.is_none());
+        assert_eq!(
+            response.diagnostic.as_deref(),
+            Some("host session caught panic")
+        );
+        assert!(session.poisoned_for_test());
+
+        let poisoned = session.is_complete("1 + 1");
+        assert_eq!(poisoned.status, HostCompletenessStatus::Invalid);
+        assert!(
+            poisoned
+                .diagnostic
+                .as_deref()
+                .is_some_and(|text| text.contains("poisoned"))
+        );
+    }
+}

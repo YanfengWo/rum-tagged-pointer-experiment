@@ -159,3 +159,27 @@ impl ContinuationValue for CasesTraversalResolution {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn option_cases_level_spec_continuation_round_trips_some_none_and_bare_spec() {
+        let spec = CasesLevelSpec::range(-2, Some(3));
+        let encoded = Some(spec).into_continuation_expr();
+        assert_eq!(
+            Option::<CasesLevelSpec>::from_continuation_expr(encoded),
+            Some(spec)
+        );
+
+        let none = Option::<CasesLevelSpec>::None.into_continuation_expr();
+        assert_eq!(Option::<CasesLevelSpec>::from_continuation_expr(none), None);
+
+        let bare = cases_level_spec_expr(CasesLevelSpec::range(-1, None));
+        assert_eq!(
+            Option::<CasesLevelSpec>::from_continuation_expr(bare),
+            Some(CasesLevelSpec::range(-1, None))
+        );
+    }
+}

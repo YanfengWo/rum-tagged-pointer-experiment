@@ -79,3 +79,50 @@ impl ContinuationValue for Option<Vec<RewriteRuleInfo>> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rule(lhs: Expr, rhs: Expr, delayed: bool) -> RewriteRuleInfo {
+        RewriteRuleInfo { lhs, rhs, delayed }
+    }
+
+    #[test]
+    fn option_rewrite_rule_info_continuation_round_trips_some_none_and_fallbacks() {
+        let rules = vec![
+            rule(Expr::symbol("x"), Expr::integer(BigInt::from(1)), false),
+            rule(Expr::symbol("y"), Expr::string("rhs"), true),
+        ];
+        let encoded = Some(rules.clone()).into_continuation_expr();
+        assert_eq!(
+            Option::<Vec<RewriteRuleInfo>>::from_continuation_expr(encoded),
+            Some(rules.clone())
+        );
+
+        let none = Option::<Vec<RewriteRuleInfo>>::None.into_continuation_expr();
+        assert_eq!(
+            Option::<Vec<RewriteRuleInfo>>::from_continuation_expr(none),
+            None
+        );
+
+        let bare_list = Expr::call(
+            system_expr("List"),
+            rules
+                .clone()
+                .into_iter()
+                .map(rewrite_rule_info_expr)
+                .collect(),
+        );
+        assert_eq!(
+            Option::<Vec<RewriteRuleInfo>>::from_continuation_expr(bare_list),
+            Some(rules)
+        );
+
+        let fallback_lhs = Expr::symbol("fallback");
+        assert_eq!(
+            Option::<Vec<RewriteRuleInfo>>::from_continuation_expr(fallback_lhs.clone()),
+            Some(vec![rule(fallback_lhs, system_expr("Null"), false)])
+        );
+    }
+}

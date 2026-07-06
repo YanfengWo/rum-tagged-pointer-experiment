@@ -197,3 +197,52 @@ impl ContinuationValue for Option<Vec<Expr>> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn binding_vec_continuation_round_trips_multiple_symbol_maps() {
+        let mut first = SymbolExprMap::default();
+        first.insert(Symbol::from_name("x"), Expr::integer(BigInt::from(1)));
+        first.insert(Symbol::from_name("y"), Expr::string("two"));
+
+        let mut second = SymbolExprMap::default();
+        second.insert(
+            Symbol::from_name("z"),
+            Expr::call(system_expr("f"), vec![Expr::integer(BigInt::from(3))]),
+        );
+
+        let original = vec![first, second];
+        let encoded = original.clone().into_continuation_expr();
+        let decoded = Vec::<SymbolExprMap>::from_continuation_expr(encoded);
+
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn option_vec_expr_continuation_round_trips_some_none_and_fallback_payloads() {
+        let values = vec![Expr::integer(BigInt::from(1)), Expr::symbol("x")];
+        let encoded = Some(values.clone()).into_continuation_expr();
+        assert_eq!(
+            Option::<Vec<Expr>>::from_continuation_expr(encoded),
+            Some(values.clone())
+        );
+
+        let none = Option::<Vec<Expr>>::None.into_continuation_expr();
+        assert_eq!(Option::<Vec<Expr>>::from_continuation_expr(none), None);
+
+        let legacy_list = Expr::call(system_expr("List"), values.clone());
+        assert_eq!(
+            Option::<Vec<Expr>>::from_continuation_expr(legacy_list),
+            Some(values)
+        );
+
+        let singleton = Expr::symbol("fallback");
+        assert_eq!(
+            Option::<Vec<Expr>>::from_continuation_expr(singleton.clone()),
+            Some(vec![singleton])
+        );
+    }
+}
