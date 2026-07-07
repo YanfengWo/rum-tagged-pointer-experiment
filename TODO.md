@@ -104,9 +104,16 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-181 DONE (191a9e6): unit-4 audit, 63/63; triage in the
   tracker. Standout: `Exit` is Capability::Pure but requests host
   termination — USER DECISION pending on the capability relabel.
-- [ ] brief-182 (unit-4 batch 1): rewrite operator forms
-  `Cases`/`DeleteCases`/`Replace`/`ReplaceAll`/`ReplaceRepeated`
-  (call planning; A/B gate; the unit-2/3 spillover).
+- [x] brief-182 DONE (5733f2f): rewrite operator forms (five; A/B
+  clean); workspace 1367/0.
+- [ ] brief-183 (unit-4, USER-decided sandbox fix): relabel `Exit`
+  from `Capability::Pure` to `Capability::Process` — sandboxed() drops
+  it, trusted CLI keeps it. Memory: [[exit-capability-fix]].
+- [ ] brief-184 (unit-4 batch 2): rewrite options — `ReplaceRepeated`
+  `MaxIterations`, `Replace` `Heads`.
+- [ ] brief-185 (unit-4 batch 3): `Sum`/`Product` malformed-iterator
+  diagnostics (message parity with `Do`/`Table`). Unit 4 closes after
+  this (+ Equivalent WL-attribute verification).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
