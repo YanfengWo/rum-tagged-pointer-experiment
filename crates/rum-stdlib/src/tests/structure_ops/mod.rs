@@ -10,6 +10,7 @@ fn core_session() -> Session {
 mod collection_stats;
 mod dedup;
 mod join;
+mod list_lookup;
 mod list_plumbing;
 mod ordering_sets;
 mod reordering;

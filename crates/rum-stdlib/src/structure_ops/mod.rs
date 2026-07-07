@@ -3,10 +3,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use rum_core::{Atom, BigInt, Expr, SharedArgs, heads};
 use rum_runtime::kernel_api::{
     EvalError, HeadsOptionClassification, Session, association_entries_from_expr,
-    association_entry_forms_from_expr, classify_heads_option_expr, expr_as_exact_integer,
-    expr_as_non_negative_usize, expr_as_signed_isize, expr_as_string, is_system_symbol_name,
-    list_items, missing_key_absent_expr, render_association,
-    render_association_entry_forms_preserving_heads, system_expr,
+    association_entry_forms_from_expr, classify_heads_option_expr, compare_expr_canonical,
+    expr_as_exact_integer, expr_as_non_negative_usize, expr_as_signed_isize, expr_as_string,
+    is_system_symbol_name, list_items, missing_key_absent_expr, render_association,
+    render_association_entry_forms_preserving_heads, system_expr, truthiness_symbol,
 };
 
 mod collection_stats;
@@ -14,6 +14,7 @@ mod combinatorial_lists;
 mod dedup;
 mod flatten;
 mod join;
+mod list_lookup;
 mod list_plumbing;
 mod ordering_sets;
 mod reordering;
@@ -30,6 +31,7 @@ pub(crate) use self::{
     dedup::{eval_delete_duplicates, eval_delete_duplicates_by},
     flatten::eval_flatten,
     join::eval_join,
+    list_lookup::{eval_binary_search, eval_duplicates, eval_select_positions},
     list_plumbing::{eval_constant_array, eval_differences, eval_pad_left, eval_pad_right},
     ordering_sets::{eval_complement, eval_intersection, eval_sort, eval_sort_by, eval_union},
     reordering::{eval_reverse, eval_transpose},

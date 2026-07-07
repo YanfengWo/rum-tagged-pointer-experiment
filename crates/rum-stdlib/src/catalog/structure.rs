@@ -167,6 +167,11 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         structure_ops::eval_delete_duplicates_by,
     ),
     BuiltinSpec::ordinary(
+        "Duplicates",
+        "Returns structurally equal top-level List elements that occur two or more times, once each in first-appearance order.",
+        structure_ops::eval_duplicates,
+    ),
+    BuiltinSpec::ordinary(
         "Tally",
         "Tallies structurally same top-level elements, or elements equivalent under a custom binary test, with the first element as representative.",
         structure_ops::eval_tally,
@@ -185,6 +190,11 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         "SortBy",
         "Sorts top-level elements by an evaluated key, optionally ordering keys with a binary predicate and preserving input order for predicate ties.",
         structure_ops::eval_sort_by,
+    ),
+    BuiltinSpec::ordinary(
+        "BinarySearch",
+        "Binary-searches an ascending List under rum's canonical order without validating sortedness, returning a 1-based position or Missing[\"NotFound\"].",
+        structure_ops::eval_binary_search,
     ),
     BuiltinSpec::ordinary(
         "ReverseSort",
@@ -220,6 +230,11 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
         "Riffle",
         "Inserts one separator between top-level elements of a normal expression, with optional interval or position specs.",
         structure_ops::eval_riffle,
+    ),
+    BuiltinSpec::ordinary(
+        "SelectPositions",
+        "Returns one-element 1-based position paths for top-level List elements whose criterion evaluates to True, matching Position's path convention, with an optional first-n limit.",
+        structure_ops::eval_select_positions,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Union",

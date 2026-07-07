@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 602
+Builtin count: 605
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -349,6 +349,14 @@ Tests interval inclusion in the current exact numeric subset.
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### BinarySearch
+
+Binary-searches an ascending List under rum's canonical order without validating sortedness, returning a 1-based position or Missing["NotFound"].
+
+- Attributes: `None`
+- Capability: `Pure`
+- Limits: assumes the input List is sorted ascending under rum's canonical order and does not validate sortedness; incomparable values under that order are treated as not found.
 
 ### Binomial
 
@@ -1060,6 +1068,13 @@ Writes a textual first-pass dump of selected symbols to a file and returns the s
 ### DuplicateFreeQ
 
 Tests whether a List has no repeated elements in the current exact structural subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### Duplicates
+
+Returns structurally equal top-level List elements that occur two or more times, once each in first-appearance order.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3172,6 +3187,13 @@ Selects elements satisfying a criterion in the current sequence subset.
 ### SelectFirst
 
 Returns the first element satisfying a criterion in the current sequence subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### SelectPositions
+
+Returns one-element 1-based position paths for top-level List elements whose criterion evaluates to True, matching Position's path convention, with an optional first-n limit.
 
 - Attributes: `None`
 - Capability: `Pure`

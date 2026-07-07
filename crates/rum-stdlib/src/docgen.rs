@@ -36,6 +36,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "the custom binary-test form performs pairwise O(n^2) representative comparisons and keeps the first representative.",
     ),
     (
+        "BinarySearch",
+        "assumes the input List is sorted ascending under rum's canonical order and does not validate sortedness; incomparable values under that order are treated as not found.",
+    ),
+    (
         "FileExtension",
         "dotfiles such as .bashrc have no extension; only the final slash-separated path component is inspected.",
     ),
