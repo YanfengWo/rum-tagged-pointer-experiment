@@ -102,7 +102,7 @@ fn eval_pad(session: &mut Session, args: &[Expr], side: PadSide) -> Result<Expr,
         _ => return Ok(session.invalid_call_with_arg_range(symbol, args, 2, 3)),
     };
 
-    let Some(target_len) = expr_as_non_negative_usize(target_len) else {
+    let Some(target_shape) = parse_pad_dimensions(target_len) else {
         return Ok(invalid_pad_length_call(session, symbol, args));
     };
 
@@ -110,6 +110,14 @@ fn eval_pad(session: &mut Session, args: &[Expr], side: PadSide) -> Result<Expr,
         return Ok(invalid_pad_normal_call(session, symbol, args));
     };
 
+    if target_shape.len() > 1 {
+        check_generated_shape_counts(session, &target_shape)?;
+        let result = pad_expr_to_shape(expr, &target_shape, padding, side)
+            .unwrap_or_else(|| Expr::call(system_expr(symbol), args.to_vec()));
+        return Ok(result);
+    }
+
+    let target_len = target_shape[0];
     session.enforce_generated_element_limit_for_count(target_len)?;
     session.enforce_active_memory_limit_for_projected_bytes(
         generated_expr_nodes_memory_proxy_bytes(target_len.saturating_add(1)),
@@ -151,7 +159,7 @@ fn invalid_pad_length_call(session: &mut Session, symbol: &str, args: &[Expr]) -
         args,
         "ilsm",
         format!(
-            "List of machine-sized integers expected at position 2 in {}.",
+            "Non-negative machine-sized integer or non-empty list of non-negative machine-sized integers expected at position 2 in {}.",
             Expr::call(system_expr(symbol), args.to_vec())
         ),
     )
@@ -195,6 +203,11 @@ fn parse_non_negative_dimensions(expr: &Expr) -> Option<Vec<usize>> {
 
     let items = list_items(expr)?;
     items.iter().map(expr_as_non_negative_usize).collect()
+}
+
+fn parse_pad_dimensions(expr: &Expr) -> Option<Vec<usize>> {
+    let dimensions = parse_non_negative_dimensions(expr)?;
+    (!dimensions.is_empty()).then_some(dimensions)
 }
 
 fn constant_array_expr(value: &Expr, shape: &[usize]) -> Expr {
@@ -262,6 +275,71 @@ fn padding_items(padding: Option<&Expr>, pad_count: usize, side: PadSide) -> Opt
     }
 
     Some(vec![padding.clone(); pad_count])
+}
+
+fn pad_expr_to_shape(
+    expr: &Expr,
+    shape: &[usize],
+    padding: Option<&Expr>,
+    side: PadSide,
+) -> Option<Expr> {
+    let (&target_len, rest) = shape.split_first()?;
+    let Expr::Call { head, args: items } = expr else {
+        return None;
+    };
+
+    if rest.is_empty() {
+        return pad_items(items, target_len, padding, side)
+            .map(|items| Expr::call(head.as_ref().clone(), items));
+    }
+
+    let kept = kept_pad_items(items, target_len, side);
+    let pad_count = target_len.saturating_sub(items.len());
+    let mut result = Vec::with_capacity(target_len);
+
+    match side {
+        PadSide::Left => {
+            result.extend(pad_shape_fillers(pad_count, rest, padding, side)?);
+            result.extend(
+                kept.into_iter()
+                    .map(|item| pad_expr_to_shape(item, rest, padding, side))
+                    .collect::<Option<Vec<_>>>()?,
+            );
+        }
+        PadSide::Right => {
+            result.extend(
+                kept.into_iter()
+                    .map(|item| pad_expr_to_shape(item, rest, padding, side))
+                    .collect::<Option<Vec<_>>>()?,
+            );
+            result.extend(pad_shape_fillers(pad_count, rest, padding, side)?);
+        }
+    }
+
+    Some(Expr::call(head.as_ref().clone(), result))
+}
+
+fn kept_pad_items(items: &[Expr], target_len: usize, side: PadSide) -> Vec<&Expr> {
+    if items.len() <= target_len {
+        return items.iter().collect();
+    }
+
+    match side {
+        PadSide::Left => items[items.len() - target_len..].iter().collect(),
+        PadSide::Right => items[..target_len].iter().collect(),
+    }
+}
+
+fn pad_shape_fillers(
+    pad_count: usize,
+    shape: &[usize],
+    padding: Option<&Expr>,
+    side: PadSide,
+) -> Option<Vec<Expr>> {
+    let empty = Expr::call(system_expr(heads::structure::LIST), Vec::new());
+    (0..pad_count)
+        .map(|_| pad_expr_to_shape(&empty, shape, padding, side))
+        .collect()
 }
 
 fn shape_scalar_count(shape: &[BigInt]) -> BigInt {

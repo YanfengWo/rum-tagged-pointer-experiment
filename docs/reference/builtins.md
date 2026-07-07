@@ -2545,17 +2545,19 @@ Lists stored immediate or delayed ownvalue definitions for a symbol.
 
 ### PadLeft
 
-Pads or truncates a normal expression on the left using the current length and padding-element subset.
+Pads or truncates a normal expression on the left using scalar lengths or rectangular list dimensions.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: does not support the margin argument; list dimensions apply to rectangular nested lists only.
 
 ### PadRight
 
-Pads or truncates a normal expression on the right using the current length and padding-element subset.
+Pads or truncates a normal expression on the right using scalar lengths or rectangular list dimensions.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: does not support the margin argument; list dimensions apply to rectangular nested lists only.
 
 ### ParentDirectory
 
@@ -2581,10 +2583,11 @@ Extracts structural parts using integer positions, All, Span, and exact nested p
 
 ### Partition
 
-Partitions a normal expression into fixed-size blocks using the current positive offset subset.
+Partitions a flat normal expression into fixed-size blocks; aligned forms anchor the first element at kL and stop once the last element appears at or beyond kR.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: supports flat positive scalar size/offset forms; aligned forms use positive {kL, kR}, prepend kL - 1 fill positions, stop at the first d-stepped block where the final item appears at position >= kR, use cyclic list padding when padding is omitted, and use ragged no-padding output for {}.
 
 ### PartitionsP
 
@@ -3025,7 +3028,7 @@ Exits the current function-style evaluation with an optional result.
 
 ### Reverse
 
-Reverses normal-expression arguments at the current positive level subset.
+Reverses normal-expression arguments at positive levels or at every level with All.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3053,11 +3056,11 @@ Sorts top-level elements by an evaluated key, then reverses the result.
 
 ### Riffle
 
-Inserts one separator between adjacent top-level elements of a normal expression.
+Inserts one separator between top-level elements of a normal expression, with optional interval or position specs.
 
 - Attributes: `None`
 - Capability: `Pure`
-- Limits: supports only the single-separator form; cyclic and list-separator forms are outside the current contract.
+- Limits: supports one separator with optional positive interval or {imin, imax, di} insertion-position specs; list-separator forms are outside the current contract.
 
 ### RightComposition
 
@@ -3629,7 +3632,7 @@ Tests subset inclusion for Lists in the current exact structural subset.
 
 ### Subsets
 
-Returns subsets of a normal expression in rum's size-major order for the current size-spec subset.
+Returns subsets of a normal expression in rum's size-major order for scalar, All, Infinity, and range size specs.
 
 - Attributes: `Protected`
 - Capability: `Pure`
@@ -4019,7 +4022,7 @@ Represents the current formatting symbol accepted by the current ToString subset
 
 ### Transpose
 
-Transposes rectangular plain-list matrices in the current first-pass subset.
+Transposes rectangular plain-list matrices and tensors using identity, first-two-swap, or rank-matching positive permutations.
 
 - Attributes: `None`
 - Capability: `Pure`

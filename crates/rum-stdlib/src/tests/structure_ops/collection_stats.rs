@@ -18,6 +18,14 @@ fn tally_and_riffle_cover_first_occurrence_and_boundaries() {
         "List[a, x, b, x, c]"
     );
     assert_eq!(eval_to_string(&mut session, "Riffle[{a}, x]"), "List[a]");
+    assert_eq!(
+        eval_to_string(&mut session, "Riffle[{a, b, c, d}, x, 3]"),
+        "List[a, b, c, x, d]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Riffle[{a, b, c, d, e}, x, {2, 4, 2}]"),
+        "List[a, b, x, c, d, x, e]"
+    );
 }
 
 #[test]
@@ -117,7 +125,7 @@ fn collection_stats_report_invalid_arity_and_empty_selection() {
         ("ReverseSort", "ReverseSort[]", "argx"),
         ("ReverseSortBy", "ReverseSortBy[{a}]", "argx"),
         ("GatherBy", "GatherBy[{a}]", "argx"),
-        ("Riffle", "Riffle[{a}]", "argx"),
+        ("Riffle", "Riffle[{a}]", "argtu"),
     ] {
         let outcome = session.eval_text(source).unwrap();
         assert_eq!(
@@ -149,6 +157,18 @@ fn collection_stats_report_invalid_arity_and_empty_selection() {
             .messages
             .iter()
             .any(|message| message.symbol == "MinBy" && message.tag == "empty")
+    );
+
+    let riffle_bad_position = session.eval_text("Riffle[{a, b}, x, 0]").unwrap();
+    assert_eq!(
+        riffle_bad_position.value.to_string(),
+        "Riffle[List[a, b], x, 0]"
+    );
+    assert!(
+        riffle_bad_position
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Riffle" && message.tag == "seqs")
     );
 }
 

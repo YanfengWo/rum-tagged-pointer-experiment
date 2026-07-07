@@ -167,8 +167,15 @@ pub(crate) fn eval_riffle(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [expr, separator] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("Riffle", args, 2));
+    let (expr, separator, positions) = match args {
+        [expr, separator] => (expr, separator, RifflePositions::Every(1)),
+        [expr, separator, positions] => {
+            let Some(positions) = parse_riffle_positions(positions) else {
+                return Ok(invalid_riffle_position_call(session, args));
+            };
+            (expr, separator, positions)
+        }
+        _ => return Ok(session.invalid_call_with_arg_range("Riffle", args, 2, 3)),
     };
 
     let Some((expr_head, items)) = normal_call_parts(expr) else {
@@ -179,15 +186,17 @@ pub(crate) fn eval_riffle(
         return Ok(Expr::call(expr_head, items));
     }
 
-    let output_len = items.len().saturating_mul(2).saturating_sub(1);
+    let insertion_positions = riffle_insertion_positions(&positions, items.len());
+    let separator_count = insertion_positions.iter().filter(|insert| **insert).count();
+    let output_len = items.len().saturating_add(separator_count);
     session.enforce_generated_element_limit_for_count(output_len)?;
 
     let mut riffled = Vec::with_capacity(output_len);
     for (index, item) in items.into_iter().enumerate() {
-        if index > 0 {
+        riffled.push(item);
+        if insertion_positions[index + 1] {
             riffled.push(separator.clone());
         }
-        riffled.push(item);
     }
 
     Ok(Expr::call(expr_head, riffled))
@@ -393,6 +402,84 @@ fn invalid_empty_collection_call(session: &mut Session, symbol: &str, args: &[Ex
     )
 }
 
+fn invalid_riffle_position_call(session: &mut Session, args: &[Expr]) -> Expr {
+    session.invalid_call_with_message(
+        "Riffle",
+        args,
+        "seqs",
+        format!(
+            "Position 3 of {} must be a positive machine-sized integer or {{imin, imax, di}} with nonzero integer step.",
+            Expr::call(system_expr("Riffle"), args.to_vec())
+        ),
+    )
+}
+
 fn list_expr(items: Vec<Expr>) -> Expr {
     Expr::call(system_expr("List"), items)
+}
+
+#[derive(Clone, Copy)]
+enum RifflePositions {
+    Every(usize),
+    Range {
+        start: isize,
+        end: isize,
+        step: isize,
+    },
+}
+
+fn parse_riffle_positions(expr: &Expr) -> Option<RifflePositions> {
+    if let Some(interval) = expr_as_positive_usize(expr) {
+        return Some(RifflePositions::Every(interval));
+    }
+
+    let [start, end, step] = list_items(expr)? else {
+        return None;
+    };
+    let start = expr_as_signed_isize(start)?;
+    let end = expr_as_signed_isize(end)?;
+    let step = expr_as_signed_isize(step)?;
+    (step != 0).then_some(RifflePositions::Range { start, end, step })
+}
+
+fn expr_as_positive_usize(expr: &Expr) -> Option<usize> {
+    expr_as_non_negative_usize(expr).filter(|value| *value > 0)
+}
+
+fn riffle_insertion_positions(positions: &RifflePositions, item_count: usize) -> Vec<bool> {
+    let mut insert = vec![false; item_count + 1];
+    match *positions {
+        RifflePositions::Every(interval) => {
+            let mut position = interval;
+            while position < item_count {
+                insert[position] = true;
+                position = position.saturating_add(interval);
+            }
+        }
+        RifflePositions::Range { start, end, step } => {
+            for position in 1..item_count {
+                let positive = position as isize;
+                let negative = positive - item_count as isize - 1;
+                if signed_position_in_range(positive, start, end, step)
+                    || signed_position_in_range(negative, start, end, step)
+                {
+                    insert[position] = true;
+                }
+            }
+        }
+    }
+    insert
+}
+
+fn signed_position_in_range(position: isize, start: isize, end: isize, step: isize) -> bool {
+    let position = position as i128;
+    let start = start as i128;
+    let end = end as i128;
+    let step = step as i128;
+    if step > 0 {
+        position >= start && position <= end && (position - start) % step == 0
+    } else {
+        let step = -step;
+        position <= start && position >= end && (start - position) % step == 0
+    }
 }

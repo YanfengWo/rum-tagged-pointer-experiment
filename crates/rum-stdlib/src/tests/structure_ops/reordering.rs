@@ -44,6 +44,14 @@ fn reverse_covers_current_positive_level_subset() {
             .to_string(),
         "f[g[b, a], g[d, c]]"
     );
+    assert_eq!(
+        session
+            .eval_text("Reverse[{{a, b}, {c, d}}, All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[d, c], List[b, a]]"
+    );
 }
 
 #[test]
@@ -113,6 +121,22 @@ fn transpose_covers_current_plain_list_matrix_subset() {
             .to_string(),
         "List[]"
     );
+    assert_eq!(
+        session
+            .eval_text("Transpose[{{{a, b}, {c, d}}, {{e, f}, {g, h}}}, {3, 2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[a, e], List[c, g]], List[List[b, f], List[d, h]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Transpose[{{{a, b}, {c, d}}, {{e, f}, {g, h}}}, {2, 1, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[a, b], List[e, f]], List[List[c, d], List[g, h]]]"
+    );
 }
 
 #[test]
@@ -142,6 +166,20 @@ fn transpose_reports_current_invalid_boundaries() {
     );
     assert!(
         invalid_permutation
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Transpose" && message.tag == "permspec")
+    );
+
+    let rank_mismatch = session
+        .eval_text("Transpose[{{a, b}, {c, d}}, {3, 2, 1}]")
+        .unwrap();
+    assert_eq!(
+        rank_mismatch.value.to_string(),
+        "Transpose[List[List[a, b], List[c, d]], List[3, 2, 1]]"
+    );
+    assert!(
+        rank_mismatch
             .messages
             .iter()
             .any(|message| message.symbol == "Transpose" && message.tag == "permspec")

@@ -130,6 +130,10 @@ fn pad_left_covers_padding_truncation_cyclic_and_normal_heads() {
         eval_to_string(&mut session, "PadLeft[f[1, 2], 5]"),
         "f[0, 0, 0, 1, 2]"
     );
+    assert_eq!(
+        eval_to_string(&mut session, "PadLeft[{{1}, {2}}, {2, 3}]"),
+        "List[List[0, 0, 1], List[0, 0, 2]]"
+    );
 
     let atomic = session.eval_text("PadLeft[x, 5]").unwrap();
     assert_eq!(atomic.value.to_string(), "PadLeft[x, 5]");
@@ -173,6 +177,10 @@ fn pad_right_covers_padding_truncation_cyclic_and_normal_heads() {
     assert_eq!(
         eval_to_string(&mut session, "PadRight[f[1, 2], 5]"),
         "f[1, 2, 0, 0, 0]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "PadRight[{{1}, {2}}, {2, 3}, x]"),
+        "List[List[1, x, x], List[2, x, x]]"
     );
 
     let atomic = session.eval_text("PadRight[x, 5]").unwrap();
@@ -218,6 +226,22 @@ fn subsets_covers_wk_anchored_size_specs_and_ordering() {
         eval_to_string(&mut session, "Subsets[f[1, 2], {1}]"),
         "List[f[1], f[2]]"
     );
+    assert_eq!(
+        eval_to_string(&mut session, "Subsets[{1, 2, 3}, All]"),
+        "List[List[], List[1], List[2], List[3], List[1, 2], List[1, 3], List[2, 3], List[1, 2, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Subsets[{1, 2, 3}, Infinity]"),
+        "List[List[], List[1], List[2], List[3], List[1, 2], List[1, 3], List[2, 3], List[1, 2, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Subsets[{1, 2, 3}, {1, 3, 2}]"),
+        "List[List[1], List[2], List[3], List[1, 2, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Subsets[{1, 2, 3}, {1, 3, -1}]"),
+        "List[List[1, 2, 3], List[1, 2], List[1, 3], List[2, 3], List[1], List[2], List[3]]"
+    );
 }
 
 #[test]
@@ -261,6 +285,26 @@ fn partition_covers_wk_anchored_block_and_offset_forms() {
     assert_eq!(
         eval_to_string(&mut session, "Partition[f[1, 2, 3], 2, 1]"),
         "f[f[1, 2], f[2, 3]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Partition[{a, b, c, d}, 2, 2, {1, 1}, z]"),
+        "List[List[a, b], List[c, d]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Partition[{a, b, c, d, e}, 2, 2, {1, 1}, {}]"),
+        "List[List[a, b], List[c, d], List[e]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Partition[{a, b, c, d}, 2, 2, {1, 1}]"),
+        "List[List[a, b], List[c, d]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Partition[{a, b, c, d}, 2, 2, {2, 1}, z]"),
+        "List[List[z, a], List[b, c], List[d, z]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Partition[{a, b, c, d}, 3, 1, {1, 2}, z]"),
+        "List[List[a, b, c], List[b, c, d]]"
     );
 }
 
@@ -323,5 +367,19 @@ fn combinatorial_list_ops_symbolically_passthrough_invalid_boundaries() {
             .messages
             .iter()
             .any(|message| message.symbol == "Partition" && message.tag == "ilsmp")
+    );
+
+    let partition_bad_alignment = session
+        .eval_text("Partition[{1, 2}, 2, 1, {0, 1}]")
+        .unwrap();
+    assert_eq!(
+        partition_bad_alignment.value.to_string(),
+        "Partition[List[1, 2], 2, 1, List[0, 1]]"
+    );
+    assert!(
+        partition_bad_alignment
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Partition" && message.tag == "align")
     );
 }

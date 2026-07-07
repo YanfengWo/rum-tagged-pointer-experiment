@@ -19,11 +19,11 @@ pub(crate) fn eval_subsets(
         return Ok(invalid_subsets_normal_call(session, args));
     };
 
-    let Some(range) = parse_subset_size_range(size_spec, items.len()) else {
+    let Some(sizes) = parse_subset_sizes(size_spec, items.len()) else {
         return Ok(invalid_subsets_size_spec_call(session, args));
     };
 
-    let subset_count = subset_range_count(items.len(), range.min, range.max);
+    let subset_count = subset_sizes_count(items.len(), &sizes);
     session.enforce_generated_element_limit_for_big_count(&subset_count)?;
     session.enforce_active_memory_limit_for_projected_bytes(
         generated_expr_nodes_memory_proxy_bytes(
@@ -32,7 +32,7 @@ pub(crate) fn eval_subsets(
     )?;
 
     let mut subsets = Vec::new();
-    for size in range.min..=range.max {
+    for size in sizes {
         append_subsets_of_size(
             expr_head.as_ref(),
             items,
@@ -63,10 +63,24 @@ pub(crate) fn eval_partition(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let (expr, size_expr, offset_expr) = match args {
-        [expr, size_expr] => (expr, size_expr, None),
-        [expr, size_expr, offset_expr] => (expr, size_expr, Some(offset_expr)),
-        _ => return Ok(session.invalid_call_with_arg_range("Partition", args, 2, 3)),
+    let (expr, size_expr, offset_expr, alignment_expr, padding_expr) = match args {
+        [expr, size_expr] => (expr, size_expr, None, None, None),
+        [expr, size_expr, offset_expr] => (expr, size_expr, Some(offset_expr), None, None),
+        [expr, size_expr, offset_expr, alignment_expr] => (
+            expr,
+            size_expr,
+            Some(offset_expr),
+            Some(alignment_expr),
+            None,
+        ),
+        [expr, size_expr, offset_expr, alignment_expr, padding_expr] => (
+            expr,
+            size_expr,
+            Some(offset_expr),
+            Some(alignment_expr),
+            Some(padding_expr),
+        ),
+        _ => return Ok(session.invalid_call_with_arg_range("Partition", args, 2, 5)),
     };
 
     let Some(size) = expr_as_positive_usize(size_expr) else {
@@ -81,7 +95,15 @@ pub(crate) fn eval_partition(
         }
         None => size,
     };
-
+    let alignment = match alignment_expr {
+        Some(alignment_expr) => {
+            let Some(alignment) = parse_partition_alignment(alignment_expr, size) else {
+                return Ok(invalid_partition_alignment_call(session, args, size));
+            };
+            Some(alignment)
+        }
+        None => None,
+    };
     let Expr::Call {
         head: expr_head,
         args: items,
@@ -89,6 +111,22 @@ pub(crate) fn eval_partition(
     else {
         return Ok(invalid_partition_normal_call(session, args));
     };
+
+    if let Some(alignment) = alignment {
+        let padding = match padding_expr {
+            Some(padding_expr) => parse_partition_padding(padding_expr),
+            None => PartitionPadding::Cycle(items),
+        };
+        let block_count = aligned_partition_block_count(items.len(), size, offset, alignment);
+        session.enforce_generated_element_limit_for_count(block_count)?;
+        session.enforce_active_memory_limit_for_projected_bytes(
+            generated_expr_nodes_memory_proxy_bytes(block_count.saturating_mul(size + 1)),
+        )?;
+
+        let blocks =
+            aligned_partition_blocks(expr_head.as_ref(), items, size, offset, alignment, padding);
+        return Ok(Expr::call(expr_head.as_ref().clone(), blocks));
+    }
 
     let block_count = partition_block_count(items.len(), size, offset);
     session.enforce_generated_element_limit_for_count(block_count)?;
@@ -259,52 +297,58 @@ fn invalid_partition_positive_integer_call(
     position: usize,
 ) -> Expr {
     session.invalid_call_with_message(
-            "Partition",
-            args,
-            "ilsmp",
-            format!(
-                "Single or list of positive machine-sized integers expected at position {position} of {}.",
-                Expr::call(system_expr("Partition"), args.to_vec())
-            ),
-        )
+        "Partition",
+        args,
+        "ilsmp",
+        format!(
+            "Positive machine-sized integer expected at position {position} of {}.",
+            Expr::call(system_expr("Partition"), args.to_vec())
+        ),
+    )
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct SubsetSizeRange {
-    min: usize,
-    max: usize,
+fn invalid_partition_alignment_call(session: &mut Session, args: &[Expr], size: usize) -> Expr {
+    session.invalid_call_with_message(
+        "Partition",
+        args,
+        "align",
+        format!(
+            "Position 4 of {} must be {{kL, kR}}, where kL and kR are positive machine-sized integers not greater than the block size {size}.",
+            Expr::call(system_expr("Partition"), args.to_vec())
+        ),
+    )
 }
 
-fn parse_subset_size_range(size_spec: Option<&Expr>, item_count: usize) -> Option<SubsetSizeRange> {
+fn parse_subset_sizes(size_spec: Option<&Expr>, item_count: usize) -> Option<Vec<usize>> {
     match size_spec {
-        None => Some(SubsetSizeRange {
-            min: 0,
-            max: item_count,
-        }),
+        None => Some((0..=item_count).collect()),
         Some(expr) => {
+            if is_system_symbol_name(expr, heads::structure::ALL)
+                || is_system_symbol_name(expr, heads::structure::INFINITY)
+            {
+                return Some((0..=item_count).collect());
+            }
+
             if let Some(max) = expr_as_non_negative_usize(expr) {
-                return Some(SubsetSizeRange {
-                    min: 0,
-                    max: max.min(item_count),
-                });
+                return Some((0..=max.min(item_count)).collect());
             }
 
             let items = list_items(expr)?;
             match items {
                 [exact] => {
                     let exact = expr_as_non_negative_usize(exact)?;
-                    Some(SubsetSizeRange {
-                        min: exact,
-                        max: exact.min(item_count),
-                    })
+                    Some((exact <= item_count).then_some(exact).into_iter().collect())
                 }
                 [min, max] => {
                     let min = expr_as_non_negative_usize(min)?;
-                    let max = expr_as_non_negative_usize(max)?;
-                    Some(SubsetSizeRange {
-                        min,
-                        max: max.min(item_count),
-                    })
+                    let max = parse_subset_max(max, item_count)?;
+                    Some(ascending_subset_sizes(min, max))
+                }
+                [min, max, step] => {
+                    let min = expr_as_non_negative_usize(min)?;
+                    let max = parse_subset_max(max, item_count)?;
+                    let step = expr_as_signed_isize(step)?;
+                    (step != 0).then(|| stepped_subset_sizes(min, max, step))
                 }
                 _ => None,
             }
@@ -312,13 +356,51 @@ fn parse_subset_size_range(size_spec: Option<&Expr>, item_count: usize) -> Optio
     }
 }
 
-fn subset_range_count(item_count: usize, min: usize, max: usize) -> BigInt {
-    if min > max {
-        return BigInt::from(0_u8);
+fn parse_subset_max(expr: &Expr, item_count: usize) -> Option<usize> {
+    if is_system_symbol_name(expr, heads::structure::INFINITY) {
+        return Some(item_count);
     }
 
-    (min..=max)
-        .map(|size| binomial_count(item_count, size))
+    expr_as_non_negative_usize(expr).map(|max| max.min(item_count))
+}
+
+fn ascending_subset_sizes(min: usize, max: usize) -> Vec<usize> {
+    if min > max {
+        return Vec::new();
+    }
+
+    (min..=max).collect()
+}
+
+fn stepped_subset_sizes(min: usize, max: usize, step: isize) -> Vec<usize> {
+    if min > max {
+        return Vec::new();
+    }
+
+    if step > 0 {
+        return (min..=max).step_by(step as usize).collect();
+    }
+
+    let step = step.unsigned_abs();
+    let mut sizes = Vec::new();
+    let mut size = max;
+    loop {
+        if size < min {
+            break;
+        }
+        sizes.push(size);
+        let Some(next) = size.checked_sub(step) else {
+            break;
+        };
+        size = next;
+    }
+    sizes
+}
+
+fn subset_sizes_count(item_count: usize, sizes: &[usize]) -> BigInt {
+    sizes
+        .iter()
+        .map(|size| binomial_count(item_count, *size))
         .sum()
 }
 
@@ -422,6 +504,142 @@ fn partition_block_count(item_count: usize, size: usize, offset: usize) -> usize
     } else {
         ((item_count - size) / offset) + 1
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct PartitionAlignment {
+    left: usize,
+    right: usize,
+}
+
+#[derive(Clone, Copy)]
+enum PartitionPadding<'a> {
+    Ragged,
+    Single(&'a Expr),
+    Cycle(&'a [Expr]),
+}
+
+fn parse_partition_alignment(expr: &Expr, size: usize) -> Option<PartitionAlignment> {
+    let [left, right] = list_items(expr)? else {
+        return None;
+    };
+    let left = expr_as_positive_usize(left)?;
+    let right = expr_as_positive_usize(right)?;
+    (left <= size && right <= size).then_some(PartitionAlignment { left, right })
+}
+
+fn parse_partition_padding(expr: &Expr) -> PartitionPadding<'_> {
+    match list_items(expr) {
+        Some([]) => PartitionPadding::Ragged,
+        Some(items) => PartitionPadding::Cycle(items),
+        None => PartitionPadding::Single(expr),
+    }
+}
+
+fn aligned_partition_block_count(
+    item_count: usize,
+    size: usize,
+    offset: usize,
+    alignment: PartitionAlignment,
+) -> usize {
+    if item_count == 0 {
+        return 0;
+    }
+
+    let first_start = aligned_partition_first_start(alignment);
+    let last_acceptable_start = item_count as i128 - alignment.right as i128;
+    if first_start > last_acceptable_start {
+        return 0;
+    }
+
+    let first_containing_last_start = item_count as i128 - size as i128;
+    let stop_start = if first_start >= first_containing_last_start {
+        first_start
+    } else {
+        let distance = first_containing_last_start - first_start;
+        let steps = (distance + offset as i128 - 1) / offset as i128;
+        first_start + steps * offset as i128
+    };
+    let final_start = if stop_start <= last_acceptable_start {
+        stop_start
+    } else {
+        let steps = (last_acceptable_start - first_start) / offset as i128;
+        first_start + steps * offset as i128
+    };
+
+    let count = ((final_start - first_start) / offset as i128) + 1;
+    usize::try_from(count).unwrap_or(usize::MAX)
+}
+
+fn aligned_partition_blocks(
+    block_head: &Expr,
+    items: &[Expr],
+    size: usize,
+    offset: usize,
+    alignment: PartitionAlignment,
+    padding: PartitionPadding<'_>,
+) -> Vec<Expr> {
+    let block_count = aligned_partition_block_count(items.len(), size, offset, alignment);
+    let mut blocks = Vec::with_capacity(block_count);
+    if block_count == 0 {
+        return blocks;
+    }
+
+    let mut start = aligned_partition_first_start(alignment);
+    for _ in 0..block_count {
+        let block = aligned_partition_block(block_head, items, size, start, padding);
+        blocks.push(block);
+        start += offset as i128;
+    }
+    blocks
+}
+
+fn aligned_partition_first_start(alignment: PartitionAlignment) -> i128 {
+    1_i128 - alignment.left as i128
+}
+
+fn aligned_partition_block(
+    block_head: &Expr,
+    items: &[Expr],
+    size: usize,
+    start: i128,
+    padding: PartitionPadding<'_>,
+) -> Expr {
+    let mut block_items = Vec::with_capacity(size);
+    for offset in 0..size {
+        let index = start + offset as i128;
+        if let Some(item) = partition_item_at(items, index) {
+            block_items.push(item.clone());
+            continue;
+        }
+
+        match padding {
+            PartitionPadding::Ragged => {}
+            PartitionPadding::Single(padding) => block_items.push(padding.clone()),
+            PartitionPadding::Cycle(cycle) => {
+                block_items.push(cyclic_partition_padding_item(cycle, index, items.len()))
+            }
+        }
+    }
+    Expr::call(block_head.clone(), block_items)
+}
+
+fn partition_item_at(items: &[Expr], index: i128) -> Option<&Expr> {
+    if !(0..items.len() as i128).contains(&index) {
+        return None;
+    }
+
+    items.get(usize::try_from(index).ok()?)
+}
+
+fn cyclic_partition_padding_item(cycle: &[Expr], index: i128, item_count: usize) -> Expr {
+    let cycle_len = cycle.len() as i128;
+    let cycle_index = if index < 0 {
+        index.rem_euclid(cycle_len)
+    } else {
+        (index - item_count as i128).rem_euclid(cycle_len)
+    };
+    cycle[cycle_index as usize].clone()
 }
 
 fn expr_as_positive_usize(expr: &Expr) -> Option<usize> {

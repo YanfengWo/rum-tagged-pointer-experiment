@@ -108,19 +108,19 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PadLeft",
-        "Pads or truncates a normal expression on the left using the current length and padding-element subset.",
+        "Pads or truncates a normal expression on the left using scalar lengths or rectangular list dimensions.",
         AttributeSet::from_attribute(Attribute::Protected),
         structure_ops::eval_pad_left,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "PadRight",
-        "Pads or truncates a normal expression on the right using the current length and padding-element subset.",
+        "Pads or truncates a normal expression on the right using scalar lengths or rectangular list dimensions.",
         AttributeSet::from_attribute(Attribute::Protected),
         structure_ops::eval_pad_right,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Subsets",
-        "Returns subsets of a normal expression in rum's size-major order for the current size-spec subset.",
+        "Returns subsets of a normal expression in rum's size-major order for scalar, All, Infinity, and range size specs.",
         AttributeSet::from_attribute(Attribute::Protected),
         structure_ops::eval_subsets,
     ),
@@ -132,7 +132,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Partition",
-        "Partitions a normal expression into fixed-size blocks using the current positive offset subset.",
+        "Partitions a flat normal expression into fixed-size blocks; aligned forms anchor the first element at kL and stop once the last element appears at or beyond kR.",
         AttributeSet::from_attribute(Attribute::Protected),
         structure_ops::eval_partition,
     ),
@@ -148,12 +148,12 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Reverse",
-        "Reverses normal-expression arguments at the current positive level subset.",
+        "Reverses normal-expression arguments at positive levels or at every level with All.",
         structure_ops::eval_reverse,
     ),
     BuiltinSpec::ordinary(
         "Transpose",
-        "Transposes rectangular plain-list matrices in the current first-pass subset.",
+        "Transposes rectangular plain-list matrices and tensors using identity, first-two-swap, or rank-matching positive permutations.",
         structure_ops::eval_transpose,
     ),
     BuiltinSpec::ordinary(
@@ -218,7 +218,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Riffle",
-        "Inserts one separator between adjacent top-level elements of a normal expression.",
+        "Inserts one separator between top-level elements of a normal expression, with optional interval or position specs.",
         structure_ops::eval_riffle,
     ),
     BuiltinSpec::ordinary_with_attributes(

@@ -161,8 +161,20 @@ pub const LIMITS: &[(&str, &str)] = &[
         "normalizes input whitespace runs to single spaces while wrapping; it does not preserve original spacing inside wrapped text.",
     ),
     (
+        "PadLeft",
+        "does not support the margin argument; list dimensions apply to rectangular nested lists only.",
+    ),
+    (
+        "PadRight",
+        "does not support the margin argument; list dimensions apply to rectangular nested lists only.",
+    ),
+    (
+        "Partition",
+        "supports flat positive scalar size/offset forms; aligned forms use positive {kL, kR}, prepend kL - 1 fill positions, stop at the first d-stepped block where the final item appears at position >= kR, use cyclic list padding when padding is omitted, and use ragged no-padding output for {}.",
+    ),
+    (
         "Riffle",
-        "supports only the single-separator form; cyclic and list-separator forms are outside the current contract.",
+        "supports one separator with optional positive interval or {imin, imax, di} insertion-position specs; list-separator forms are outside the current contract.",
     ),
     (
         "StringLines",
