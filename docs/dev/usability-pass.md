@@ -54,7 +54,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
 | 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
-| 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
+| 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
 | 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
 | 9 | kernel B: scoping/eval control/patterns/forms | ~55 | | |
@@ -376,6 +376,66 @@ the RUNTIME-side mirror too — brief-193's catalog attribute change
 rippled into `runtime/builtin_catalog/stdlib_attributes.rs` (the kernel's
 attribute table), outside the stdlib-only MAY list; the sync was
 necessary, not scope creep (cf. the brief-185 cross-crate lesson).
+
+## Unit 6 (codecs+bytes+datetime) triage — 2026-07-07
+
+Audit brief-194: 34/34, findings in
+`usability-pass/codecs-bytes-datetime-findings.md`. Nine families (json 2 +
+csv 2 + ini 2 + toml 2 + xml 3 + yaml 2 + schema 2 + bytes 11 + datetime 8).
+The healthiest unit so far: the highest-value axis this unit — fail-closed
+parsing — held everywhere. Every `From*` parser and decoder fails closed
+with a message + `$Failed` on malformed input (reproduced myself: `FromJson`
+malformed/dup-key, `ToJson[1/3]` non-terminating, CSV/INI/TOML/XML/YAML
+malformed, `FromHexString`/`FromBase64`/`FromDateString` invalid, out-of-range
+date lists). The `Capability::Clock` gate on the `DateList[]`/`DateString[]`
+now-forms is correct (rum-host test `sandboxed_..._blocks_datetime_current_
+readers...` passes; with-arg deterministic forms stay available). Folk-codec /
+rationals-only / determinism / no-ambient-clock boundaries all correctly
+marked OK-intended, not gaps.
+
+**ONE real behavioral safety finding** (reproduced): digest heads
+`Sha256`/`Sha512`/`Sha1`/`Md5` return an INERT call on an unknown output-format
+second argument (`Sha256["abc", "Base64"] -> Sha256["abc", "Base64"]`) instead
+of failing closed — the generic format parser in `bytes/digest.rs:75`. The rest
+are hygiene: all 34 heads lack `Protected` (`ConformSchema`/`SchemaErrors` carry
+`HoldRest` — preserve it); `Crc32` lacks the non-security Limits note that
+`Md5`/`Sha1` have; implemented options are not `Options[...]`-discoverable;
+datetime ergonomics (`DateString` format enum, `DayOfWeek` output selector);
+operator forms for the pipeline verbs. No user-decision-level item this unit.
+
+Fix batches (dispatch order — safety first):
+
+1. **brief-195 — digest fail-closed + Crc32 note** (safety, S; the only
+   behavior change): unknown digest output format → message + `$Failed`
+   (matches the fail-closed principle), not inert. Add the `Crc32`
+   non-security Limits note (parity with `Md5`/`Sha1`). rum-stdlib
+   (`bytes/digest.rs`) + docgen/reference. MAY list must span any test that
+   asserts the old inert form (cross-crate lesson). No call planning, no A/B.
+2. **brief-196 — Protected sweep** (safety/convenience, S): add `Protected`
+   to all 34 codec/bytes/date heads, PRESERVING `HoldRest` on
+   `ConformSchema`/`SchemaErrors`. `Protected` is not attribute-driven
+   planning (no `eval_call_prepare` arg reshaping like `Flat`/`Orderless`) —
+   NO A/B — but the catalog change ripples into
+   `runtime/builtin_catalog/stdlib_attributes.rs` (the brief-193 gate lesson;
+   pre-include it in MAY). Same class as brief-162/193.
+3. **brief-197 — option discovery registration** (flexibility/convenience,
+   S): register the already-implemented option defaults for discovery via
+   `Options[...]` — `ToJson` `"Indent"`, `FromCsv`/`ToCsv`
+   `"Delimiter"`/`"Headers"`, `ToXml` `"Indent"`,
+   `ConformSchema`/`SchemaErrors` `"AllowExtraKeys"`. The unit-2/3 discovery
+   pattern: implementations already read options directly, the defaults table
+   feeds only `Options`/`OptionValue`, so behavior is byte-identical. No call
+   planning.
+4. **brief-198 — datetime ergonomics** (flexibility, S/M): `DateString[date,
+   fmt]` with a documented format enum (`"ISODateTime"`/`"ISODate"`/
+   `"ISOTime"`, fail-closed on unknown name), `DayOfWeek[date, sel]` output
+   selector (`"Name"`/`"ISOInteger"` or equiv). Keep UTC, exact seconds, no
+   locale/time-zone database, fixed-duration-only arithmetic.
+5. **brief-199 — pipeline operator forms** (flexibility, M; A/B GATE):
+   `DatePlus[spec]`, `ConformSchema[schema]`, `SchemaErrors[schema]` — unary
+   spec/schema forms are not data forms (E11: they currently fail at wrapper
+   construction). Touches call planning → core-language microbench A/B (the
+   175/182 protocol).
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 
