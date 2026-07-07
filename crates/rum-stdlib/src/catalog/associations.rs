@@ -81,7 +81,7 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "KeySortBy",
-        "Sorts association entries by transformed keys in the current first-pass subset.",
+        "Sorts association entries by transformed keys, optionally using a supplied binary ordering predicate.",
         associations::eval_key_sort_by,
     ),
     BuiltinSpec::ordinary(

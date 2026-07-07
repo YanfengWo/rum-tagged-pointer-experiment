@@ -15,3 +15,7 @@ pub(crate) use self::{
 pub(super) fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
     format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
 }
+
+pub(super) fn one_to_three_argument_count_message(symbol: &str, count: usize) -> String {
+    format!("{symbol} called with {count} arguments; 1, 2, or 3 arguments are expected.")
+}

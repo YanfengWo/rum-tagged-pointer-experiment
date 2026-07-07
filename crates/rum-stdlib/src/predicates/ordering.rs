@@ -1,5 +1,27 @@
 use super::*;
 
+#[derive(Clone)]
+struct OrderedQComparatorState {
+    ordering: Expr,
+    items: Vec<Expr>,
+    index: usize,
+}
+
+#[derive(Clone)]
+struct LexicographicListComparatorState {
+    ordering: Expr,
+    lhs: Vec<Expr>,
+    rhs: Vec<Expr>,
+    index: usize,
+}
+
+#[derive(Clone)]
+struct LexicographicPairComparatorState {
+    ordering: Expr,
+    lhs: Expr,
+    rhs: Expr,
+}
+
 pub(crate) fn eval_order(
     session: &mut Session,
     _head: &Expr,
@@ -17,10 +39,19 @@ pub(crate) fn eval_ordered_q(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [expr] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("OrderedQ", args, 1));
-    };
+    match args {
+        [expr] => eval_ordered_q_default(session, head, args, expr),
+        [expr, ordering] => eval_ordered_q_with_comparator(session, head, args, expr, ordering),
+        _ => Ok(session.invalid_call_with_arg_range("OrderedQ", args, 1, 2)),
+    }
+}
 
+fn eval_ordered_q_default(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    expr: &Expr,
+) -> Result<Expr, EvalError> {
     let items = match expr {
         Expr::Call { args, .. } => args.as_slice(),
         Expr::Atom(_) => {
@@ -41,22 +72,218 @@ pub(crate) fn eval_ordered_q(
     })))
 }
 
+fn eval_ordered_q_with_comparator(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    expr: &Expr,
+    ordering: &Expr,
+) -> Result<Expr, EvalError> {
+    let items = match expr {
+        Expr::Call { args, .. } => args.to_vec(),
+        Expr::Atom(_) => {
+            return Ok(session.invalid_call_with_message(
+                "OrderedQ",
+                args,
+                "normal",
+                format!(
+                    "Nonatomic expression expected at position 1 in {}.",
+                    Expr::call(head.clone(), args.to_vec())
+                ),
+            ));
+        }
+    };
+
+    resume_ordered_q_comparator(
+        session,
+        OrderedQComparatorState {
+            ordering: ordering.clone(),
+            items,
+            index: 0,
+        },
+    )
+}
+
+fn resume_ordered_q_comparator(
+    session: &mut Session,
+    state: OrderedQComparatorState,
+) -> Result<Expr, EvalError> {
+    if state.index + 1 >= state.items.len() {
+        return Ok(predicate_bool_expr(true));
+    }
+
+    let result = eval_binary_predicate(
+        session,
+        &state.ordering,
+        &state.items[state.index],
+        &state.items[state.index + 1],
+    );
+    let suspended_state = state.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_ordered_q_comparator_with_value(session, suspended_state, value)
+    })?;
+
+    resume_ordered_q_comparator_with_value(session, state, value)
+}
+
+fn resume_ordered_q_comparator_with_value(
+    session: &mut Session,
+    mut state: OrderedQComparatorState,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if !comparator_says_before(&value) {
+        return Ok(predicate_bool_expr(false));
+    }
+
+    state.index += 1;
+    resume_ordered_q_comparator(session, state)
+}
+
 pub(crate) fn eval_lexicographic_order(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [lhs, rhs] = args else {
-        return Ok(if (1..=3).contains(&args.len()) {
+    match args {
+        [lhs, rhs] => Ok(order_result_expr(compare_lexicographic_order_subset(
+            lhs, rhs,
+        ))),
+        [lhs, rhs, ordering] => eval_lexicographic_order_with_comparator(
+            session,
+            ordering.clone(),
+            lhs.clone(),
+            rhs.clone(),
+        ),
+        _ => Ok(if (1..=3).contains(&args.len()) {
             Expr::call(head.clone(), args.to_vec())
         } else {
             session.invalid_call_with_arg_range("LexicographicOrder", args, 1, 3)
-        });
-    };
+        }),
+    }
+}
 
-    Ok(order_result_expr(compare_lexicographic_order_subset(
-        lhs, rhs,
-    )))
+fn eval_lexicographic_order_with_comparator(
+    session: &mut Session,
+    ordering: Expr,
+    lhs: Expr,
+    rhs: Expr,
+) -> Result<Expr, EvalError> {
+    match (list_items(&lhs), list_items(&rhs)) {
+        (Some(lhs_items), Some(rhs_items)) => resume_lexicographic_list_comparator(
+            session,
+            LexicographicListComparatorState {
+                ordering,
+                lhs: lhs_items.to_vec(),
+                rhs: rhs_items.to_vec(),
+                index: 0,
+            },
+        ),
+        _ => resume_lexicographic_pair_comparator(
+            session,
+            LexicographicPairComparatorState { ordering, lhs, rhs },
+        ),
+    }
+}
+
+fn resume_lexicographic_list_comparator(
+    session: &mut Session,
+    state: LexicographicListComparatorState,
+) -> Result<Expr, EvalError> {
+    if state.index >= state.lhs.len() || state.index >= state.rhs.len() {
+        return Ok(order_result_expr(state.lhs.len().cmp(&state.rhs.len())));
+    }
+
+    let result = eval_binary_predicate(
+        session,
+        &state.ordering,
+        &state.lhs[state.index],
+        &state.rhs[state.index],
+    );
+    let suspended_state = state.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_lexicographic_list_comparator_with_forward_value(session, suspended_state, value)
+    })?;
+
+    resume_lexicographic_list_comparator_with_forward_value(session, state, value)
+}
+
+fn resume_lexicographic_list_comparator_with_forward_value(
+    session: &mut Session,
+    state: LexicographicListComparatorState,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if comparator_says_before(&value) {
+        return Ok(order_result_expr(std::cmp::Ordering::Less));
+    }
+
+    let result = eval_binary_predicate(
+        session,
+        &state.ordering,
+        &state.rhs[state.index],
+        &state.lhs[state.index],
+    );
+    let suspended_state = state.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_lexicographic_list_comparator_with_reverse_value(session, suspended_state, value)
+    })?;
+
+    resume_lexicographic_list_comparator_with_reverse_value(session, state, value)
+}
+
+fn resume_lexicographic_list_comparator_with_reverse_value(
+    session: &mut Session,
+    mut state: LexicographicListComparatorState,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if comparator_says_before(&value) {
+        return Ok(order_result_expr(std::cmp::Ordering::Greater));
+    }
+
+    state.index += 1;
+    resume_lexicographic_list_comparator(session, state)
+}
+
+fn resume_lexicographic_pair_comparator(
+    session: &mut Session,
+    state: LexicographicPairComparatorState,
+) -> Result<Expr, EvalError> {
+    let result = eval_binary_predicate(session, &state.ordering, &state.lhs, &state.rhs);
+    let suspended_state = state.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_lexicographic_pair_comparator_with_forward_value(session, suspended_state, value)
+    })?;
+
+    resume_lexicographic_pair_comparator_with_forward_value(session, state, value)
+}
+
+fn resume_lexicographic_pair_comparator_with_forward_value(
+    session: &mut Session,
+    state: LexicographicPairComparatorState,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if comparator_says_before(&value) {
+        return Ok(order_result_expr(std::cmp::Ordering::Less));
+    }
+
+    let result = eval_binary_predicate(session, &state.ordering, &state.rhs, &state.lhs);
+    let suspended_state = state.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_lexicographic_pair_comparator_with_reverse_value(session, suspended_state, value)
+    })?;
+
+    resume_lexicographic_pair_comparator_with_reverse_value(session, state, value)
+}
+
+fn resume_lexicographic_pair_comparator_with_reverse_value(
+    _session: &mut Session,
+    _state: LexicographicPairComparatorState,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if comparator_says_before(&value) {
+        Ok(order_result_expr(std::cmp::Ordering::Greater))
+    } else {
+        Ok(order_result_expr(std::cmp::Ordering::Equal))
+    }
 }
 
 pub(crate) fn eval_numerical_order(
@@ -156,4 +383,23 @@ pub(crate) fn eval_unsame_q(
     }
 
     Ok(predicate_bool_expr(true))
+}
+
+fn eval_binary_predicate(
+    session: &mut Session,
+    predicate: &Expr,
+    lhs: &Expr,
+    rhs: &Expr,
+) -> Result<Expr, EvalError> {
+    session.evaluate(Expr::call(
+        predicate.clone(),
+        vec![lhs.clone(), rhs.clone()],
+    ))
+}
+
+fn comparator_says_before(value: &Expr) -> bool {
+    match value {
+        Expr::Atom(Atom::Integer(integer)) if integer.as_i64() == Some(1) => true,
+        _ => is_system_symbol_name(value, heads::structure::TRUE),
+    }
 }

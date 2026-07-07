@@ -682,35 +682,35 @@ Constructs an expression from a head and zero or more arguments.
 
 ### ContainsAll
 
-Tests whether a List contains every requested element in the current exact structural subset.
+Tests whether a List contains every requested element, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### ContainsAny
 
-Tests whether a List contains any requested element in the current exact structural subset.
+Tests whether a List contains any requested element, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### ContainsExactly
 
-Tests List multiset equality in the current exact structural subset.
+Tests List multiset equality, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### ContainsNone
 
-Tests whether a List contains none of the requested elements in the current exact structural subset.
+Tests whether a List contains none of the requested elements, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
 
 ### ContainsOnly
 
-Tests whether every element of a List belongs to the allowed-element List in the current exact structural subset.
+Tests whether every element of a List belongs to the allowed-element List, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -996,7 +996,7 @@ Returns a parent directory path string for a file name.
 
 ### DisjointQ
 
-Tests whether two Lists share no element in the current exact structural subset.
+Tests whether two Lists share no element, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1067,7 +1067,7 @@ Writes a textual first-pass dump of selected symbols to a file and returns the s
 
 ### DuplicateFreeQ
 
-Tests whether a List has no repeated elements in the current exact structural subset.
+Tests whether a List has no repeated elements, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1755,7 +1755,7 @@ Reverses the digits of an exact integer in a given base.
 
 ### IntersectingQ
 
-Tests whether two Lists share any element in the current exact structural subset.
+Tests whether two Lists share any element, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1853,7 +1853,7 @@ Sorts association entries by key in the current canonical ordering subset.
 
 ### KeySortBy
 
-Sorts association entries by transformed keys in the current first-pass subset.
+Sorts association entries by transformed keys, optionally using a supplied binary ordering predicate.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1986,7 +1986,7 @@ Collects subexpressions found on levels specified by a standard levelspec.
 
 ### LexicographicOrder
 
-Compares two expressions lexicographically in the current exact order subset.
+Compares two expressions lexicographically under the default order or a supplied binary predicate.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -2526,7 +2526,7 @@ Orders two expressions using exact numeric order when possible, then the current
 
 ### OrderedQ
 
-Tests whether a List is nondecreasing under the current exact order subset.
+Tests whether an expression's arguments are ordered under the default order or a supplied binary predicate.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3648,7 +3648,7 @@ Replaces selected exact parts using a mapped subset result in the current first-
 
 ### SubsetQ
 
-Tests subset inclusion for Lists in the current exact structural subset.
+Tests subset inclusion for Lists, optionally using SameTest.
 
 - Attributes: `None`
 - Capability: `Pure`

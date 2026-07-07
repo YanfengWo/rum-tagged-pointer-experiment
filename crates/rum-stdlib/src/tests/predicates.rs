@@ -430,6 +430,133 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
 }
 
 #[test]
+fn collection_predicates_accept_same_test_options() {
+    let mut session = core_session();
+    let same_abs = "SameTest -> (SameQ[Abs[#1], Abs[#2]] &)";
+
+    assert_eq!(
+        session
+            .eval_text(&format!("DuplicateFreeQ[{{1, -1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("IntersectingQ[{{1}}, {{-1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("DisjointQ[{{1}}, {{-1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("SubsetQ[{{1, 2}}, {{-1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("ContainsAll[{{1, 2}}, {{-1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("ContainsAny[{{1, 2}}, {{-1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "ContainsExactly[{{1, -1}}, {{-1, 1}}, {same_abs}]"
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("ContainsNone[{{1}}, {{-1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text(&format!("ContainsOnly[{{1, -1}}, {{1}}, {same_abs}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[DuplicateFreeQ]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[SameTest, Automatic]]"
+    );
+}
+
+#[test]
+fn ordering_predicates_accept_custom_comparators() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{3, 2, 1}, Greater]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("OrderedQ[{1, 3, 2}, Greater]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("LexicographicOrder[{3}, {2}, Greater]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("LexicographicOrder[{2}, {3}, Greater]")
+            .unwrap()
+            .value
+            .to_string(),
+        "-1"
+    );
+}
+
+#[test]
 fn truth_aggregates_and_coprime_q_cover_current_subsets() {
     let mut session = core_session();
 

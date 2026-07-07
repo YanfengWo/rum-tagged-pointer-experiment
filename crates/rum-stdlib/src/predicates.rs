@@ -1,8 +1,9 @@
 use rum_core::{Atom, BigInt, Expr, Rational, SYSTEM_CONTEXT, heads};
 use rum_runtime::kernel_api::{
     CasesTraversalConfig, EvalError, Session, collect_level_parts_owned, compare_expr_canonical,
-    expr_as_exact_integer, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_symbol,
-    is_system_symbol_name, parse_standard_level_spec, system_expr, truthiness_symbol,
+    expr_as_exact_integer, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_string,
+    expr_as_symbol, is_system_symbol_name, parse_standard_level_spec, system_expr,
+    truthiness_symbol,
 };
 
 mod arrays;

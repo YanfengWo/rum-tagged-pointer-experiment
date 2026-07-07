@@ -65,7 +65,9 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             "DistanceFunction",
             system_expr("Automatic"),
         )],
-        "Union" | "Intersection" | "Complement" => {
+        "Union" | "Intersection" | "Complement" | "DuplicateFreeQ" | "IntersectingQ"
+        | "DisjointQ" | "SubsetQ" | "ContainsAll" | "ContainsAny" | "ContainsExactly"
+        | "ContainsNone" | "ContainsOnly" => {
             vec![system_rule_option("SameTest", system_expr("Automatic"))]
         }
         "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ" | "StringFreeQ"

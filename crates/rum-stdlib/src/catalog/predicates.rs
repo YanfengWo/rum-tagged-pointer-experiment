@@ -145,22 +145,22 @@ pub(crate) const PREDICATE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "DuplicateFreeQ",
-        "Tests whether a List has no repeated elements in the current exact structural subset.",
+        "Tests whether a List has no repeated elements, optionally using SameTest.",
         predicates::eval_duplicate_free_q,
     ),
     BuiltinSpec::ordinary(
         "IntersectingQ",
-        "Tests whether two Lists share any element in the current exact structural subset.",
+        "Tests whether two Lists share any element, optionally using SameTest.",
         predicates::eval_intersecting_q,
     ),
     BuiltinSpec::ordinary(
         "DisjointQ",
-        "Tests whether two Lists share no element in the current exact structural subset.",
+        "Tests whether two Lists share no element, optionally using SameTest.",
         predicates::eval_disjoint_q,
     ),
     BuiltinSpec::ordinary(
         "SubsetQ",
-        "Tests subset inclusion for Lists in the current exact structural subset.",
+        "Tests subset inclusion for Lists, optionally using SameTest.",
         predicates::eval_subset_q,
     ),
     BuiltinSpec::ordinary(
@@ -170,12 +170,12 @@ pub(crate) const PREDICATE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "OrderedQ",
-        "Tests whether a List is nondecreasing under the current exact order subset.",
+        "Tests whether an expression's arguments are ordered under the default order or a supplied binary predicate.",
         predicates::eval_ordered_q,
     ),
     BuiltinSpec::ordinary(
         "LexicographicOrder",
-        "Compares two expressions lexicographically in the current exact order subset.",
+        "Compares two expressions lexicographically under the default order or a supplied binary predicate.",
         predicates::eval_lexicographic_order,
     ),
     BuiltinSpec::ordinary(
@@ -190,27 +190,27 @@ pub(crate) const PREDICATE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "ContainsAll",
-        "Tests whether a List contains every requested element in the current exact structural subset.",
+        "Tests whether a List contains every requested element, optionally using SameTest.",
         predicates::eval_contains_all,
     ),
     BuiltinSpec::ordinary(
         "ContainsAny",
-        "Tests whether a List contains any requested element in the current exact structural subset.",
+        "Tests whether a List contains any requested element, optionally using SameTest.",
         predicates::eval_contains_any,
     ),
     BuiltinSpec::ordinary(
         "ContainsExactly",
-        "Tests List multiset equality in the current exact structural subset.",
+        "Tests List multiset equality, optionally using SameTest.",
         predicates::eval_contains_exactly,
     ),
     BuiltinSpec::ordinary(
         "ContainsNone",
-        "Tests whether a List contains none of the requested elements in the current exact structural subset.",
+        "Tests whether a List contains none of the requested elements, optionally using SameTest.",
         predicates::eval_contains_none,
     ),
     BuiltinSpec::ordinary(
         "ContainsOnly",
-        "Tests whether every element of a List belongs to the allowed-element List in the current exact structural subset.",
+        "Tests whether every element of a List belongs to the allowed-element List, optionally using SameTest.",
         predicates::eval_contains_only,
     ),
     BuiltinSpec::ordinary(

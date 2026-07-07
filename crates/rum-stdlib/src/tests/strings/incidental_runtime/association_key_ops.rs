@@ -302,6 +302,16 @@ fn key_predicates_take_drop_map_and_sort_cover_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "KeySortBy[Association[bb -> 2, a -> 1, ccc -> 3], StringLength[ToString[#]] &, Greater]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[ccc, 3], Rule[bb, 2], Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
             .eval_text("KeySortBy[List[bb -> 2, a -> 1, ccc -> 3], StringLength[ToString[#]] &]")
             .unwrap()
             .value

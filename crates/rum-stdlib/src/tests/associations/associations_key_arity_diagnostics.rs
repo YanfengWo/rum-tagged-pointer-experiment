@@ -184,7 +184,6 @@ fn key_function_arity_and_currying_diagnostics_cover_invalid_forms() {
             "KeySelect[Association[], TrueQ, x]",
         ),
         ("KeySort", "KeySort[]", "KeySort[Association[], Less, x]"),
-        ("KeySortBy", "KeySortBy[]", "KeySortBy[Association[], f, x]"),
     ] {
         let outcome = session.eval_text(zero_arg_call).unwrap();
         assert_eq!(outcome.value.to_string(), zero_arg_call);
@@ -204,6 +203,29 @@ fn key_function_arity_and_currying_diagnostics_cover_invalid_forms() {
                     == format!("{symbol} called with 3 arguments; 1 or 2 arguments are expected.")
         }));
     }
+
+    let outcome = session.eval_text("KeySortBy[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "KeySortBy[]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeySortBy"
+            && message.tag == "argt"
+            && message.text
+                == "KeySortBy called with 0 arguments; 1, 2, or 3 arguments are expected."
+    }));
+
+    let outcome = session
+        .eval_text("KeySortBy[Association[], f, Less, x]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "KeySortBy[Association[], f, Less, x]"
+    );
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "KeySortBy"
+            && message.tag == "argt"
+            && message.text
+                == "KeySortBy called with 4 arguments; 1, 2, or 3 arguments are expected."
+    }));
 
     let outcome = session.eval_text("KeyMap[f]").unwrap();
     assert_eq!(
