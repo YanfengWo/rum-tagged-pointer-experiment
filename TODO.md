@@ -69,9 +69,10 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   include it in MAY when a brief changes documented limits.
 - [x] brief-168 DONE (944a6de): strict modes; workspace 1345/0.
   **UNIT 1 (strings) CLOSED** — deferred/debt ledger in the tracker.
-- [ ] brief-169 (unit 2 audit): structure + functional families
-  (47 + 42 = 89 builtins), all-rows findings table; pre-seeded check:
-  `Cases` operator form (spillover from 164's recon).
+- [x] brief-169 DONE (992e904): unit-2 audit, 89/89; triage + five-batch
+  queue in the tracker (operator forms frozen pending perf thaw).
+- [ ] brief-170 (unit-2 batch 1): `Heads -> False` registration for the
+  eight map/apply symbols (discovery pattern, zero behavior change).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

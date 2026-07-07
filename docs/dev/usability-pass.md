@@ -50,7 +50,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | # | Unit | Count | Audit | Fixes |
 |---|------|-------|-------|-------|
 | 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
-| 2 | structure + functional | 89 | | |
+| 2 | structure + functional | 89 | brief-169 ✓ | 170… (triage below) |
 | 3 | predicates + associations | 83 | | |
 | 4 | control + logic + rewrite | 63 | | |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
@@ -127,6 +127,44 @@ SHA-256 (TODO); rum-jupyter transient test failure (watch). Spillover:
 now standing: MAY lists pre-include `docgen.rs` (LIMITS notes) and
 `options/defaults.rs`; probes feed stdin; audits get an all-rows
 coverage check.
+
+## Unit 2 (structure+functional) triage — 2026-07-07
+
+Audit brief-169: 89/89, findings in
+`usability-pass/structure-functional-findings.md`. Mechanism fact
+grounding the first batch: the options-defaults table
+(`options/defaults.rs`) is a DISCOVERY surface — implementations never
+consult it at call time (verified: zero `options_for_symbol` callers
+in kernel_data/stdlib); registered defaults feed `Options`/
+`OptionValue` only. Fix batches, dispatch order:
+
+1. **brief-170 — Heads options registration** (safety, S): register
+   `Heads -> False` for `Map`/`MapIndexed`/`MapAll`/`Scan`/`Apply`/
+   `MapApply`/`Comap`/`ComapApply` — the Cases/Depth discovery
+   pattern; hard-coded behavior defaults unchanged; NO per-call
+   SetOptions wiring (new mechanism + hot path + frozen).
+2. **brief-171 — spec flexibility**: `Subsets` advertised size specs
+   (its own message currently lies — safety), `PadLeft`/`PadRight`
+   list dimensions, `Partition` padded/offset forms, `Transpose`
+   general permutations, `Reverse[expr, All]`, `Riffle` positional
+   forms.
+3. **brief-172 — collection comparison controls**: `DeleteDuplicates`/
+   `Tally` test args, set-ops `SameTest`, `ReverseSort` comparator,
+   `SortBy` 3-arg ordering, `GatherBy` function-list hierarchical
+   grouping (today: silent wrong-ish singletons), `MaxBy`/`MinBy`
+   top-k. Folk note: predicate dedup documented O(n²).
+4. **brief-173 — fail-closed diagnostics**: `MapAt` missing-target
+   message (WL parity), `SubsetMap` path messages, `Inner`/`Dot`
+   shape-mismatch messages.
+5. **brief-174 — WFR-inspired additions** (idea-level; see
+   `docs/dev/wfr-core-survey.md`): `SelectPositions`, `Duplicates`,
+   `BinarySearch` — no operator forms until the thaw.
+
+FROZEN (perf moratorium, one thaw batch later): ALL unit-2 operator
+forms — `Take`/`Drop`/`Insert`/`Delete`/`TakeList`/`Partition`/
+`Riffle`/`GatherBy`/`MaxBy`/`MinBy`/`TakeLargestBy`/`TakeSmallestBy`/
+`DeleteDuplicatesBy`/`ReverseSortBy` + the new additions' operator
+forms.
 
 Corrections to audit findings (so fix briefs do not inherit them):
 `LongestCommonSubsequence`'s contiguous behavior IS the WL contract
