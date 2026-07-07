@@ -93,9 +93,12 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-176 DONE (d87bc97): unit-3 audit, 83/83; healthier family
   (no silent bugs); four-batch triage in the tracker.
 - [x] brief-177 DONE (55629d0): comparison controls; workspace 1358/0.
-- [ ] brief-178 (unit-3 batch 2): array predicate forms —
-  `VectorQ[expr, test]`, `MatrixQ[expr, test]`, `ArrayQ` shape-pattern
-  + element-test forms (pure, no call planning).
+- [x] brief-178 DONE (02750b1): array predicate test/rank forms;
+  workspace 1358/0.
+- [ ] brief-179 (unit-3 batch 3): operator forms (call planning; A/B
+  gate) — `Contains*[needles]`, `Between[range]`, `AllTrue`/`AnyTrue`/
+  `NoneTrue[crit]`, `OrderedQ[p]`, `Lookup[key, default]`, kernel
+  `MatchQ[patt]`.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
