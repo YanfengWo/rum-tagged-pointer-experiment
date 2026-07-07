@@ -247,7 +247,7 @@ Applies a function to local list-array neighborhoods in the current first-pass s
 
 ### ArrayQ
 
-Tests whether an expression is a rectangular List array in the current exact structural subset.
+Tests whether an expression is a rectangular List array, optionally matching its depth against a pattern and requiring every leaf to satisfy a test.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -2091,7 +2091,7 @@ Tests whether an expression matches a pattern.
 
 ### MatrixQ
 
-Tests whether an expression is a rectangular two-dimensional List array in the current exact structural subset.
+Tests whether an expression is a rectangular two-dimensional List array, optionally requiring every leaf to satisfy a test.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -4215,7 +4215,7 @@ Returns association values in structural order.
 
 ### VectorQ
 
-Tests whether an expression is a one-dimensional List array in the current exact structural subset.
+Tests whether an expression is a one-dimensional List array, optionally requiring every leaf to satisfy a test.
 
 - Attributes: `None`
 - Capability: `Pure`

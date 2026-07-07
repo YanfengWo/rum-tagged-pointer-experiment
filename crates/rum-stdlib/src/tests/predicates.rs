@@ -427,6 +427,30 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
             .to_string(),
         "False"
     );
+    assert_eq!(
+        session
+            .eval_text("{VectorQ[{1, 2}, IntegerQ], VectorQ[{1, a}, IntegerQ], MatrixQ[{{1, 2}, {3, 4}}, IntegerQ], MatrixQ[{{1, 2}, {3, a}}, IntegerQ], ArrayQ[{{1, 2}, {3, 4}}, _], ArrayQ[{{1, 2}, {3, 4}}, 1 | 2], ArrayQ[{{1, 2}, {3, 4}}, 3], ArrayQ[{{1, 2}, {3, 4}}, 2, IntegerQ], ArrayQ[{{1, 2}, {3, a}}, 2, IntegerQ]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, False, True, False, True, True, False, True, False]"
+    );
+    assert_eq!(
+        session
+            .eval_text("VectorQ[{1}, Function[1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+    assert_eq!(
+        session
+            .eval_text("VectorQ[{{1}}, Function[InputString[\"should not ask\"]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
 }
 
 #[test]
