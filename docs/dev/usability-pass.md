@@ -50,7 +50,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | # | Unit | Count | Audit | Fixes |
 |---|------|-------|-------|-------|
 | 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
-| 2 | structure + functional | 89 | brief-169 ✓ | 170… (triage below) |
+| 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
 | 3 | predicates + associations | 83 | | |
 | 4 | control + logic + rewrite | 63 | | |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
@@ -159,6 +159,18 @@ in kernel_data/stdlib); registered defaults feed `Options`/
 5. **brief-174 — WFR-inspired additions** (idea-level; see
    `docs/dev/wfr-core-survey.md`): `SelectPositions`, `Duplicates`,
    `BinarySearch` — no operator forms until the thaw.
+
+**UNIT 2 CLOSED (2026-07-07).** Landed: 169 audit + 170 (Heads
+registration) + 171/171b (spec flexibility; 171's inverted Partition
+anchor caught at gate, fixed in 171b) + 175 (14 operator forms +
+wrapper early-exit, a net perf win) + 172 (comparison controls;
+GatherBy silent-singleton bug fixed) + 173 (fail-closed diagnostics) +
+174 (SelectPositions/Duplicates/BinarySearch). Workspace 1345 → 1356;
+reference +3. Left for later: operator forms for the three new builtins
+(future matcher touch); `SubValuesHoldAll`-style hold operator forms
+(units 8-10 hold design). Gate lessons added: review OUTPUT SEMANTICS,
+not just green tests (171 Partition); rename any source file that
+credits an inspiration source (174 `list_lookup`).
 
 THAWED 2026-07-07 (perf moratorium lifted by the user): the unit-2
 operator forms — `Take`/`Drop`/`Insert`/`Delete`/`TakeList`/

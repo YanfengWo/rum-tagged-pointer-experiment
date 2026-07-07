@@ -87,11 +87,14 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   builtins; GatherBy silent-singleton bug fixed); workspace 1351/0.
 - [x] brief-173 DONE (5044e0b): fail-closed diagnostics for
   Inner/Dot/MapAt/SubsetMap (crisp error-vs-symbolic seam); 1353/0.
-- [ ] brief-174 (unit-2 batch 5, FINAL): WFR-inspired additions
-  (idea-level, `docs/dev/wfr-core-survey.md`) — `SelectPositions`,
-  `Duplicates`, `BinarySearch`. New builtins → catalog + kernel
-  vocabulary. Operator forms via the 175 matcher where unambiguous.
-  Unit 2 closes after this.
+- [x] brief-174 DONE (2249bfd): SelectPositions/Duplicates/BinarySearch;
+  workspace 1356/0. **UNIT 2 (structure+functional) CLOSED** —
+  ledger in the tracker.
+- [ ] brief-176 (unit 3 audit): predicates + associations families
+  (50 + 33 = 83 builtins), all-rows findings table; pre-seed the WFR
+  association candidates `KeyGroupBy`/`AssociationKeyDeflatten`
+  (+ flatten twin) / `MergeNested` (config layering — pairs with
+  codecs + ConformSchema).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
