@@ -190,6 +190,106 @@ fn coefficient_extracts_exact_monomial_powers_without_requiring_manual_expand() 
 }
 
 #[test]
+fn coefficient_family_fails_closed_on_leaked_laurent_target_powers() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Coefficient[x + 1/x, x, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Coefficient[Plus[Power[x, -1], x], x, 0]"
+    );
+    assert_eq!(
+        session
+            .eval_text("CoefficientList[x + 1/x, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "CoefficientList[Plus[Power[x, -1], x], x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Coefficient[x + 1/x^2, x, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Coefficient[Plus[Power[x, -2], x], x, 0]"
+    );
+}
+
+#[test]
+fn coefficient_family_keeps_non_laurent_residues_and_polynomials() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Coefficient[x + 1/x, x, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("Coefficient[Sin[x] + x, x, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Sin[x]"
+    );
+    assert_eq!(
+        session
+            .eval_text("CoefficientList[Sin[x] + x^2, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Sin[x], 0, 1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Coefficient[1/(1+x), x, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Power[Plus[1, x], -1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Coefficient[x^2 + 3 x + 1, x, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("CoefficientList[1 + x + y + x y, x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Plus[1, y], Plus[1, y]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Coefficient[x^2 + y, {x, y}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "0"
+    );
+    assert_eq!(
+        session
+            .eval_text("CoefficientList[1 + x + y + x y, {x, y}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 1], List[1, 1]]"
+    );
+}
+
+#[test]
 fn coefficient_list_builds_rectangular_grids_in_the_requested_variable_order() {
     let mut session = core_session();
 

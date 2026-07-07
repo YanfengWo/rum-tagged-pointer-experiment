@@ -66,9 +66,15 @@ pub(crate) fn eval_coefficient(
         }
     };
 
-    polynomial
+    let target_vars = monomial_factor_bases(std::slice::from_ref(&target));
+    let result = polynomial
         .coefficient_for_monomial_power(&target, power)
-        .to_expr(session)
+        .to_expr(session)?;
+    if output_has_negative_target_power(&result, &target_vars) {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    Ok(result)
 }
 
 pub(crate) fn eval_coefficient_list(
@@ -87,7 +93,13 @@ pub(crate) fn eval_coefficient_list(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
-    polynomial.coefficient_list_expr(&variables, session)
+    let target_vars = monomial_factor_bases(&variables);
+    let result = polynomial.coefficient_list_expr(&variables, session)?;
+    if output_has_negative_target_power(&result, &target_vars) {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    Ok(result)
 }
 
 pub(crate) fn eval_together(
@@ -157,6 +169,41 @@ fn is_pattern_language_head(expr: &Expr) -> bool {
                         | "Verbatim"
                 )
     )
+}
+
+fn monomial_factor_bases(monomials: &[Monomial]) -> Vec<Expr> {
+    let mut bases = Vec::new();
+
+    for monomial in monomials {
+        for factor in &monomial.factors {
+            if !bases.iter().any(|base| base == &factor.base) {
+                bases.push(factor.base.clone());
+            }
+        }
+    }
+
+    bases
+}
+
+fn output_has_negative_target_power(expr: &Expr, targets: &[Expr]) -> bool {
+    match expr {
+        Expr::Call { head, args } => {
+            if is_system_symbol_name(head, "Power")
+                && args.len() == 2
+                && targets.iter().any(|target| target == &args[0])
+                && expr_as_exact_integer(&args[1])
+                    .is_some_and(|exponent| exponent < BigInt::from(0_u8))
+            {
+                return true;
+            }
+
+            output_has_negative_target_power(head, targets)
+                || args
+                    .iter()
+                    .any(|arg| output_has_negative_target_power(arg, targets))
+        }
+        Expr::Atom(_) => false,
+    }
 }
 
 pub fn parse_indeterminate_expr(expr: &Expr) -> Option<Expr> {
