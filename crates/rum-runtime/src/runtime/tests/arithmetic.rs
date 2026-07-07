@@ -285,6 +285,38 @@ fn plus_and_times_fold_numeric_parts_without_forcing_symbolic_algebra() {
 }
 
 #[test]
+fn total_evaluates_documented_level_forms_and_leaves_invalid_specs_inert() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let cases = [
+        ("Total[{{1, 2}, {3, 4}}]", "List[4, 6]"),
+        ("Total[{1, 2, 3}]", "6"),
+        ("Total[{{1, 2}, {3, 4}}, 1]", "List[4, 6]"),
+        ("Total[{{1, 2}, {3, 4}}, 2]", "10"),
+        ("Total[{1, 2, 3}, 2]", "6"),
+        ("Total[{{1, 2}, {3, 4}}, {1}]", "List[4, 6]"),
+        ("Total[{{1, 2}, {3, 4}}, {2}]", "List[3, 7]"),
+        ("Total[{{1, 2}, {3, 4}}, Infinity]", "10"),
+        (
+            "Total[{{1, 2}, {3}}, {2}]",
+            "Total[List[List[1, 2], List[3]], List[2]]",
+        ),
+        (
+            "Total[{{1, 2}, {3, 4}}, 0]",
+            "Total[List[List[1, 2], List[3, 4]], 0]",
+        ),
+        (
+            "Total[{{1, 2}, {3, 4}}, x]",
+            "Total[List[List[1, 2], List[3, 4]], x]",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
 fn exact_integer_mod_quotient_gcd_lcm_and_powermod_follow_floor_style_semantics() {
     let mut session = session_with_test_rewrite_builtins();
 
