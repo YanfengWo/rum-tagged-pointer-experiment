@@ -352,6 +352,68 @@ fn setoptions_and_optionvalue_match_known_system_options_by_name() {
 }
 
 #[test]
+fn codec_and_schema_options_are_discoverable() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Options[System`ToJson]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Indent, None]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[System`ToXml]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Indent, None]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[System`FromCsv]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Delimiter, \",\"], Rule[Headers, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[System`ToCsv]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Delimiter, \",\"], Rule[Headers, Automatic]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[System`ConformSchema]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[AllowExtraKeys, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[System`SchemaErrors]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[AllowExtraKeys, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("OptionValue[System`FromCsv, \"Delimiter\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "\",\""
+    );
+}
+
+#[test]
 fn argumentsoptions_and_checkarguments_cover_current_first_pass_subset() {
     let mut session = session_with_test_control_builtins();
 

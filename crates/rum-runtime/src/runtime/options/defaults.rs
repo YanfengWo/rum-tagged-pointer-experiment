@@ -22,6 +22,13 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
         "Cases" | "DeleteCases" | "Count" | "MemberQ" | "Level" | "Depth" | "Replace" => {
             vec![system_rule_option("Heads", bool_option(false))]
         }
+        "ConformSchema" | "SchemaErrors" => {
+            vec![system_rule_option("AllowExtraKeys", bool_option(false))]
+        }
+        "FromCsv" => vec![
+            system_rule_option("Delimiter", Expr::string(",")),
+            system_rule_option("Headers", bool_option(false)),
+        ],
         "ReplaceRepeated" => vec![system_rule_option(
             "MaxIterations",
             system_expr("Automatic"),
@@ -96,6 +103,12 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
         "TemplateApply" | "Uncompress" | "HtmlUnescape" => {
             vec![system_rule_option("Strict", bool_option(false))]
         }
+        "ToCsv" => vec![
+            system_rule_option("Delimiter", Expr::string(",")),
+            system_rule_option("Headers", system_expr("Automatic")),
+        ],
+        "ToJson" => vec![system_rule_option("Indent", system_expr("None"))],
+        "ToXml" => vec![system_rule_option("Indent", system_expr("None"))],
         "UrlEncode" | "UrlDecode" => vec![system_rule_option("FormEncoding", bool_option(false))],
         "UrlParse" => vec![
             system_rule_option("DefaultScheme", system_expr("None")),
