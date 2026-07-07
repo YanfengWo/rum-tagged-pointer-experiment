@@ -144,10 +144,11 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   (WL clearly errors on the malformed ARG, not a singularity) — Fibonacci
   arity, integer_digits base<2 + negative length, malformed D specs
   (non-variable/negative order; defer symbolic order). rum-stdlib. No A/B.
-- [ ] brief-188 (unit-5 fix 2): clean WL-value fixes — Mod[m,0]->m,
-  PartitionsP/Q[-1]->0, + per-function combinatorics/number-theory where
-  WL gives a plain integer (defer uncertain). No messages, no special
-  values.
+- [ ] brief-188 (unit-5 fix 2, in flight): clean WL-value fixes —
+  Mod[m,0]->m + PartitionsP/Q[-1]->0 ONLY (the two certain cases). All
+  other combinatorics/number-theory negatives + Quotient/PowerMod zero
+  DEFER (stay inert). No messages, no special values, shared
+  nonnegative_combinatorics_index untouched.
 - [ ] brief-189 (unit-5 fix 3): polynomial target-containment guard
   (CoefficientList; Coefficient only where genuinely wrong).
 - [ ] brief-190 (unit-5 fix 4): cheap flexibility — Total level forms,
