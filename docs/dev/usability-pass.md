@@ -160,11 +160,15 @@ in kernel_data/stdlib); registered defaults feed `Options`/
    `docs/dev/wfr-core-survey.md`): `SelectPositions`, `Duplicates`,
    `BinarySearch` — no operator forms until the thaw.
 
-FROZEN (perf moratorium, one thaw batch later): ALL unit-2 operator
-forms — `Take`/`Drop`/`Insert`/`Delete`/`TakeList`/`Partition`/
-`Riffle`/`GatherBy`/`MaxBy`/`MinBy`/`TakeLargestBy`/`TakeSmallestBy`/
-`DeleteDuplicatesBy`/`ReverseSortBy` + the new additions' operator
-forms.
+THAWED 2026-07-07 (perf moratorium lifted by the user): the unit-2
+operator forms — `Take`/`Drop`/`Insert`/`Delete`/`TakeList`/
+`Partition`/`Riffle`/`GatherBy`/`MaxBy`/`MinBy`/`TakeLargestBy`/
+`TakeSmallestBy`/`DeleteDuplicatesBy`/`ReverseSortBy` — go as
+brief-175 after 171, WITH the restored microbench A/B hard gate
+(saved-binaries alternating-run protocol). The unit-1 leftovers
+(`StringTake`/`Drop`/`Count`/`Position` operator forms) join 175 ONLY
+if WL documentation confirms those forms exist; otherwise they stay a
+separate design decision.
 
 Corrections to audit findings (so fix briefs do not inherit them):
 `LongestCommonSubsequence`'s contiguous behavior IS the WL contract

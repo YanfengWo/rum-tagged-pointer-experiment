@@ -71,8 +71,14 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   **UNIT 1 (strings) CLOSED** — deferred/debt ledger in the tracker.
 - [x] brief-169 DONE (992e904): unit-2 audit, 89/89; triage + five-batch
   queue in the tracker (operator forms frozen pending perf thaw).
-- [ ] brief-170 (unit-2 batch 1): `Heads -> False` registration for the
-  eight map/apply symbols (discovery pattern, zero behavior change).
+- [x] brief-170 DONE (226bceb): Heads registration for the map/apply
+  eight; workspace 1345/0. PERF MORATORIUM LIFTED same day — unit-2
+  operator forms thawed as brief-175 (after 171), microbench A/B gate
+  restored.
+- [ ] brief-171 (unit-2 batch 2): spec flexibility — `Subsets`
+  advertised size specs (lying diagnostic), `PadLeft`/`PadRight` list
+  dims, `Partition` alignment/padding forms, `Transpose` general
+  permutations, `Reverse[expr, All]`, `Riffle` positional forms.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
