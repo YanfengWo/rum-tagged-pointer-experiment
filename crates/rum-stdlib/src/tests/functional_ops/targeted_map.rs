@@ -49,6 +49,63 @@ fn mapat_mapthread_and_subsetmap_cover_current_first_pass_subset() {
 }
 
 #[test]
+fn targeted_mapping_reports_only_explicit_missing_or_incompatible_paths() {
+    let mut session = core_session();
+
+    let missing_map_at = session.eval_text("MapAt[f, {a, b}, 3]").unwrap();
+    assert_eq!(missing_map_at.value.to_string(), "List[a, b]");
+    assert!(missing_map_at.messages.iter().any(|message| {
+        message.symbol == "MapAt"
+            && message.tag == "partw"
+            && message.text == "Part 3 of List[a, b] does not exist."
+    }));
+
+    let all_map_at = session.eval_text("MapAt[f, {a, b}, {All, 3}]").unwrap();
+    assert_eq!(all_map_at.value.to_string(), "List[a, b]");
+    assert!(all_map_at.messages.is_empty());
+
+    let successful_map_at = session.eval_text("MapAt[f, {a, b}, 1]").unwrap();
+    assert_eq!(successful_map_at.value.to_string(), "List[f[a], b]");
+    assert!(successful_map_at.messages.is_empty());
+
+    let duplicate_subset = session
+        .eval_text("SubsetMap[Reverse, {a, b}, {{1}, {1}}]")
+        .unwrap();
+    assert_eq!(duplicate_subset.value.to_string(), "List[a, b]");
+    assert!(duplicate_subset.messages.iter().any(|message| {
+        message.symbol == "SubsetMap"
+            && message.tag == "path"
+            && message.text == "Duplicate subset path List[1] is not allowed."
+    }));
+
+    let overlapping_subset = session
+        .eval_text("SubsetMap[Reverse, {a, b}, {{1}, {1, 1}}]")
+        .unwrap();
+    assert_eq!(overlapping_subset.value.to_string(), "List[a, b]");
+    assert!(overlapping_subset.messages.iter().any(|message| {
+        message.symbol == "SubsetMap"
+            && message.tag == "path"
+            && message.text == "Overlapping subset paths List[1] and List[1, 1] are not allowed."
+    }));
+
+    let missing_subset = session
+        .eval_text("SubsetMap[Reverse, {a, b}, {{3}}]")
+        .unwrap();
+    assert_eq!(missing_subset.value.to_string(), "List[a, b]");
+    assert!(missing_subset.messages.iter().any(|message| {
+        message.symbol == "SubsetMap"
+            && message.tag == "path"
+            && message.text.contains("part 3 of List[a, b] does not exist")
+    }));
+
+    let successful_subset = session
+        .eval_text("SubsetMap[Reverse, {a, b, c}, {{1}, {3}}]")
+        .unwrap();
+    assert_eq!(successful_subset.value.to_string(), "List[c, b, a]");
+    assert!(successful_subset.messages.is_empty());
+}
+
+#[test]
 fn targeted_mapping_builtins_report_current_argument_forms() {
     let mut session = core_session();
 

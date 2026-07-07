@@ -19,6 +19,18 @@ struct SubsetMapEvalState {
     fallback: Expr,
 }
 
+struct MissingExactPath {
+    path: Vec<isize>,
+    part: isize,
+    target: Expr,
+}
+
+enum SubsetMapPathFailure {
+    Duplicate(Vec<isize>),
+    Overlap(Vec<isize>, Vec<isize>),
+    Missing(MissingExactPath),
+}
+
 pub(crate) fn eval_subset_map(
     session: &mut Session,
     head: &Expr,
@@ -39,8 +51,11 @@ pub(crate) fn eval_subset_map(
                 ));
             };
 
-            if !subset_map_paths_are_compatible(&paths) {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
+            let explicit_paths = subset_map_explicit_integer_paths_from_expr(positions);
+            if let Some(failure) = subset_map_path_failure(expr, &paths, explicit_paths.as_deref())
+            {
+                session.push_message("SubsetMap", "path", subset_map_path_message(&failure));
+                return Ok(expr.clone());
             }
 
             apply_subset_map(session, head, operator, expr, &paths, args)
@@ -68,6 +83,13 @@ pub(crate) fn eval_map_at(
                     "expected an exact part specification or list of exact part specifications as the third argument",
                 ));
             };
+
+            if let Some(explicit_paths) = map_at_explicit_integer_paths_from_expr(position_spec) {
+                if let Some(missing) = first_missing_exact_path(expr, &explicit_paths) {
+                    push_missing_part_message(session, "MapAt", "partw", &missing);
+                    return Ok(expr.clone());
+                }
+            }
 
             apply_map_at_paths(session, operator, expr.clone(), paths)
         }
@@ -315,19 +337,68 @@ fn map_thread_inputs(
     )))
 }
 
-fn subset_map_paths_are_compatible(paths: &[Vec<isize>]) -> bool {
+fn subset_map_path_failure(
+    expr: &Expr,
+    paths: &[Vec<isize>],
+    explicit_paths: Option<&[Vec<isize>]>,
+) -> Option<SubsetMapPathFailure> {
+    if let Some(failure) = subset_map_path_compatibility_failure(paths) {
+        return Some(failure);
+    }
+
+    if let Some(explicit_paths) = explicit_paths {
+        if let Some(failure) = subset_map_path_compatibility_failure(explicit_paths) {
+            return Some(failure);
+        }
+
+        if let Some(missing) = first_missing_exact_path(expr, explicit_paths) {
+            return Some(SubsetMapPathFailure::Missing(missing));
+        }
+    }
+
+    None
+}
+
+fn subset_map_path_compatibility_failure(paths: &[Vec<isize>]) -> Option<SubsetMapPathFailure> {
     for (index, path) in paths.iter().enumerate() {
         for other in paths.iter().skip(index + 1) {
-            if path == other
-                || path.starts_with(other.as_slice())
-                || other.starts_with(path.as_slice())
-            {
-                return false;
+            if path == other {
+                return Some(SubsetMapPathFailure::Duplicate(path.clone()));
+            }
+
+            if path.starts_with(other.as_slice()) || other.starts_with(path.as_slice()) {
+                return Some(SubsetMapPathFailure::Overlap(path.clone(), other.clone()));
             }
         }
     }
 
-    true
+    None
+}
+
+fn subset_map_path_message(failure: &SubsetMapPathFailure) -> String {
+    match failure {
+        SubsetMapPathFailure::Duplicate(path) => {
+            format!(
+                "Duplicate subset path {} is not allowed.",
+                position_expr_from_path(path)
+            )
+        }
+        SubsetMapPathFailure::Overlap(left, right) => {
+            format!(
+                "Overlapping subset paths {} and {} are not allowed.",
+                position_expr_from_path(left),
+                position_expr_from_path(right)
+            )
+        }
+        SubsetMapPathFailure::Missing(missing) => {
+            format!(
+                "Path {} cannot be used because part {} of {} does not exist.",
+                position_expr_from_path(&missing.path),
+                missing.part,
+                missing.target
+            )
+        }
+    }
 }
 
 fn subset_map_paths_from_expr(expr: &Expr, spec_expr: &Expr) -> Option<Vec<Vec<isize>>> {
@@ -381,4 +452,101 @@ fn apply_subset_map(
     })?;
 
     finish_subset_map_from_mapped(session, state, mapped)
+}
+
+fn map_at_explicit_integer_paths_from_expr(spec_expr: &Expr) -> Option<Vec<Vec<isize>>> {
+    if let Some(index) = expr_as_signed_isize(spec_expr) {
+        return Some(vec![vec![index]]);
+    }
+
+    if let Some(path) = exact_integer_path_from_expr(spec_expr) {
+        return Some(vec![path]);
+    }
+
+    let Expr::Call { head, args } = spec_expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "List") || !args.iter().all(is_plain_list_call) {
+        return None;
+    }
+
+    args.iter().map(exact_integer_path_from_expr).collect()
+}
+
+fn subset_map_explicit_integer_paths_from_expr(spec_expr: &Expr) -> Option<Vec<Vec<isize>>> {
+    if let Some(index) = expr_as_signed_isize(spec_expr) {
+        return Some(vec![vec![index]]);
+    }
+
+    let Expr::Call { head, args } = spec_expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    if args.iter().all(|arg| !is_plain_list_call(arg)) {
+        return args
+            .iter()
+            .map(|arg| expr_as_signed_isize(arg).map(|index| vec![index]))
+            .collect();
+    }
+
+    args.iter().map(exact_integer_path_from_expr).collect()
+}
+
+fn exact_integer_path_from_expr(expr: &Expr) -> Option<Vec<isize>> {
+    if let Some(index) = expr_as_signed_isize(expr) {
+        return Some(vec![index]);
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !is_system_symbol_name(head, "List") {
+        return None;
+    }
+
+    args.iter().map(expr_as_signed_isize).collect()
+}
+
+fn is_plain_list_call(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Call { head, .. } if is_system_symbol_name(head, "List")
+    )
+}
+
+fn first_missing_exact_path(expr: &Expr, paths: &[Vec<isize>]) -> Option<MissingExactPath> {
+    for path in paths {
+        let mut target = expr.clone();
+        for part in path {
+            let Some(next) = exact_expr_at_path(&target, &[*part]) else {
+                return Some(MissingExactPath {
+                    path: path.clone(),
+                    part: *part,
+                    target,
+                });
+            };
+            target = next;
+        }
+    }
+
+    None
+}
+
+fn push_missing_part_message(
+    session: &mut Session,
+    symbol: &str,
+    tag: &str,
+    missing: &MissingExactPath,
+) {
+    session.push_message(
+        symbol,
+        tag,
+        format!(
+            "Part {} of {} does not exist.",
+            missing.part, missing.target
+        ),
+    );
 }

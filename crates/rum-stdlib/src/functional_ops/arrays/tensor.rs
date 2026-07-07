@@ -123,6 +123,7 @@ pub(super) fn array_reduce_full_index(
 
 pub(super) fn compute_inner(
     session: &mut Session,
+    caller: &str,
     f: &Expr,
     left: &Expr,
     right: &Expr,
@@ -161,6 +162,16 @@ pub(super) fn compute_inner(
     };
 
     if left_contract_dim != contract_dim {
+        let tag = if caller == "Dot" { "dot" } else { "dim" };
+        push_tensor_message_once(
+            session,
+            caller,
+            tag,
+            format!(
+                "Tensor contraction dimensions {} and {} do not match for {} and {}.",
+                left_contract_dim, contract_dim, left, right
+            ),
+        );
         return Ok(None);
     }
 
@@ -188,6 +199,18 @@ pub(super) fn compute_inner(
     };
 
     resume_inner_output_from_index(session, state, 0, Vec::new()).map(Some)
+}
+
+fn push_tensor_message_once(session: &mut Session, symbol: &str, tag: &str, text: String) {
+    if session
+        .messages()
+        .iter()
+        .any(|message| message.symbol == symbol && message.tag == tag && message.text == text)
+    {
+        return;
+    }
+
+    session.push_message(symbol, tag, text);
 }
 
 pub(super) fn resume_tensor_callback_from_index(

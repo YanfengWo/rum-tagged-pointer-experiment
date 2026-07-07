@@ -202,6 +202,49 @@ fn inner_arrayfilter_and_arrayreduce_cover_current_subset() {
 }
 
 #[test]
+fn inner_and_dot_dimension_mismatches_report_only_rectangular_same_head_cases() {
+    let mut session = core_session();
+
+    let inner = session.eval_text("Inner[f, {a, b}, {{c, d}}, g]").unwrap();
+    assert_eq!(
+        inner.value.to_string(),
+        "Inner[f, List[a, b], List[List[c, d]], g]"
+    );
+    assert!(inner.messages.iter().any(|message| {
+        message.symbol == "Inner"
+            && message.tag == "dim"
+            && message.text.contains("2")
+            && message.text.contains("1")
+    }));
+
+    let dot = session.eval_text("Dot[{a, b}, {c}]").unwrap();
+    assert_eq!(dot.value.to_string(), "Dot[List[a, b], List[c]]");
+    assert!(dot.messages.iter().any(|message| {
+        message.symbol == "Dot"
+            && message.tag == "dot"
+            && message.text.contains("2")
+            && message.text.contains("1")
+    }));
+
+    let symbolic_dot = session.eval_text("Dot[x, y]").unwrap();
+    assert_eq!(symbolic_dot.value.to_string(), "Dot[x, y]");
+    assert!(symbolic_dot.messages.is_empty());
+
+    let symbolic_inner = session.eval_text("Inner[f, p, q, g]").unwrap();
+    assert_eq!(symbolic_inner.value.to_string(), "Inner[f, p, q, g]");
+    assert!(symbolic_inner.messages.is_empty());
+
+    let ragged_inner = session
+        .eval_text("Inner[f, {a, b}, {{c}, {d, e}}, g]")
+        .unwrap();
+    assert_eq!(
+        ragged_inner.value.to_string(),
+        "Inner[f, List[a, b], List[List[c], List[d, e]], g]"
+    );
+    assert!(ragged_inner.messages.is_empty());
+}
+
+#[test]
 fn array_and_outer_cover_current_dense_generation_subset() {
     let mut session = core_session();
 

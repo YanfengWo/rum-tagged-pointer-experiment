@@ -21,7 +21,7 @@ pub(crate) fn eval_inner(
         _ => return Ok(session.invalid_call_with_arg_range("Inner", args, 3, 4)),
     };
 
-    let Some(result) = compute_inner(session, f, left, right, &g)? else {
+    let Some(result) = compute_inner(session, "Inner", f, left, right, &g)? else {
         return Ok(Expr::call(system_expr("Inner"), args.to_vec()));
     };
 
@@ -44,7 +44,7 @@ pub(crate) fn eval_dot(
     let plus = system_expr("Plus");
     let mut current = first.clone();
     for next in rest {
-        let Some(result) = compute_inner(session, &times, &current, next, &plus)? else {
+        let Some(result) = compute_inner(session, "Dot", &times, &current, next, &plus)? else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
         current = result;
