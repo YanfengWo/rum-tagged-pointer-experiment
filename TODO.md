@@ -116,16 +116,21 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   `Heads -> False` (levelspec head traversal, Cases/DeleteCases parity;
   flexibility). No A/B gate; defaults byte-identical. Reuses the shared
   `parse_heads_option_with_default` helper. Workspace 1371/0.
-- [ ] brief-185 (unit-4 batch 3): `Sum`/`Product` malformed-iterator
-  diagnostics — `argform` message parity with `Do`/`Table` (mirror the
-  `driver.rs` `None` branch; inert return byte-identical, only a message
-  added). Low-risk safety, no A/B gate.
-- [ ] Unit-4 close-out (after 185): verify `Equivalent`'s WL attribute
-  surface before any change — the audit believes `{Orderless,
-  Protected}` (NOT Flat/OneIdentity); a Flat/OneIdentity add touches
-  attribute-driven planning (would need the A/B gate) and is NOT done
-  until the WL surface is confirmed. `Implies` short-circuit stays
-  REJECTED (rum matches WL: `{Protected}`, non-held).
+- [x] brief-185 DONE (f18c17b): `Sum`/`Product` malformed-iterator
+  `argform` parity with `Do`/`Table` (mirror the shared `parse_do_spec`
+  `None` verdict; inert return byte-identical, only a message added).
+  Cross-crate ripple: a rum-stdlib test asserting the old silence was
+  updated (necessary, not scope creep). Workspace 1373/0.
+- [x] **UNIT 4 CLOSED (2026-07-07):** 181 audit + 182-185. Close-out
+  decisions in the tracker: `Equivalent` Flat/OneIdentity REJECTED
+  (conservative — WL surface unconfirmed, no oracle per policy, folk
+  scope gains nothing, touches planning); `Implies` short-circuit stays
+  REJECTED. Separate future candidate: boolean-head attribute hygiene
+  (missing `Protected`; `And`/`Or` `{HoldAll}` vs WL — likely
+  intentional, own design pass). Units 1-4 = 334 builtins swept.
+- [ ] NEXT: unit 5 audit (arithmetic + number_theory + combinatorics +
+  integer_digits + polynomials + calculus, 62) — audit brief, findings
+  file, then triage. Awaiting go-ahead.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

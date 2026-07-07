@@ -52,7 +52,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
 | 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
 | 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
-| 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182… (triage below) |
+| 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
@@ -228,6 +228,46 @@ Routine fix batches (dispatch order):
 3. **brief-184 — iteration diagnostics** (low-risk safety):
    `Sum`/`Product` malformed-iterator messages matching `Do`/`Table`.
 4. **Exit capability** (pending user decision).
+
+(NOTE — the batches were renumbered at dispatch: brief-183 = the
+user-decided Exit capability; brief-184 = rewrite options; brief-185 =
+Sum/Product diagnostics.)
+
+**UNIT 4 CLOSED (2026-07-07).** Landed: 181 audit + 182 (five rewrite
+operator forms, A/B clean) + 183 (Exit → Capability::Process, USER
+decision; sandboxed() drops it, trusted CLI byte-identical) + 184
+(rewrite options: `ReplaceRepeated` `MaxIterations -> Automatic` clamped
+to the session ceiling with malformed-value fail-close, `Replace`
+`Heads -> False` levelspec head traversal) + 185 (`Sum`/`Product`
+`argform` parity with `Do`/`Table` on the shared `parse_do_spec` `None`
+verdict; inert return byte-identical). Workspace 1366 → 1373; reference
+unchanged (operator forms and options are not in the generated
+reference). Cumulative: units 1-4 = 334 builtins swept, all fixes compat
+(defaults byte-identical).
+
+Close-out decisions (no further brief):
+- **`Equivalent` Flat/OneIdentity — REJECTED (conservative).** rum
+  registers `Equivalent` as `{Orderless}` (`logic.rs:39`). Adding
+  `Flat`/`OneIdentity` is declined: the WL surface is unconfirmed and
+  the testing policy forbids oracle-checking it; folk scope gains
+  nothing from associative flattening of a biconditional; and the change
+  would touch attribute-driven planning (an A/B gate) for zero
+  user-facing benefit. Same disposition as the `Implies` short-circuit
+  (rum matches WL `{Protected}`, non-held — kept). A SEPARATE
+  attribute-hygiene question remains a future candidate (not this unit):
+  rum's boolean heads diverge from WL more broadly — `Equivalent` and
+  several others lack `Protected`, and `And`/`Or` are `{HoldAll}` in rum
+  (short-circuit semantics) vs WL's `{Flat, OneIdentity, HoldAll,
+  Protected}`; that HoldAll divergence is likely intentional and any
+  touch there needs its own design pass.
+
+Gate lesson (added to the standing set): a behavior-change brief's
+MAY-modify list must span EVERY test file that asserts the old behavior,
+across crates — brief-185's message addition rippled into a rum-stdlib
+test (`holding_and_control_part5`) that encoded the old silence, outside
+the runtime-only MAY list; updating it was necessary (a red tree
+otherwise), not scope creep. Pre-include cross-crate behavior tests in
+the MAY list next time.
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 
