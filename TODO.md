@@ -149,8 +149,12 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   other combinatorics/number-theory negatives + Quotient/PowerMod zero
   DEFER (stay inert). No messages, no special values, shared
   nonnegative_combinatorics_index untouched.
-- [ ] brief-189 (unit-5 fix 3): polynomial target-containment guard
-  (CoefficientList; Coefficient only where genuinely wrong).
+- [ ] brief-189 (unit-5 fix 3, in flight): polynomial target-containment
+  guard. Precise: fail closed only when an output coefficient contains a
+  NEGATIVE INTEGER POWER of a target variable (Power[x,neg], the Laurent
+  leak) — NOT a naive "contains target" (Sin[x] as x^0 coeff is
+  WL-correct). Only Coefficient[x+1/x,x,0] + CoefficientList[x+1/x,x]
+  newly inert; Sin[x]/1/(1+x)/genuine polynomials unchanged.
 - [ ] brief-190 (unit-5 fix 4): cheap flexibility — Total level forms,
   Commonest[list,n], list-valued Quantile, PowerMod modular inverse.
 - [ ] brief-191 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
