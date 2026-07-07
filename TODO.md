@@ -164,8 +164,10 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   1..n) / Total[list,{k}] (contract level k) / Total[list,Infinity]
   (all levels). Build nested Plus/List tree, evaluate once; 1-arg
   byte-identical. WL cases derived: Total[m,{2}]->{3,7}, Total[m,2]->10.
-- [ ] brief-192 (unit-5 fix 4c): PowerMod negative-exponent modular
-  inverse (extended-GCD; message on non-invertible base). integer_ops.rs.
+- [ ] brief-192 (unit-5 fix 4c, in flight): PowerMod negative-exponent
+  modular inverse via hand-rolled extended Euclid (PowerMod[2,-1,5]->3);
+  non-invertible base -> PowerMod::ninv + inert; zero modulus stays
+  inert. Reuses power_mod_integer for (a^-1)^k. No new dep.
 - [ ] brief-193 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
   (Orderless/Flat/OneIdentity, WL-correct) + Abs numeric/protected. A/B
   gate (attribute-driven planning).
