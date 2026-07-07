@@ -54,7 +54,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
 | 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
-| 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 |
+| 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
 | 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
 | 9 | kernel B: scoping/eval control/patterns/forms | ~55 | | |
@@ -436,6 +436,51 @@ Fix batches (dispatch order — safety first):
    spec/schema forms are not data forms (E11: they currently fail at wrapper
    construction). Touches call planning → core-language microbench A/B (the
    175/182 protocol).
+
+**UNIT 6 CLOSED (2026-07-08).** Landed: 194 audit + 195 (digest
+fail-closed on unknown output format + `"Hex"` alias + `Crc32` non-security
+note) + 196 (`Protected` on all 34 heads; `HoldRest` preserved on the two
+schema heads; runtime mirror + drift test) + 197 (option-discovery
+registration for `ToJson`/`ToXml`/`FromCsv`/`ToCsv`/`ConformSchema`/
+`SchemaErrors`) + 198 (`DateString[date, fmt]` ISODateTime/ISODate/ISOTime +
+`DayOfWeek[date, sel]` Name/ISOInteger) + 199 (`DatePlus[spec]` operator
+form, A/B clean). Workspace 1385 → ~1391; reference: `Crc32` +
+DateString/DayOfWeek Limits, 34 Attributes lines → `Protected`. Cumulative
+units 1-6 = 430 builtins swept, all fixes compat (defaults byte-identical).
+The healthiest unit: the highest-value axis (fail-closed parsing) held
+everywhere — no silent-wrong parser bug; only one real behavioral fix (the
+digest inert-on-unknown-format).
+
+Close-out decisions (no further brief):
+- **`ConformSchema[schema]` / `SchemaErrors[schema]` operator forms —
+  DEFERRED (hold semantics).** Both heads carry `HoldRest`, so the direct
+  `ConformSchema[value, schema]` holds the schema (position 2), but the
+  operator capture `ConformSchema[schema]` sits the schema at position 1
+  where it is EVALUATED — a divergence for non-fixed-point schemas
+  (arithmetic/side-effecting values; `Condition` is `{}` not `HoldAll`, so
+  patterns are fixed points in practice but not guaranteed). Shipping on a
+  guess is out; needs its own hold-semantics design pass. `DatePlus` has no
+  hold and a self-evaluating spec, so it shipped clean.
+- **Datetime layering boundary (user architecture ruling 2026-07-08).**
+  The 8 datetime builtins are pure calendar math + a minimal `Capability::
+  Clock`-gated wall-clock read (the `DateList[]`/`DateString[]` zero-arg
+  dual-form; declared `Pure` on purpose so the pure with-arg forms stay
+  usable in `sandboxed()`, with a runtime Clock check on the now-path —
+  NOT the `Exit`-style mislabel, since the gate is real). `Now`/`Today`/
+  `Yesterday`/`Tomorrow`, time zones, locale, DST, `DateObject` are
+  deliberately ABSENT: wall-clock conveniences + tz/locale belong DOWNSTREAM
+  in rum-os (OS authority), reusing these pure primitives. stdlib stays
+  UTC-only, exact-seconds, no tz database — a simple-version by design, not
+  a gap. See [[usability-pass-line]].
+
+Gate lesson (added to the standing set): the docgen `LIMITS` table is
+keyed by name (one note per builtin) — a brief that says "add a Limits
+note" to a builtin that ALREADY has one will OVERWRITE it. brief-198's
+Codex run silently replaced `DateString`'s existing ISO-only/terminating-
+second/Clock note with the format-arg note; caught at the gate and MERGED
+(original constraints preserved + format note appended). When directing a
+docgen Limits note, check for an existing entry and instruct MERGE, not
+replace.
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 
