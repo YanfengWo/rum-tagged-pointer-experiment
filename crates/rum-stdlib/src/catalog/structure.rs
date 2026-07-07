@@ -158,7 +158,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "DeleteDuplicates",
-        "Keeps the first occurrence of structurally equal top-level elements.",
+        "Keeps the first occurrence of structurally equal top-level elements, or of elements equivalent under a custom binary test.",
         structure_ops::eval_delete_duplicates,
     ),
     BuiltinSpec::ordinary(
@@ -168,12 +168,12 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "Tally",
-        "Tallies structurally same top-level elements in first-occurrence order.",
+        "Tallies structurally same top-level elements, or elements equivalent under a custom binary test, with the first element as representative.",
         structure_ops::eval_tally,
     ),
     BuiltinSpec::ordinary(
         "GatherBy",
-        "Groups top-level elements by an evaluated key in first-occurrence key order.",
+        "Groups top-level elements by evaluated keys in first-occurrence key order, including hierarchical grouping for a list of functions.",
         structure_ops::eval_gather_by,
     ),
     BuiltinSpec::ordinary(
@@ -183,12 +183,12 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "SortBy",
-        "Sorts top-level elements by an evaluated key in the current unary-function subset.",
+        "Sorts top-level elements by an evaluated key, optionally ordering keys with a binary predicate and preserving input order for predicate ties.",
         structure_ops::eval_sort_by,
     ),
     BuiltinSpec::ordinary(
         "ReverseSort",
-        "Sorts top-level elements using the current structural ordering subset, then reverses the result.",
+        "Sorts top-level elements using structural ordering or a binary predicate, then reverses the result.",
         structure_ops::eval_reverse_sort,
     ),
     BuiltinSpec::ordinary(
@@ -198,12 +198,12 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary(
         "MaxBy",
-        "Returns the first top-level element attaining the maximum evaluated key under Sort ordering.",
+        "Returns the first top-level element attaining the maximum evaluated key, or the top n in decreasing key order with input-order ties.",
         structure_ops::eval_max_by,
     ),
     BuiltinSpec::ordinary(
         "MinBy",
-        "Returns the first top-level element attaining the minimum evaluated key under Sort ordering.",
+        "Returns the first top-level element attaining the minimum evaluated key, or the bottom n in increasing key order with input-order ties.",
         structure_ops::eval_min_by,
     ),
     BuiltinSpec::ordinary(
@@ -223,19 +223,19 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Union",
-        "Returns sorted unique elements across same-head normal expressions.",
+        "Returns sorted unique elements across same-head normal expressions; SameTest keeps the first representative in structural scan order.",
         SET_OPERATION_ATTRIBUTES,
         structure_ops::eval_union,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "Intersection",
-        "Returns sorted unique elements common to all same-head normal expressions.",
+        "Returns sorted unique elements common to all same-head normal expressions; SameTest keeps the first representative in structural scan order.",
         SET_OPERATION_ATTRIBUTES,
         structure_ops::eval_intersection,
     ),
     BuiltinSpec::ordinary(
         "Complement",
-        "Returns sorted unique elements from the first expression that are absent from later same-head expressions.",
+        "Returns sorted unique elements from the first expression that are absent from later same-head expressions; SameTest keeps the first representative in structural scan order.",
         structure_ops::eval_complement,
     ),
     BuiltinSpec::ordinary(

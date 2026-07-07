@@ -1,14 +1,31 @@
 use super::*;
 
+#[derive(Clone)]
+struct DeleteDuplicatesTestState {
+    expr_head: Expr,
+    test: Expr,
+    items: Vec<Expr>,
+    index: usize,
+    kept: Vec<Expr>,
+}
+
 pub(crate) fn eval_delete_duplicates(
     session: &mut Session,
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [expr] = args else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
+    match args {
+        [expr] => eval_delete_duplicates_structural(session, expr, args),
+        [expr, test] => eval_delete_duplicates_with_test(session, expr, test, args),
+        _ => Ok(Expr::call(head.clone(), args.to_vec())),
+    }
+}
 
+fn eval_delete_duplicates_structural(
+    session: &mut Session,
+    expr: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
     let Expr::Call {
         head: expr_head,
         args: expr_args,
@@ -25,6 +42,36 @@ pub(crate) fn eval_delete_duplicates(
         expr_head.as_ref().clone(),
         stable_unique_exprs(expr_args),
     ))
+}
+
+fn eval_delete_duplicates_with_test(
+    session: &mut Session,
+    expr: &Expr,
+    test: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let Expr::Call {
+        head: expr_head,
+        args: expr_args,
+    } = expr
+    else {
+        return Ok(invalid_delete_duplicates_normal_call(
+            session,
+            "DeleteDuplicates",
+            args,
+        ));
+    };
+
+    resume_delete_duplicates_test_from_index(
+        session,
+        DeleteDuplicatesTestState {
+            expr_head: expr_head.as_ref().clone(),
+            test: test.clone(),
+            items: expr_args.to_vec(),
+            index: 0,
+            kept: Vec::new(),
+        },
+    )
 }
 
 pub(crate) fn eval_delete_duplicates_by(
@@ -132,6 +179,68 @@ fn resume_delete_duplicates_by_with_key(
         keys,
         kept,
     )
+}
+
+fn resume_delete_duplicates_test_from_index(
+    session: &mut Session,
+    mut state: DeleteDuplicatesTestState,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = state.items.get(state.index).cloned() else {
+            return Ok(Expr::call(state.expr_head, state.kept));
+        };
+
+        if state.kept.is_empty() {
+            state.kept.push(item);
+            state.index += 1;
+            continue;
+        }
+
+        return resume_delete_duplicates_test_from_kept(session, state, item, 0);
+    }
+}
+
+fn resume_delete_duplicates_test_from_kept(
+    session: &mut Session,
+    mut state: DeleteDuplicatesTestState,
+    item: Expr,
+    kept_index: usize,
+) -> Result<Expr, EvalError> {
+    let Some(existing) = state.kept.get(kept_index).cloned() else {
+        state.kept.push(item);
+        state.index += 1;
+        return resume_delete_duplicates_test_from_index(session, state);
+    };
+
+    let result = eval_binary_predicate(session, &state.test, &item, &existing);
+    let suspended_state = state.clone();
+    let suspended_item = item.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_delete_duplicates_test_with_value(
+            session,
+            suspended_state,
+            suspended_item,
+            kept_index,
+            value,
+        )
+    })?;
+
+    resume_delete_duplicates_test_with_value(session, state, item, kept_index, value)
+}
+
+fn resume_delete_duplicates_test_with_value(
+    session: &mut Session,
+    mut state: DeleteDuplicatesTestState,
+    item: Expr,
+    kept_index: usize,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if is_true_expr(&value) {
+        state.index += 1;
+        resume_delete_duplicates_test_from_index(session, state)
+    } else {
+        resume_delete_duplicates_test_from_kept(session, state, item, kept_index + 1)
+    }
 }
 
 fn invalid_delete_duplicates_normal_call(

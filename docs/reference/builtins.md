@@ -590,7 +590,7 @@ Returns the most frequent elements of a list in first-occurrence order, includin
 
 ### Complement
 
-Returns sorted unique elements from the first expression that are absent from later same-head expressions.
+Returns sorted unique elements from the first expression that are absent from later same-head expressions; SameTest keeps the first representative in structural scan order.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -889,10 +889,11 @@ Deletes subexpressions matching a pattern on levels specified by a standard leve
 
 ### DeleteDuplicates
 
-Keeps the first occurrence of structurally equal top-level elements.
+Keeps the first occurrence of structurally equal top-level elements, or of elements equivalent under a custom binary test.
 
 - Attributes: `None`
 - Capability: `Pure`
+- Limits: the custom binary-test form performs pairwise O(n^2) representative comparisons and keeps the first representative.
 
 ### DeleteDuplicatesBy
 
@@ -1487,7 +1488,7 @@ Computes the greatest common divisor of exact integers.
 
 ### GatherBy
 
-Groups top-level elements by an evaluated key in first-occurrence key order.
+Groups top-level elements by evaluated keys in first-occurrence key order, including hierarchical grouping for a list of functions.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1746,7 +1747,7 @@ Tests whether two Lists share any element in the current exact structural subset
 
 ### Intersection
 
-Returns sorted unique elements common to all same-head normal expressions.
+Returns sorted unique elements common to all same-head normal expressions; SameTest keeps the first representative in structural scan order.
 
 - Attributes: `Flat`, `OneIdentity`, `Protected`, `ReadProtected`
 - Capability: `Pure`
@@ -2089,7 +2090,7 @@ Returns the maximum exact integer or rational operand.
 
 ### MaxBy
 
-Returns the first top-level element attaining the maximum evaluated key under Sort ordering.
+Returns the first top-level element attaining the maximum evaluated key, or the top n in decreasing key order with input-order ties.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -2195,7 +2196,7 @@ Returns the minimum exact integer or rational operand.
 
 ### MinBy
 
-Returns the first top-level element attaining the minimum evaluated key under Sort ordering.
+Returns the first top-level element attaining the minimum evaluated key, or the bottom n in increasing key order with input-order ties.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3042,7 +3043,7 @@ Represents a wrapper that reverses current call arguments before application in 
 
 ### ReverseSort
 
-Sorts top-level elements using the current structural ordering subset, then reverses the result.
+Sorts top-level elements using structural ordering or a binary predicate, then reverses the result.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3298,7 +3299,7 @@ Sorts top-level elements using the current structural ordering subset.
 
 ### SortBy
 
-Sorts top-level elements by an evaluated key in the current unary-function subset.
+Sorts top-level elements by an evaluated key, optionally ordering keys with a binary predicate and preserving input order for predicate ties.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -3772,10 +3773,11 @@ Takes the longest prefix satisfying a criterion in the current first-pass subset
 
 ### Tally
 
-Tallies structurally same top-level elements in first-occurrence order.
+Tallies structurally same top-level elements, or elements equivalent under a custom binary test, with the first element as representative.
 
 - Attributes: `None`
 - Capability: `Pure`
+- Limits: the custom binary-test form performs pairwise O(n^2) representative comparisons and uses the first element of each class as representative.
 
 ### TemplateApply
 
@@ -4071,7 +4073,7 @@ Temporarily leaves an argument unevaluated as a direct function argument.
 
 ### Union
 
-Returns sorted unique elements across same-head normal expressions.
+Returns sorted unique elements across same-head normal expressions; SameTest keeps the first representative in structural scan order.
 
 - Attributes: `Flat`, `OneIdentity`, `Protected`, `ReadProtected`
 - Capability: `Pure`

@@ -56,6 +56,22 @@ fn invalid_normal_expression_call(session: &mut Session, symbol: &str, args: &[E
     Expr::call(system_expr(symbol), args.to_vec())
 }
 
+fn eval_binary_predicate(
+    session: &mut Session,
+    predicate: &Expr,
+    lhs: &Expr,
+    rhs: &Expr,
+) -> Result<Expr, EvalError> {
+    session.evaluate(Expr::call(
+        predicate.clone(),
+        vec![lhs.clone(), rhs.clone()],
+    ))
+}
+
+fn is_true_expr(expr: &Expr) -> bool {
+    is_system_symbol_name(expr, heads::structure::TRUE)
+}
+
 fn is_plain_list_expr(expr: &Expr) -> bool {
     matches!(
         expr,

@@ -10,6 +10,12 @@ struct KeyedEntry {
     index: usize,
 }
 
+#[derive(Clone, Debug)]
+struct GatherPathEntry {
+    item: Expr,
+    keys: Vec<Expr>,
+}
+
 #[derive(Clone)]
 struct DecorateByState {
     expr_head: Expr,
@@ -18,9 +24,27 @@ struct DecorateByState {
     operation: DecoratedOperation,
 }
 
+#[derive(Clone)]
+struct TallyTestState {
+    test: Expr,
+    items: Vec<Expr>,
+    index: usize,
+    counts: Vec<(Expr, usize)>,
+}
+
+#[derive(Clone)]
+struct GatherByFunctionListState {
+    items: Vec<Expr>,
+    functions: Vec<Expr>,
+    item_index: usize,
+    function_index: usize,
+    keys: Vec<Vec<Expr>>,
+}
+
 #[derive(Clone, Copy)]
 enum DecoratedOperation {
     MaxBy { select_max: bool },
+    ExtremeByCount { largest: bool, count: usize },
     TakeBy { largest: bool, count: usize },
     ReverseSortBy,
     GatherBy,
@@ -31,13 +55,27 @@ pub(crate) fn eval_tally(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [expr] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("Tally", args, 1));
+    let (expr, test) = match args {
+        [expr] => (expr, None),
+        [expr, test] => (expr, Some(test)),
+        _ => return Ok(session.invalid_call_with_exact_arg_count("Tally", args, 1)),
     };
 
     let Some((_expr_head, items)) = normal_call_parts(expr) else {
         return Ok(invalid_collection_normal_call(session, "Tally", args));
     };
+
+    if let Some(test) = test {
+        return resume_tally_test_from_index(
+            session,
+            TallyTestState {
+                test: test.clone(),
+                items,
+                index: 0,
+                counts: Vec::new(),
+            },
+        );
+    }
 
     let mut counts = Vec::<(Expr, usize)>::new();
     for item in items {
@@ -54,6 +92,72 @@ pub(crate) fn eval_tally(
             .map(|(item, count)| list_expr(vec![item, Expr::integer(BigInt::from(count))]))
             .collect(),
     ))
+}
+
+fn resume_tally_test_from_index(
+    session: &mut Session,
+    mut state: TallyTestState,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = state.items.get(state.index).cloned() else {
+            return Ok(render_tally_counts(state.counts));
+        };
+
+        if state.counts.is_empty() {
+            state.counts.push((item, 1));
+            state.index += 1;
+            continue;
+        }
+
+        return resume_tally_test_from_count(session, state, item, 0);
+    }
+}
+
+fn resume_tally_test_from_count(
+    session: &mut Session,
+    mut state: TallyTestState,
+    item: Expr,
+    count_index: usize,
+) -> Result<Expr, EvalError> {
+    let Some((representative, _)) = state.counts.get(count_index).cloned() else {
+        state.counts.push((item, 1));
+        state.index += 1;
+        return resume_tally_test_from_index(session, state);
+    };
+
+    let result = eval_binary_predicate(session, &state.test, &item, &representative);
+    let suspended_state = state.clone();
+    let suspended_item = item.clone();
+    let value = session.suspend_with_frame(result, move |session, value| {
+        resume_tally_test_with_value(session, suspended_state, suspended_item, count_index, value)
+    })?;
+
+    resume_tally_test_with_value(session, state, item, count_index, value)
+}
+
+fn resume_tally_test_with_value(
+    session: &mut Session,
+    mut state: TallyTestState,
+    item: Expr,
+    count_index: usize,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if is_true_expr(&value) {
+        state.counts[count_index].1 += 1;
+        state.index += 1;
+        resume_tally_test_from_index(session, state)
+    } else {
+        resume_tally_test_from_count(session, state, item, count_index + 1)
+    }
+}
+
+fn render_tally_counts(counts: Vec<(Expr, usize)>) -> Expr {
+    list_expr(
+        counts
+            .into_iter()
+            .map(|(item, count)| list_expr(vec![item, Expr::integer(BigInt::from(count))]))
+            .collect(),
+    )
 }
 
 pub(crate) fn eval_max_by(
@@ -93,13 +197,28 @@ pub(crate) fn eval_reverse_sort(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [expr] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("ReverseSort", args, 1));
+    let (expr, ordering) = match args {
+        [expr] => (expr, None),
+        [expr, ordering] => (expr, Some(ordering)),
+        _ => return Ok(session.invalid_call_with_exact_arg_count("ReverseSort", args, 1)),
     };
 
     let Some((expr_head, mut items)) = normal_call_parts(expr) else {
         return Ok(invalid_collection_normal_call(session, "ReverseSort", args));
     };
+
+    if let Some(ordering) = ordering {
+        let before = vec![vec![false; items.len()]; items.len()];
+        return resume_reverse_sort_comparator_from_pair(
+            session,
+            expr_head,
+            ordering.clone(),
+            items,
+            0,
+            0,
+            before,
+        );
+    }
 
     items.sort_by(compare_structural_order);
     items.reverse();
@@ -154,6 +273,19 @@ pub(crate) fn eval_gather_by(
     let Some((_expr_head, items)) = normal_call_parts(expr) else {
         return Ok(invalid_collection_normal_call(session, "GatherBy", args));
     };
+
+    if let Some(functions) = list_items(function) {
+        return resume_gather_by_function_list_from_position(
+            session,
+            GatherByFunctionListState {
+                items,
+                functions: functions.to_vec(),
+                item_index: 0,
+                function_index: 0,
+                keys: Vec::new(),
+            },
+        );
+    }
 
     resume_decorate_by_from_index(
         session,
@@ -213,6 +345,181 @@ pub(crate) fn eval_riffle(
     Ok(Expr::call(expr_head, riffled))
 }
 
+fn resume_reverse_sort_comparator_from_pair(
+    session: &mut Session,
+    expr_head: Expr,
+    ordering: Expr,
+    items: Vec<Expr>,
+    mut lhs_index: usize,
+    mut rhs_index: usize,
+    before: Vec<Vec<bool>>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if lhs_index >= items.len() {
+            return Ok(reverse_sort_by_comparator_table(expr_head, items, &before));
+        }
+        if rhs_index >= items.len() {
+            lhs_index += 1;
+            rhs_index = 0;
+            continue;
+        }
+        if lhs_index != rhs_index {
+            break;
+        }
+        rhs_index += 1;
+    }
+
+    let comparison_result =
+        eval_binary_predicate(session, &ordering, &items[lhs_index], &items[rhs_index]);
+    let suspended_expr_head = expr_head.clone();
+    let suspended_ordering = ordering.clone();
+    let suspended_items = items.clone();
+    let suspended_before = before.clone();
+    let value = session.suspend_with_frame(comparison_result, move |session, value| {
+        resume_reverse_sort_comparator_with_value(
+            session,
+            suspended_expr_head,
+            suspended_ordering,
+            suspended_items,
+            lhs_index,
+            rhs_index,
+            suspended_before,
+            value,
+        )
+    })?;
+
+    resume_reverse_sort_comparator_with_value(
+        session, expr_head, ordering, items, lhs_index, rhs_index, before, value,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_reverse_sort_comparator_with_value(
+    session: &mut Session,
+    expr_head: Expr,
+    ordering: Expr,
+    items: Vec<Expr>,
+    lhs_index: usize,
+    rhs_index: usize,
+    mut before: Vec<Vec<bool>>,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if is_true_expr(&value) {
+        before[lhs_index][rhs_index] = true;
+    }
+
+    resume_reverse_sort_comparator_from_pair(
+        session,
+        expr_head,
+        ordering,
+        items,
+        lhs_index,
+        rhs_index + 1,
+        before,
+    )
+}
+
+fn reverse_sort_by_comparator_table(
+    expr_head: Expr,
+    items: Vec<Expr>,
+    before: &[Vec<bool>],
+) -> Expr {
+    let mut indices = (0..items.len()).collect::<Vec<_>>();
+    indices.sort_by(|lhs, rhs| match (before[*lhs][*rhs], before[*rhs][*lhs]) {
+        (true, false) => Ordering::Less,
+        (false, true) => Ordering::Greater,
+        _ => lhs.cmp(rhs),
+    });
+    indices.reverse();
+
+    Expr::call(
+        expr_head,
+        indices
+            .into_iter()
+            .map(|index| items[index].clone())
+            .collect(),
+    )
+}
+
+fn resume_gather_by_function_list_from_position(
+    session: &mut Session,
+    mut state: GatherByFunctionListState,
+) -> Result<Expr, EvalError> {
+    if state.functions.is_empty() {
+        return Ok(list_expr(state.items));
+    }
+
+    loop {
+        if state.item_index >= state.items.len() {
+            return Ok(render_hierarchical_gather_by(state.items, state.keys));
+        }
+        if state.function_index >= state.functions.len() {
+            state.item_index += 1;
+            state.function_index = 0;
+            continue;
+        }
+
+        while state.keys.len() <= state.item_index {
+            state.keys.push(Vec::with_capacity(state.functions.len()));
+        }
+
+        let item = state.items[state.item_index].clone();
+        let function = state.functions[state.function_index].clone();
+        let key_result = session.evaluate(Expr::call(function, vec![item]));
+        let suspended_state = state.clone();
+        let key = session.suspend_with_frame(key_result, move |session, key| {
+            resume_gather_by_function_list_with_key(session, suspended_state, key)
+        })?;
+
+        return resume_gather_by_function_list_with_key(session, state, key);
+    }
+}
+
+fn resume_gather_by_function_list_with_key(
+    session: &mut Session,
+    mut state: GatherByFunctionListState,
+    key: Expr,
+) -> Result<Expr, EvalError> {
+    state.keys[state.item_index].push(key);
+    state.function_index += 1;
+    resume_gather_by_function_list_from_position(session, state)
+}
+
+fn render_hierarchical_gather_by(items: Vec<Expr>, keys: Vec<Vec<Expr>>) -> Expr {
+    let key_count = keys.first().map(|item_keys| item_keys.len()).unwrap_or(0);
+    let entries = items
+        .into_iter()
+        .zip(keys)
+        .map(|(item, keys)| GatherPathEntry { item, keys })
+        .collect();
+    list_expr(hierarchical_gather_entries(entries, 0, key_count))
+}
+
+fn hierarchical_gather_entries(
+    entries: Vec<GatherPathEntry>,
+    depth: usize,
+    key_count: usize,
+) -> Vec<Expr> {
+    if depth >= key_count {
+        return entries.into_iter().map(|entry| entry.item).collect();
+    }
+
+    let mut groups = Vec::<(Expr, Vec<GatherPathEntry>)>::new();
+    for entry in entries {
+        let key = entry.keys[depth].clone();
+        if let Some((_, group)) = groups.iter_mut().find(|(seen, _)| seen == &key) {
+            group.push(entry);
+        } else {
+            groups.push((key, vec![entry]));
+        }
+    }
+
+    groups
+        .into_iter()
+        .map(|(_, group)| list_expr(hierarchical_gather_entries(group, depth + 1, key_count)))
+        .collect()
+}
+
 fn eval_extreme_by(
     session: &mut Session,
     head: &Expr,
@@ -220,19 +527,30 @@ fn eval_extreme_by(
     args: &[Expr],
     select_max: bool,
 ) -> Result<Expr, EvalError> {
-    let [expr, function] = args else {
-        if args.len() == 1 {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+    let (expr, function, count) = match args {
+        [expr, function] => (expr, function, None),
+        [expr, function, count] => (expr, function, Some(count)),
+        _ => {
+            if args.len() == 1 {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+            return Ok(session.invalid_call_with_exact_arg_count(symbol, args, 2));
         }
-        return Ok(session.invalid_call_with_exact_arg_count(symbol, args, 2));
     };
 
     let Some((expr_head, items)) = normal_call_parts(expr) else {
         return Ok(invalid_collection_normal_call(session, symbol, args));
     };
-    if items.is_empty() {
+    if count.is_none() && items.is_empty() {
         return Ok(invalid_empty_collection_call(session, symbol, args));
     }
+    let count = match count {
+        Some(count) => Some(match expr_as_non_negative_usize(count) {
+            Some(count) => count,
+            None => return Ok(Expr::call(head.clone(), args.to_vec())),
+        }),
+        None => None,
+    };
 
     resume_decorate_by_from_index(
         session,
@@ -240,7 +558,13 @@ fn eval_extreme_by(
             expr_head,
             function: function.clone(),
             items,
-            operation: DecoratedOperation::MaxBy { select_max },
+            operation: match count {
+                Some(count) => DecoratedOperation::ExtremeByCount {
+                    largest: select_max,
+                    count,
+                },
+                None => DecoratedOperation::MaxBy { select_max },
+            },
         },
         0,
         Vec::new(),
@@ -326,6 +650,10 @@ fn finish_decorated(state: DecorateByState, decorated: Vec<KeyedEntry>) -> Resul
     match state.operation {
         DecoratedOperation::MaxBy { select_max } => Ok(select_extreme_by(decorated, select_max)
             .unwrap_or_else(|| Expr::call(state.expr_head, Vec::new()))),
+        DecoratedOperation::ExtremeByCount { largest, count } => Ok(Expr::call(
+            state.expr_head,
+            take_by(decorated, largest, count),
+        )),
         DecoratedOperation::TakeBy { largest, count } => Ok(Expr::call(
             state.expr_head,
             take_by(decorated, largest, count),

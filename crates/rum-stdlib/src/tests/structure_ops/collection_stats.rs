@@ -12,6 +12,10 @@ fn tally_and_riffle_cover_first_occurrence_and_boundaries() {
         eval_to_string(&mut session, "Tally[{a, b, a, 1 + 1, 2}]"),
         "List[List[a, 2], List[b, 1], List[2, 2]]"
     );
+    assert_eq!(
+        eval_to_string(&mut session, "Tally[{1, -1, 2}, SameQ[Abs[#1], Abs[#2]] &]"),
+        "List[List[1, 2], List[2, 1]]"
+    );
     assert_eq!(eval_to_string(&mut session, "Tally[{}]"), "List[]");
     assert_eq!(
         eval_to_string(&mut session, "Riffle[{a, b, c}, x]"),
@@ -65,6 +69,10 @@ fn by_extrema_take_and_reverse_sort_cover_ties_and_boundaries() {
         "List[3, 2, 1]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "ReverseSort[{3, 1, 2}, Less]"),
+        "List[3, 2, 1]"
+    );
+    assert_eq!(
         eval_to_string(
             &mut session,
             "ReverseSortBy[{bb, a, ccc}, StringLength[ToString[#]] &]"
@@ -95,6 +103,28 @@ fn gather_by_groups_in_first_key_order() {
     assert_eq!(
         eval_to_string(&mut session, "GatherBy[{}, StringLength[ToString[#]] &]"),
         "List[]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "GatherBy[{1, 2, 3, 4}, {OddQ, Mod[#, 3] &}]"),
+        "List[List[List[1], List[3]], List[List[2], List[4]]]"
+    );
+}
+
+#[test]
+fn max_by_and_min_by_accept_top_counts() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut session, "MaxBy[{1, -3, 2}, Abs, 2]"),
+        "List[-3, 2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MinBy[{1, -3, 2}, Abs, 2]"),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MaxBy[{1, -1, 2}, Abs, 2]"),
+        "List[2, 1]"
     );
 }
 

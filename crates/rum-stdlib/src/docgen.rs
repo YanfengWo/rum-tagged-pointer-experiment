@@ -32,6 +32,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "uses exact integer/rational arithmetic only, rounds half away from zero, and always emits exactly n fractional digits.",
     ),
     (
+        "DeleteDuplicates",
+        "the custom binary-test form performs pairwise O(n^2) representative comparisons and keeps the first representative.",
+    ),
+    (
         "FileExtension",
         "dotfiles such as .bashrc have no extension; only the final slash-separated path component is inspected.",
     ),
@@ -131,6 +135,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "ToIni",
         "renders only Association-of-Associations with String section names, keys, and values; unrepresentable names, multiline values, whitespace-trimming value loss, and an empty default section fail closed.",
+    ),
+    (
+        "Tally",
+        "the custom binary-test form performs pairwise O(n^2) representative comparisons and uses the first element of each class as representative.",
     ),
     (
         "ToToml",

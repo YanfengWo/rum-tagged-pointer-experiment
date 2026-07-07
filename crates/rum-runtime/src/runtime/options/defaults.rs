@@ -65,6 +65,9 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             "DistanceFunction",
             system_expr("Automatic"),
         )],
+        "Union" | "Intersection" | "Complement" => {
+            vec![system_rule_option("SameTest", system_expr("Automatic"))]
+        }
         "StringContainsQ" | "StringStartsQ" | "StringEndsQ" | "StringMatchQ" | "StringFreeQ"
         | "StringDelete" | "StringReplace" | "StringSplit" => {
             vec![system_rule_option("IgnoreCase", bool_option(false))]

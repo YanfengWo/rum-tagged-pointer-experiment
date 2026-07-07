@@ -62,6 +62,14 @@ fn sort_and_sortby_cover_current_top_level_subset() {
             .to_string(),
         "List[a, bb, ccc]"
     );
+    assert_eq!(
+        session
+            .eval_text("SortBy[{3, 1, 2}, Identity, Greater]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[3, 2, 1]"
+    );
 }
 
 #[test]
@@ -112,6 +120,38 @@ fn union_and_complement_cover_current_same_head_subset() {
             .to_string(),
         "List[a, b, c]"
     );
+}
+
+#[test]
+fn set_operations_accept_same_test_option() {
+    let mut session = core_session();
+
+    let union = session
+        .eval_text("Union[{1, -1}, SameTest -> (SameQ[Abs[#1], Abs[#2]] &)]")
+        .unwrap();
+    assert_eq!(union.value.to_string(), "List[-1]");
+    assert!(union.messages.is_empty());
+
+    let union_option_list = session
+        .eval_text("Union[{1, -1}, {SameTest -> (SameQ[Abs[#1], Abs[#2]] &)}]")
+        .unwrap();
+    assert_eq!(union_option_list.value.to_string(), "List[-1]");
+    assert!(union_option_list.messages.is_empty());
+
+    let intersection = session
+        .eval_text("Intersection[{1, 2}, {-1}, SameTest -> (SameQ[Abs[#1], Abs[#2]] &)]")
+        .unwrap();
+    assert_eq!(intersection.value.to_string(), "List[1]");
+    assert!(intersection.messages.is_empty());
+
+    let complement = session
+        .eval_text("Complement[{1, 2}, {-1}, SameTest -> (SameQ[Abs[#1], Abs[#2]] &)]")
+        .unwrap();
+    assert_eq!(complement.value.to_string(), "List[2]");
+    assert!(complement.messages.is_empty());
+
+    let options = session.eval_text("Options[Union]").unwrap();
+    assert_eq!(options.value.to_string(), "List[Rule[SameTest, Automatic]]");
 }
 
 #[test]

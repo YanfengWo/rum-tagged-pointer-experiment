@@ -31,6 +31,17 @@ fn delete_duplicates_keeps_first_structural_occurrence() {
 }
 
 #[test]
+fn delete_duplicates_accepts_custom_same_test() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text("DeleteDuplicates[{1, -1, 2}, SameQ[Abs[#1], Abs[#2]] &]")
+        .unwrap();
+    assert_eq!(outcome.value.to_string(), "List[1, 2]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
 fn delete_duplicates_reports_current_invalid_boundaries() {
     let mut session = core_session();
 
