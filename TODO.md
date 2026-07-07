@@ -168,9 +168,14 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   modular inverse via hand-rolled extended Euclid (PowerMod[2,-1,5]->3);
   non-invertible base -> PowerMod::ninv + inert; zero modulus stays
   inert. Reuses power_mod_integer for (a^-1)^k. No new dep.
-- [ ] brief-193 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
-  (Orderless/Flat/OneIdentity, WL-correct) + Abs numeric/protected. A/B
-  gate (attribute-driven planning).
+- [ ] brief-193 (unit-5 fix 5, in flight): attribute hygiene CONSERVATIVE
+  — add Protected (GCD/LCM/Max/Min/Abs) + NumericFunction (Max/Min/Abs
+  only, aligning Abs with the Sign/Floor sibling set). Zero eval-cost, no
+  A/B, no reordering. DEFER Orderless/Flat/OneIdentity: rum honors them by
+  per-call arg sort/flatten in eval_call_prepare — adding them to folk
+  numeric reducers is hot-path cost for marginal benefit and would flip
+  the committed FullForm[Max[x,3]]=="Max[x, 3]" order (no-default-cost
+  line; same class as the Equivalent rejection). Regenerate builtins.md.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
