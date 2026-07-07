@@ -52,6 +52,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "intended only for interoperability and checksums; it is not collision-resistant.",
     ),
     (
+        "Crc32",
+        "computes the IEEE CRC-32 checksum for integrity and interoperability, not security; it is not collision-resistant.",
+    ),
+    (
         "DumpSave",
         "writes a textual dump format; it is not a binary image.",
     ),

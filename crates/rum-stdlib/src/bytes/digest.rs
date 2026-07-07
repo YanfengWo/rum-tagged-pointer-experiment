@@ -71,12 +71,9 @@ fn eval_digest<D: Digest>(
     args: &[Expr],
     symbol: &'static str,
 ) -> Result<Expr, EvalError> {
-    let (arg, bytes_output) = match args {
-        [arg] => (arg, false),
-        [arg, format] if expr_as_string(format).is_some_and(|format| format == "Bytes") => {
-            (arg, true)
-        }
-        [_arg, _format] => return Ok(Expr::call(head.clone(), args.to_vec())),
+    let (arg, format) = match args {
+        [arg] => (arg, None),
+        [arg, format] => (arg, Some(format)),
         _ => return Ok(session.invalid_call_with_arg_range(symbol, args, 1, 2)),
     };
 
@@ -91,6 +88,19 @@ fn eval_digest<D: Digest>(
             ));
         }
         ByteInput::WrongType => return Ok(Expr::call(head.clone(), args.to_vec())),
+    };
+    let bytes_output = match format.and_then(expr_as_string) {
+        None if format.is_none() => false,
+        Some("Bytes") => true,
+        Some("Hex") => false,
+        _ => {
+            return Ok(fail_bytes(
+                session,
+                symbol,
+                "format",
+                "unknown digest output format; use \"Hex\" (default) or \"Bytes\"",
+            ));
+        }
     };
     let digest = D::digest(&bytes);
 

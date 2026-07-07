@@ -784,6 +784,7 @@ Computes the IEEE CRC-32 checksum over a string's UTF-8 bytes or a ByteArray.
 
 - Attributes: `None`
 - Capability: `Pure`
+- Limits: computes the IEEE CRC-32 checksum for integrity and interoperability, not security; it is not collision-resistant.
 
 ### CurryApplied
 

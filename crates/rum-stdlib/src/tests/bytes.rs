@@ -226,6 +226,18 @@ fn malformed_codecs_fail_closed() {
     assert_failed_with_message("FromBase64[\"YQ==AA==\"]", "FromBase64", "base64");
 }
 
+#[cfg(feature = "hash")]
+#[test]
+fn unknown_digest_output_format_fails_closed() {
+    let mut session = core_session();
+
+    assert_failed_with_message("Sha256[\"abc\", \"HexString\"]", "Sha256", "format");
+    assert_eq!(
+        eval_to_string(&mut session, "Sha256[\"abc\", \"Hex\"] == Sha256[\"abc\"]"),
+        "True"
+    );
+}
+
 #[test]
 fn byte_array_to_string_and_predicate_cover_boundaries() {
     let mut session = core_session();
@@ -260,8 +272,6 @@ fn unsupported_argument_types_remain_inert() {
     for source in [
         #[cfg(feature = "hash")]
         "Sha256[123]",
-        #[cfg(feature = "hash")]
-        "Sha256[\"abc\", \"HexString\"]",
         #[cfg(feature = "hash")]
         "Crc32[123]",
         "ToHexString[123]",
