@@ -206,6 +206,12 @@ string-pattern surface. Batches, evidence-ranked:
   (never kernel); scoping half (declarative Public/Package/Private,
   private-by-default per source unit) = required design input for the
   unit-10 package-surface audit; relevant to dun plugins.
+- [ ] WFR survey (2026-07-07, docs/dev/wfr-core-survey.md; idea-level
+  absorption only, sources never read): unit-2 batch candidates
+  `SelectPositions`/`Duplicates`/`BinarySearch`; unit-3 candidates
+  `KeyGroupBy`/`AssociationKeyDeflatten`(+flatten twin)/`MergeNested`
+  (config layering — pairs with codecs+ConformSchema);
+  `ReplaceAllUnheld` defers to the units-8-10 hold design.
 - [ ] Downstream `rum-os` (process/env; post-launch, alongside `rum-fs`):
   process execution is the maximal ambient authority and never enters the
   kernel — kernel only reserves a `Capability::Process` variant (do this in
