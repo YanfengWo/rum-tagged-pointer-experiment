@@ -279,50 +279,57 @@ marked OK-intended, not gaps. Reproduced the key findings myself
 (coverage 62/62; `FromDigits[{2},2]->2` silent bug; zero-domain inerts;
 `GCD`/`LCM`=`{Listable}`, `Max`/`Min`=`{}`).
 
-**AUDIT CORRECTIONS (so fix briefs do not inherit the over-reach):**
-- **Negative/zero args are NOT a blanket fail-close.** The audit
-  proposes "emit a nonnegative-integer diagnostic and fail closed" for
-  every negative-index combinatorics and zero-domain number-theory case.
-  That would DIVERGE from WL where WL DEFINES a value: `PartitionsP[-1]`
-  and `PartitionsQ[-1]` are `0` in WL (not an error), and several others
-  (`CatalanNumber`/`Subfactorial`/`StirlingS*`/number-theory zeros) have
-  a documented WL value or an error that must be checked PER FUNCTION.
-  Rule for the fix: return WL's value where WL defines one, message only
-  where WL genuinely errors, and DEFER (keep today's inert) where the WL
-  surface is uncertain — never guess (same discipline as the Equivalent
-  close-out). No oracle runs; documented WL knowledge only.
-- **`Coefficient[x+1/x, x, 1]` -> `1` is a CORRECT value**, not a bug —
-  1 is genuinely the coefficient of x^1. The real defect is
-  `CoefficientList[x+1/x, x]` -> `{x^-1, 1}` (a returned coefficient
-  still contains the target variable). Fix the CoefficientList
-  target-containment; do NOT make the scalar `Coefficient` reject valid
+**AUDIT CORRECTIONS + the USER singularity decision (2026-07-07):**
+- **Arithmetic singularities stay INERT — folk-conservative (USER
+  decision).** For `1/0`, `0^0`, `(-1)!`, and zero divisor/modulus/
+  multiple in `Divide`/`Quotient`/`PowerMod`/`Round`, WL returns special
+  values rum does not compute with (`ComplexInfinity`/`Indeterminate` are
+  inert symbols only; source has zero references to them). The user chose
+  the folk-conservative path: keep these INERT (today's behavior), emit
+  NO domain-error message, introduce NO special-value arithmetic. The
+  audit's "arithmetic-runtime fail-closed" batch is therefore RECLASSIFIED
+  as OK-intended folk boundary rows, NOT gaps. Only clean WL-value cases
+  are fixed (see below).
+- **`FromDigits[{2}, 2] -> 2` is WL-conformant, not a bug.** WL's LIST
+  form of `FromDigits` is a lenient base-weighted sum (no per-digit range
+  check; only the STRING form is strict) — rum's `2` matches. Reclassified
+  OK; the audit's #1 "silent bug" was a false gap.
+- **Negative/zero args are NOT a blanket fail-close.** Where WL DEFINES a
+  value, rum returns it (PartitionsP/Q[-1] -> 0). Where WL genuinely
+  errors on a MALFORMED ARGUMENT (arity, base < 2, a non-variable
+  derivative target), rum messages (matches its existing `Prime::intpp` /
+  arity pattern — this is argument validation, not a singularity). DEFER
+  where the WL surface is uncertain — never guess (Equivalent-close-out
+  discipline; documented WL knowledge only, no oracle).
+- **`Coefficient[x+1/x, x, 1]` -> `1` is a CORRECT value**, not a bug. The
+  real defect is `CoefficientList[x+1/x, x]` -> `{x^-1, 1}` (a returned
+  coefficient still contains the target variable). Fix CoefficientList
+  target-containment; do NOT make scalar `Coefficient` reject valid
   queries.
 - **Attribute-hygiene changes symbolic-arg OUTPUT.** Adding `Orderless`/
-  `Flat`/`OneIdentity` to `GCD`/`LCM`/`Max`/`Min` is WL-correct (WL has
-  them) but it canonicalizes symbolic-arg ordering (`Max[y,x]` -> sorted)
-  — a visible change that is a MOVE TOWARD WL-conformance (allowed by the
-  compat directive), not a regression. Touches attribute-driven planning
-  → A/B gate required.
+  `Flat`/`OneIdentity` to `GCD`/`LCM`/`Max`/`Min` is WL-correct but
+  canonicalizes symbolic-arg ordering (`Max[y,x]` -> sorted) — a visible
+  MOVE TOWARD WL-conformance (allowed by the compat directive), not a
+  regression. Touches attribute-driven planning → A/B gate required.
 
-Fix batches (dispatch order):
+Fix batches (dispatch order, reshaped by the singularity decision):
 
-1. **brief-187 — unambiguous fail-closed** (safety, S, no call planning;
-   WL also errors on every case here): zero divisor/modulus/multiple for
-   `Divide`/`Mod`/`Quotient`/`PowerMod`/`Round`; `Power[0,0]` ->
-   Indeterminate + message; `FromDigits` out-of-base digit validation;
-   invalid base (<2) and negative length for `IntegerLength`/
-   `IntegerDigits`/`IntegerReverse`/`DigitCount`; `Factorial`/
-   `Factorial2` negative; `Fibonacci` arity; malformed `D`
-   variable/order specs (`D[x^2,1]`, `D[x^2,{x,-1}]`, symbolic order).
-   Pure diagnostics around existing folk algorithms.
-2. **brief-188 — WL-contract-checked domain values** (the corrected
-   batch): combinatorics negative indices + number-theory zero/negative
-   (`Divisors[0]`, `DivisorSigma[_,0]`, `PrimeNu`/`PrimeOmega[0]`,
-   `NextPrime[_,0]`). Per function: WL value where defined (PartitionsP/Q
-   -> 0 confirmed), message where WL errors, defer where uncertain.
+1. **brief-187 — argument/arity validation** (safety, S; WL clearly
+   ERRORS on the malformed argument — NOT a singularity): `Fibonacci`
+   arity (`Fibonacci[]`, `Fibonacci[1,2]`); invalid base (< 2) for
+   `IntegerLength`/`IntegerDigits`/`IntegerReverse`/`DigitCount` and
+   negative length for `IntegerDigits`; malformed `D` specs that are
+   clearly not a valid variable/order (`D[x^2,1]`, `D[x^2,{x,-1}]`;
+   DEFER the symbolic-order `D[x^2,{x,a}]`). rum-stdlib; mirror the
+   existing arity/domain message machinery. No A/B.
+2. **brief-188 — clean WL-value fixes** (folk-conservative correctness):
+   `Mod[m,0] -> m`; `PartitionsP[-1] -> 0`, `PartitionsQ[-1] -> 0`; and
+   any other combinatorics/number-theory negative/zero case where WL
+   gives a plain integer rum can represent — per function, DEFER where
+   uncertain. Small and careful; no messages, no special values.
 3. **brief-189 — polynomial target-containment** (safety):
-   `CoefficientList` (and Coefficient only where genuinely wrong)
-   target-containment guard for non-polynomial residues. No new CAS.
+   `CoefficientList` target-containment guard for non-polynomial residues
+   (Coefficient only where genuinely wrong). No new CAS.
 4. **brief-190 — cheap flexibility**: `Total[list,n]`/`Total[list,
    {level}]` level forms, `Commonest[list,n]`, list-valued
    `Quantile[list, {q..}]`, negative-exponent `PowerMod` modular inverse

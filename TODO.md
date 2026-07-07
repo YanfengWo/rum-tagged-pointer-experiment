@@ -135,13 +135,19 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   a blanket fail-close — WL DEFINES some (PartitionsP/Q[-1]->0), so the
   fix returns WL's value where defined, messages only where WL errors,
   defers where uncertain.
-- [ ] brief-187 (unit-5 fix 1): unambiguous fail-closed diagnostics
-  (WL also errors) — zero divisor/modulus/multiple, Power[0,0], FromDigits
-  out-of-base, invalid base/length, Factorial neg, Fibonacci arity,
-  malformed D specs. Pure diagnostics, no A/B.
-- [ ] brief-188 (unit-5 fix 2): WL-contract-checked domain values —
-  combinatorics negative indices + number-theory zero cases, per-function
-  (WL value where defined, message where WL errors, defer if uncertain).
+  USER decision 2026-07-07 (singularities): 1/0, 0^0, (-1)!, zero
+  div/mod/mult stay INERT (folk-conservative) — NO domain messages, NO
+  special-value arithmetic; only clean WL values fixed. Reshaped the
+  fix batches accordingly (arithmetic-singularity fail-closed batch
+  DROPPED; FromDigits list range-check = WL-conformant, not a gap).
+- [ ] brief-187 (unit-5 fix 1, in flight): argument/arity validation
+  (WL clearly errors on the malformed ARG, not a singularity) — Fibonacci
+  arity, integer_digits base<2 + negative length, malformed D specs
+  (non-variable/negative order; defer symbolic order). rum-stdlib. No A/B.
+- [ ] brief-188 (unit-5 fix 2): clean WL-value fixes — Mod[m,0]->m,
+  PartitionsP/Q[-1]->0, + per-function combinatorics/number-theory where
+  WL gives a plain integer (defer uncertain). No messages, no special
+  values.
 - [ ] brief-189 (unit-5 fix 3): polynomial target-containment guard
   (CoefficientList; Coefficient only where genuinely wrong).
 - [ ] brief-190 (unit-5 fix 4): cheap flexibility — Total level forms,
