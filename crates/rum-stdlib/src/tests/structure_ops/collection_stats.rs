@@ -99,6 +99,37 @@ fn gather_by_groups_in_first_key_order() {
 }
 
 #[test]
+fn collection_operator_forms_rewrite_to_data_first_calls() {
+    let mut session = core_session();
+
+    let applied = session
+        .eval_text(
+            "{Riffle[x][{a, b}], GatherBy[OddQ][{1, 2, 3}], MaxBy[Abs][{1, -3, 2}], \
+             MinBy[Abs][{1, -3, 2}], DeleteDuplicatesBy[Abs][{-1, 1, 2}], \
+             ReverseSortBy[Identity][{3, 1, 2}], TakeLargestBy[Abs, 2][{1, -3, 2}], \
+             TakeSmallestBy[Abs, 1][{1, -3, 2}]}",
+        )
+        .unwrap();
+    assert_eq!(
+        applied.value.to_string(),
+        "List[List[a, x, b], List[List[1, 3], List[2]], -3, 1, List[-1, 2], List[3, 2, 1], List[-3, 2], List[1]]"
+    );
+    assert!(applied.messages.is_empty());
+
+    let inert = session
+        .eval_text(
+            "{Riffle[x], GatherBy[OddQ], MaxBy[Abs], MinBy[Abs], DeleteDuplicatesBy[Abs], \
+             ReverseSortBy[Identity], TakeLargestBy[Abs, 2], TakeSmallestBy[Abs, 1]}",
+        )
+        .unwrap();
+    assert_eq!(
+        inert.value.to_string(),
+        "List[Riffle[x], GatherBy[OddQ], MaxBy[Abs], MinBy[Abs], DeleteDuplicatesBy[Abs], ReverseSortBy[Identity], TakeLargestBy[Abs, 2], TakeSmallestBy[Abs, 1]]"
+    );
+    assert!(inert.messages.is_empty());
+}
+
+#[test]
 fn collection_stats_support_normal_expression_heads_where_structure_ops_do() {
     let mut session = core_session();
 
@@ -118,14 +149,14 @@ fn collection_stats_report_invalid_arity_and_empty_selection() {
 
     for (symbol, source, tag) in [
         ("Tally", "Tally[]", "argx"),
-        ("MaxBy", "MaxBy[{a}]", "argx"),
-        ("MinBy", "MinBy[{a}]", "argx"),
-        ("TakeLargestBy", "TakeLargestBy[{a}, f]", "argx"),
-        ("TakeSmallestBy", "TakeSmallestBy[{a}, f]", "argx"),
+        ("MaxBy", "MaxBy[]", "argx"),
+        ("MinBy", "MinBy[]", "argx"),
+        ("TakeLargestBy", "TakeLargestBy[{a}]", "argx"),
+        ("TakeSmallestBy", "TakeSmallestBy[{a}]", "argx"),
         ("ReverseSort", "ReverseSort[]", "argx"),
-        ("ReverseSortBy", "ReverseSortBy[{a}]", "argx"),
-        ("GatherBy", "GatherBy[{a}]", "argx"),
-        ("Riffle", "Riffle[{a}]", "argtu"),
+        ("ReverseSortBy", "ReverseSortBy[]", "argx"),
+        ("GatherBy", "GatherBy[]", "argx"),
+        ("Riffle", "Riffle[]", "argtu"),
     ] {
         let outcome = session.eval_text(source).unwrap();
         assert_eq!(

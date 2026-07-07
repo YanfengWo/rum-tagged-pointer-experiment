@@ -12,6 +12,9 @@ pub(crate) fn eval_delete(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [expr, positions_expr] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count("Delete", args, 2));
     };
 

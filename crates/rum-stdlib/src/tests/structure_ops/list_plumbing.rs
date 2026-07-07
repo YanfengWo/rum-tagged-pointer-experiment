@@ -309,6 +309,19 @@ fn partition_covers_wk_anchored_block_and_offset_forms() {
 }
 
 #[test]
+fn partition_operator_form_rewrites_to_data_first_call() {
+    let mut session = core_session();
+
+    let applied = session.eval_text("Partition[2][{a, b, c, d}]").unwrap();
+    assert_eq!(applied.value.to_string(), "List[List[a, b], List[c, d]]");
+    assert!(applied.messages.is_empty());
+
+    let inert = session.eval_text("Partition[2]").unwrap();
+    assert_eq!(inert.value.to_string(), "Partition[2]");
+    assert!(inert.messages.is_empty());
+}
+
+#[test]
 fn combinatorial_list_ops_symbolically_passthrough_invalid_boundaries() {
     let mut session = core_session();
 

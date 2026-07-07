@@ -15,10 +15,13 @@ enum StructuralSequenceSpec {
 
 pub(crate) fn eval_take(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     if args.len() < 2 {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_message(
             "Take",
             args,
@@ -44,10 +47,13 @@ pub(crate) fn eval_take(
 
 pub(crate) fn eval_drop(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     if args.len() < 2 {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_message(
             "Drop",
             args,

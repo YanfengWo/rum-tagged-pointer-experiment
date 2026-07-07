@@ -58,18 +58,18 @@ pub(crate) fn eval_tally(
 
 pub(crate) fn eval_max_by(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    eval_extreme_by(session, "MaxBy", args, true)
+    eval_extreme_by(session, head, "MaxBy", args, true)
 }
 
 pub(crate) fn eval_min_by(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    eval_extreme_by(session, "MinBy", args, false)
+    eval_extreme_by(session, head, "MinBy", args, false)
 }
 
 pub(crate) fn eval_take_largest_by(
@@ -108,10 +108,13 @@ pub(crate) fn eval_reverse_sort(
 
 pub(crate) fn eval_reverse_sort_by(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [expr, function] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count("ReverseSortBy", args, 2));
     };
 
@@ -138,10 +141,13 @@ pub(crate) fn eval_reverse_sort_by(
 
 pub(crate) fn eval_gather_by(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [expr, function] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count("GatherBy", args, 2));
     };
 
@@ -164,7 +170,7 @@ pub(crate) fn eval_gather_by(
 
 pub(crate) fn eval_riffle(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let (expr, separator, positions) = match args {
@@ -175,7 +181,12 @@ pub(crate) fn eval_riffle(
             };
             (expr, separator, positions)
         }
-        _ => return Ok(session.invalid_call_with_arg_range("Riffle", args, 2, 3)),
+        _ => {
+            if args.len() == 1 {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+            return Ok(session.invalid_call_with_arg_range("Riffle", args, 2, 3));
+        }
     };
 
     let Some((expr_head, items)) = normal_call_parts(expr) else {
@@ -204,11 +215,15 @@ pub(crate) fn eval_riffle(
 
 fn eval_extreme_by(
     session: &mut Session,
+    head: &Expr,
     symbol: &str,
     args: &[Expr],
     select_max: bool,
 ) -> Result<Expr, EvalError> {
     let [expr, function] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count(symbol, args, 2));
     };
 
@@ -240,6 +255,9 @@ fn eval_take_by(
     largest: bool,
 ) -> Result<Expr, EvalError> {
     let [expr, function, count] = args else {
+        if args.len() == 2 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count(symbol, args, 3));
     };
 

@@ -11,6 +11,9 @@ pub(crate) fn eval_insert(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [expr, item, position] = args else {
+        if args.len() == 2 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count("Insert", args, 3));
     };
 

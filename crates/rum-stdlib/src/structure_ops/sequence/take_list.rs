@@ -6,6 +6,9 @@ pub(crate) fn eval_take_list(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [expr, counts] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count("TakeList", args, 2));
     };
 

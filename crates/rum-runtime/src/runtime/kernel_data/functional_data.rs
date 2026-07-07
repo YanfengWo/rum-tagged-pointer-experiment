@@ -61,11 +61,16 @@ pub(in crate::runtime) fn apply_composition_to_args(
 }
 
 pub(in crate::runtime) fn is_callable_operator_wrapper(expr: &Expr) -> bool {
+    if !matches!(expr, Expr::Call { .. }) {
+        return false;
+    }
+
     is_curried_operator_wrapper(expr)
         || is_reverse_applied_wrapper(expr)
         || is_comparison_operator_wrapper(expr)
         || is_nearest_to_wrapper(expr)
         || is_string_unary_operator_wrapper(expr)
+        || is_structure_operator_wrapper(expr)
         || parse_key_wrapper(expr).is_some()
 }
 
@@ -93,6 +98,10 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
         return Some(expr);
     }
 
+    if let Some(expr) = apply_structure_operator_wrapper_to_args(head, args) {
+        return Some(expr);
+    }
+
     apply_key_wrapper_to_args(head, args)
 }
 
@@ -101,6 +110,10 @@ pub(in crate::runtime) fn invalid_callable_operator_wrapper_argx_symbol(
     args: &[Expr],
 ) -> Option<&'static str> {
     if let Some(symbol) = invalid_string_unary_operator_wrapper_argx_symbol(head, args) {
+        return Some(symbol);
+    }
+
+    if let Some(symbol) = invalid_structure_operator_wrapper_argx_symbol(head, args) {
         return Some(symbol);
     }
 
@@ -622,6 +635,69 @@ fn string_unary_operator_symbol(head: &Expr) -> Option<&'static str> {
         Some("StringDelete")
     } else {
         None
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct StructureOperatorSpec<'a> {
+    symbol: &'static str,
+    tail: &'a [Expr],
+}
+
+fn is_structure_operator_wrapper(expr: &Expr) -> bool {
+    parse_structure_operator_wrapper(expr).is_some()
+}
+
+fn apply_structure_operator_wrapper_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    let spec = parse_structure_operator_wrapper(head)?;
+    let [data] = args else {
+        return None;
+    };
+
+    let mut ordinary_args = Vec::with_capacity(spec.tail.len() + 1);
+    ordinary_args.push(data.clone());
+    ordinary_args.extend(spec.tail.iter().cloned());
+    Some(Expr::call(system_expr(spec.symbol), ordinary_args))
+}
+
+fn invalid_structure_operator_wrapper_argx_symbol(
+    head: &Expr,
+    args: &[Expr],
+) -> Option<&'static str> {
+    let spec = parse_structure_operator_wrapper(head)?;
+    (args.len() != 1).then_some(spec.symbol)
+}
+
+fn parse_structure_operator_wrapper(expr: &Expr) -> Option<StructureOperatorSpec<'_>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    Some(StructureOperatorSpec {
+        symbol: structure_operator_symbol(head, args.len())?,
+        tail: args,
+    })
+}
+
+fn structure_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> {
+    // An arity becomes an operator form only when it cannot be a valid
+    // data-form call of the same builtin; never sniff the first argument type.
+    match arity {
+        1 if is_system_symbol_name(head, "Take") => Some("Take"),
+        1 if is_system_symbol_name(head, "Drop") => Some("Drop"),
+        1 if is_system_symbol_name(head, "Delete") => Some("Delete"),
+        1 if is_system_symbol_name(head, "TakeList") => Some("TakeList"),
+        1 if is_system_symbol_name(head, "Partition") => Some("Partition"),
+        1 if is_system_symbol_name(head, "Riffle") => Some("Riffle"),
+        1 if is_system_symbol_name(head, "GatherBy") => Some("GatherBy"),
+        1 if is_system_symbol_name(head, "MaxBy") => Some("MaxBy"),
+        1 if is_system_symbol_name(head, "MinBy") => Some("MinBy"),
+        1 if is_system_symbol_name(head, "DeleteDuplicatesBy") => Some("DeleteDuplicatesBy"),
+        1 if is_system_symbol_name(head, "ReverseSortBy") => Some("ReverseSortBy"),
+        2 if is_system_symbol_name(head, "Insert") => Some("Insert"),
+        2 if is_system_symbol_name(head, "TakeLargestBy") => Some("TakeLargestBy"),
+        2 if is_system_symbol_name(head, "TakeSmallestBy") => Some("TakeSmallestBy"),
+        _ => None,
     }
 }
 

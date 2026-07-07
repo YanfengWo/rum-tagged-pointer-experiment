@@ -233,6 +233,32 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
 }
 
 #[test]
+fn sequence_operator_forms_rewrite_to_data_first_calls() {
+    let mut session = core_session();
+
+    let applied = session
+        .eval_text(
+            "{Take[2][{a, b, c}], Drop[1][{a, b, c}], Delete[1][{a, b}], \
+             TakeList[{2, 1}][{a, b, c, d}], Insert[x, 2][{a, b}]}",
+        )
+        .unwrap();
+    assert_eq!(
+        applied.value.to_string(),
+        "List[List[a, b], List[b, c], List[b], List[List[a, b], List[c]], List[a, x, b]]"
+    );
+    assert!(applied.messages.is_empty());
+
+    let inert = session
+        .eval_text("{Take[2], Drop[1], Delete[1], TakeList[{2, 1}], Insert[x, 2]}")
+        .unwrap();
+    assert_eq!(
+        inert.value.to_string(),
+        "List[Take[2], Drop[1], Delete[1], TakeList[List[2, 1]], Insert[x, 2]]"
+    );
+    assert!(inert.messages.is_empty());
+}
+
+#[test]
 fn take_drop_append_and_prepend_report_current_invalid_boundaries() {
     let mut session = core_session();
 

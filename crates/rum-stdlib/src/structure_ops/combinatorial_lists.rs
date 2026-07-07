@@ -60,7 +60,7 @@ pub(crate) fn eval_tuples(
 
 pub(crate) fn eval_partition(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let (expr, size_expr, offset_expr, alignment_expr, padding_expr) = match args {
@@ -80,7 +80,12 @@ pub(crate) fn eval_partition(
             Some(alignment_expr),
             Some(padding_expr),
         ),
-        _ => return Ok(session.invalid_call_with_arg_range("Partition", args, 2, 5)),
+        _ => {
+            if args.len() == 1 {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+            return Ok(session.invalid_call_with_arg_range("Partition", args, 2, 5));
+        }
     };
 
     let Some(size) = expr_as_positive_usize(size_expr) else {
