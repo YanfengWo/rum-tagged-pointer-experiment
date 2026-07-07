@@ -95,10 +95,13 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-177 DONE (55629d0): comparison controls; workspace 1358/0.
 - [x] brief-178 DONE (02750b1): array predicate test/rank forms;
   workspace 1358/0.
-- [ ] brief-179 (unit-3 batch 3): operator forms (call planning; A/B
-  gate) — `Contains*[needles]`, `Between[range]`, `AllTrue`/`AnyTrue`/
-  `NoneTrue[crit]`, `OrderedQ[p]`, `Lookup[key, default]`, kernel
-  `MatchQ[patt]`.
+- [x] brief-179 DONE (63c1363): ten predicate operator forms (A/B
+  clean); OrderedQ[p]/Lookup[key,default] excluded (data-form
+  collision); workspace 1360/0.
+- [ ] brief-180 (unit-3 batch 4, FINAL): WFR association additions —
+  `KeyGroupBy`, `AssociationKeyDeflatten` + `AssociationKeyFlatten`,
+  `MergeNested`. New folk builtins, neutral naming, vocabulary
+  registration. Unit 3 closes after this.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
