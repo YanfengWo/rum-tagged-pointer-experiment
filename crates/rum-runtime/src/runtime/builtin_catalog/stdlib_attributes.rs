@@ -68,6 +68,10 @@ const ATTR_NON_THREADABLE_PROTECTED: AttributeSet = AttributeSet::empty()
     .with(Attribute::NonThreadable)
     .with(Attribute::Protected);
 
+const ATTR_NUMERIC_FUNCTION_PROTECTED: AttributeSet = AttributeSet::empty()
+    .with(Attribute::NumericFunction)
+    .with(Attribute::Protected);
+
 const ATTR_ORDERLESS: AttributeSet = AttributeSet::empty().with(Attribute::Orderless);
 
 const ATTR_ORDERLESS_FLAT_ONE_IDENTITY: AttributeSet = AttributeSet::empty()
@@ -83,7 +87,7 @@ const ATTR_PROTECTED_READ_PROTECTED: AttributeSet = AttributeSet::empty()
 
 const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("AbortProtect", ATTR_HOLD_ALL),
-    Spec::new("Abs", ATTR_LISTABLE),
+    Spec::new("Abs", ATTR_LISTABLE_NUMERIC_FUNCTION_PROTECTED),
     Spec::new("AlgebraicIntegerQ", ATTR_LISTABLE),
     Spec::new("Alphanumeric", ATTR_PROTECTED),
     Spec::new("Alternatives", ATTR_PROTECTED),
@@ -143,7 +147,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("For", ATTR_HOLD_ALL),
     Spec::new("FractionalPart", ATTR_LISTABLE_NUMERIC_FUNCTION_PROTECTED),
     Spec::new("FromDigits", ATTR_PROTECTED),
-    Spec::new("GCD", ATTR_LISTABLE),
+    Spec::new("GCD", ATTR_LISTABLE_PROTECTED),
     Spec::new("If", ATTR_HOLD_REST),
     Spec::new("IntegerDigits", ATTR_LISTABLE_PROTECTED),
     Spec::new("IntegerLength", ATTR_LISTABLE_PROTECTED),
@@ -154,13 +158,15 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
         ATTR_FLAT_ONE_IDENTITY_PROTECTED_READ_PROTECTED,
     ),
     Spec::new("KeyDropFrom", ATTR_HOLD_FIRST),
-    Spec::new("LCM", ATTR_LISTABLE),
+    Spec::new("LCM", ATTR_LISTABLE_PROTECTED),
     Spec::new("Last", ATTR_HOLD_REST),
     Spec::new("LeafCount", ATTR_PROTECTED),
     Spec::new("LetterCharacter", ATTR_PROTECTED),
     Spec::new("Lookup", ATTR_HOLD_ALL),
     Spec::new("LowerCaseQ", ATTR_PROTECTED),
     Spec::new("LowercaseLetters", ATTR_PROTECTED),
+    Spec::new("Max", ATTR_NUMERIC_FUNCTION_PROTECTED),
+    Spec::new("Min", ATTR_NUMERIC_FUNCTION_PROTECTED),
     Spec::new("MinMax", ATTR_PROTECTED),
     Spec::new("Minus", ATTR_LISTABLE_NUMERIC_FUNCTION_PROTECTED),
     Spec::new("Mod", ATTR_LISTABLE),
@@ -399,14 +405,12 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "MapThread",
     "MatchQ",
     "MatrixQ",
-    "Max",
     "MaxBy",
     "Md5",
     "Mean",
     "Median",
     "Merge",
     "MergeNested",
-    "Min",
     "MinBy",
     "Missing",
     "Most",

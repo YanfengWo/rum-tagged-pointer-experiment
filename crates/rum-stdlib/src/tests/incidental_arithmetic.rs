@@ -138,6 +138,24 @@ fn numerator_mirrors_denominator_for_exact_numbers_and_registration() {
 }
 
 #[test]
+fn arithmetic_builtins_report_declared_attributes() {
+    let mut session = core_session();
+
+    let cases = [
+        ("Attributes[GCD]", "List[Listable, Protected]"),
+        ("Attributes[Max]", "List[NumericFunction, Protected]"),
+        (
+            "Attributes[Abs]",
+            "List[Listable, NumericFunction, Protected]",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
 fn max_min_handle_exact_extrema_lists_and_registration() {
     let mut session = core_session();
 

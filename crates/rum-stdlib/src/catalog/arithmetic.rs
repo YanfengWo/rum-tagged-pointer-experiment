@@ -47,7 +47,10 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary_with_attributes(
         "Abs",
         "Returns the absolute value of exact integers and rationals.",
-        AttributeSet::from_attribute(Attribute::Listable),
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
         arithmetic::eval_abs,
     ),
     BuiltinSpec::ordinary_with_attributes(
@@ -180,23 +183,33 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary_with_attributes(
         "GCD",
         "Computes the greatest common divisor of exact integers.",
-        AttributeSet::from_attribute(Attribute::Listable),
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
         arithmetic::eval_gcd,
     ),
     BuiltinSpec::ordinary_with_attributes(
         "LCM",
         "Computes the least common multiple of exact integers.",
-        AttributeSet::from_attribute(Attribute::Listable),
+        AttributeSet::empty()
+            .with(Attribute::Listable)
+            .with(Attribute::Protected),
         arithmetic::eval_lcm,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Max",
         "Returns the maximum exact integer or rational operand.",
+        AttributeSet::empty()
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
         arithmetic::eval_max,
     ),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_attributes(
         "Min",
         "Returns the minimum exact integer or rational operand.",
+        AttributeSet::empty()
+            .with(Attribute::NumericFunction)
+            .with(Attribute::Protected),
         arithmetic::eval_min,
     ),
     BuiltinSpec::ordinary_with_attributes(

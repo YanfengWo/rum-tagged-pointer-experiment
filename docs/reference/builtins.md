@@ -94,7 +94,7 @@ Evaluates an expression while delaying any abort until the protected region exit
 
 Returns the absolute value of exact integers and rationals.
 
-- Attributes: `Listable`
+- Attributes: `Listable`, `NumericFunction`, `Protected`
 - Capability: `Pure`
 
 ### AbsoluteTime
@@ -1512,7 +1512,7 @@ Creates a pure function.
 
 Computes the greatest common divisor of exact integers.
 
-- Attributes: `Listable`
+- Attributes: `Listable`, `Protected`
 - Capability: `Pure`
 
 ### GatherBy
@@ -1918,7 +1918,7 @@ Returns association keys in structural order.
 
 Computes the least common multiple of exact integers.
 
-- Attributes: `Listable`
+- Attributes: `Listable`, `Protected`
 - Capability: `Pure`
 
 ### Last
@@ -2121,7 +2121,7 @@ Tests whether an expression is a rectangular two-dimensional List array, optiona
 
 Returns the maximum exact integer or rational operand.
 
-- Attributes: `None`
+- Attributes: `NumericFunction`, `Protected`
 - Capability: `Pure`
 
 ### MaxBy
@@ -2234,7 +2234,7 @@ Lists message names defined for the whole session, a symbol, or one message quer
 
 Returns the minimum exact integer or rational operand.
 
-- Attributes: `None`
+- Attributes: `NumericFunction`, `Protected`
 - Capability: `Pure`
 
 ### MinBy
