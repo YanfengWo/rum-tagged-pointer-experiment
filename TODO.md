@@ -106,11 +106,15 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   termination — USER DECISION pending on the capability relabel.
 - [x] brief-182 DONE (5733f2f): rewrite operator forms (five; A/B
   clean); workspace 1367/0.
-- [ ] brief-183 (unit-4, USER-decided sandbox fix): relabel `Exit`
-  from `Capability::Pure` to `Capability::Process` — sandboxed() drops
-  it, trusted CLI keeps it. Memory: [[exit-capability-fix]].
+- [x] brief-183 DONE (1af0a9d): relabel `Exit` from `Capability::Pure`
+  to `Capability::Process` — sandboxed() drops it, trusted CLI keeps it
+  (Exit[7] still exits 7); rum-host asserts both directions. Workspace
+  1368/0. Memory: [[exit-capability-fix]].
 - [ ] brief-184 (unit-4 batch 2): rewrite options — `ReplaceRepeated`
-  `MaxIterations`, `Replace` `Heads`.
+  `MaxIterations -> Automatic` (per-call runaway budget, clamped to the
+  session ceiling; safety) + `Replace` `Heads -> False` (levelspec head
+  traversal, Cases/DeleteCases parity; flexibility). No A/B gate
+  (options/traversal, not call planning); defaults byte-identical.
 - [ ] brief-185 (unit-4 batch 3): `Sum`/`Product` malformed-iterator
   diagnostics (message parity with `Do`/`Table`). Unit 4 closes after
   this (+ Equivalent WL-attribute verification).
