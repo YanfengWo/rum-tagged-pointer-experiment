@@ -75,10 +75,15 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   eight; workspace 1345/0. PERF MORATORIUM LIFTED same day — unit-2
   operator forms thawed as brief-175 (after 171), microbench A/B gate
   restored.
-- [ ] brief-171 (unit-2 batch 2): spec flexibility — `Subsets`
-  advertised size specs (lying diagnostic), `PadLeft`/`PadRight` list
-  dims, `Partition` alignment/padding forms, `Transpose` general
-  permutations, `Reverse[expr, All]`, `Riffle` positional forms.
+- [x] brief-171+171b DONE (2d018ca): spec flexibility six-pack;
+  171's inverted Partition anchoring caught at gate (output-semantics
+  review, not just green tests) and corrected in 171b; workspace
+  1345/0.
+- [ ] brief-175 (unit-2 operator-forms thaw batch): unary/unambiguous
+  operator forms for the 14 structure/functional symbols via the
+  existing callable-wrapper chain; arity rule = only arities that
+  cannot be a valid data form become operators; microbench A/B hard
+  gate restored (saved-binaries alternating protocol).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
