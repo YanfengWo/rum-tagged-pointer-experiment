@@ -461,17 +461,33 @@ Close-out decisions (no further brief):
   patterns are fixed points in practice but not guaranteed). Shipping on a
   guess is out; needs its own hold-semantics design pass. `DatePlus` has no
   hold and a self-evaluating spec, so it shipped clean.
-- **Datetime layering boundary (user architecture ruling 2026-07-08).**
-  The 8 datetime builtins are pure calendar math + a minimal `Capability::
-  Clock`-gated wall-clock read (the `DateList[]`/`DateString[]` zero-arg
-  dual-form; declared `Pure` on purpose so the pure with-arg forms stay
-  usable in `sandboxed()`, with a runtime Clock check on the now-path —
-  NOT the `Exit`-style mislabel, since the gate is real). `Now`/`Today`/
-  `Yesterday`/`Tomorrow`, time zones, locale, DST, `DateObject` are
-  deliberately ABSENT: wall-clock conveniences + tz/locale belong DOWNSTREAM
-  in rum-os (OS authority), reusing these pure primitives. stdlib stays
-  UTC-only, exact-seconds, no tz database — a simple-version by design, not
-  a gap. See [[usability-pass-line]].
+- **Datetime layering boundary + stateful/pure separation (user rulings
+  2026-07-08).** Datetime = pure calendar math + a SINGLE stateful clock
+  reader. **Stateful/pure separation (brief-200, superseded the dual-form):**
+  the wall-clock read is now `Now[]` alone — declared `Capability::Clock` at
+  the SPEC level (dispatcher-enforced, denied in `sandboxed()`, like
+  `RandomBytes`; NOT a runtime check), returning an exact Unix timestamp with
+  no format option. `DateList`/`DateString` LOST their zero-arg now-forms and
+  are now genuinely pure conversions (`DateList[]`/`DateString[]` = arity
+  errors); current time = `DateList[Now[]]` / `DateString[Now[]]`. Rationale:
+  a dual-form (pure conversion + stateful now in one symbol) is a foot-gun —
+  a caller treating `DateList` as pure gets bitten by `DateList[]`, and the
+  `Pure` label was dishonest for the now-path. This DELIBERATELY diverges
+  from WL's stateful `DateList[]` (safety separation over WL-conformance).
+  The symmetric twin is brief-201: `SeedRandom` split → `ReseedRandom[]`
+  (`Capability::Random`) for the entropy reseed, `SeedRandom[seed]`
+  deterministic-only. Standing rule now: **stateful reads are single-purpose
+  symbols gated by a spec-level capability; never crammed into an otherwise-
+  pure symbol with a runtime check.** OPEN (kernel, units 8-10): `AbsoluteTime`
+  is the mirror-image case — declared `Capability::Clock` for the WHOLE
+  builtin, so its PURE `AbsoluteTime[datelist]` conversion is needlessly
+  Clock-gated, and its `AbsoluteTime[]` now-form duplicates `Now[]`; fold into
+  the kernel sweep (or a small brief) — make it pure conversion-only.
+  **Layering (still holds):** `Today`/`Yesterday`/`Tomorrow`, time zones,
+  locale, DST, `DateObject` are deliberately ABSENT — wall-clock conveniences
+  + tz/locale belong DOWNSTREAM in rum-os (OS authority), reusing these pure
+  primitives; stdlib stays UTC-only, exact-seconds, no tz database.
+  See [[usability-pass-line]].
 
 Gate lesson (added to the standing set): the docgen `LIMITS` table is
 keyed by name (one note per builtin) — a brief that says "add a Limits
