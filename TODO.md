@@ -128,9 +128,12 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   REJECTED. Separate future candidate: boolean-head attribute hygiene
   (missing `Protected`; `And`/`Or` `{HoldAll}` vs WL — likely
   intentional, own design pass). Units 1-4 = 334 builtins swept.
-- [ ] NEXT: unit 5 audit (arithmetic + number_theory + combinatorics +
-  integer_digits + polynomials + calculus, 62) — audit brief, findings
-  file, then triage. Awaiting go-ahead.
+- [ ] brief-186 (unit 5 AUDIT, in flight): arithmetic + number_theory +
+  combinatorics + integer_digits + polynomials + calculus, 62 builtins →
+  `docs/dev/usability-pass/math-findings.md`. Folk-scope guardrail is the
+  crux: rationals-only + folk algorithms are the CONTRACT, so flag
+  usability (options/attributes/fail-closed/convenience) NOT CAS depth.
+  Triage follows.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
