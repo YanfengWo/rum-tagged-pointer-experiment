@@ -453,14 +453,14 @@ Represents raw byte payloads using base64 text in the current first-pass subset.
 
 Tests whether an expression is a ByteArray with a valid base64 payload.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ByteArrayToString
 
 Converts a ByteArray to a string when its payload is valid UTF-8, failing closed otherwise.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ByteCount
@@ -677,7 +677,7 @@ Confirms that an evaluation emits no matching messages in the current first-pass
 
 Validates a value against a symbolic schema and returns the normalized value with defaults filled.
 
-- Attributes: `HoldRest`
+- Attributes: `HoldRest`, `Protected`
 - Capability: `Pure`
 
 ### ConstantArray
@@ -782,7 +782,7 @@ Counts transformed elements and returns an association in the current first-pass
 
 Computes the IEEE CRC-32 checksum over a string's UTF-8 bytes or a ByteArray.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: computes the IEEE CRC-32 checksum for integrity and interoperability, not security; it is not collision-resistant.
 
@@ -804,7 +804,7 @@ Differentiates exact arithmetic, rational-function, and abstract-function expres
 
 Returns the exact fixed-duration difference between two timestamps or date lists.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.
 
@@ -812,7 +812,7 @@ Returns the exact fixed-duration difference between two timestamps or date lists
 
 Converts an exact Unix timestamp to a UTC date list, or reads the current UTC date list in the zero-argument form.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses UTC, the proleptic Gregorian calendar, and no leap seconds; the zero-argument current-time form requires Capability::Clock.
 
@@ -827,7 +827,7 @@ Tests whether an expression has a DateObject head in the current structural subs
 
 Adds an exact fixed-duration offset to an exact timestamp or date list.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.
 
@@ -835,7 +835,7 @@ Adds an exact fixed-duration offset to an exact timestamp or date list.
 
 Formats an exact timestamp or date list as an ISO 8601 UTC string.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.
 
@@ -843,14 +843,14 @@ Formats an exact timestamp or date list as an ISO 8601 UTC string.
 
 Returns the ISO weekday symbol for an exact timestamp or date list.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### DaysInMonth
 
 Returns the number of days in a proleptic Gregorian month.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Decapitalize
@@ -1423,14 +1423,14 @@ Tests whether no subexpression matches a pattern on levels specified by a standa
 
 Decodes standard RFC 4648 base64 with padding into a ByteArray, failing closed on malformed input.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### FromCsv
 
 Parses CSV text into Lists of Strings, optionally using the first row as Association headers.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: parses RFC 4180-style text into String fields only; plain rows may be ragged, while Headers -> True rejects duplicate headers and ragged data rows. Delimiter must be one non-quote, non-newline character.
 
@@ -1438,7 +1438,7 @@ Parses CSV text into Lists of Strings, optionally using the first row as Associa
 
 Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timestamp.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: accepts only the documented ISO 8601 subset with optional Z or fixed +/-HH:MM offsets; there is no time-zone database and no leap-second support.
 
@@ -1453,14 +1453,14 @@ Constructs an exact integer from a list or string of digits.
 
 Decodes even-length hexadecimal text into a ByteArray, failing closed on malformed input.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### FromIni
 
 Parses rum's fail-closed INI dialect into an Association of section Associations.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: implements rum's documented INI dialect only: whole-line ;/# comments, [section] headers, key = value lines, trimmed keys/values, verbatim values, no nesting, no multiline values, and no inline comments.
 
@@ -1468,14 +1468,14 @@ Parses rum's fail-closed INI dialect into an Association of section Associations
 
 Parses an RFC 8259 JSON text string into exact rum values, failing closed on invalid JSON.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### FromToml
 
 Parses rum's documented fail-closed TOML subset into exact rum values.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: implements rum's documented TOML 1.0 folk subset only: tables, arrays-of-tables, inline tables, strings, exact integers/decimals, booleans, and date/time tokens; inf/nan and unsupported TOML surface fail closed. Offset date-times decode as exact Unix-second instants, while local dates/times decode as Lists.
 
@@ -1483,7 +1483,7 @@ Parses rum's documented fail-closed TOML subset into exact rum values.
 
 Parses XML text into a symbolic XmlElement tree, rejecting DTDs and unsupported XML surface.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: parses a value-oriented XML element tree only: declaration syntax is validated but not represented, comments are dropped, CDATA becomes text, namespaces remain verbatim, whitespace-only runs around element content are dropped, and DTD/DOCTYPE declarations are deliberately rejected.
 
@@ -1491,7 +1491,7 @@ Parses XML text into a symbolic XmlElement tree, rejecting DTDs and unsupported 
 
 Parses rum's documented fail-closed YAML block subset into exact rum values.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: implements rum's documented YAML sane block subset only: block mappings and sequences, plain and quoted scalars, literal | and |- blocks, comments, and empty flow {} / []; anchors, aliases, tags, directives, document markers, merge keys, folded blocks, non-empty flow collections, duplicate keys, tabs in indentation, and ambiguous same-indent collection mixes fail closed.
 
@@ -1940,7 +1940,7 @@ Counts atomic leaves in an expression's full structural tree, including heads.
 
 Tests whether an exact integer year is a leap year in the proleptic Gregorian calendar.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Length
@@ -2143,7 +2143,7 @@ Returns the peak session memory-proxy byte count high-water mark subset.
 
 Computes an MD5 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: intended only for interoperability and checksums; it is not collision-resistant.
 
@@ -3195,7 +3195,7 @@ Evaluates a function across selected levels for side effects in the current firs
 
 Returns path-keyed validation errors for a value checked against a symbolic schema.
 
-- Attributes: `HoldRest`
+- Attributes: `HoldRest`, `Protected`
 - Capability: `Pure`
 
 ### SeedRandom
@@ -3287,7 +3287,7 @@ Updates known default options for a symbol.
 
 Computes a SHA-1 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: intended only for interoperability and checksums; it is not collision-resistant.
 
@@ -3295,14 +3295,14 @@ Computes a SHA-1 digest over a string's UTF-8 bytes or a ByteArray, returning lo
 
 Computes a SHA-256 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Sha512
 
 Computes a SHA-512 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ShellQuote
@@ -3939,7 +3939,7 @@ Evaluates an expression and returns {elapsed, value} using the current wall-cloc
 
 Encodes a string's UTF-8 bytes or a ByteArray as standard RFC 4648 base64 with padding.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ToCharacterCode
@@ -3953,7 +3953,7 @@ Returns Unicode scalar values for strings, or UTF-8 byte values when given the "
 
 Renders Lists of String rows or String-keyed Association rows as CSV text.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: renders only String fields from list rows or String-keyed Association rows; Association rows imply a header row and must share the same keys. Delimiter must be one non-quote, non-newline character.
 
@@ -3968,14 +3968,14 @@ Parses and evaluates input strings using the current InputForm/StandardForm-comp
 
 Encodes a string's UTF-8 bytes or a ByteArray as lowercase hexadecimal text.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ToIni
 
 Renders an Association of section Associations as rum's INI dialect.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: renders only Association-of-Associations with String section names, keys, and values; unrepresentable names, multiline values, whitespace-trimming value loss, and an empty default section fail closed.
 
@@ -3983,7 +3983,7 @@ Renders an Association of section Associations as rum's INI dialect.
 
 Renders the JSON-representable subset of rum values as a JSON text string.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ToLowerCase
@@ -4004,7 +4004,7 @@ Renders an evaluated expression into the current canonical kernel text form.
 
 Renders the TOML-representable subset of rum Associations as TOML text.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: renders only top-level Associations with String keys, exact integers, terminating rationals, booleans, strings, Lists, nested Associations, and Lists of Associations; nested Associations use sub-table headers unless inline form is required to preserve same-level key order. It never synthesizes TOML datetime syntax, so date Lists and timestamps encode as arrays or numbers.
 
@@ -4019,7 +4019,7 @@ Converts a string or list of strings to uppercase using the current Unicode-awar
 
 Renders a well-formed XmlElement tree as XML text.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: renders only well-formed XmlElement[tag_String, attrs_Association, children_List] trees with String attributes and String/XmlElement children; names use the documented ASCII XML-name subset, compact output is default, and Indent pretty-prints only element-only content.
 
@@ -4027,7 +4027,7 @@ Renders a well-formed XmlElement tree as XML text.
 
 Renders the YAML-representable subset of rum values as YAML text.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: renders only Associations with String keys, Lists, exact integers, terminating rationals, True, False, Null, and Strings; safe plain strings use the documented Norway-safe rule, other strings are double-quoted or literal blocks, and unsupported YAML surface is never synthesized.
 
@@ -4309,7 +4309,7 @@ Represents the current string-pattern atom for one alphabetic, ASCII digit, or u
 
 Represents an inert XML element as XmlElement[tag, attrs, children].
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### Xor

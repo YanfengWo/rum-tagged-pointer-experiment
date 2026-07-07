@@ -36,6 +36,20 @@ fn no_default_features_drop_digest_builtins_but_keep_codecs() {
     }
 }
 
+#[cfg(feature = "hash")]
+#[test]
+fn unit6_codec_byte_datetime_and_schema_heads_are_protected() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{Attributes[FromJson], Attributes[XmlElement], Attributes[Sha256], Attributes[DateList], Attributes[ConformSchema]}"
+        ),
+        "List[List[Protected], List[Protected], List[Protected], List[Protected], List[HoldRest, Protected]]"
+    );
+}
+
 fn assert_failed_with_message(source: &str, symbol: &str, tag: &str) {
     let mut session = core_session();
     let (value, messages) = eval_with_messages(&mut session, source);
