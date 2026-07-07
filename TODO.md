@@ -160,8 +160,10 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [ ] brief-190 (unit-5 fix 4a, in flight): stats list forms —
   Commonest[list,n] (top-n by frequency) + Quantile[list,{q..}] (map
   scalar over q list). stats.rs, folk-cheap, no A/B.
-- [ ] brief-191 (unit-5 fix 4b): Total[list,n] / Total[list,{level}]
-  levelspec summation (parts.rs). Watch WL row/column level semantics.
+- [ ] brief-191 (unit-5 fix 4b, in flight): Total[list,n] (cumulative
+  1..n) / Total[list,{k}] (contract level k) / Total[list,Infinity]
+  (all levels). Build nested Plus/List tree, evaluate once; 1-arg
+  byte-identical. WL cases derived: Total[m,{2}]->{3,7}, Total[m,2]->10.
 - [ ] brief-192 (unit-5 fix 4c): PowerMod negative-exponent modular
   inverse (extended-GCD; message on non-invertible base). integer_ops.rs.
 - [ ] brief-193 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
