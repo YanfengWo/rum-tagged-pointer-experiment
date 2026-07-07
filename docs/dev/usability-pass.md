@@ -53,7 +53,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
 | 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
 | 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
-| 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187… (triage below) |
+| 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
 | 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
@@ -338,6 +338,44 @@ Fix batches (dispatch order, reshaped by the singularity decision):
    grouping attributes (Orderless/Flat/OneIdentity, WL-correct); `Abs`
    and small `NumericFunction`/`Protected` omissions. Microbench A/B
    required (attribute-driven planning).
+
+(At dispatch, the cheap-flexibility batch above was split by feature:
+190 = `Commonest[list,n]` + `Quantile[list,{q..}]`, 191 = `Total` level
+forms, 192 = `PowerMod` modular inverse; the attribute batch became 193.)
+
+**UNIT 5 CLOSED (2026-07-07).** Landed: 186 audit + 187 (argument/arity
+validation: Fibonacci arity, integer_digits base<2 / negative length, D
+malformed specs) + 188 (clean WL values: `Mod[m,0]->m`,
+`PartitionsP/Q[-1]->0`) + 189 (Coefficient/CoefficientList
+target-containment guard — the precise Laurent-leak version, not a naive
+contains-target) + 190 (`Commonest[list,n]`, `Quantile[list,{q..}]`) +
+191 (Total level forms n / {k} / Infinity) + 192 (PowerMod
+negative-exponent modular inverse via extended Euclid) + 193 (attribute
+hygiene, CONSERVATIVE). Workspace 1373 -> 1385; reference: five
+Attributes lines (Abs/GCD/LCM/Max/Min). Cumulative units 1-5 = 396
+builtins swept, all fixes compat.
+
+Close-out decisions recorded (no further brief):
+- **Arithmetic singularities stay INERT (USER decision).** 1/0, 0^0,
+  (-1)!, zero divisor/modulus/multiple: no domain message, no
+  ComplexInfinity/Indeterminate arithmetic (rum has them only as inert
+  symbols). Memory: [[rum-rationals-only-by-design]].
+- **`Orderless`/`Flat`/`OneIdentity` on GCD/LCM/Max/Min — REJECTED
+  (no-default-cost).** rum honors them by per-call arg sort/flatten in
+  `eval_call_prepare`; adding them to folk numeric reducers is hot-path
+  cost for a marginal symbolic-canonicalization benefit and would flip
+  the pinned `FullForm[Max[x,3]]=="Max[x, 3]"` ordering. Only the
+  zero-cost `Protected` + `NumericFunction` were added (brief-193). Same
+  disposition class as the unit-4 Equivalent Flat/OneIdentity rejection.
+- **`FromDigits[{2},2]->2` is WL-conformant** (lenient list form), not a
+  gap; several arithmetic-domain "safety" audit rows were reclassified to
+  OK-intended folk boundaries by the singularity decision.
+
+Gate lesson reinforced: a behavior/attribute change's MAY list must span
+the RUNTIME-side mirror too — brief-193's catalog attribute change
+rippled into `runtime/builtin_catalog/stdlib_attributes.rs` (the kernel's
+attribute table), outside the stdlib-only MAY list; the sync was
+necessary, not scope creep (cf. the brief-185 cross-crate lesson).
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 

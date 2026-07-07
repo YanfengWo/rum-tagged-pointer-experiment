@@ -168,14 +168,15 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   modular inverse via hand-rolled extended Euclid (PowerMod[2,-1,5]->3);
   non-invertible base -> PowerMod::ninv + inert; zero modulus stays
   inert. Reuses power_mod_integer for (a^-1)^k. No new dep.
-- [ ] brief-193 (unit-5 fix 5, in flight): attribute hygiene CONSERVATIVE
-  — add Protected (GCD/LCM/Max/Min/Abs) + NumericFunction (Max/Min/Abs
-  only, aligning Abs with the Sign/Floor sibling set). Zero eval-cost, no
-  A/B, no reordering. DEFER Orderless/Flat/OneIdentity: rum honors them by
-  per-call arg sort/flatten in eval_call_prepare — adding them to folk
-  numeric reducers is hot-path cost for marginal benefit and would flip
-  the committed FullForm[Max[x,3]]=="Max[x, 3]" order (no-default-cost
-  line; same class as the Equivalent rejection). Regenerate builtins.md.
+- [x] brief-193 DONE (54e76d3): attribute hygiene CONSERVATIVE — Protected
+  (GCD/LCM/Max/Min/Abs) + NumericFunction (Max/Min/Abs). Zero eval-cost,
+  no reordering (FullForm[Max[x,3]] stays "Max[x, 3]"), reductions
+  unchanged; runtime attribute mirror synced; reference regenerated.
+  Orderless/Flat/OneIdentity REJECTED (no-default-cost). Workspace 1385/0.
+- [x] **UNIT 5 CLOSED (2026-07-07):** 186 audit + 187-193. Units 1-5 =
+  396 builtins swept. Close-out decisions in the tracker (singularities
+  inert per user; Orderless/Flat/OneIdentity rejected; FromDigits list
+  form WL-conformant). Next sweep unit: 6 (codecs + bytes + datetime, 34).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
