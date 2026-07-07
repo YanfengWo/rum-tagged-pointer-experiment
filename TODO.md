@@ -101,8 +101,12 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-180 DONE (828d774): KeyGroupBy/AssociationKeyDeflatten+
   Flatten/MergeNested; workspace 1366/0. **UNIT 3 CLOSED** (271
   builtins swept across units 1-3).
-- [ ] brief-181 (unit 4 audit): control + logic + rewrite families
-  (35 + 21 + 7 = 63 builtins), all-rows findings table.
+- [x] brief-181 DONE (191a9e6): unit-4 audit, 63/63; triage in the
+  tracker. Standout: `Exit` is Capability::Pure but requests host
+  termination — USER DECISION pending on the capability relabel.
+- [ ] brief-182 (unit-4 batch 1): rewrite operator forms
+  `Cases`/`DeleteCases`/`Replace`/`ReplaceAll`/`ReplaceRepeated`
+  (call planning; A/B gate; the unit-2/3 spillover).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

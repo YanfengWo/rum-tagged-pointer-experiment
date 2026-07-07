@@ -52,7 +52,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
 | 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
 | 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
-| 4 | control + logic + rewrite | 63 | | |
+| 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182… (triage below) |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
@@ -190,6 +190,44 @@ MergeNested). Workspace 1358 → 1366; reference +4. No silent-wrong-
 answer bugs in this family. Cumulative: units 1-3 = 271 builtins
 swept, all fixes compat (defaults byte-identical). Next: unit 4
 (control+logic+rewrite, 63).
+
+## Unit 4 (control+logic+rewrite) triage — 2026-07-07
+
+Audit brief-181: 63/63, findings in
+`usability-pass/control-logic-rewrite-findings.md`. Two standout
+findings beyond routine gaps + routine batches:
+
+- **`Exit` capability mislabel — USER DECISION PENDING.** `Exit` is
+  `Capability::Pure` (default via `ordinary`), so `sandboxed()`
+  installs it; a sandboxed computation can raise
+  `EvalError::Exit`→`SessionRequestError::Exit`, a host-lifecycle
+  request that a naive host could act on (DoS escape). Kernel is clean
+  (signal only), but the LABEL is wrong — host lifecycle control is
+  ambient authority, not Pure (same logic as Clock/Random in the
+  FS-purity line). `Capability::Process` already exists. Recommended
+  fix: relabel `Exit` to `Capability::Process`; sandboxed drops it,
+  trusted CLI keeps it. Not dispatched until the user picks the
+  capability.
+- **`Implies` short-circuit — REJECTED (compat).** WL `Implies` is
+  `{Protected}`, does NOT hold its args; `Implies[False, x]` evaluates
+  `x`. rum matches WL. The audit's short-circuit proposal would
+  diverge — rejected per the WL-conformant-defaults rule.
+- **`Equivalent` Flat/OneIdentity — DEFERRED (verify WL first).** WL
+  `Equivalent` is believed `{Orderless, Protected}` (not Flat); do not
+  add associative attributes without confirming the WL surface.
+
+Routine fix batches (dispatch order):
+
+1. **brief-182 — rewrite operator forms** (call planning; A/B gate;
+   the unit-2/3 spillover): `Cases[patt]`, `DeleteCases[patt]`,
+   `Replace[rules]`, `ReplaceAll[rules]`, `ReplaceRepeated[rules]`. All
+   data forms are ≥2-arg → 1-arg operator forms unambiguous.
+2. **brief-183 — rewrite options** (pure-ish): `ReplaceRepeated`
+   `MaxIterations -> Automatic` (per-call runaway budget; safety),
+   `Replace` `Heads -> False` traversal (parity with Cases/DeleteCases).
+3. **brief-184 — iteration diagnostics** (low-risk safety):
+   `Sum`/`Product` malformed-iterator messages matching `Do`/`Table`.
+4. **Exit capability** (pending user decision).
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 
