@@ -110,14 +110,22 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   to `Capability::Process` — sandboxed() drops it, trusted CLI keeps it
   (Exit[7] still exits 7); rum-host asserts both directions. Workspace
   1368/0. Memory: [[exit-capability-fix]].
-- [ ] brief-184 (unit-4 batch 2): rewrite options — `ReplaceRepeated`
+- [x] brief-184 DONE (29f5fd3): rewrite options — `ReplaceRepeated`
   `MaxIterations -> Automatic` (per-call runaway budget, clamped to the
-  session ceiling; safety) + `Replace` `Heads -> False` (levelspec head
-  traversal, Cases/DeleteCases parity; flexibility). No A/B gate
-  (options/traversal, not call planning); defaults byte-identical.
+  session ceiling; malformed fails closed; safety) + `Replace`
+  `Heads -> False` (levelspec head traversal, Cases/DeleteCases parity;
+  flexibility). No A/B gate; defaults byte-identical. Reuses the shared
+  `parse_heads_option_with_default` helper. Workspace 1371/0.
 - [ ] brief-185 (unit-4 batch 3): `Sum`/`Product` malformed-iterator
-  diagnostics (message parity with `Do`/`Table`). Unit 4 closes after
-  this (+ Equivalent WL-attribute verification).
+  diagnostics — `argform` message parity with `Do`/`Table` (mirror the
+  `driver.rs` `None` branch; inert return byte-identical, only a message
+  added). Low-risk safety, no A/B gate.
+- [ ] Unit-4 close-out (after 185): verify `Equivalent`'s WL attribute
+  surface before any change — the audit believes `{Orderless,
+  Protected}` (NOT Flat/OneIdentity); a Flat/OneIdentity add touches
+  attribute-driven planning (would need the A/B gate) and is NOT done
+  until the WL surface is confirmed. `Implies` short-circuit stays
+  REJECTED (rum matches WL: `{Protected}`, non-held).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
