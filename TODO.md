@@ -83,10 +83,12 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   early exit; A/B twice (3+3 Codex, 2+2 independent) — zero regressions,
   early exit IMPROVES symbol-head labels (downvalue-exact-hit -7.1%);
   workspace 1348/0.
-- [ ] brief-172 (unit-2 batch 3): collection comparison controls —
-  `DeleteDuplicates`/`Tally` test args, set-ops `SameTest`,
-  `ReverseSort` comparator, `SortBy` 3-arg ordering, `GatherBy`
-  function-list hierarchical grouping, `MaxBy`/`MinBy` top-k.
+- [x] brief-172 DONE (5528ea2): collection comparison controls (seven
+  builtins; GatherBy silent-singleton bug fixed); workspace 1351/0.
+- [ ] brief-173 (unit-2 batch 4): fail-closed diagnostics — `MapAt`
+  missing-target message (WL parity), `SubsetMap` incompatible/missing
+  path messages, `Inner`/`Dot` shape-mismatch messages. Genuinely
+  symbolic cases stay inert.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
