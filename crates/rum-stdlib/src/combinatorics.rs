@@ -51,6 +51,9 @@ pub(crate) fn eval_partitions_p(
     let Some(index) = expr_as_exact_integer(arg) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    if index < BigInt::from(0_u8) {
+        return Ok(Expr::integer(BigInt::from(0_u8)));
+    }
     let Some(index) = nonnegative_combinatorics_index(session, &index)? else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
@@ -73,6 +76,9 @@ pub(crate) fn eval_partitions_q(
     let Some(index) = expr_as_exact_integer(arg) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
+    if index < BigInt::from(0_u8) {
+        return Ok(Expr::integer(BigInt::from(0_u8)));
+    }
     let Some(index) = nonnegative_combinatorics_index(session, &index)? else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };

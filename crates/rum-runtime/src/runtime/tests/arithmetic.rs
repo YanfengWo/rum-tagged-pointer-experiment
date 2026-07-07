@@ -289,6 +289,22 @@ fn exact_integer_mod_quotient_gcd_lcm_and_powermod_follow_floor_style_semantics(
     let mut session = session_with_test_rewrite_builtins();
 
     assert_eq!(
+        session.eval_text("Mod[5, 0]").unwrap().value.to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("Mod[-3, 0]").unwrap().value.to_string(),
+        "-3"
+    );
+    assert_eq!(
+        session.eval_text("Mod[7, 3]").unwrap().value.to_string(),
+        "1"
+    );
+    assert_eq!(
+        session.eval_text("Mod[x, 0]").unwrap().value.to_string(),
+        "Mod[x, 0]"
+    );
+    assert_eq!(
         session.eval_text("Mod[-3, 2]").unwrap().value.to_string(),
         "1"
     );

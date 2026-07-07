@@ -14,6 +14,10 @@ impl Session {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
+        if rhs == BigInt::from(0_u8) {
+            return Ok(Expr::integer(lhs));
+        }
+
         Ok(mod_integer(&lhs, &rhs)
             .map(Expr::integer)
             .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
