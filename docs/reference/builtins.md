@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 605
+Builtin count: 609
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -276,6 +276,20 @@ Adds or replaces association entries, including held symbol mutation in the curr
 ### Association
 
 Builds an association from Rule/RuleDelayed entries in the current first-pass subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### AssociationKeyDeflatten
+
+Builds nested associations from flat associations whose keys are path lists.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### AssociationKeyFlatten
+
+Flattens nested associations into associations whose keys are path lists.
 
 - Attributes: `None`
 - Capability: `Pure`
@@ -1816,6 +1830,13 @@ Tests whether an association does not contain a key in the current first-pass su
 - Attributes: `None`
 - Capability: `Pure`
 
+### KeyGroupBy
+
+Groups association entries by transformed keys, including the current reducer form.
+
+- Attributes: `None`
+- Capability: `Pure`
+
 ### KeyIntersection
 
 Builds a key-intersection association in the current first-pass subset.
@@ -2163,6 +2184,13 @@ Returns the current session memory-proxy byte count subset.
 ### Merge
 
 Merges associations by key using a combiner in the current first-pass subset.
+
+- Attributes: `None`
+- Capability: `Pure`
+
+### MergeNested
+
+Recursively merges nested associations by key using a combiner at leaves.
 
 - Attributes: `None`
 - Capability: `Pure`

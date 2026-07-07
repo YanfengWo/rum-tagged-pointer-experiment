@@ -702,6 +702,8 @@ fn structure_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> 
         1 if is_system_symbol_name(head, "MaxBy") => Some("MaxBy"),
         1 if is_system_symbol_name(head, "MinBy") => Some("MinBy"),
         1 if is_system_symbol_name(head, "DeleteDuplicatesBy") => Some("DeleteDuplicatesBy"),
+        1 if is_system_symbol_name(head, "KeyGroupBy") => Some("KeyGroupBy"),
+        1 if is_system_symbol_name(head, "MergeNested") => Some("MergeNested"),
         1 if is_system_symbol_name(head, "ReverseSortBy") => Some("ReverseSortBy"),
         2 if is_system_symbol_name(head, "Insert") => Some("Insert"),
         2 if is_system_symbol_name(head, "TakeLargestBy") => Some("TakeLargestBy"),

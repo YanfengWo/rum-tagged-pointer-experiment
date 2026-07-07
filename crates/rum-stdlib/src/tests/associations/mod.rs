@@ -12,6 +12,7 @@ mod associations_aggregate_diagnostics;
 mod associations_basic_diagnostics;
 mod associations_key_arity_diagnostics;
 mod associations_key_diagnostics;
+mod associations_key_reshape;
 mod associations_key_sets;
 mod associations_key_value_pattern;
 mod associations_missing_diagnostics;

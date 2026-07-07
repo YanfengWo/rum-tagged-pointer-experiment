@@ -6,7 +6,7 @@ mod key_sort;
 mod map;
 
 pub(crate) use self::{
-    aggregate::{eval_counts_by, eval_merge},
+    aggregate::{eval_counts_by, eval_merge, eval_merge_nested},
     key_select::eval_key_select,
     key_sort::{eval_key_sort_by, resume_key_sort_with_ordering_from_index},
     map::eval_association_map,

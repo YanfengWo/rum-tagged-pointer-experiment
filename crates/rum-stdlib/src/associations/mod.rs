@@ -13,6 +13,7 @@ mod aggregate;
 mod basic;
 mod data;
 mod grouping;
+mod key_reshape;
 mod missing;
 mod mutation;
 mod resumable;
@@ -28,11 +29,14 @@ pub(crate) use self::{
         eval_lookup, eval_normal, eval_values,
     },
     grouping::eval_group_by,
+    key_reshape::{
+        eval_association_key_deflatten, eval_association_key_flatten, eval_key_group_by,
+    },
     missing::{eval_delete_missing, eval_missing},
     mutation::{eval_associate_to, eval_key_drop_from},
     resumable::{
         eval_association_map, eval_counts_by, eval_key_select, eval_key_sort_by, eval_merge,
-        resume_key_sort_with_ordering_from_index,
+        eval_merge_nested, resume_key_sort_with_ordering_from_index,
     },
     transforms::{
         eval_association_thread, eval_key_complement, eval_key_intersection, eval_key_map,

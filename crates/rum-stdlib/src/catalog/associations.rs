@@ -13,6 +13,16 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         "Tests whether an expression is an Association with rule entries.",
         associations::eval_association_q,
     ),
+    BuiltinSpec::ordinary(
+        "AssociationKeyDeflatten",
+        "Builds nested associations from flat associations whose keys are path lists.",
+        associations::eval_association_key_deflatten,
+    ),
+    BuiltinSpec::ordinary(
+        "AssociationKeyFlatten",
+        "Flattens nested associations into associations whose keys are path lists.",
+        associations::eval_association_key_flatten,
+    ),
     BuiltinSpec::ordinary_with_hold(
         "Lookup",
         "Looks up a key in an association in the current first-pass subset.",
@@ -75,6 +85,11 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         associations::eval_key_free_q,
     ),
     BuiltinSpec::ordinary(
+        "KeyGroupBy",
+        "Groups association entries by transformed keys, including the current reducer form.",
+        associations::eval_key_group_by,
+    ),
+    BuiltinSpec::ordinary(
         "KeySort",
         "Sorts association entries by key in the current canonical ordering subset.",
         associations::eval_key_sort,
@@ -135,6 +150,11 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         "Merge",
         "Merges associations by key using a combiner in the current first-pass subset.",
         associations::eval_merge,
+    ),
+    BuiltinSpec::ordinary(
+        "MergeNested",
+        "Recursively merges nested associations by key using a combiner at leaves.",
+        associations::eval_merge_nested,
     ),
     BuiltinSpec::ordinary(
         "Catenate",
