@@ -463,3 +463,46 @@ fn tracing_records_definition_rule_and_evaluation_events() {
     )));
     assert!(session.take_trace().is_empty());
 }
+
+#[test]
+fn sum_and_product_malformed_iterators_emit_argform_messages() {
+    let detail = "expected a supported repetition count or iterator specification";
+
+    for (source, symbol, expected) in [
+        ("Sum[i, {i, 1, 3, 0}]", "Sum", "Sum[i, List[i, 1, 3, 0]]"),
+        (
+            "Product[i, {i, 1, 3, 0}]",
+            "Product",
+            "Product[i, List[i, 1, 3, 0]]",
+        ),
+        ("Sum[1, bad]", "Sum", "Sum[1, bad]"),
+        ("Product[1, bad]", "Product", "Product[1, bad]"),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        let outcome = session.eval_text(source).unwrap();
+
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome.messages.iter().any(|message| {
+                message.symbol == symbol && message.tag == "argform" && message.text == detail
+            }),
+            "{source} messages {:?}",
+            outcome.messages
+        );
+    }
+}
+
+#[test]
+fn sum_and_product_valid_iterators_remain_message_free() {
+    for (source, expected) in [("Sum[i, {i, 1, 3}]", "6"), ("Product[i, {i, 1, 4}]", "24")] {
+        let mut session = session_with_test_control_builtins();
+        let outcome = session.eval_text(source).unwrap();
+
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome.messages.is_empty(),
+            "{source} messages {:?}",
+            outcome.messages
+        );
+    }
+}

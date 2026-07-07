@@ -91,38 +91,60 @@ fn iterator_spec_matrix_covers_counts_lists_ranges_steps_and_rejections() {
         );
     }
 
-    for (source, expected) in [
-        ("Sum[i, {i, 1, 3, 0}]", "Sum[i, List[i, 1, 3, 0]]"),
-        ("Product[i, {i, 1, 3, 0}]", "Product[i, List[i, 1, 3, 0]]"),
-        ("Sum[i, {i, 1.5}]", "Sum[i, List[i, 3/2]]"),
-        ("Product[i, {i, 1.5}]", "Product[i, List[i, 3/2]]"),
+    for (source, symbol, expected) in [
+        ("Sum[i, {i, 1, 3, 0}]", "Sum", "Sum[i, List[i, 1, 3, 0]]"),
+        (
+            "Product[i, {i, 1, 3, 0}]",
+            "Product",
+            "Product[i, List[i, 1, 3, 0]]",
+        ),
+        ("Sum[i, {i, 1.5}]", "Sum", "Sum[i, List[i, 3/2]]"),
+        (
+            "Product[i, {i, 1.5}]",
+            "Product",
+            "Product[i, List[i, 3/2]]",
+        ),
     ] {
         let mut session = core_session();
         let outcome = session.eval_text(source).unwrap();
         assert_eq!(outcome.value.to_string(), expected, "{source}");
         assert!(
-            outcome.messages.is_empty(),
-            "{source}: {:?}",
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == symbol && message.tag == "argform"),
+            "{source} messages {:?}",
             outcome.messages
         );
     }
 }
 
 #[test]
-fn sum_and_product_leave_symbolic_bounds_unevaluated() {
+fn sum_and_product_leave_unsupported_specs_unevaluated_with_argform() {
     let mut session = core_session();
 
     let cases = [
-        ("Sum[i, {i, 1, n}]", "Sum[i, List[i, 1, n]]"),
-        ("Product[i, {i, 1, n}]", "Product[i, List[i, 1, n]]"),
-        ("Sum[x, 3]", "Sum[x, 3]"),
-        ("Product[x, 3]", "Product[x, 3]"),
+        ("Sum[i, {i, 1, n}]", "Sum", "Sum[i, List[i, 1, n]]"),
+        (
+            "Product[i, {i, 1, n}]",
+            "Product",
+            "Product[i, List[i, 1, n]]",
+        ),
+        ("Sum[x, 3]", "Sum", "Sum[x, 3]"),
+        ("Product[x, 3]", "Product", "Product[x, 3]"),
     ];
 
-    for (source, expected) in cases {
+    for (source, symbol, expected) in cases {
         let outcome = session.eval_text(source).unwrap();
         assert_eq!(outcome.value.to_string(), expected, "{source}");
-        assert!(outcome.messages.is_empty(), "{source}");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == symbol && message.tag == "argform"),
+            "{source} messages {:?}",
+            outcome.messages
+        );
     }
 }
 

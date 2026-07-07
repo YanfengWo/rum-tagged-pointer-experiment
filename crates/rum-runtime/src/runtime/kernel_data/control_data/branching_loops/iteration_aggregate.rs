@@ -84,7 +84,13 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let spec = match parse_do_spec(self, &spec_expr, aggregate.consumer())? {
             Some(spec) => spec,
-            None => return Ok(Expr::call(system_expr(aggregate.name()), args)),
+            None => {
+                return Ok(self.invalid_call_with_arg_form(
+                    aggregate.name(),
+                    &args,
+                    "expected a supported repetition count or iterator specification",
+                ));
+            }
         };
 
         let capacity = spec.iteration_count();
