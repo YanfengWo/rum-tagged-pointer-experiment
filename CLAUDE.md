@@ -100,10 +100,25 @@ rather than duplicating them.
 - **PUBLICATION DEFERRED INDEFINITELY (user directive 2026-07-06) — do not
   steer toward release.** rum publishes only after sufficient divergence.
   Direction: embedded scripting + sandbox safety + rapid script development
-  (elisp/guile/lua/python family). ACTIVE mainline: stdlib expansion for
-  scripting, evidence-first (TODO §Stdlib Expansion). The FS-purity line
-  (briefs 132-134) landed the three mechanical kernel hard lines: zero
-  unsafe, zero std::fs (non-test), Pure = deterministic.
+  (elisp/guile/lua/python family). The FS-purity line (briefs 132-134)
+  landed the three mechanical kernel hard lines: zero unsafe, zero std::fs
+  (non-test), Pure = deterministic. The stdlib-expansion line (briefs
+  135-156) is COMPLETE.
+- **USABILITY PASS — ACTIVE MAINLINE (opened 2026-07-07).** The "works
+  well" layer over every installed builtin (three axes:
+  flexibility/convenience/safety), audit-then-fix per sweep unit. Tracker
+  `docs/dev/usability-pass.md`; memory `usability-pass-line.md`. **Units
+  1-5 CLOSED** (strings, structure+functional, predicates+associations,
+  control+logic+rewrite, math — briefs 161-193, 396 builtins swept, all
+  fixes compat). **NEXT: unit 6** (codecs json/csv/ini/toml/xml/yaml/schema
+  + bytes + datetime, 34) — write the audit brief (194) mirroring
+  brief-186. Standing user directives: high coverage incl. the
+  WL-inherited surface; compat enhancement only (default behavior stays
+  WL-conformant, new powers via options / rum-native siblings). Standing
+  design rulings from this line: arithmetic singularities stay INERT (no
+  special-value arithmetic — user decision); Orderless/Flat/OneIdentity on
+  folk numeric reducers and Equivalent, plus the Implies short-circuit, all
+  REJECTED (no-default-cost / WL-conformant-defaults).
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-

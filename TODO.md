@@ -140,34 +140,13 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   special-value arithmetic; only clean WL values fixed. Reshaped the
   fix batches accordingly (arithmetic-singularity fail-closed batch
   DROPPED; FromDigits list range-check = WL-conformant, not a gap).
-- [ ] brief-187 (unit-5 fix 1, in flight): argument/arity validation
-  (WL clearly errors on the malformed ARG, not a singularity) — Fibonacci
-  arity, integer_digits base<2 + negative length, malformed D specs
-  (non-variable/negative order; defer symbolic order). rum-stdlib. No A/B.
-- [ ] brief-188 (unit-5 fix 2, in flight): clean WL-value fixes —
-  Mod[m,0]->m + PartitionsP/Q[-1]->0 ONLY (the two certain cases). All
-  other combinatorics/number-theory negatives + Quotient/PowerMod zero
-  DEFER (stay inert). No messages, no special values, shared
-  nonnegative_combinatorics_index untouched.
-- [ ] brief-189 (unit-5 fix 3, in flight): polynomial target-containment
-  guard. Precise: fail closed only when an output coefficient contains a
-  NEGATIVE INTEGER POWER of a target variable (Power[x,neg], the Laurent
-  leak) — NOT a naive "contains target" (Sin[x] as x^0 coeff is
-  WL-correct). Only Coefficient[x+1/x,x,0] + CoefficientList[x+1/x,x]
-  newly inert; Sin[x]/1/(1+x)/genuine polynomials unchanged.
-  (cheap-flexibility batch split into 190/191/192 by feature — 4
-  heterogeneous forms is too much for one gate.)
-- [ ] brief-190 (unit-5 fix 4a, in flight): stats list forms —
-  Commonest[list,n] (top-n by frequency) + Quantile[list,{q..}] (map
-  scalar over q list). stats.rs, folk-cheap, no A/B.
-- [ ] brief-191 (unit-5 fix 4b, in flight): Total[list,n] (cumulative
-  1..n) / Total[list,{k}] (contract level k) / Total[list,Infinity]
-  (all levels). Build nested Plus/List tree, evaluate once; 1-arg
-  byte-identical. WL cases derived: Total[m,{2}]->{3,7}, Total[m,2]->10.
-- [ ] brief-192 (unit-5 fix 4c, in flight): PowerMod negative-exponent
-  modular inverse via hand-rolled extended Euclid (PowerMod[2,-1,5]->3);
-  non-invertible base -> PowerMod::ninv + inert; zero modulus stays
-  inert. Reuses power_mod_integer for (a^-1)^k. No new dep.
+- [x] briefs 187-192 DONE: 187 argument/arity validation (ceb58b5), 188
+  clean WL values Mod[m,0]/PartitionsP-Q[-1] (cb2c173), 189
+  Coefficient/CoefficientList Laurent-leak guard (bb41439), 190
+  Commonest[list,n]+Quantile[list,{q..}] (e67cfdc), 191 Total level forms
+  (95426db), 192 PowerMod modular inverse (1d5e885). Full detail +
+  close-out decisions in the tracker (unit-5 section) and
+  [[usability-pass-line]].
 - [x] brief-193 DONE (54e76d3): attribute hygiene CONSERVATIVE — Protected
   (GCD/LCM/Max/Min/Abs) + NumericFunction (Max/Min/Abs). Zero eval-cost,
   no reordering (FullForm[Max[x,3]] stays "Max[x, 3]"), reductions
