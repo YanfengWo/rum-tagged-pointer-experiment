@@ -79,11 +79,14 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   171's inverted Partition anchoring caught at gate (output-semantics
   review, not just green tests) and corrected in 171b; workspace
   1345/0.
-- [ ] brief-175 (unit-2 operator-forms thaw batch): unary/unambiguous
-  operator forms for the 14 structure/functional symbols via the
-  existing callable-wrapper chain; arity rule = only arities that
-  cannot be a valid data form become operators; microbench A/B hard
-  gate restored (saved-binaries alternating protocol).
+- [x] brief-175 DONE (d1f0b4a): 14 operator forms + wrapper non-Call
+  early exit; A/B twice (3+3 Codex, 2+2 independent) — zero regressions,
+  early exit IMPROVES symbol-head labels (downvalue-exact-hit -7.1%);
+  workspace 1348/0.
+- [ ] brief-172 (unit-2 batch 3): collection comparison controls —
+  `DeleteDuplicates`/`Tally` test args, set-ops `SameTest`,
+  `ReverseSort` comparator, `SortBy` 3-arg ordering, `GatherBy`
+  function-list hierarchical grouping, `MaxBy`/`MinBy` top-k.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
