@@ -6,6 +6,15 @@ use rum_runtime::kernel_api::{
 
 pub(super) const SECONDS_PER_MINUTE: i64 = 60;
 pub(super) const SECONDS_PER_HOUR: i64 = 60 * SECONDS_PER_MINUTE;
+pub(super) const DAY_NAMES: [&str; 7] = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+];
 const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
 const SECONDS_PER_WEEK: i64 = 7 * SECONDS_PER_DAY;
 
@@ -119,19 +128,15 @@ pub(super) fn date_difference(
 }
 
 pub(super) fn day_of_week(date: &Expr) -> Result<&'static str, DateTimeError> {
+    Ok(DAY_NAMES[day_of_week_index(date)?])
+}
+
+pub(super) fn day_of_week_index(date: &Expr) -> Result<usize, DateTimeError> {
     let timestamp = timestamp_from_timestamp_or_date_list_expr(date)?;
     let days = timestamp_day_floor(&timestamp);
     let shifted = days + BigInt::from(3_i64);
     let index = mod_floor_i64(&shifted, 7);
-    Ok([
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ][index as usize])
+    Ok(index as usize)
 }
 
 pub(super) fn leap_year_from_expr(expr: &Expr) -> Result<bool, DateTimeError> {

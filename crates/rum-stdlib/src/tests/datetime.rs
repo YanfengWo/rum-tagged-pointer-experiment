@@ -145,7 +145,22 @@ fn date_string_renders_utc_and_rejects_non_terminating_fractional_seconds() {
         ),
         "List[\"1970-01-01T00:00:00Z\", \"2026-07-07T12:34:56Z\", \"1970-01-01T00:00:00.5Z\"]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "DateString[0, \"ISODateTime\"] == DateString[0]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{DateString[0, \"ISODateTime\"], DateString[0, \"ISODate\"], DateString[0, \"ISOTime\"], DateString[{2026,7,7,12,34,56}, \"ISOTime\"]}"
+        ),
+        "List[\"1970-01-01T00:00:00Z\", \"1970-01-01\", \"00:00:00Z\", \"12:34:56Z\"]"
+    );
     assert_failed_with_message(&mut session, "DateString[1/3]", "DateString");
+    assert_failed_with_message(&mut session, "DateString[0, \"Nope\"]", "DateString");
 }
 
 #[test]
@@ -167,7 +182,11 @@ fn day_of_week_returns_iso_weekday_symbols() {
     let mut session = core_session();
 
     assert_eq!(
-        eval_to_string(&mut session, "{DayOfWeek[0], DayOfWeek[{2000,2,29}]}"),
-        "List[Thursday, Tuesday]"
+        eval_to_string(
+            &mut session,
+            "{DayOfWeek[0], DayOfWeek[0, \"Name\"], DayOfWeek[0, \"ISOInteger\"], DayOfWeek[{2000,2,29}]}"
+        ),
+        "List[Thursday, Thursday, 4, Tuesday]"
     );
+    assert_failed_with_message(&mut session, "DayOfWeek[0, \"Nope\"]", "DayOfWeek");
 }

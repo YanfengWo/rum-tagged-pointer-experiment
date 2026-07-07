@@ -16,6 +16,26 @@ pub(super) fn date_string_from_timestamp(timestamp: &Rational) -> Result<String,
     ))
 }
 
+pub(super) fn iso_date_from_timestamp(timestamp: &Rational) -> Result<String, DateTimeError> {
+    let parts = parts_from_timestamp(timestamp);
+    Ok(format!(
+        "{}-{:02}-{:02}",
+        format_year(&parts.year)?,
+        parts.month,
+        parts.day,
+    ))
+}
+
+pub(super) fn iso_time_from_timestamp(timestamp: &Rational) -> Result<String, DateTimeError> {
+    let parts = parts_from_timestamp(timestamp);
+    Ok(format!(
+        "{:02}:{:02}:{}Z",
+        parts.hour,
+        parts.minute,
+        format_second(&parts.second)?,
+    ))
+}
+
 fn format_year(year: &BigInt) -> Result<String, DateTimeError> {
     let Some(value) = year.to_i64() else {
         return Err(DateTimeError::date(

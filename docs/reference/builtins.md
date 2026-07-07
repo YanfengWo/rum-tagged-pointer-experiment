@@ -837,7 +837,7 @@ Formats an exact timestamp or date list as an ISO 8601 UTC string.
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock.
+- Limits: renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock. The two-argument form DateString[date, fmt] accepts fmt "ISODateTime" (default, full UTC timestamp), "ISODate" (date only), or "ISOTime" (time only).
 
 ### DayOfWeek
 
@@ -845,6 +845,7 @@ Returns the ISO weekday symbol for an exact timestamp or date list.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: the two-argument form DayOfWeek[date, sel] accepts sel "Name" (default weekday symbol) or "ISOInteger" (Monday=1 through Sunday=7).
 
 ### DaysInMonth
 

@@ -32,21 +32,46 @@ pub(crate) fn eval_date_string(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let timestamp = match args {
+    let (timestamp, fmt) = match args {
         [] => {
             if !clock_capability_allowed(session, "DateString") {
                 return Ok(system_expr("$Failed"));
             }
-            current_unix_time()
+            (current_unix_time(), "ISODateTime")
         }
         [value] => match calendar::timestamp_from_timestamp_or_date_list_expr(value) {
-            Ok(timestamp) => timestamp,
+            Ok(timestamp) => (timestamp, "ISODateTime"),
             Err(error) => return Ok(fail_datetime(session, "DateString", error)),
         },
-        _ => return Ok(session.invalid_call_with_arg_range("DateString", args, 0, 1)),
+        [value, fmt] => {
+            let timestamp = match calendar::timestamp_from_timestamp_or_date_list_expr(value) {
+                Ok(timestamp) => timestamp,
+                Err(error) => return Ok(fail_datetime(session, "DateString", error)),
+            };
+            let Some(fmt) = expr_as_string(fmt) else {
+                return Ok(fail_datetime(
+                    session,
+                    "DateString",
+                    calendar::DateTimeError::date(
+                        "unknown DateString format; use \"ISODateTime\", \"ISODate\", or \"ISOTime\"",
+                    ),
+                ));
+            };
+            (timestamp, fmt)
+        }
+        _ => return Ok(session.invalid_call_with_arg_range("DateString", args, 0, 2)),
     };
 
-    match format::date_string_from_timestamp(&timestamp) {
+    let rendered = match fmt {
+        "ISODateTime" => format::date_string_from_timestamp(&timestamp),
+        "ISODate" => format::iso_date_from_timestamp(&timestamp),
+        "ISOTime" => format::iso_time_from_timestamp(&timestamp),
+        _ => Err(calendar::DateTimeError::date(
+            "unknown DateString format; use \"ISODateTime\", \"ISODate\", or \"ISOTime\"",
+        )),
+    };
+
+    match rendered {
         Ok(value) => Ok(Expr::string(value)),
         Err(error) => Ok(fail_datetime(session, "DateString", error)),
     }
@@ -109,13 +134,40 @@ pub(crate) fn eval_day_of_week(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [date] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("DayOfWeek", args, 1));
-    };
-
-    match calendar::day_of_week(date) {
-        Ok(name) => Ok(system_expr(name)),
-        Err(error) => Ok(fail_datetime(session, "DayOfWeek", error)),
+    match args {
+        [date] => match calendar::day_of_week(date) {
+            Ok(name) => Ok(system_expr(name)),
+            Err(error) => Ok(fail_datetime(session, "DayOfWeek", error)),
+        },
+        [date, selector] => {
+            let Some(selector) = expr_as_string(selector) else {
+                return Ok(fail_datetime(
+                    session,
+                    "DayOfWeek",
+                    calendar::DateTimeError::date(
+                        "unknown DayOfWeek selector; use \"Name\" or \"ISOInteger\"",
+                    ),
+                ));
+            };
+            match selector {
+                "Name" => match calendar::day_of_week(date) {
+                    Ok(name) => Ok(system_expr(name)),
+                    Err(error) => Ok(fail_datetime(session, "DayOfWeek", error)),
+                },
+                "ISOInteger" => match calendar::day_of_week_index(date) {
+                    Ok(index) => Ok(Expr::small_integer((index + 1) as i64)),
+                    Err(error) => Ok(fail_datetime(session, "DayOfWeek", error)),
+                },
+                _ => Ok(fail_datetime(
+                    session,
+                    "DayOfWeek",
+                    calendar::DateTimeError::date(
+                        "unknown DayOfWeek selector; use \"Name\" or \"ISOInteger\"",
+                    ),
+                )),
+            }
+        }
+        _ => Ok(session.invalid_call_with_arg_range("DayOfWeek", args, 1, 2)),
     }
 }
 
