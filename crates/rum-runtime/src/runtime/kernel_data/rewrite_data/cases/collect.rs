@@ -2,6 +2,9 @@ use super::*;
 
 impl Session {
     pub(in crate::runtime) fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("Cases", args));
+        }
         if !(2..=5).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Cases", args, 2, 5));
         }

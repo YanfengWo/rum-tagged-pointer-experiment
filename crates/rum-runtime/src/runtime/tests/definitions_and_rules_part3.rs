@@ -179,6 +179,52 @@ fn replacelist_supports_operator_form_rule_order_and_max_results() {
 }
 
 #[test]
+fn rewrite_family_operator_forms_are_inert_and_apply_to_data() {
+    let mut session = session_with_test_control_builtins();
+
+    for (source, expected) in [
+        ("Cases[_Integer]", "Cases[Blank[Integer]]"),
+        ("DeleteCases[_Integer]", "DeleteCases[Blank[Integer]]"),
+        (
+            "Replace[x_ :> f[x]]",
+            "Replace[RuleDelayed[Pattern[x, Blank[]], f[x]]]",
+        ),
+        (
+            "ReplaceAll[x_ :> f[x]]",
+            "ReplaceAll[RuleDelayed[Pattern[x, Blank[]], f[x]]]",
+        ),
+        (
+            "ReplaceRepeated[x_ :> f[x]]",
+            "ReplaceRepeated[RuleDelayed[Pattern[x, Blank[]], f[x]]]",
+        ),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert!(outcome.messages.is_empty(), "{source}");
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+    }
+
+    for (source, expected) in [
+        ("Cases[_Integer][{1, a, 2}]", "List[1, 2]"),
+        ("DeleteCases[_Integer][{1, a, 2}]", "List[a]"),
+        ("Replace[x_ :> f[x]][a]", "f[a]"),
+        ("ReplaceAll[x_ :> f[x]][a]", "f[a]"),
+        ("ReplaceRepeated[a -> b][a]", "b"),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert!(outcome.messages.is_empty(), "{source}");
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+    }
+
+    let invalid = session.eval_text("Cases[_Integer][1, 2]").unwrap();
+    assert!(
+        invalid
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Cases" && message.tag == "argx")
+    );
+}
+
+#[test]
 fn replacelist_collects_multiple_backtracking_matches_for_sequence_patterns() {
     let mut session = session_with_test_control_builtins();
 

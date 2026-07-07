@@ -5,6 +5,9 @@ impl Session {
         &mut self,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("ReplaceRepeated", args));
+        }
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("ReplaceRepeated", args, 2));
         }

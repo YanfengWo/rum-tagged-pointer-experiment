@@ -5,6 +5,9 @@ impl Session {
         &mut self,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("DeleteCases", args));
+        }
         if !(2..=5).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("DeleteCases", args, 2, 5));
         }

@@ -2,6 +2,9 @@ use super::*;
 
 impl Session {
     pub(in crate::runtime) fn eval_replace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("Replace", args));
+        }
         if !(2..=3).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Replace", args, 2, 3));
         }
