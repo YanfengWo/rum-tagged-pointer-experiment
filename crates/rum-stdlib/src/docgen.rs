@@ -17,7 +17,7 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     (
         "DateList",
-        "uses UTC, the proleptic Gregorian calendar, and no leap seconds; the zero-argument current-time form requires Capability::Clock.",
+        "uses UTC, the proleptic Gregorian calendar, and no leap seconds.",
     ),
     (
         "DatePlus",
@@ -25,7 +25,7 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     (
         "DateString",
-        "renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock. The two-argument form DateString[date, fmt] accepts fmt \"ISODateTime\" (default, full UTC timestamp), \"ISODate\" (date only), or \"ISOTime\" (time only).",
+        "renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion. The two-argument form DateString[date, fmt] accepts fmt \"ISODateTime\" (default, full UTC timestamp), \"ISODate\" (date only), or \"ISOTime\" (time only).",
     ),
     (
         "DayOfWeek",
@@ -54,6 +54,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "Md5",
         "intended only for interoperability and checksums; it is not collision-resistant.",
+    ),
+    (
+        "Now",
+        "reads the host wall clock; requires Capability::Clock and is denied under sandboxed().",
     ),
     (
         "Crc32",

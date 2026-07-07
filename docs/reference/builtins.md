@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 609
+Builtin count: 610
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -810,11 +810,11 @@ Returns the exact fixed-duration difference between two timestamps or date lists
 
 ### DateList
 
-Converts an exact Unix timestamp to a UTC date list, or reads the current UTC date list in the zero-argument form.
+Converts an exact Unix timestamp to a UTC date list.
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: uses UTC, the proleptic Gregorian calendar, and no leap seconds; the zero-argument current-time form requires Capability::Clock.
+- Limits: uses UTC, the proleptic Gregorian calendar, and no leap seconds.
 
 ### DateObjectQ
 
@@ -837,7 +837,7 @@ Formats an exact timestamp or date list as an ISO 8601 UTC string.
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion, and the zero-argument current-time form requires Capability::Clock. The two-argument form DateString[date, fmt] accepts fmt "ISODateTime" (default, full UTC timestamp), "ISODate" (date only), or "ISOTime" (time only).
+- Limits: renders ISO 8601 UTC only; non-integer seconds are rendered only when their exact rational value has a terminating decimal expansion. The two-argument form DateString[date, fmt] accepts fmt "ISODateTime" (default, full UTC timestamp), "ISODate" (date only), or "ISOTime" (time only).
 
 ### DayOfWeek
 
@@ -2448,6 +2448,14 @@ Represents a list element that is removed from evaluated Lists.
 
 - Attributes: `None`
 - Capability: `Pure`
+
+### Now
+
+Reads the current time as an exact Unix timestamp (seconds since the epoch). Requires Capability::Clock; compose with DateList/DateString for the current date.
+
+- Attributes: `Protected`
+- Capability: `Clock`
+- Limits: reads the host wall clock; requires Capability::Clock and is denied under sandboxed().
 
 ### NumberQ
 

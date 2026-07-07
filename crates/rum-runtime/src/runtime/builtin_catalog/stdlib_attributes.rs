@@ -204,6 +204,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("NonNegative", ATTR_LISTABLE),
     Spec::new("NonPositive", ATTR_LISTABLE),
     Spec::new("Nor", ATTR_HOLD_ALL),
+    Spec::new("Now", ATTR_PROTECTED),
     Spec::new("Numerator", ATTR_LISTABLE),
     Spec::new("OddQ", ATTR_LISTABLE),
     Spec::new("Or", ATTR_HOLD_ALL),

@@ -1,5 +1,5 @@
 use crate::install_core;
-use rum_core::Expr;
+use rum_core::{Atom, Expr};
 use rum_runtime::{RuntimeMessage, Session};
 
 fn core_session() -> Session {
@@ -28,6 +28,19 @@ fn assert_failed_with_message(session: &mut Session, source: &str, symbol: &str)
     );
 }
 
+fn assert_arity_message(session: &mut Session, source: &str, symbol: &str, tag: &str) {
+    let outcome = session.eval_text(source).unwrap();
+    assert_eq!(outcome.value.to_string(), source, "source {source}");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == symbol && message.tag == tag),
+        "source {source} messages {:?}",
+        outcome.messages
+    );
+}
+
 #[test]
 fn absolute_time_and_date_list_epoch_pins_are_utc() {
     let mut session = core_session();
@@ -52,6 +65,33 @@ fn absolute_time_and_date_list_epoch_pins_are_utc() {
         eval_to_string(&mut session, "DateList[-1]"),
         "List[1969, 12, 31, 23, 59, 59]"
     );
+}
+
+#[test]
+fn now_reads_exact_timestamp_and_composes_with_datetime_conversions() {
+    let mut session = core_session();
+
+    let now = session.eval_text("Now[]").unwrap();
+    assert!(now.messages.is_empty(), "{:?}", now.messages);
+    match now.value {
+        Expr::Atom(Atom::Integer(_)) | Expr::Atom(Atom::Rational(_)) => {}
+        other => panic!("Now[] should return an exact numeric timestamp, got {other}"),
+    }
+
+    assert_eq!(eval_to_string(&mut session, "Length[DateList[Now[]]]"), "6");
+    assert_eq!(
+        eval_to_string(&mut session, "StringContainsQ[DateString[Now[]], \"T\"]"),
+        "True"
+    );
+}
+
+#[test]
+fn date_list_date_string_and_now_report_arity_errors() {
+    let mut session = core_session();
+
+    assert_arity_message(&mut session, "DateList[]", "DateList", "argx");
+    assert_arity_message(&mut session, "DateString[]", "DateString", "argx");
+    assert_arity_message(&mut session, "Now[1]", "Now", "argx");
 }
 
 #[test]

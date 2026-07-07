@@ -94,6 +94,32 @@ fn assert_sandbox_denied(session: &mut HostSession, source: &str) {
     );
 }
 
+fn assert_arity_not_sandbox_denial(
+    session: &mut HostSession,
+    source: &str,
+    symbol: &str,
+    tag: &str,
+) {
+    let success = successful_eval(session.eval(source));
+    assert_eq!(success.value.text, source, "source {source}");
+    assert!(
+        success
+            .messages
+            .iter()
+            .any(|message| message.symbol == symbol && message.tag == tag),
+        "source {source} messages {:?}",
+        success.messages
+    );
+    assert!(
+        !success
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "sandbox"),
+        "source {source} messages {:?}",
+        success.messages
+    );
+}
+
 #[test]
 fn host_session_and_cancel_handle_are_send() {
     fn is_send<T: Send>() {}
@@ -343,13 +369,14 @@ fn capability_policy_can_allow_clock_without_filesystem() {
 }
 
 #[test]
-fn sandboxed_host_config_blocks_datetime_current_readers_but_allows_pure_forms() {
+fn sandboxed_host_config_blocks_now_but_allows_pure_datetime_forms() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::sandboxed())
         .build();
 
-    assert_sandbox_denied(&mut session, "DateList[]");
-    assert_sandbox_denied(&mut session, "DateString[]");
+    assert_sandbox_denied(&mut session, "Now[]");
+    assert_arity_not_sandbox_denial(&mut session, "DateList[]", "DateList", "argx");
+    assert_arity_not_sandbox_denial(&mut session, "DateString[]", "DateString", "argx");
 
     let date_list = successful_eval(session.eval("DateList[0]"));
     assert_eq!(date_list.value.text, "List[1970, 1, 1, 0, 0, 0]");
@@ -365,17 +392,21 @@ fn sandboxed_host_config_blocks_datetime_current_readers_but_allows_pure_forms()
 }
 
 #[test]
-fn clock_policy_allows_datetime_current_readers() {
+fn clock_policy_allows_now_and_composed_datetime_current_readers() {
     let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Clock]);
     let mut session = HostSession::builder()
         .with_config(HostConfig::default().with_capability_policy(policy))
         .build();
 
-    let date_list = successful_eval(session.eval("DateList[]"));
+    let now = successful_eval(session.eval("Now[]"));
+    assert_ne!(now.value.text, "$Failed");
+    assert!(now.messages.is_empty(), "{:?}", now.messages);
+
+    let date_list = successful_eval(session.eval("DateList[Now[]]"));
     assert_ne!(date_list.value.text, "$Failed");
     assert!(date_list.messages.is_empty(), "{:?}", date_list.messages);
 
-    let date_string = successful_eval(session.eval("DateString[]"));
+    let date_string = successful_eval(session.eval("DateString[Now[]]"));
     assert_ne!(date_string.value.text, "$Failed");
     assert!(
         date_string.messages.is_empty(),

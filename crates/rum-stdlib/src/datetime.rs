@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rum_core::{BigInt, Expr, Rational};
-use rum_runtime::kernel_api::{Capability, EvalError, Session, expr_as_string, system_expr};
+use rum_runtime::kernel_api::{EvalError, Session, expr_as_string, system_expr};
 
 mod calendar;
 mod format;
@@ -12,19 +12,25 @@ pub(crate) fn eval_date_list(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    match args {
-        [] => {
-            if !clock_capability_allowed(session, "DateList") {
-                return Ok(system_expr("$Failed"));
-            }
-            Ok(calendar::date_list_expr_from_timestamp(&current_unix_time()))
-        }
-        [timestamp] => match calendar::timestamp_from_timestamp_or_date_list_expr(timestamp) {
-            Ok(timestamp) => Ok(calendar::date_list_expr_from_timestamp(&timestamp)),
-            Err(error) => Ok(fail_datetime(session, "DateList", error)),
-        },
-        _ => Ok(session.invalid_call_with_arg_range("DateList", args, 0, 1)),
+    let [timestamp] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("DateList", args, 1));
+    };
+
+    match calendar::timestamp_from_timestamp_or_date_list_expr(timestamp) {
+        Ok(timestamp) => Ok(calendar::date_list_expr_from_timestamp(&timestamp)),
+        Err(error) => Ok(fail_datetime(session, "DateList", error)),
     }
+}
+
+pub(crate) fn eval_now(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !args.is_empty() {
+        return Ok(session.invalid_call_with_exact_arg_count("Now", args, 0));
+    }
+    Ok(Expr::rational(current_unix_time()))
 }
 
 pub(crate) fn eval_date_string(
@@ -32,13 +38,16 @@ pub(crate) fn eval_date_string(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.is_empty() {
+        return Ok(session.invalid_call_with_message(
+            "DateString",
+            args,
+            "argx",
+            "expected between 1 and 2 argument(s), got 0",
+        ));
+    }
+
     let (timestamp, fmt) = match args {
-        [] => {
-            if !clock_capability_allowed(session, "DateString") {
-                return Ok(system_expr("$Failed"));
-            }
-            (current_unix_time(), "ISODateTime")
-        }
         [value] => match calendar::timestamp_from_timestamp_or_date_list_expr(value) {
             Ok(timestamp) => (timestamp, "ISODateTime"),
             Err(error) => return Ok(fail_datetime(session, "DateString", error)),
@@ -59,7 +68,7 @@ pub(crate) fn eval_date_string(
             };
             (timestamp, fmt)
         }
-        _ => return Ok(session.invalid_call_with_arg_range("DateString", args, 0, 2)),
+        _ => return Ok(session.invalid_call_with_arg_range("DateString", args, 1, 2)),
     };
 
     let rendered = match fmt {
@@ -221,20 +230,6 @@ fn unix_time_rational(time: SystemTime) -> Rational {
         )
         .expect("positive denominator should always build a rational"),
     }
-}
-
-fn clock_capability_allowed(session: &mut Session, name: &str) -> bool {
-    let policy = session.capability_policy();
-    if policy.is_unrestricted() || policy.allows(Capability::Clock) {
-        return true;
-    }
-
-    session.push_message(
-        "General",
-        "sandbox",
-        format!("{name} is not permitted in this sandbox."),
-    );
-    false
 }
 
 fn fail_datetime(session: &mut Session, symbol: &str, error: calendar::DateTimeError) -> Expr {

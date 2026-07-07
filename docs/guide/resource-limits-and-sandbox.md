@@ -176,10 +176,10 @@ Wall-clock and time-effect builtins such as `AbsoluteTime`, `Timing`,
 `AbsoluteTiming`, `RepeatedTiming`, `TimeConstrained`, `Pause`,
 `EvaluationData`, and `TestReport` are `Clock`.
 
-`DateList[]` and `DateString[]` are current-time readers and require `Clock`
-inside their handlers. Their argumentful forms (`DateList[ts]` and
-`DateString[ts]` or `DateString[{y, mo, d, h, mi, s}]`) are pure UTC calendar
-conversions and remain available under a `{Pure}` policy.
+`Now[]` is the current-time reader and requires `Clock`. `DateList` and
+`DateString` are pure UTC calendar conversions (`DateList[ts]`,
+`DateString[ts]`, or `DateString[{y, mo, d, h, mi, s}]`) and remain available
+under a `{Pure}` policy.
 
 Entropy-effect builtins are `Random`: `RandomBytes` and `RandomPassword` draw
 directly from the host entropy provider, and `SeedRandom[]` reseeds the
