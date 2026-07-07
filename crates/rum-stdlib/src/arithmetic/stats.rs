@@ -1,7 +1,7 @@
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, ToPrimitive, call_items_with_head, compare_expr_canonical,
-    expr_as_exact_rational, system_expr,
+    expr_as_exact_integer, expr_as_exact_rational, system_expr,
 };
 
 pub(crate) fn eval_median(
@@ -40,8 +40,10 @@ pub(crate) fn eval_commonest(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    let [expr] = args else {
-        return Ok(session.invalid_call_with_exact_arg_count("Commonest", args, 1));
+    let (expr, n_expr) = match args {
+        [expr] => (expr, None),
+        [expr, n_expr] => (expr, Some(n_expr)),
+        _ => return Ok(session.invalid_call_with_exact_arg_count("Commonest", args, 1)),
     };
 
     let Some(items) = call_items_with_head(expr, &system_expr("List")) else {
@@ -55,6 +57,31 @@ pub(crate) fn eval_commonest(
         } else {
             counts.push((item.clone(), 1));
         }
+    }
+
+    if let Some(n_expr) = n_expr {
+        let Some(n) = expr_as_exact_integer(n_expr) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        if n < BigInt::from(0_u8) {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+
+        let take_count = if n > BigInt::from(counts.len()) {
+            counts.len()
+        } else {
+            n.to_usize()
+                .expect("count bounded by frequency class count should fit usize")
+        };
+        counts.sort_by(|(_, left_count), (_, right_count)| right_count.cmp(left_count));
+        return Ok(Expr::call(
+            system_expr("List"),
+            counts
+                .into_iter()
+                .take(take_count)
+                .map(|(item, _)| item)
+                .collect(),
+        ));
     }
 
     let max_count = counts.iter().map(|(_, count)| *count).max().unwrap_or(0);
@@ -85,6 +112,42 @@ pub(crate) fn eval_quantile(
             args,
             "empty",
             "Quantile cannot aggregate an empty list.",
+        ));
+    }
+
+    if let Some(q_items) = call_items_with_head(q_expr, &system_expr("List")) {
+        let mut ranks = Vec::with_capacity(q_items.len());
+        for q_expr in q_items {
+            let Some(q) = expr_as_exact_rational(q_expr) else {
+                return Ok(session.invalid_call_with_message(
+                    "Quantile",
+                    args,
+                    "range",
+                    "Quantile rank parameter must be an exact number between 0 and 1.",
+                ));
+            };
+            if q.numerator() < &BigInt::from(0_u8) || q.numerator() > q.denominator() {
+                return Ok(session.invalid_call_with_message(
+                    "Quantile",
+                    args,
+                    "range",
+                    "Quantile rank parameter must be an exact number between 0 and 1.",
+                ));
+            }
+            ranks.push(q);
+        }
+
+        let mut sorted = items.to_vec();
+        sorted.sort_by(compare_expr_canonical);
+        return Ok(Expr::call(
+            system_expr("List"),
+            ranks
+                .into_iter()
+                .map(|q| {
+                    let rank = nearest_rank_index(&q, sorted.len());
+                    sorted[rank].clone()
+                })
+                .collect(),
         ));
     }
 

@@ -133,6 +133,98 @@ fn exact_statistics_cover_median_commonest_and_quantile_contracts() {
 }
 
 #[test]
+fn commonest_accepts_count_limit_form() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Commonest[{a, b, a, c, b, a}, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Commonest[{a, b, a, c, b, a}, 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Commonest[{a, b, a, c, b, a}, 10]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Commonest[{a, b, a, c, b, a}, 0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Commonest[{a, b, a, c, b, a}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a]"
+    );
+}
+
+#[test]
+fn quantile_accepts_parameter_lists_and_fails_closed() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Quantile[{1, 2, 3}, {0, 1/2, 1}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2, 3]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Quantile[{1, 2, 3}, 1/2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+
+    let bad_quantile = session.eval_text("Quantile[{1, 2, 3}, {1/2, 5}]").unwrap();
+    assert_eq!(
+        bad_quantile.value.to_string(),
+        "Quantile[List[1, 2, 3], List[1/2, 5]]"
+    );
+    assert!(
+        bad_quantile
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Quantile" && message.tag == "range")
+    );
+
+    let empty_quantile = session.eval_text("Quantile[{}, {1/2}]").unwrap();
+    assert_eq!(
+        empty_quantile.value.to_string(),
+        "Quantile[List[], List[1/2]]"
+    );
+    assert!(
+        empty_quantile
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Quantile" && message.tag == "empty")
+    );
+}
+
+#[test]
 fn exact_statistics_report_empty_and_invalid_boundaries() {
     let mut session = core_session();
 
