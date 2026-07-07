@@ -38,6 +38,14 @@ fn map_scan_and_comap_family_cover_current_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Map[f, {a, b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[a], f[b]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Map[f, g[h[a, b]], {0, 1}]")
             .unwrap()
             .value

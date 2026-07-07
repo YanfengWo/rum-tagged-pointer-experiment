@@ -122,6 +122,16 @@ fn system_default_options_cover_current_first_pass_subset() {
     );
     assert_eq!(
         session
+            .eval_text(
+                "Options /@ {Map, MapIndexed, MapAll, Scan, Apply, MapApply, Comap, ComapApply}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Rule[Heads, False]], List[Rule[Heads, False]], List[Rule[Heads, False]], List[Rule[Heads, False]], List[Rule[Heads, False]], List[Rule[Heads, False]], List[Rule[Heads, False]], List[Rule[Heads, False]]]"
+    );
+    assert_eq!(
+        session
             .eval_text("Options[StringCount]")
             .unwrap()
             .value
