@@ -128,12 +128,27 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   REJECTED. Separate future candidate: boolean-head attribute hygiene
   (missing `Protected`; `And`/`Or` `{HoldAll}` vs WL — likely
   intentional, own design pass). Units 1-4 = 334 builtins swept.
-- [ ] brief-186 (unit 5 AUDIT, in flight): arithmetic + number_theory +
-  combinatorics + integer_digits + polynomials + calculus, 62 builtins →
-  `docs/dev/usability-pass/math-findings.md`. Folk-scope guardrail is the
-  crux: rationals-only + folk algorithms are the CONTRACT, so flag
-  usability (options/attributes/fail-closed/convenience) NOT CAS depth.
-  Triage follows.
+- [x] brief-186 DONE (unit 5 AUDIT): math families 62/62 →
+  `docs/dev/usability-pass/math-findings.md`. Folk-scope held (Factor/
+  Together/Expand/rationals-only = OK-intended). Triage + audit
+  corrections in the tracker. Key correction: negative/zero args are NOT
+  a blanket fail-close — WL DEFINES some (PartitionsP/Q[-1]->0), so the
+  fix returns WL's value where defined, messages only where WL errors,
+  defers where uncertain.
+- [ ] brief-187 (unit-5 fix 1): unambiguous fail-closed diagnostics
+  (WL also errors) — zero divisor/modulus/multiple, Power[0,0], FromDigits
+  out-of-base, invalid base/length, Factorial neg, Fibonacci arity,
+  malformed D specs. Pure diagnostics, no A/B.
+- [ ] brief-188 (unit-5 fix 2): WL-contract-checked domain values —
+  combinatorics negative indices + number-theory zero cases, per-function
+  (WL value where defined, message where WL errors, defer if uncertain).
+- [ ] brief-189 (unit-5 fix 3): polynomial target-containment guard
+  (CoefficientList; Coefficient only where genuinely wrong).
+- [ ] brief-190 (unit-5 fix 4): cheap flexibility — Total level forms,
+  Commonest[list,n], list-valued Quantile, PowerMod modular inverse.
+- [ ] brief-191 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
+  (Orderless/Flat/OneIdentity, WL-correct) + Abs numeric/protected. A/B
+  gate (attribute-driven planning).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

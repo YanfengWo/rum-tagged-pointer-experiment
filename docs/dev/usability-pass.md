@@ -53,7 +53,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
 | 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
 | 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
-| 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
+| 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187… (triage below) |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
 | 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
@@ -268,6 +268,69 @@ test (`holding_and_control_part5`) that encoded the old silence, outside
 the runtime-only MAY list; updating it was necessary (a red tree
 otherwise), not scope creep. Pre-include cross-crate behavior tests in
 the MAY list next time.
+
+## Unit 5 (math) triage — 2026-07-07
+
+Audit brief-186: 62/62, findings in `usability-pass/math-findings.md`.
+Six families (arithmetic 31 + number_theory 9 + combinatorics 11 +
+integer_digits 5 + polynomials 5 + calculus 1). Folk-scope guardrail
+held: Factor/Together/Expand/Floor/Ceiling/rationals-only correctly
+marked OK-intended, not gaps. Reproduced the key findings myself
+(coverage 62/62; `FromDigits[{2},2]->2` silent bug; zero-domain inerts;
+`GCD`/`LCM`=`{Listable}`, `Max`/`Min`=`{}`).
+
+**AUDIT CORRECTIONS (so fix briefs do not inherit the over-reach):**
+- **Negative/zero args are NOT a blanket fail-close.** The audit
+  proposes "emit a nonnegative-integer diagnostic and fail closed" for
+  every negative-index combinatorics and zero-domain number-theory case.
+  That would DIVERGE from WL where WL DEFINES a value: `PartitionsP[-1]`
+  and `PartitionsQ[-1]` are `0` in WL (not an error), and several others
+  (`CatalanNumber`/`Subfactorial`/`StirlingS*`/number-theory zeros) have
+  a documented WL value or an error that must be checked PER FUNCTION.
+  Rule for the fix: return WL's value where WL defines one, message only
+  where WL genuinely errors, and DEFER (keep today's inert) where the WL
+  surface is uncertain — never guess (same discipline as the Equivalent
+  close-out). No oracle runs; documented WL knowledge only.
+- **`Coefficient[x+1/x, x, 1]` -> `1` is a CORRECT value**, not a bug —
+  1 is genuinely the coefficient of x^1. The real defect is
+  `CoefficientList[x+1/x, x]` -> `{x^-1, 1}` (a returned coefficient
+  still contains the target variable). Fix the CoefficientList
+  target-containment; do NOT make the scalar `Coefficient` reject valid
+  queries.
+- **Attribute-hygiene changes symbolic-arg OUTPUT.** Adding `Orderless`/
+  `Flat`/`OneIdentity` to `GCD`/`LCM`/`Max`/`Min` is WL-correct (WL has
+  them) but it canonicalizes symbolic-arg ordering (`Max[y,x]` -> sorted)
+  — a visible change that is a MOVE TOWARD WL-conformance (allowed by the
+  compat directive), not a regression. Touches attribute-driven planning
+  → A/B gate required.
+
+Fix batches (dispatch order):
+
+1. **brief-187 — unambiguous fail-closed** (safety, S, no call planning;
+   WL also errors on every case here): zero divisor/modulus/multiple for
+   `Divide`/`Mod`/`Quotient`/`PowerMod`/`Round`; `Power[0,0]` ->
+   Indeterminate + message; `FromDigits` out-of-base digit validation;
+   invalid base (<2) and negative length for `IntegerLength`/
+   `IntegerDigits`/`IntegerReverse`/`DigitCount`; `Factorial`/
+   `Factorial2` negative; `Fibonacci` arity; malformed `D`
+   variable/order specs (`D[x^2,1]`, `D[x^2,{x,-1}]`, symbolic order).
+   Pure diagnostics around existing folk algorithms.
+2. **brief-188 — WL-contract-checked domain values** (the corrected
+   batch): combinatorics negative indices + number-theory zero/negative
+   (`Divisors[0]`, `DivisorSigma[_,0]`, `PrimeNu`/`PrimeOmega[0]`,
+   `NextPrime[_,0]`). Per function: WL value where defined (PartitionsP/Q
+   -> 0 confirmed), message where WL errors, defer where uncertain.
+3. **brief-189 — polynomial target-containment** (safety):
+   `CoefficientList` (and Coefficient only where genuinely wrong)
+   target-containment guard for non-polynomial residues. No new CAS.
+4. **brief-190 — cheap flexibility**: `Total[list,n]`/`Total[list,
+   {level}]` level forms, `Commonest[list,n]`, list-valued
+   `Quantile[list, {q..}]`, negative-exponent `PowerMod` modular inverse
+   (extended-GCD, message on non-invertible base). Folk-cheap only.
+5. **brief-191 — attribute hygiene** (A/B gate): `GCD`/`LCM`/`Max`/`Min`
+   grouping attributes (Orderless/Flat/OneIdentity, WL-correct); `Abs`
+   and small `NumericFunction`/`Protected` omissions. Microbench A/B
+   required (attribute-driven planning).
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 
