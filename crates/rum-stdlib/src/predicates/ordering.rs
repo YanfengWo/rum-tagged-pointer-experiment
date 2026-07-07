@@ -332,6 +332,10 @@ pub(crate) fn eval_between(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
     let [value_expr, interval_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Between", args, 2));
     };

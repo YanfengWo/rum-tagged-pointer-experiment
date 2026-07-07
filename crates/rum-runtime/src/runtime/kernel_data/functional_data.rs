@@ -71,6 +71,7 @@ pub(in crate::runtime) fn is_callable_operator_wrapper(expr: &Expr) -> bool {
         || is_nearest_to_wrapper(expr)
         || is_string_unary_operator_wrapper(expr)
         || is_structure_operator_wrapper(expr)
+        || is_predicate_operator_wrapper(expr)
         || parse_key_wrapper(expr).is_some()
 }
 
@@ -102,6 +103,10 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
         return Some(expr);
     }
 
+    if let Some(expr) = apply_predicate_operator_wrapper_to_args(head, args) {
+        return Some(expr);
+    }
+
     apply_key_wrapper_to_args(head, args)
 }
 
@@ -114,6 +119,10 @@ pub(in crate::runtime) fn invalid_callable_operator_wrapper_argx_symbol(
     }
 
     if let Some(symbol) = invalid_structure_operator_wrapper_argx_symbol(head, args) {
+        return Some(symbol);
+    }
+
+    if let Some(symbol) = invalid_predicate_operator_wrapper_argx_symbol(head, args) {
         return Some(symbol);
     }
 
@@ -697,6 +706,67 @@ fn structure_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> 
         2 if is_system_symbol_name(head, "Insert") => Some("Insert"),
         2 if is_system_symbol_name(head, "TakeLargestBy") => Some("TakeLargestBy"),
         2 if is_system_symbol_name(head, "TakeSmallestBy") => Some("TakeSmallestBy"),
+        _ => None,
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct PredicateOperatorSpec<'a> {
+    symbol: &'static str,
+    tail: &'a [Expr],
+}
+
+fn is_predicate_operator_wrapper(expr: &Expr) -> bool {
+    parse_predicate_operator_wrapper(expr).is_some()
+}
+
+fn apply_predicate_operator_wrapper_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    let spec = parse_predicate_operator_wrapper(head)?;
+    let [data] = args else {
+        return None;
+    };
+
+    let mut ordinary_args = Vec::with_capacity(spec.tail.len() + 1);
+    ordinary_args.push(data.clone());
+    ordinary_args.extend(spec.tail.iter().cloned());
+    Some(Expr::call(system_expr(spec.symbol), ordinary_args))
+}
+
+fn invalid_predicate_operator_wrapper_argx_symbol(
+    head: &Expr,
+    args: &[Expr],
+) -> Option<&'static str> {
+    let spec = parse_predicate_operator_wrapper(head)?;
+    (args.len() != 1).then_some(spec.symbol)
+}
+
+fn parse_predicate_operator_wrapper(expr: &Expr) -> Option<PredicateOperatorSpec<'_>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    Some(PredicateOperatorSpec {
+        symbol: predicate_operator_symbol(head, args.len())?,
+        tail: args,
+    })
+}
+
+fn predicate_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> {
+    // An arity becomes an operator form only when it cannot be a valid
+    // data-form call of the same builtin; never sniff the first argument type.
+    // Excluded by that rule: OrderedQ[p] collides with OrderedQ[list], and
+    // Lookup[key, default] collides with Lookup[assoc, key].
+    match arity {
+        1 if is_system_symbol_name(head, "ContainsAll") => Some("ContainsAll"),
+        1 if is_system_symbol_name(head, "ContainsAny") => Some("ContainsAny"),
+        1 if is_system_symbol_name(head, "ContainsExactly") => Some("ContainsExactly"),
+        1 if is_system_symbol_name(head, "ContainsNone") => Some("ContainsNone"),
+        1 if is_system_symbol_name(head, "ContainsOnly") => Some("ContainsOnly"),
+        1 if is_system_symbol_name(head, "Between") => Some("Between"),
+        1 if is_system_symbol_name(head, "AllTrue") => Some("AllTrue"),
+        1 if is_system_symbol_name(head, "AnyTrue") => Some("AnyTrue"),
+        1 if is_system_symbol_name(head, "NoneTrue") => Some("NoneTrue"),
+        1 if is_system_symbol_name(head, "MatchQ") => Some("MatchQ"),
         _ => None,
     }
 }

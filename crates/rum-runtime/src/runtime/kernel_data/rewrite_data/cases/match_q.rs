@@ -2,6 +2,9 @@ use super::*;
 
 impl Session {
     pub(in crate::runtime) fn eval_match_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("MatchQ", args));
+        }
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("MatchQ", args, 2));
         }

@@ -80,6 +80,10 @@ fn eval_truth_aggregate(
     args: &[Expr],
     kind: TruthAggregateKind,
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
     if !(2..=3).contains(&args.len()) {
         let symbol = truth_aggregate_name(kind);
         return Ok(session.invalid_call_with_arg_range(symbol, args, 2, 3));

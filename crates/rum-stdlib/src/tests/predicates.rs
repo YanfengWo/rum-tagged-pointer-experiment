@@ -543,6 +543,45 @@ fn collection_predicates_accept_same_test_options() {
 }
 
 #[test]
+fn predicate_operator_forms_are_inert_and_apply_to_data() {
+    let mut session = core_session();
+
+    let inert = session
+        .eval_text(
+            "{ContainsAll[{a}], ContainsAny[{z}], ContainsExactly[{a, b}], \
+             ContainsNone[{z}], ContainsOnly[{a, b}], Between[{1, 3}], \
+             AllTrue[EvenQ], AnyTrue[OddQ], NoneTrue[OddQ], MatchQ[_Integer]}",
+        )
+        .unwrap();
+    assert!(inert.messages.is_empty());
+    assert_eq!(
+        inert.value.to_string(),
+        "List[ContainsAll[List[a]], ContainsAny[List[z]], ContainsExactly[List[a, b]], ContainsNone[List[z]], ContainsOnly[List[a, b]], Between[List[1, 3]], AllTrue[EvenQ], AnyTrue[OddQ], NoneTrue[OddQ], MatchQ[Blank[Integer]]]"
+    );
+
+    let applied = session
+        .eval_text(
+            "{ContainsAll[{a}][{a, b}], ContainsAny[{z}][{a, b}], \
+             ContainsExactly[{a, b}][{b, a}], ContainsNone[{z}][{a, b}], \
+             ContainsOnly[{a, b}][{a}], Between[{1, 3}][2], \
+             AllTrue[EvenQ][{2, 4}], AnyTrue[OddQ][{2, 3}], \
+             NoneTrue[OddQ][{2, 4}], MatchQ[_Integer][3]}",
+        )
+        .unwrap();
+    assert!(applied.messages.is_empty());
+    assert_eq!(
+        applied.value.to_string(),
+        "List[True, False, True, True, True, True, True, True, True, True]"
+    );
+
+    let excluded_data_forms = session
+        .eval_text("{OrderedQ[{1, 2, 3}], Lookup[<|\"a\" -> 1|>, \"a\"]}")
+        .unwrap();
+    assert!(excluded_data_forms.messages.is_empty());
+    assert_eq!(excluded_data_forms.value.to_string(), "List[True, 1]");
+}
+
+#[test]
 fn ordering_predicates_accept_custom_comparators() {
     let mut session = core_session();
 

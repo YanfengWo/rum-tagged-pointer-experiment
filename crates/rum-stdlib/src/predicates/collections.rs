@@ -225,6 +225,8 @@ where
     let Some((lhs, rhs)) = two_list_args(data_args) else {
         return Ok(if data_args.len() == 2 {
             Expr::call(head.clone(), args.to_vec())
+        } else if data_args.len() == 1 && is_contains_operator_kind(same_test_kind) {
+            Expr::call(head.clone(), args.to_vec())
         } else {
             session.invalid_call_with_exact_arg_count(name, args, 2)
         });
@@ -235,6 +237,17 @@ where
     }
 
     Ok(predicate_bool_expr(predicate(lhs, rhs)))
+}
+
+fn is_contains_operator_kind(kind: SameTestRelationKind) -> bool {
+    matches!(
+        kind,
+        SameTestRelationKind::ContainsAll
+            | SameTestRelationKind::ContainsAny
+            | SameTestRelationKind::ContainsExactly
+            | SameTestRelationKind::ContainsNone
+            | SameTestRelationKind::ContainsOnly
+    )
 }
 
 fn split_same_test_options(args: &[Expr], min_data_args: usize) -> (&[Expr], Vec<Expr>) {

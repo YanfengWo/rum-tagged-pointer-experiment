@@ -256,6 +256,19 @@ fn matchq_reports_true_for_matching_pattern() {
 }
 
 #[test]
+fn matchq_operator_form_is_inert_and_applies_to_data() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let inert = session.eval_text("MatchQ[_Integer]").unwrap();
+    assert!(inert.messages.is_empty());
+    assert_eq!(inert.value.to_string(), "MatchQ[Blank[Integer]]");
+
+    let applied = session.eval_text("MatchQ[_Integer][3]").unwrap();
+    assert!(applied.messages.is_empty());
+    assert_eq!(applied.value.to_string(), "True");
+}
+
+#[test]
 fn matchq_reports_false_for_non_matching_pattern() {
     let mut session = session_with_test_rewrite_builtins();
 
