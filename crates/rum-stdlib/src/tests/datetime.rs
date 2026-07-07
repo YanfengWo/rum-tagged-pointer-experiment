@@ -178,6 +178,38 @@ fn date_plus_and_date_difference_use_exact_fixed_duration_arithmetic() {
 }
 
 #[test]
+fn date_plus_operator_form_rewrites_to_data_first_call() {
+    let mut session = core_session();
+
+    let inert = session.eval_text("DatePlus[{1, \"Days\"}]").unwrap();
+    assert_eq!(inert.value.to_string(), "DatePlus[List[1, \"Days\"]]");
+    assert!(inert.messages.is_empty());
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{DatePlus[{1, \"Days\"}][0], DatePlus[0, {1, \"Days\"}], DatePlus[{36, \"Hours\"}][0], Map[DatePlus[{1, \"Days\"}], {0, 86400}]}"
+        ),
+        "List[86400, 86400, 129600, List[86400, 172800]]"
+    );
+
+    let invalid = session.eval_text("DatePlus[{1, \"Days\"}][0, 0]").unwrap();
+    assert_eq!(
+        invalid.value.to_string(),
+        "DatePlus[List[1, \"Days\"]][0, 0]"
+    );
+    assert!(
+        invalid
+            .messages
+            .iter()
+            .any(|message| message.symbol == "DatePlus" && message.tag == "argx"),
+        "DatePlus operator form should emit argx"
+    );
+
+    assert_failed_with_message(&mut session, "DatePlus[0, {1, \"Months\"}]", "DatePlus");
+}
+
+#[test]
 fn day_of_week_returns_iso_weekday_symbols() {
     let mut session = core_session();
 

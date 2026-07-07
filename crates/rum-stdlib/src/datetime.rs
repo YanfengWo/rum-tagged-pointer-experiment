@@ -101,10 +101,13 @@ pub(crate) fn eval_from_date_string(
 
 pub(crate) fn eval_date_plus(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [date, spec] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_exact_arg_count("DatePlus", args, 2));
     };
 

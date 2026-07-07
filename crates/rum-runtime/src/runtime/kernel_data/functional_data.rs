@@ -708,6 +708,7 @@ fn structure_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> 
         1 if is_system_symbol_name(head, "Partition") => Some("Partition"),
         1 if is_system_symbol_name(head, "Riffle") => Some("Riffle"),
         1 if is_system_symbol_name(head, "GatherBy") => Some("GatherBy"),
+        1 if is_system_symbol_name(head, "DatePlus") => Some("DatePlus"),
         1 if is_system_symbol_name(head, "MaxBy") => Some("MaxBy"),
         1 if is_system_symbol_name(head, "MinBy") => Some("MinBy"),
         1 if is_system_symbol_name(head, "DeleteDuplicatesBy") => Some("DeleteDuplicatesBy"),
