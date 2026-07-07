@@ -236,6 +236,24 @@ fn sandboxed_host_config_blocks_clock_builtins_at_dispatch() {
 }
 
 #[test]
+fn sandboxed_host_config_blocks_exit_at_dispatch_but_trusted_allows_it() {
+    let mut sandboxed = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_sandbox_denied(&mut sandboxed, "Exit[0]");
+
+    let mut trusted = HostSession::new();
+    match trusted.eval("Exit[7]") {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Exit);
+            assert_eq!(failure.message, "Exit[7]");
+        }
+        other => panic!("expected trusted Exit failure, got {other:?}"),
+    }
+}
+
+#[test]
 fn sandboxed_host_config_still_allows_pure_work_and_path_string_helpers() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::sandboxed())

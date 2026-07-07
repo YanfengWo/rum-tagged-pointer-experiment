@@ -1,4 +1,4 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, Capability, HoldAttribute};
 
 use crate::control_flow;
 
@@ -82,7 +82,8 @@ pub(crate) const CONTROL_BUILTINS: &[BuiltinSpec] = &[
         "Exit",
         "Requests host-level termination with an optional integer exit code.",
         control_flow::eval_exit,
-    ),
+    )
+    .with_capability(Capability::Process),
     BuiltinSpec::ordinary_with_hold(
         "CheckAbort",
         "Evaluates an expression and substitutes a fallback if an Abort occurs.",

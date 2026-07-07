@@ -1217,7 +1217,7 @@ Represents the current pattern exclusion head.
 Requests host-level termination with an optional integer exit code.
 
 - Attributes: `None`
-- Capability: `Pure`
+- Capability: `Process`
 
 ### Expand
 
