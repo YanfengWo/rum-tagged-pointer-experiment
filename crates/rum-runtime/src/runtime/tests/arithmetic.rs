@@ -387,6 +387,34 @@ fn exact_integer_mod_quotient_gcd_lcm_and_powermod_follow_floor_style_semantics(
 }
 
 #[test]
+fn powermod_negative_exponents_use_modular_inverse() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    for (source, expected) in [
+        ("PowerMod[2, -1, 5]", "3"),
+        ("PowerMod[3, -1, 7]", "5"),
+        ("PowerMod[2, -3, 5]", "2"),
+        ("PowerMod[10, -1, 1]", "0"),
+        ("PowerMod[2, 3, 5]", "3"),
+        ("PowerMod[2, 3, 0]", "PowerMod[2, 3, 0]"),
+        ("PowerMod[2, -1, 0]", "PowerMod[2, -1, 0]"),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(outcome.messages.is_empty(), "{source}");
+    }
+
+    let noninvertible = session.eval_text("PowerMod[2, -1, 4]").unwrap();
+    assert_eq!(noninvertible.value.to_string(), "PowerMod[2, -1, 4]");
+    assert!(
+        noninvertible
+            .messages
+            .iter()
+            .any(|message| message.symbol == "PowerMod" && message.tag == "ninv")
+    );
+}
+
+#[test]
 fn rational_atoms_expose_a_rational_head_for_patterns() {
     let mut session = session_with_test_rewrite_builtins();
 

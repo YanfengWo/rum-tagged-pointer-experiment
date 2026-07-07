@@ -105,7 +105,23 @@ impl Session {
         };
 
         if exponent < BigInt::from(0_u8) {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+            if modulus == BigInt::from(0_u8) {
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
+
+            let Some(inverse) = mod_inverse(&base, &modulus) else {
+                return Ok(self.invalid_call_with_message(
+                    "PowerMod",
+                    args,
+                    "ninv",
+                    format!("{base} is not invertible modulo {modulus}."),
+                ));
+            };
+            let inverse_exponent = -exponent;
+
+            return Ok(power_mod_integer(&inverse, &inverse_exponent, &modulus)
+                .map(Expr::integer)
+                .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())));
         }
 
         Ok(power_mod_integer(&base, &exponent, &modulus)
@@ -132,6 +148,39 @@ fn bigint_gcd(mut lhs: BigInt, mut rhs: BigInt) -> BigInt {
     }
 
     bigint_abs(&lhs)
+}
+
+fn mod_inverse(base: &BigInt, modulus: &BigInt) -> Option<BigInt> {
+    let zero = BigInt::from(0_u8);
+    let one = BigInt::from(1_u8);
+    let m = bigint_abs(modulus);
+
+    if m == one {
+        return Some(zero);
+    }
+
+    let mut old_r = mod_integer(base, &m)?;
+    let mut r = m.clone();
+    let mut old_s = one.clone();
+    let mut s = zero.clone();
+
+    while r != zero {
+        let quotient = &old_r / &r;
+
+        let next_r = old_r - &quotient * &r;
+        old_r = r;
+        r = next_r;
+
+        let next_s = old_s - quotient * &s;
+        old_s = s;
+        s = next_s;
+    }
+
+    if old_r != one {
+        return None;
+    }
+
+    mod_integer(&old_s, &m)
 }
 
 fn mod_integer(lhs: &BigInt, rhs: &BigInt) -> Option<BigInt> {
