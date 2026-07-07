@@ -90,11 +90,11 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-174 DONE (2249bfd): SelectPositions/Duplicates/BinarySearch;
   workspace 1356/0. **UNIT 2 (structure+functional) CLOSED** —
   ledger in the tracker.
-- [ ] brief-176 (unit 3 audit): predicates + associations families
-  (50 + 33 = 83 builtins), all-rows findings table; pre-seed the WFR
-  association candidates `KeyGroupBy`/`AssociationKeyDeflatten`
-  (+ flatten twin) / `MergeNested` (config layering — pairs with
-  codecs + ConformSchema).
+- [x] brief-176 DONE (d87bc97): unit-3 audit, 83/83; healthier family
+  (no silent bugs); four-batch triage in the tracker.
+- [ ] brief-177 (unit-3 batch 1): comparison controls — SameTest for
+  the 9 collection predicates, OrderedQ/LexicographicOrder custom
+  ordering, KeySortBy 3-arg (pure, no call planning).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

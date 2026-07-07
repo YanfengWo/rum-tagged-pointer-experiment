@@ -51,7 +51,7 @@ first (157), then flexibility (158), convenience + safety (159).
 |---|------|-------|-------|-------|
 | 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
 | 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
-| 3 | predicates + associations | 83 | | |
+| 3 | predicates + associations | 83 | brief-176 ✓ | 177… (triage below) |
 | 4 | control + logic + rewrite | 63 | | |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
@@ -181,6 +181,34 @@ brief-175 after 171, WITH the restored microbench A/B hard gate
 (`StringTake`/`Drop`/`Count`/`Position` operator forms) join 175 ONLY
 if WL documentation confirms those forms exist; otherwise they stay a
 separate design decision.
+
+## Unit 3 (predicates+associations) triage — 2026-07-07
+
+Audit brief-176: 83/83, findings in
+`usability-pass/predicates-associations-findings.md`. Healthier family
+than structure (no silent-wrong-answer bugs). Fix batches, dispatch
+order (perf moratorium lifted, so operator-form batches allowed with
+the A/B gate):
+
+1. **brief-177 — comparison controls** (pure per-builtin, no call
+   planning): `SameTest -> SameQ` for `DuplicateFreeQ`/`IntersectingQ`/
+   `DisjointQ`/`SubsetQ`/`ContainsAll`/`ContainsAny`/`ContainsExactly`/
+   `ContainsNone`/`ContainsOnly`; `OrderedQ[list, p]` ordering
+   predicate; `LexicographicOrder` comparator; `KeySortBy[assoc, f, p]`
+   3-arg (mirror `KeySort`'s comparator path). Register the SameTest
+   defaults.
+2. **brief-178 — array predicate forms** (pure): `VectorQ[expr, test]`,
+   `MatrixQ[expr, test]`, `ArrayQ` shape-pattern + element-test forms.
+3. **brief-179 — operator forms** (call planning; A/B gate, the 175
+   pattern): `ContainsAll/Any/Exactly/None/Only[needles]`,
+   `Between[range]`, `AllTrue/AnyTrue/NoneTrue[crit]`,
+   `OrderedQ[p]`, `Lookup[key, default]`, and the kernel `MatchQ[patt]`
+   (arity exemption in rum-runtime's MatchQ path). Disambiguation rule
+   as in 175: only arities that cannot be a data form.
+4. **brief-180 — WFR association additions** (new folk builtins,
+   idea-level; `list_lookup`-style neutral naming): `KeyGroupBy`,
+   `AssociationKeyDeflatten` + `AssociationKeyFlatten` twin,
+   `MergeNested` (config layering — pairs with codecs + `ConformSchema`).
 
 Corrections to audit findings (so fix briefs do not inherit them):
 `LongestCommonSubsequence`'s contiguous behavior IS the WL contract
