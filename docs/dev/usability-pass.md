@@ -51,7 +51,7 @@ first (157), then flexibility (158), convenience + safety (159).
 |---|------|-------|-------|-------|
 | 1 | strings | 99 | brief-161 ✓ | 162b-168 ✓ CLOSED |
 | 2 | structure + functional | 89 | brief-169 ✓ | 170-175 ✓ CLOSED |
-| 3 | predicates + associations | 83 | brief-176 ✓ | 177… (triage below) |
+| 3 | predicates + associations | 83 | brief-176 ✓ | 177-180 ✓ CLOSED |
 | 4 | control + logic + rewrite | 63 | | |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | | |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | | |
@@ -181,6 +181,15 @@ brief-175 after 171, WITH the restored microbench A/B hard gate
 (`StringTake`/`Drop`/`Count`/`Position` operator forms) join 175 ONLY
 if WL documentation confirms those forms exist; otherwise they stay a
 separate design decision.
+
+**UNIT 3 CLOSED (2026-07-07).** Landed: 176 audit + 177 (comparison
+controls) + 178 (array predicate test/rank forms) + 179 (ten predicate
+operator forms; `OrderedQ[p]`/`Lookup[key,default]` excluded on
+data-form collision) + 180 (KeyGroupBy/AssociationKeyDeflatten+Flatten/
+MergeNested). Workspace 1358 → 1366; reference +4. No silent-wrong-
+answer bugs in this family. Cumulative: units 1-3 = 271 builtins
+swept, all fixes compat (defaults byte-identical). Next: unit 4
+(control+logic+rewrite, 63).
 
 ## Unit 3 (predicates+associations) triage — 2026-07-07
 

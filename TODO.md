@@ -98,10 +98,11 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] brief-179 DONE (63c1363): ten predicate operator forms (A/B
   clean); OrderedQ[p]/Lookup[key,default] excluded (data-form
   collision); workspace 1360/0.
-- [ ] brief-180 (unit-3 batch 4, FINAL): WFR association additions —
-  `KeyGroupBy`, `AssociationKeyDeflatten` + `AssociationKeyFlatten`,
-  `MergeNested`. New folk builtins, neutral naming, vocabulary
-  registration. Unit 3 closes after this.
+- [x] brief-180 DONE (828d774): KeyGroupBy/AssociationKeyDeflatten+
+  Flatten/MergeNested; workspace 1366/0. **UNIT 3 CLOSED** (271
+  builtins swept across units 1-3).
+- [ ] brief-181 (unit 4 audit): control + logic + rewrite families
+  (35 + 21 + 7 = 63 builtins), all-rows findings table.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
