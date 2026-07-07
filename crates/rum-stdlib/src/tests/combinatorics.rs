@@ -1,5 +1,5 @@
 use crate::install_core;
-use rum_runtime::Session;
+use rum_runtime::{EvalOutcome, Session};
 
 fn core_session() -> Session {
     let mut session = Session::new();
@@ -9,6 +9,17 @@ fn core_session() -> Session {
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
+}
+
+fn assert_message(outcome: &EvalOutcome, symbol: &str, tag: &str) {
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == symbol && message.tag == tag),
+        "missing {symbol}::{tag}; messages: {:?}",
+        outcome.messages
+    );
 }
 
 #[test]
@@ -158,6 +169,23 @@ fn cheap_combinatorics_builtins_report_declared_attributes() {
     for (source, expected) in cases {
         assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
     }
+}
+
+#[test]
+fn fibonacci_wrong_arity_reports_argx_and_stays_inert() {
+    let mut session = core_session();
+
+    let empty = session.eval_text("Fibonacci[]").unwrap();
+    assert_eq!(empty.value.to_string(), "Fibonacci[]");
+    assert_message(&empty, "Fibonacci", "argx");
+
+    let two_args = session.eval_text("Fibonacci[1, 2]").unwrap();
+    assert_eq!(two_args.value.to_string(), "Fibonacci[1, 2]");
+    assert_message(&two_args, "Fibonacci", "argx");
+
+    let valid = session.eval_text("Fibonacci[10]").unwrap();
+    assert_eq!(valid.value.to_string(), "55");
+    assert!(valid.messages.is_empty(), "{:?}", valid.messages);
 }
 
 #[test]

@@ -24,12 +24,12 @@ pub(crate) fn eval_binomial(
 }
 
 pub(crate) fn eval_fibonacci(
-    _session: &mut Session,
+    session: &mut Session,
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [arg] = args else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+        return Ok(session.invalid_call_with_exact_arg_count("Fibonacci", args, 1));
     };
 
     let Some(index) = expr_as_exact_integer(arg) else {

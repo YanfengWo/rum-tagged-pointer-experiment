@@ -1,5 +1,5 @@
 use crate::install_core;
-use rum_runtime::Session;
+use rum_runtime::{EvalOutcome, Session};
 
 fn core_session() -> Session {
     let mut session = Session::new();
@@ -9,6 +9,17 @@ fn core_session() -> Session {
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
+}
+
+fn assert_message(outcome: &EvalOutcome, symbol: &str, tag: &str) {
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == symbol && message.tag == tag),
+        "missing {symbol}::{tag}; messages: {:?}",
+        outcome.messages
+    );
 }
 
 #[test]
@@ -107,5 +118,60 @@ fn integer_digit_builtins_report_declared_attributes() {
 
     for (source, expected) in cases {
         assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn integer_digit_builtins_report_invalid_base_and_negative_length() {
+    let mut session = core_session();
+
+    let cases = [
+        (
+            "IntegerDigits[5, 1]",
+            "IntegerDigits[5, 1]",
+            "IntegerDigits",
+        ),
+        (
+            "IntegerLength[10, 1]",
+            "IntegerLength[10, 1]",
+            "IntegerLength",
+        ),
+        (
+            "IntegerReverse[10, 1]",
+            "IntegerReverse[10, 1]",
+            "IntegerReverse",
+        ),
+        ("DigitCount[12321, 1]", "DigitCount[12321, 1]", "DigitCount"),
+    ];
+
+    for (source, expected, symbol) in cases {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert_message(&outcome, symbol, "ibase");
+    }
+
+    let negative_length = session.eval_text("IntegerDigits[5, 2, -1]").unwrap();
+    assert_eq!(negative_length.value.to_string(), "IntegerDigits[5, 2, -1]");
+    assert_message(&negative_length, "IntegerDigits", "intnn");
+}
+
+#[test]
+fn integer_digit_valid_bases_and_defaults_stay_message_free() {
+    let mut session = core_session();
+
+    let cases = [
+        ("IntegerDigits[5, 2]", "List[1, 0, 1]"),
+        ("IntegerDigits[12345]", "List[1, 2, 3, 4, 5]"),
+        ("IntegerDigits[5, 2, 4]", "List[0, 1, 0, 1]"),
+    ];
+
+    for (source, expected) in cases {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome.messages.is_empty(),
+            "{source}: {:?}",
+            outcome.messages
+        );
     }
 }

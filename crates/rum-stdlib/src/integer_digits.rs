@@ -20,10 +20,13 @@ pub(crate) fn eval_integer_length(
     };
     let base = match base_expr {
         Some(base_expr) => {
-            let Some(base) = expr_as_integer_digits_base(base_expr) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            base
+            match parse_integer_digits_base(session, "IntegerLength", args, base_expr) {
+                Ok(Some(base)) => base,
+                Ok(None) => {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+                Err(invalid) => return Ok(invalid),
+            }
         }
         None => BigInt::from(10_u8),
     };
@@ -50,17 +53,22 @@ pub(crate) fn eval_integer_digits(
     };
     let base = match base_expr {
         Some(base_expr) => {
-            let Some(base) = expr_as_integer_digits_base(base_expr) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            base
+            match parse_integer_digits_base(session, "IntegerDigits", args, base_expr) {
+                Ok(Some(base)) => base,
+                Ok(None) => {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+                Err(invalid) => return Ok(invalid),
+            }
         }
         None => BigInt::from(10_u8),
     };
     let length = match length_expr {
         Some(length_expr) => {
-            let Some(length) = expr_as_non_negative_machine_integer(length_expr) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
+            let length = match parse_integer_digits_length(session, args, length_expr) {
+                Ok(Some(length)) => length,
+                Ok(None) => return Ok(Expr::call(head.clone(), args.to_vec())),
+                Err(invalid) => return Ok(invalid),
             };
             Some(length)
         }
@@ -104,10 +112,13 @@ pub(crate) fn eval_integer_reverse(
     };
     let base = match base_expr {
         Some(base_expr) => {
-            let Some(base) = expr_as_integer_digits_base(base_expr) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            base
+            match parse_integer_digits_base(session, "IntegerReverse", args, base_expr) {
+                Ok(Some(base)) => base,
+                Ok(None) => {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+                Err(invalid) => return Ok(invalid),
+            }
         }
         None => BigInt::from(10_u8),
     };
@@ -177,10 +188,13 @@ pub(crate) fn eval_digit_count(
     };
     let base = match base_expr {
         Some(base_expr) => {
-            let Some(base) = expr_as_integer_digits_base(base_expr) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            base
+            match parse_integer_digits_base(session, "DigitCount", args, base_expr) {
+                Ok(Some(base)) => base,
+                Ok(None) => {
+                    return Ok(Expr::call(head.clone(), args.to_vec()));
+                }
+                Err(invalid) => return Ok(invalid),
+            }
         }
         None => BigInt::from(10_u8),
     };
@@ -235,9 +249,47 @@ fn list_expr(items: Vec<Expr>) -> Expr {
     Expr::call(system_expr("List"), items)
 }
 
-fn expr_as_integer_digits_base(expr: &Expr) -> Option<BigInt> {
-    let base = expr_as_exact_integer(expr)?;
-    (base > BigInt::from(1_u8)).then_some(base)
+fn parse_integer_digits_base(
+    session: &mut Session,
+    symbol: &str,
+    args: &[Expr],
+    expr: &Expr,
+) -> Result<Option<BigInt>, Expr> {
+    let Some(base) = expr_as_exact_integer(expr) else {
+        return Ok(None);
+    };
+
+    if base < BigInt::from(2_u8) {
+        let call = Expr::call(system_expr(symbol), args.to_vec());
+        return Err(session.invalid_call_with_message(
+            symbol,
+            args,
+            "ibase",
+            format!("Base {base} is not an integer greater than 1 in {call}."),
+        ));
+    }
+
+    Ok(Some(base))
+}
+
+fn parse_integer_digits_length(
+    session: &mut Session,
+    args: &[Expr],
+    expr: &Expr,
+) -> Result<Option<usize>, Expr> {
+    if let Some(length) = expr_as_exact_integer(expr) {
+        if length < BigInt::from(0_u8) {
+            let call = Expr::call(system_expr("IntegerDigits"), args.to_vec());
+            return Err(session.invalid_call_with_message(
+                "IntegerDigits",
+                args,
+                "intnn",
+                format!("Length {length} is not a non-negative integer in {call}."),
+            ));
+        }
+    }
+
+    Ok(expr_as_non_negative_machine_integer(expr))
 }
 
 fn expr_as_from_digits_base(expr: &Expr) -> Option<BigInt> {

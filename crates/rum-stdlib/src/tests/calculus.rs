@@ -1,10 +1,21 @@
 use crate::install_core;
-use rum_runtime::Session;
+use rum_runtime::{EvalOutcome, Session};
 
 fn core_session() -> Session {
     let mut session = Session::new();
     install_core(&mut session);
     session
+}
+
+fn assert_message(outcome: &EvalOutcome, symbol: &str, tag: &str) {
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == symbol && message.tag == tag),
+        "missing {symbol}::{tag}; messages: {:?}",
+        outcome.messages
+    );
 }
 
 #[test]
@@ -112,5 +123,52 @@ fn d_keeps_current_variable_boundary_for_pattern_or_non_symbol_heads() {
             .value
             .to_string(),
         "D[Power[x, 2], h[x][1]]"
+    );
+}
+
+#[test]
+fn d_reports_concrete_invalid_variable_and_negative_order_specs() {
+    let mut session = core_session();
+
+    let invalid_variable = session.eval_text("D[x^2, 1]").unwrap();
+    assert_eq!(invalid_variable.value.to_string(), "D[Power[x, 2], 1]");
+    assert_message(&invalid_variable, "D", "dvar");
+
+    let negative_order = session.eval_text("D[x^2, {x, -1}]").unwrap();
+    assert_eq!(
+        negative_order.value.to_string(),
+        "D[Power[x, 2], List[x, -1]]"
+    );
+    assert_message(&negative_order, "D", "dvord");
+}
+
+#[test]
+fn d_symbolic_order_and_valid_derivatives_stay_message_free() {
+    let mut session = core_session();
+
+    let symbolic_order = session.eval_text("D[x^2, {x, a}]").unwrap();
+    assert_eq!(
+        symbolic_order.value.to_string(),
+        "D[Power[x, 2], List[x, a]]"
+    );
+    assert!(
+        symbolic_order.messages.is_empty(),
+        "{:?}",
+        symbolic_order.messages
+    );
+
+    let polynomial = session.eval_text("D[x^3, {x, 2}]").unwrap();
+    assert_eq!(
+        polynomial.value.to_string(),
+        session.eval_text("6*x").unwrap().value.to_string()
+    );
+    assert!(polynomial.messages.is_empty(), "{:?}", polynomial.messages);
+
+    let abstract_call = session.eval_text("D[f[x], x]").unwrap();
+    assert_eq!(abstract_call.value.to_string(), "Derivative[1][f][x]");
+    assert!(
+        abstract_call.messages.is_empty(),
+        "{:?}",
+        abstract_call.messages
     );
 }
