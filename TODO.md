@@ -155,9 +155,16 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   leak) — NOT a naive "contains target" (Sin[x] as x^0 coeff is
   WL-correct). Only Coefficient[x+1/x,x,0] + CoefficientList[x+1/x,x]
   newly inert; Sin[x]/1/(1+x)/genuine polynomials unchanged.
-- [ ] brief-190 (unit-5 fix 4): cheap flexibility — Total level forms,
-  Commonest[list,n], list-valued Quantile, PowerMod modular inverse.
-- [ ] brief-191 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
+  (cheap-flexibility batch split into 190/191/192 by feature — 4
+  heterogeneous forms is too much for one gate.)
+- [ ] brief-190 (unit-5 fix 4a, in flight): stats list forms —
+  Commonest[list,n] (top-n by frequency) + Quantile[list,{q..}] (map
+  scalar over q list). stats.rs, folk-cheap, no A/B.
+- [ ] brief-191 (unit-5 fix 4b): Total[list,n] / Total[list,{level}]
+  levelspec summation (parts.rs). Watch WL row/column level semantics.
+- [ ] brief-192 (unit-5 fix 4c): PowerMod negative-exponent modular
+  inverse (extended-GCD; message on non-invertible base). integer_ops.rs.
+- [ ] brief-193 (unit-5 fix 5): attribute hygiene GCD/LCM/Max/Min
   (Orderless/Flat/OneIdentity, WL-correct) + Abs numeric/protected. A/B
   gate (attribute-driven planning).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
