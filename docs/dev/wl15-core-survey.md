@@ -97,6 +97,19 @@ kernel audit (contexts/packages surface), where the existing
 `BeginPackage`/`Needs`/`DeclarePackage` story gets its three-axis
 sweep anyway. Loader mechanics stay out of the kernel regardless.
 
+Boundary-strength note (user discussion 2026-07-07): context-based
+privacy — SPF's included — is a NAMING CONVENTION, not access control:
+a fully qualified name always resolves, so it prevents accidents, not
+adversaries. Gensym encapsulation (Module/Unique, the mma-hol
+LCF-boundary pattern) provides unforgeability instead and is NOT
+replaceable by SPF-style scoping. The rum-native design opportunity
+for unit 10: since rum owns its kernel, "private" could be genuinely
+ENFORCED (sealed contexts — qualified-name resolution refused from
+outside; Names/Contexts introspection capability-gated), turning
+declarative scoping into a real trust boundary WL cannot offer. Design
+must cover the forgery paths (ToExpression/Symbol construction),
+snapshot/restore serialization, and Definition display.
+
 ## 5. Noted, low value for rum
 
 - One-argument `Monitor[expr]` (auto progress for top-level iteration):
