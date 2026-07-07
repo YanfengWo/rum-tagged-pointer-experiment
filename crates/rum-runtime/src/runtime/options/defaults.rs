@@ -19,9 +19,13 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
 
     let entries = match symbol.name() {
         "ArrayFilter" => vec![system_rule_option("Padding", Expr::string("Fixed"))],
-        "Cases" | "DeleteCases" | "Count" | "MemberQ" | "Level" | "Depth" => {
+        "Cases" | "DeleteCases" | "Count" | "MemberQ" | "Level" | "Depth" | "Replace" => {
             vec![system_rule_option("Heads", bool_option(false))]
         }
+        "ReplaceRepeated" => vec![system_rule_option(
+            "MaxIterations",
+            system_expr("Automatic"),
+        )],
         "Map" | "MapIndexed" | "MapAll" | "Scan" | "Apply" | "MapApply" | "Comap"
         | "ComapApply" => vec![system_rule_option("Heads", bool_option(false))],
         "Trace" | "TracePrint" => vec![system_rule_option("Heads", bool_option(false))],

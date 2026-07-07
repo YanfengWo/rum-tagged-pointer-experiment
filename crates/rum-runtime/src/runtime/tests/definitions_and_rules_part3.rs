@@ -133,6 +133,58 @@ fn replace_supports_levelspecs_and_rule_lists() {
 }
 
 #[test]
+fn replace_heads_option_controls_head_traversal() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Replace[f[1], f -> g, {0, Infinity}, Heads -> True]")
+            .unwrap()
+            .value
+            .to_string(),
+        "g[1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[1], f -> g, {0, Infinity}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Replace[f[1], f -> g, {0, Infinity}, Heads -> False]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[1]"
+    );
+}
+
+#[test]
+fn rewrite_options_report_new_defaults() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Options[Replace]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, False]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[ReplaceRepeated]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[MaxIterations, Automatic]]"
+    );
+}
+
+#[test]
 fn replace_rewrites_association_values_without_touching_keys() {
     let mut session = session_with_test_control_builtins();
 
@@ -321,6 +373,75 @@ fn replacerepeated_reaches_a_fixed_point() {
             .value
             .to_string(),
         "1"
+    );
+}
+
+#[test]
+fn replacerepeated_max_iterations_option_controls_effective_limit() {
+    let mut session = session_with_test_control_builtins();
+
+    let lower = session
+        .eval_text("ReplaceRepeated[a, a -> a + 1, MaxIterations -> 2]")
+        .unwrap();
+    assert_eq!(
+        lower.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(lower.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "iterlim"
+            && message.text == "ReplaceRepeated exceeded iteration limit (2)"
+    }));
+
+    assert_eq!(
+        session
+            .eval_text("ReplaceRepeated[a, {a -> b, b -> c}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "c"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReplaceRepeated[a, {a -> b, b -> c}, MaxIterations -> Automatic]")
+            .unwrap()
+            .value
+            .to_string(),
+        "c"
+    );
+
+    session.set_replace_repeated_limit(3);
+    let clamped = session
+        .eval_text("ReplaceRepeated[a, a -> a + 1, MaxIterations -> 50]")
+        .unwrap();
+    assert_eq!(
+        clamped.value.to_string(),
+        "TerminatedEvaluation[\"IterationLimit\"]"
+    );
+    assert!(clamped.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "iterlim"
+            && message.text == "ReplaceRepeated exceeded iteration limit (3)"
+    }));
+
+    let malformed = session
+        .eval_text("ReplaceRepeated[a, a -> a + 1, MaxIterations -> 0]")
+        .unwrap();
+    assert_eq!(
+        malformed.value.to_string(),
+        "ReplaceRepeated[a, Rule[a, Plus[a, 1]], Rule[MaxIterations, 0]]"
+    );
+    assert!(
+        malformed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ReplaceRepeated" && message.tag == "argform")
+    );
+    assert!(
+        !malformed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "iterlim")
     );
 }
 

@@ -8,28 +8,53 @@ impl Session {
         if args.len() == 1 {
             return Ok(self.invalid_call("ReplaceRepeated", args));
         }
-        if args.len() != 2 {
-            return Ok(self.invalid_call_with_exact_arg_count("ReplaceRepeated", args, 2));
-        }
+        let max_iterations_expr = match args {
+            [_, _] => None,
+            [_, _, option] if replace_repeated_max_iterations_option_value(option).is_some() => {
+                Some(option.clone())
+            }
+            _ => return Ok(self.invalid_call_with_exact_arg_count("ReplaceRepeated", args, 2)),
+        };
 
+        let call_args = args.to_vec();
         let current_result = self.evaluate(args[0].clone());
         let current = self.suspend_with_frame(current_result, {
             let rules_expr = args[1].clone();
+            let max_iterations_expr = max_iterations_expr.clone();
+            let call_args = call_args.clone();
             move |session, current| {
-                session.resume_replace_repeated_after_current(current, rules_expr)
+                session.resume_replace_repeated_after_current(
+                    current,
+                    rules_expr,
+                    max_iterations_expr,
+                    call_args,
+                )
             }
         })?;
 
-        self.resume_replace_repeated_after_current(current, args[1].clone())
+        self.resume_replace_repeated_after_current(
+            current,
+            args[1].clone(),
+            max_iterations_expr,
+            call_args,
+        )
     }
 
     fn resume_replace_repeated_after_current(
         &mut self,
         current: Expr,
         rules_expr: Expr,
+        max_iterations_expr: Option<Expr>,
+        call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         self.drive_rewrite_rule_exprs_owned(rules_expr.clone(), move |session, rule_exprs| {
-            session.resume_replace_repeated_after_rule_exprs(current, rules_expr, rule_exprs)
+            session.resume_replace_repeated_after_rule_exprs(
+                current,
+                rules_expr,
+                max_iterations_expr,
+                rule_exprs,
+                call_args,
+            )
         })
     }
 
@@ -37,7 +62,9 @@ impl Session {
         &mut self,
         current: Expr,
         rules_input: Expr,
+        max_iterations_expr: Option<Expr>,
         normalized_rule_exprs: Option<Vec<Expr>>,
+        call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let Some(rule_exprs) = normalized_rule_exprs else {
             return Ok(self.invalid_call_with_arg_form(
@@ -51,7 +78,39 @@ impl Session {
             .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
             .expect("normalized rewrite rule expressions should recompile");
 
-        self.resume_replace_repeated_loop(current, rules, 0)
+        let limit_result = self.resolve_replace_repeated_limit_owned(max_iterations_expr);
+        self.drive_internal_value(limit_result, move |session, effective_limit| {
+            let Some(effective_limit_expr) = effective_limit else {
+                return Ok(session.invalid_call_with_arg_form(
+                    "ReplaceRepeated",
+                    &call_args,
+                    "expected MaxIterations -> Automatic, Infinity, or a positive integer",
+                ));
+            };
+            let effective_limit = expr_as_non_negative_usize(&effective_limit_expr)
+                .expect("replace-repeated limit should be non-negative");
+
+            session.resume_replace_repeated_loop(current, rules, 0, effective_limit)
+        })
+    }
+
+    fn resolve_replace_repeated_limit_owned(
+        &mut self,
+        max_iterations_expr: Option<Expr>,
+    ) -> Result<Option<Expr>, EvalError> {
+        let ceiling = self.resource_limits.replace_repeated_limit;
+        let Some(max_iterations_expr) = max_iterations_expr else {
+            return Ok(Some(Expr::integer(BigInt::from(ceiling))));
+        };
+
+        let resolved_result = self.evaluate(max_iterations_expr);
+        self.drive_evaluated_value(resolved_result, move |_, resolved| {
+            let Some(value) = replace_repeated_max_iterations_option_value(&resolved) else {
+                return Ok(None);
+            };
+            Ok(parse_replace_repeated_max_iterations_value(value, ceiling)
+                .map(|limit| Expr::integer(BigInt::from(limit))))
+        })
     }
 
     fn resume_replace_repeated_loop(
@@ -59,10 +118,11 @@ impl Session {
         current: Expr,
         rules: Vec<RewriteRule>,
         iteration: usize,
+        effective_limit: usize,
     ) -> Result<Expr, EvalError> {
-        if iteration >= self.resource_limits.replace_repeated_limit {
+        if iteration >= effective_limit {
             return Err(EvalError::IterationLimitExceeded {
-                limit: self.resource_limits.replace_repeated_limit,
+                limit: effective_limit,
             });
         }
 
@@ -76,11 +136,17 @@ impl Session {
             let current = current.clone();
             let rules = rules.clone();
             move |session, next| {
-                session.resume_replace_repeated_after_next(current, rules, iteration, next)
+                session.resume_replace_repeated_after_next(
+                    current,
+                    rules,
+                    iteration,
+                    effective_limit,
+                    next,
+                )
             }
         })?;
 
-        self.resume_replace_repeated_after_next(current, rules, iteration, next)
+        self.resume_replace_repeated_after_next(current, rules, iteration, effective_limit, next)
     }
 
     fn resume_replace_repeated_after_next(
@@ -88,12 +154,49 @@ impl Session {
         current: Expr,
         rules: Vec<RewriteRule>,
         iteration: usize,
+        effective_limit: usize,
         next: Expr,
     ) -> Result<Expr, EvalError> {
         if next == current {
             Ok(next)
         } else {
-            self.resume_replace_repeated_loop(next, rules, iteration + 1)
+            self.resume_replace_repeated_loop(next, rules, iteration + 1, effective_limit)
         }
     }
+}
+
+fn replace_repeated_max_iterations_option_value(expr: &Expr) -> Option<&Expr> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+
+    max_iterations_option_symbol_matches(&args[0]).then_some(&args[1])
+}
+
+fn max_iterations_option_symbol_matches(expr: &Expr) -> bool {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => symbol.name() == "MaxIterations",
+        Expr::Atom(Atom::String(name)) => {
+            name == "MaxIterations"
+                || resolve_unqualified_symbol(name)
+                    .is_some_and(|symbol| symbol.name() == "MaxIterations")
+        }
+        _ => false,
+    }
+}
+
+fn parse_replace_repeated_max_iterations_value(value: &Expr, ceiling: usize) -> Option<usize> {
+    if is_system_symbol_name(value, "Automatic") || is_system_symbol_name(value, "Infinity") {
+        return Some(ceiling);
+    }
+
+    expr_as_non_negative_usize(value)
+        .filter(|limit| *limit > 0)
+        .map(|limit| limit.min(ceiling))
 }
