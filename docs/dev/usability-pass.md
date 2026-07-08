@@ -60,7 +60,8 @@ first (157), then flexibility (158), convenience + safety (159).
 | 9 | kernel B: scoping/eval control/patterns/forms | ~55 | | |
 | 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | ~55 | | |
 
-Counts for units 1-7 are exact (catalog arrays, 445 total); units 8-10
+Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
+after brief-201 split off `ReseedRandom`); units 8-10
 split the 160-name kernel list (installed reference minus stdlib
 catalog) and are enumerated exactly when their audit brief is written.
 
