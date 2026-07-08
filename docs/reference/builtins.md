@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 611
+Builtin count: 612
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -4290,6 +4290,13 @@ Represents the current string-pattern atom for one or more whitespace characters
 ### WhitespaceCharacter
 
 Represents the current string-pattern atom for one whitespace character.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+
+### WhitespaceCharacters
+
+Evaluates to the ASCII whitespace character-class string.
 
 - Attributes: `Protected`
 - Capability: `Pure`

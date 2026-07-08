@@ -112,6 +112,10 @@ fn character_class_constants_have_pinned_values_and_compose() {
         crate::character_classes::ALPHANUMERIC
     );
     assert_eq!(
+        eval_string_value(&mut session, "WhitespaceCharacters"),
+        crate::character_classes::WHITESPACE_CHARACTERS
+    );
+    assert_eq!(
         eval_to_string(
             &mut session,
             "Alphanumeric === UppercaseLetters <> LowercaseLetters <> DigitCharacters"
@@ -124,6 +128,31 @@ fn character_class_constants_have_pinned_values_and_compose() {
         crate::character_classes::PUNCTUATION_CHARACTERS
     );
     assert_eq!(eval_to_string(&mut session, &punctuation), "True");
+}
+
+#[test]
+fn whitespace_character_constant_has_pinned_value_and_composes() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut session, "WhitespaceCharacters === \" \\t\\n\\r\""),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringLength[WhitespaceCharacters]"),
+        "4"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[WhitespaceCharacters]"),
+        "List[Protected]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringLength[RandomString[WhitespaceCharacters, 5]]"
+        ),
+        "5"
+    );
 }
 
 #[test]
@@ -384,6 +413,25 @@ fn random_password_respects_custom_alphabet_membership() {
     assert_eq!(
         eval_to_string(&mut session, "RandomPassword[\"abc\", 6]"),
         "\"abcabc\""
+    );
+}
+
+#[test]
+fn random_password_policy_options_are_discoverable_without_changing_draws() {
+    let mut options_session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut options_session, "Options[RandomPassword]"),
+        "List[Rule[Require, List[]], Rule[NoAdjacentRepeats, False], Rule[Exclude, List[]], Rule[IgnoreCase, False]]"
+    );
+
+    let mut password_session = core_session_with_entropy(&[0, 0, 1, 0, 0, 1, 0, 1]);
+    assert_eq!(
+        eval_to_string(
+            &mut password_session,
+            "RandomPassword[\"ab\", 4, \"NoAdjacentRepeats\" -> True]"
+        ),
+        "\"abab\""
     );
 }
 

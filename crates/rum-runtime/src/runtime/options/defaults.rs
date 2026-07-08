@@ -29,6 +29,12 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("Delimiter", Expr::string(",")),
             system_rule_option("Headers", bool_option(false)),
         ],
+        "RandomPassword" => vec![
+            system_rule_option("Require", Expr::call(system_expr("List"), Vec::new())),
+            system_rule_option("NoAdjacentRepeats", bool_option(false)),
+            system_rule_option("Exclude", Expr::call(system_expr("List"), Vec::new())),
+            system_rule_option("IgnoreCase", bool_option(false)),
+        ],
         "ReplaceRepeated" => vec![system_rule_option(
             "MaxIterations",
             system_expr("Automatic"),

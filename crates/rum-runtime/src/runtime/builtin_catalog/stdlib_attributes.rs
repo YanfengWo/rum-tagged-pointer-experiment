@@ -284,6 +284,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("UppercaseLetters", ATTR_PROTECTED),
     Spec::new("UuidQ", ATTR_PROTECTED),
     Spec::new("WhitespaceCharacter", ATTR_PROTECTED),
+    Spec::new("WhitespaceCharacters", ATTR_PROTECTED),
     Spec::new("Which", ATTR_HOLD_ALL),
     Spec::new("While", ATTR_HOLD_ALL),
     Spec::new("WordBoundary", ATTR_PROTECTED),

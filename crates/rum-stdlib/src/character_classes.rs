@@ -7,6 +7,7 @@ pub(crate) const DIGIT_CHARACTERS: &str = "0123456789";
 pub(crate) const PUNCTUATION_CHARACTERS: &str = r##"!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"##;
 pub(crate) const ALPHANUMERIC: &str =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+pub(crate) const WHITESPACE_CHARACTERS: &str = " \t\n\r";
 
 pub(crate) const CHARACTER_CLASS_CONSTANTS: &[(&str, &str)] = &[
     ("UppercaseLetters", UPPERCASE_LETTERS),
@@ -14,6 +15,7 @@ pub(crate) const CHARACTER_CLASS_CONSTANTS: &[(&str, &str)] = &[
     ("DigitCharacters", DIGIT_CHARACTERS),
     ("PunctuationCharacters", PUNCTUATION_CHARACTERS),
     ("Alphanumeric", ALPHANUMERIC),
+    ("WhitespaceCharacters", WHITESPACE_CHARACTERS),
 ];
 
 pub(crate) fn install(session: &mut Session) {

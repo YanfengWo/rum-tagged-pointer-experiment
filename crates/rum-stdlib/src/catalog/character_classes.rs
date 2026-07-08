@@ -28,4 +28,9 @@ pub(crate) const CHARACTER_CLASS_BUILTINS: &[BuiltinSpec] = &[
         "Evaluates to the uppercase ASCII letter character-class string.",
         ATTR_PROTECTED,
     ),
+    BuiltinSpec::with_attributes(
+        "WhitespaceCharacters",
+        "Evaluates to the ASCII whitespace character-class string.",
+        ATTR_PROTECTED,
+    ),
 ];
