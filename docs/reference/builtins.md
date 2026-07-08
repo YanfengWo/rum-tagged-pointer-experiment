@@ -2891,7 +2891,7 @@ Chooses elements from a list using the deterministic session PRNG.
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: uses the deterministic session PRNG; it is not cryptographic.
+- Limits: uses the deterministic session PRNG; it is not cryptographic. RandomChoice[list, {n1, n2, ...}] returns a nested array of those dimensions.
 
 ### RandomInteger
 
@@ -2899,7 +2899,7 @@ Draws exact integers uniformly from the deterministic session PRNG.
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary.
+- Limits: uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary. RandomInteger[spec, {n1, n2, ...}] returns a nested array of those dimensions.
 
 ### RandomPassword
 

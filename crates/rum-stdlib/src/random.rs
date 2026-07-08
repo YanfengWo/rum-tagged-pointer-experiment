@@ -61,13 +61,18 @@ pub(crate) fn eval_random_integer(
             let Some((min, max)) = random_integer_bounds(spec) else {
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             };
-            let Some(count) = parse_output_count(session, count)? else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            let values = (0..count)
-                .map(|_| random_integer_between(session, &min, &max))
-                .collect();
-            Ok(list_expr(values))
+            if let Some(count) = parse_output_count(session, count)? {
+                let values = (0..count)
+                    .map(|_| random_integer_between(session, &min, &max))
+                    .collect();
+                Ok(list_expr(values))
+            } else if let Some(dims) = parse_dims(session, count)? {
+                Ok(build_random_array(session, &dims, &mut |s| {
+                    random_integer_between(s, &min, &max)
+                }))
+            } else {
+                Ok(Expr::call(head.clone(), args.to_vec()))
+            }
         }
         _ => Ok(session.invalid_call_with_arg_range("RandomInteger", args, 0, 2)),
     }
@@ -94,14 +99,19 @@ pub(crate) fn eval_random_choice(
     let Some(count) = count else {
         return Ok(items[random_usize_below(session, items.len())].clone());
     };
-    let Some(count) = parse_output_count(session, count)? else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
-    };
-
-    let choices = (0..count)
-        .map(|_| items[random_usize_below(session, items.len())].clone())
-        .collect();
-    Ok(list_expr(choices))
+    if let Some(count) = parse_output_count(session, count)? {
+        let choices = (0..count)
+            .map(|_| items[random_usize_below(session, items.len())].clone())
+            .collect();
+        Ok(list_expr(choices))
+    } else if let Some(dims) = parse_dims(session, count)? {
+        let len = items.len();
+        Ok(build_random_array(session, &dims, &mut |s| {
+            items[random_usize_below(s, len)].clone()
+        }))
+    } else {
+        Ok(Expr::call(head.clone(), args.to_vec()))
+    }
 }
 
 pub(crate) fn eval_random_sample(
@@ -404,6 +414,45 @@ fn parse_output_count(session: &Session, expr: &Expr) -> Result<Option<usize>, E
     Ok(Some(count.to_usize().expect(
         "generated element limit keeps count representable",
     )))
+}
+
+/// Parses a `{n1, n2, ...}` dimensions spec of non-negative exact integers.
+fn parse_dims(session: &Session, expr: &Expr) -> Result<Option<Vec<usize>>, EvalError> {
+    let Some(items) = list_items(expr) else {
+        return Ok(None);
+    };
+    let mut product = BigInt::from(1_u8);
+    let mut dims = Vec::with_capacity(items.len());
+    for item in items {
+        let Some(dim) = expr_as_exact_integer(item) else {
+            return Ok(None);
+        };
+        if dim < BigInt::from(0_u8) {
+            return Ok(None);
+        }
+        product *= &dim;
+        // Bounds every prefix product, including huge leading dimensions
+        // before a zero axis would make the total leaf count zero.
+        session.enforce_generated_element_limit_for_big_count(&product)?;
+        dims.push(dim.to_usize().unwrap_or(0));
+    }
+    Ok(Some(dims))
+}
+
+fn build_random_array(
+    session: &mut Session,
+    dims: &[usize],
+    draw: &mut dyn FnMut(&mut Session) -> Expr,
+) -> Expr {
+    match dims.split_first() {
+        None => draw(session),
+        Some((&head, rest)) => {
+            let items = (0..head)
+                .map(|_| build_random_array(session, rest, draw))
+                .collect();
+            list_expr(items)
+        }
+    }
 }
 
 fn parse_byte_count(session: &Session, expr: &Expr) -> Result<Option<usize>, EvalError> {

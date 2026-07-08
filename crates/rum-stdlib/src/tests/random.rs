@@ -519,6 +519,45 @@ fn random_integer_respects_large_exact_ranges() {
 }
 
 #[test]
+fn random_integer_and_choice_accept_nested_output_dimensions() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SeedRandom[7]; grid = RandomInteger[9, {2, 3}]; choices = RandomChoice[{a, b, c}, {2, 2}]; {grid, Length[grid], Length /@ grid, ContainsOnly[Flatten[grid], Range[0, 9]], choices, Length[choices], Length /@ choices, ContainsOnly[Flatten[choices], {a, b, c}]}"
+        ),
+        "List[List[List[7, 5, 8], List[9, 2, 3]], 2, List[3, 3], True, List[List[c, b], List[b, a]], 2, List[2, 2], True]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SeedRandom[7]; first = RandomInteger[9, {2, 3}]; SeedRandom[7]; second = RandomInteger[9, {2, 3}]; SeedRandom[99]; flatInts = RandomInteger[9, 3]; SeedRandom[99]; dimInts = RandomInteger[9, {3}]; SeedRandom[99]; flatChoices = RandomChoice[{left, right}, 2]; SeedRandom[99]; dimChoices = RandomChoice[{left, right}, {2}]; {SameQ[first, second], SameQ[flatInts, dimInts], SameQ[flatChoices, dimChoices], flatInts, flatChoices, RandomInteger[9, {0, 5}], IntegerQ[RandomInteger[9, {}]]}"
+        ),
+        "List[True, True, True, List[4, 7, 2], List[right, left], List[], True]"
+    );
+
+    let mut limited = core_session();
+    limited.set_generated_element_limit(3);
+    let too_many = limited.resource_limits().generated_element_limit + 1;
+    let limited_outcome = limited
+        .eval_text(&format!("RandomInteger[9, {{{too_many}, 0}}]"))
+        .unwrap();
+    assert_eq!(
+        limited_outcome.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert!(
+        limited_outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim"),
+        "messages={:?}",
+        limited_outcome.messages
+    );
+}
+
+#[test]
 fn random_choice_and_sample_cover_current_list_contracts() {
     let mut session = core_session();
 
