@@ -45,6 +45,22 @@ fn assert_password_failed(source: &str, expected_message: &str) {
     );
 }
 
+fn assert_random_choice_weights_failed(source: &str, expected_value: &str, expected_message: &str) {
+    let mut session = core_session();
+    let response = session.eval_text(source).unwrap();
+
+    assert_eq!(response.value.to_string(), expected_value);
+    assert!(
+        response.messages.iter().any(|message| {
+            message.symbol == "RandomChoice"
+                && message.tag == "weights"
+                && message.text.contains(expected_message)
+        }),
+        "messages={:?}",
+        response.messages
+    );
+}
+
 #[derive(Debug)]
 struct SequentialEntropy {
     bytes: Mutex<VecDeque<u8>>,
@@ -580,6 +596,63 @@ fn random_choice_and_sample_cover_current_list_contracts() {
             .messages
             .iter()
             .any(|message| message.symbol == "RandomChoice" && message.tag == "empty")
+    );
+}
+
+#[test]
+fn random_choice_weighted_forms_use_exact_weights_and_fail_closed() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{RandomChoice[{1, 0, 0} -> {a, b, c}], RandomChoice[{0, 1, 0} -> {a, b, c}, 5]}"
+        ),
+        "List[a, List[b, b, b, b, b]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SeedRandom[7]; ContainsOnly[RandomChoice[{1/2, 1/2} -> {a, b}, 20], {a, b}]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SeedRandom[19]; first = RandomChoice[{3, 1} -> {a, b}, 12]; SeedRandom[19]; second = RandomChoice[{3, 1} -> {a, b}, 12]; SameQ[first, second]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SeedRandom[23]; grid = RandomChoice[{1, 1} -> {a, b}, {2, 2}]; {Length[grid], Length /@ grid, ContainsOnly[Flatten[grid], {a, b}]}"
+        ),
+        "List[2, List[2, 2], True]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "ContainsOnly[{RandomChoice[{a, b, c}]}, {a, b, c}]"
+        ),
+        "True"
+    );
+
+    assert_random_choice_weights_failed(
+        "RandomChoice[{1, 2} -> {a, b, c}]",
+        "RandomChoice[Rule[List[1, 2], List[a, b, c]]]",
+        "equal, nonzero length",
+    );
+    assert_random_choice_weights_failed(
+        "RandomChoice[{-1, 2} -> {a, b}]",
+        "RandomChoice[Rule[List[-1, 2], List[a, b]]]",
+        "non-negative",
+    );
+    assert_random_choice_weights_failed(
+        "RandomChoice[{0, 0} -> {a, b}]",
+        "RandomChoice[Rule[List[0, 0], List[a, b]]]",
+        "at least one weight",
     );
 }
 

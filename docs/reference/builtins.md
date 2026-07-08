@@ -2891,7 +2891,7 @@ Chooses elements from a list using the deterministic session PRNG.
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: uses the deterministic session PRNG; it is not cryptographic. RandomChoice[list, {n1, n2, ...}] returns a nested array of those dimensions.
+- Limits: uses the deterministic session PRNG; it is not cryptographic. RandomChoice[list, {n1, n2, ...}] returns a nested array of those dimensions. RandomChoice[weights -> elements] draws each element with probability proportional to its exact non-negative weight.
 
 ### RandomInteger
 

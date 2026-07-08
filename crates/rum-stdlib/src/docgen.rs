@@ -110,7 +110,7 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     (
         "RandomChoice",
-        "uses the deterministic session PRNG; it is not cryptographic. RandomChoice[list, {n1, n2, ...}] returns a nested array of those dimensions.",
+        "uses the deterministic session PRNG; it is not cryptographic. RandomChoice[list, {n1, n2, ...}] returns a nested array of those dimensions. RandomChoice[weights -> elements] draws each element with probability proportional to its exact non-negative weight.",
     ),
     (
         "RandomInteger",

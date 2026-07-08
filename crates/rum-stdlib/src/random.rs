@@ -1,7 +1,7 @@
 use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{
-    EntropyError, EvalError, Session, ToPrimitive, base64_encode, expr_as_exact_integer,
-    expr_as_string, list_items, system_expr,
+    EntropyError, EvalError, Integer, Session, ToPrimitive, base64_encode, expr_as_exact_integer,
+    expr_as_exact_rational, expr_as_string, is_system_symbol_name, list_items, system_expr,
 };
 
 mod password_policy;
@@ -88,6 +88,22 @@ pub(crate) fn eval_random_choice(
         [list, count] => (list, Some(count)),
         _ => return Ok(session.invalid_call_with_arg_range("RandomChoice", args, 1, 2)),
     };
+    if let Expr::Call {
+        head: rule_head,
+        args: rule_args,
+    } = list
+    {
+        if is_system_symbol_name(rule_head, "Rule") && rule_args.len() == 2 {
+            return eval_random_choice_weighted(
+                session,
+                head,
+                args,
+                &rule_args[0],
+                &rule_args[1],
+                count,
+            );
+        }
+    }
     let Some(items) = list_items(list) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
@@ -111,6 +127,82 @@ pub(crate) fn eval_random_choice(
         }))
     } else {
         Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+}
+
+fn eval_random_choice_weighted(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    weights_expr: &Expr,
+    elements_expr: &Expr,
+    count: Option<&Expr>,
+) -> Result<Expr, EvalError> {
+    let (Some(weight_items), Some(element_items)) =
+        (list_items(weights_expr), list_items(elements_expr))
+    else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    if element_items.is_empty() || weight_items.len() != element_items.len() {
+        session.push_message(
+            "RandomChoice",
+            "weights",
+            "weight and element lists must have equal, nonzero length",
+        );
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let mut weights = Vec::with_capacity(weight_items.len());
+    for weight in weight_items {
+        let Some(weight) = expr_as_exact_rational(weight) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        if weight.numerator() < &BigInt::from(0_u8) {
+            session.push_message("RandomChoice", "weights", "weights must be non-negative");
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
+        weights.push(weight);
+    }
+
+    let mut denom_lcm = BigInt::from(1_u8);
+    for weight in &weights {
+        denom_lcm = denom_lcm.lcm(weight.denominator());
+    }
+    let mut cum = Vec::with_capacity(weights.len());
+    let mut total = BigInt::from(0_u8);
+    for weight in &weights {
+        let scaled = weight.numerator() * (&denom_lcm / weight.denominator());
+        total += &scaled;
+        cum.push(total.clone());
+    }
+    if total <= BigInt::from(0_u8) {
+        session.push_message(
+            "RandomChoice",
+            "weights",
+            "at least one weight must be positive",
+        );
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let elements = element_items.to_vec();
+    let mut draw = |s: &mut Session| -> Expr {
+        let r = random_bigint_below(s, &total);
+        let idx = cum.partition_point(|c| c <= &r);
+        elements[idx].clone()
+    };
+
+    match count {
+        None => Ok(draw(session)),
+        Some(count) => {
+            if let Some(count) = parse_output_count(session, count)? {
+                let choices = (0..count).map(|_| draw(session)).collect();
+                Ok(list_expr(choices))
+            } else if let Some(dims) = parse_dims(session, count)? {
+                Ok(build_random_array(session, &dims, &mut draw))
+            } else {
+                Ok(Expr::call(head.clone(), args.to_vec()))
+            }
+        }
     }
 }
 
