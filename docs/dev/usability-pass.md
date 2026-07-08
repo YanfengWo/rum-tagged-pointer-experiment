@@ -55,7 +55,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
-| 7 | character_classes + random (light re-check; 157-159 fresh) | 15 | | |
+| 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 |
 | 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
 | 9 | kernel B: scoping/eval control/patterns/forms | ~55 | | |
 | 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | ~55 | | |
@@ -550,3 +550,58 @@ authenticated method" proposal is rejected (policy);
 language/normalization escape hatches (`Alphabet` beyond English,
 `RemoveDiacritics` combining marks, `SequenceAlignment` scoring) defer
 to a future unicode line (unblocked by the feature skeleton).
+
+## Unit 7 (character_classes + random) triage — 2026-07-08
+
+Audit brief-203: 16/16 (count reconciled 15→16 — brief-201 split
+`SeedRandom` and added `ReseedRandom`), findings in
+`usability-pass/character-classes-random-findings.md`. The lightest unit:
+the two FRESH arcs both held — the `RandomPassword` policy surface (briefs
+157-159: `Require`/`NoAdjacentRepeats`/`Exclude`/`IgnoreCase`, fail-closed
+after 10000 attempts, entropy-backed) and the `SeedRandom`/`ReseedRandom`
+stateful↔pure separation (briefs 200-202: deterministic heads `Pure`, the
+three entropy heads `Capability::Random`, `sandboxed()` denies only the
+entropy heads). No fail-closed or capability-label hole; the deterministic
+PRNG contract and the no-`RandomReal` exact-number boundary are correct.
+Reproduced the central claim myself (`Attributes /@` the 11 random heads =
+ten `{}` + `BlockRandom` `{HoldAll}`; the 5 character-class heads already
+`{Protected}`).
+
+Fix batches (dispatch order — safety first, all compat / defaults
+byte-identical):
+
+1. **brief-204 — random Protected sweep** (safety, S): add `Protected` to
+   all 11 random heads, PRESERVING `BlockRandom`'s `HoldAll` and the three
+   entropy heads' `Capability::Random`; sync the runtime mirror
+   (`stdlib_attributes.rs`, new `ATTR_HOLD_ALL_PROTECTED` const + 10 moved
+   empty→Protected + BlockRandom's const changed) + regen reference +
+   attribute test. The brief-196 class — NOT attribute-driven planning, NO
+   A/B. The 5 character-class heads are already `{Protected}` (untouched).
+2. **brief-205 — nested `{dims}` output + `RandomString[]`** (flexibility,
+   M): a shared `{n1,n2,...}` output-shape parser/builder for
+   `RandomInteger`/`RandomChoice`/`RandomString` (today the count arg is
+   scalar-only → `{dims}` stays inert), reusing the existing
+   generated-element + memory limits; plus `RandomString[]` = the
+   `RandomInteger[]`-analog single-char convenience form (folk-specified;
+   inert→useful). Per-dispatch generation, NOT call planning — no A/B.
+3. **brief-206 — weighted `RandomChoice`** (flexibility/safety, M):
+   `RandomChoice[weights -> elements(, n)]` with EXACT non-negative
+   rational weights. No floats: scale weights to a common denominator →
+   integer weights → uniform integer draw over the integer-weight sum →
+   cumulative bucket map (exact, unbiased). Fail closed on length
+   mismatch / negative / zero-total. Not call planning — no A/B.
+4. **brief-207 — RandomPassword option discovery + `WhitespaceCharacters`
+   constant** (convenience, S): register the `RandomPassword` policy-key
+   defaults for `Options[...]` discovery (the unit-6/197 pattern; string-
+   keyed rules, implementation already reads them directly → behavior
+   byte-identical); add one `Protected` ASCII `WhitespaceCharacters`
+   string constant mirroring the existing `WhitespaceCharacter`
+   string-pattern atom's set (folk, ASCII-only — no Unicode alphabet
+   machinery). No A/B.
+
+Standing guardrails carried into the fixes: deterministic-by-default is
+the contract (only the three entropy heads touch host entropy, behind
+`Capability::Random`); no floats / no distribution zoo (`RandomReal`
+deliberately absent); the 200-202 separation stays settled (do NOT re-merge
+`SeedRandom`/`ReseedRandom`); character classes stay ASCII folk (Unicode
+defers to the future unicode line). No user-decision-level item this unit.
