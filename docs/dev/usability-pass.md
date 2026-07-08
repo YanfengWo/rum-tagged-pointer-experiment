@@ -55,7 +55,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 4 | control + logic + rewrite | 63 | brief-181 ✓ | 182-185 ✓ CLOSED |
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
-| 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 |
+| 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
 | 9 | kernel B: scoping/eval control/patterns/forms | ~55 | | |
 | 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | ~55 | | |
@@ -609,3 +609,44 @@ the contract (only the three entropy heads touch host entropy, behind
 deliberately absent); the 200-202 separation stays settled (do NOT re-merge
 `SeedRandom`/`ReseedRandom`); character classes stay ASCII folk (Unicode
 defers to the future unicode line). No user-decision-level item this unit.
+
+**UNIT 7 CLOSED (2026-07-08).** Landed: 203 audit + 204 (`Protected` on all
+11 random heads; `BlockRandom` keeps `HoldAll`, the three entropy heads keep
+`Capability::Random`; runtime mirror + drift test) + 205 (nested `{dims}`
+tensor output for `RandomInteger`/`RandomChoice` via shared
+`parse_dims`/`build_random_array`, prefix-product element-limit fail-close) +
+206 (weighted `RandomChoice[weights -> elements(, n / {dims})]`, exact
+non-negative rational weights, lcm-scaled integer draw, no floats,
+fail-closed on malformed specs) + 207 (`WhitespaceCharacters` = `" \t\n\r"`
+protected ASCII constant + `RandomPassword` option-key discovery
+registration). Workspace ~1391 → ~1395 (reproduced 539 in the big suite,
+0 failed); reference 611 → 612 (`WhitespaceCharacters`). Cumulative units 1-7
+= 446 builtins swept, all fixes compat (defaults byte-identical). The
+lightest/healthiest unit: both FRESH arcs (157-159 RandomPassword, 200-202
+stateful↔pure separation) confirmed held — no fail-closed, capability-label,
+or determinism hole.
+
+Close-out decisions / deferrals (no further brief):
+- **`RandomString[spec, {dims}]` + `RandomString[]` — DEFERRED (WL surface
+  uncertain; unit-5 "never guess").** `RandomString`'s second argument is the
+  string LENGTH, not a sample count, so the tensor `{dims}` form and the
+  zero-arg convenience have no confident WL target. 205 shipped `{dims}` only
+  for the two draw functions whose second arg IS a sample count
+  (`RandomInteger`/`RandomChoice`). Revisit only with a confirmed WL surface.
+- **String-keyed option-discovery wart — CROSS-CUTTING, deferred to the
+  host-embedding line.** Registered option keys render as SYMBOLS (`Require`)
+  while the accepted call syntax uses STRINGS (`"Require"`) — affects
+  `FromCsv`/`ToCsv`/`ConformSchema`/`SchemaErrors`/`RandomPassword` (all via
+  the brief-197 `system_rule_option` mechanism). 207 followed that precedent
+  for consistency (makes the names discoverable). A uniform
+  string-keyed-discovery mechanism is the right fix, best done in the
+  host-embedding API line (dun's machine-readable-options ask is the consumer)
+  — see [[dun-plugin-requirements-line]].
+- **`Dimensions` absent — candidate for a later structure touch.** rum has no
+  `Dimensions` builtin (it stays inert); noticed while probing 205's nested
+  output. Structure/array family (unit-2 CLOSED); a small future addition
+  candidate, not blocking.
+
+Next: unit 8 (kernel A — definitions/values/attributes/protection, ~50), per
+the dun sequencing ruling (finish the usability pass units 8-10, THEN open the
+host-embedding API line).
