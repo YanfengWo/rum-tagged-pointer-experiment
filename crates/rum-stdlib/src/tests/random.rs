@@ -265,6 +265,57 @@ fn seed_random_integer_sequence_is_pinned() {
 }
 
 #[test]
+fn seed_random_is_deterministic_only_and_reseed_random_has_exact_arity() {
+    let mut session = core_session();
+
+    let seed_empty = session.eval_text("SeedRandom[]").unwrap();
+    assert_eq!(seed_empty.value.to_string(), "SeedRandom[]");
+    assert!(
+        seed_empty
+            .messages
+            .iter()
+            .any(|message| message.symbol == "SeedRandom" && message.tag == "argx"),
+        "messages={:?}",
+        seed_empty.messages
+    );
+
+    let reseed_args = session.eval_text("ReseedRandom[5]").unwrap();
+    assert_eq!(reseed_args.value.to_string(), "ReseedRandom[5]");
+    assert!(
+        reseed_args
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ReseedRandom" && message.tag == "argx"),
+        "messages={:?}",
+        reseed_args.messages
+    );
+}
+
+#[test]
+fn reseed_random_uses_entropy_source_in_unrestricted_session() {
+    let bytes = (0_u8..32).collect::<Vec<_>>();
+    let mut session = core_session_with_entropy(&bytes);
+
+    let outcome = session.eval_text("ReseedRandom[]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Null");
+    assert!(
+        outcome.messages.is_empty(),
+        "messages={:?}",
+        outcome.messages
+    );
+
+    let mut first = core_session_with_entropy(&bytes);
+    let mut second = core_session_with_entropy(&bytes);
+    let source =
+        "ReseedRandom[]; {RandomInteger[1000000], RandomInteger[1000000], RandomInteger[1000000]}";
+
+    assert_eq!(
+        eval_to_string(&mut first, source),
+        eval_to_string(&mut second, source)
+    );
+}
+
+#[test]
 fn block_random_restores_the_random_string_stream() {
     let mut with_block = core_session();
     let mut without_block = core_session();

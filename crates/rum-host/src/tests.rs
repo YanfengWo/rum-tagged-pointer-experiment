@@ -440,9 +440,10 @@ fn sandboxed_host_config_blocks_entropy_builtins_but_allows_prng_builtins() {
         .with_config(HostConfig::sandboxed())
         .build();
 
-    assert_sandbox_denied(&mut session, "SeedRandom[]");
+    assert_sandbox_denied(&mut session, "ReseedRandom[]");
     assert_sandbox_denied(&mut session, "RandomBytes[8]");
     assert_sandbox_denied(&mut session, "RandomPassword[8]");
+    assert_arity_not_sandbox_denial(&mut session, "SeedRandom[]", "SeedRandom", "argx");
 
     let pure = successful_eval(session.eval(
         "SeedRandom[42]; {RandomInteger[10], RandomChoice[{a,b}], RandomSample[{a,b}], RandomString[8], BlockRandom[RandomInteger[10]], UuidQ[RandomUuid[]]}",
@@ -457,7 +458,7 @@ fn permissive_policy_without_entropy_provider_returns_noentropy_failed() {
         .with_config(HostConfig::default().without_entropy_source())
         .build();
 
-    for source in ["RandomBytes[8]", "RandomPassword[8]", "SeedRandom[]"] {
+    for source in ["RandomBytes[8]", "RandomPassword[8]", "ReseedRandom[]"] {
         let success = successful_eval(session.eval(source));
 
         assert_eq!(success.value.text, "$Failed", "source {source}");
@@ -466,6 +467,22 @@ fn permissive_policy_without_entropy_provider_returns_noentropy_failed() {
         assert_eq!(success.messages[0].tag, "noentropy");
         assert_eq!(success.messages[0].text, "no entropy provider installed");
     }
+}
+
+#[test]
+fn random_policy_allows_entropy_reseed() {
+    let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Random]);
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_capability_policy(policy))
+        .build();
+
+    let success = successful_eval(session.eval("ReseedRandom[]"));
+    assert_eq!(success.value.text, "Null");
+    assert!(
+        success.messages.is_empty(),
+        "messages={:?}",
+        success.messages
+    );
 }
 
 #[test]

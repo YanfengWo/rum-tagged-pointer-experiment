@@ -182,8 +182,9 @@ Wall-clock and time-effect builtins such as `AbsoluteTime`, `Timing`,
 under a `{Pure}` policy.
 
 Entropy-effect builtins are `Random`: `RandomBytes` and `RandomPassword` draw
-directly from the host entropy provider, and `SeedRandom[]` reseeds the
-deterministic session PRNG from that provider.
+directly from the host entropy provider, and `ReseedRandom[]` reseeds the
+deterministic session PRNG from that provider. `SeedRandom` takes an exact
+integer seed and is deterministic/`Pure`.
 
 General file utilities are deliberately outside the kernel; the filesystem
 surface is the module system and session persistence only.

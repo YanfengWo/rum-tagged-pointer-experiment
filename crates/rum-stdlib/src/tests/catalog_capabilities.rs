@@ -34,6 +34,7 @@ fn random_catalog_capabilities_match_dispatch_surface() {
     assert_eq!(capability("SeedRandom"), Capability::Pure);
     assert_eq!(capability("RandomBytes"), Capability::Random);
     assert_eq!(capability("RandomPassword"), Capability::Random);
+    assert_eq!(capability("ReseedRandom"), Capability::Random);
 }
 
 #[test]

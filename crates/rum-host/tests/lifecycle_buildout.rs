@@ -167,14 +167,14 @@ fn host_config_uses_injected_file_io_for_get_and_needs() {
 }
 
 #[test]
-fn host_config_uses_fixed_entropy_for_seed_random_without_arguments() {
+fn host_config_uses_fixed_entropy_for_reseed_random() {
     let entropy = FixedEntropy::new(&[0, 1, 2, 3, 4, 5, 6, 7]);
     let config = HostConfig::default().with_entropy_source(Some(entropy.provider()));
     let mut first = HostSession::builder().with_config(config.clone()).build();
     let mut second = HostSession::builder().with_config(config).build();
 
     let source =
-        "SeedRandom[]; {RandomInteger[1000000], RandomInteger[1000000], RandomInteger[1000000]}";
+        "ReseedRandom[]; {RandomInteger[1000000], RandomInteger[1000000], RandomInteger[1000000]}";
     let first_value = successful_eval(first.eval(source)).value.text;
     let second_value = successful_eval(second.eval(source)).value.text;
 
@@ -220,7 +220,7 @@ fn host_session_builder_policy_and_core_builtin_controls_are_applied() {
             .any(|message| message.symbol == "General" && message.tag == "sandbox")
     );
 
-    let random = successful_eval(denied.eval("SeedRandom[]"));
+    let random = successful_eval(denied.eval("ReseedRandom[]"));
     assert_eq!(random.value.text, "$Failed");
     assert!(
         random
@@ -228,6 +228,8 @@ fn host_session_builder_policy_and_core_builtin_controls_are_applied() {
             .iter()
             .any(|message| message.symbol == "General" && message.tag == "sandbox")
     );
+
+    assert_success_text(denied.eval("SeedRandom[42]; RandomInteger[100]"), "39");
 
     let mut disabled = HostSession::builder().with_core_builtins(false).build();
     assert!(!disabled.configuration().install_core_builtins);

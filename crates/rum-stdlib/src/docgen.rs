@@ -133,8 +133,12 @@ pub const LIMITS: &[(&str, &str)] = &[
         "uses the deterministic session PRNG and is reproducible under the same seed; use an entropy reseed first when global uniqueness matters.",
     ),
     (
+        "ReseedRandom",
+        "reseeds the session PRNG from host entropy; requires Capability::Random and is denied under sandboxed().",
+    ),
+    (
         "SeedRandom",
-        "uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds. The zero-argument entropy form requires Capability::Random.",
+        "uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds.",
     ),
     (
         "Sha1",

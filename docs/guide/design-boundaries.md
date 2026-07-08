@@ -170,9 +170,9 @@ $ cargo run -q -p rum-cli -- --eval 'StringLength[RandomPassword[Alphanumeric <>
 ```
 
 Password-grade bytes come from `RandomBytes`, which also uses the host entropy
-provider directly and requires `Capability::Random`. `SeedRandom[]` also
-requires `Capability::Random` because it reseeds the session PRNG from host
-entropy.
+provider directly and requires `Capability::Random`. `ReseedRandom[]` reseeds
+the session PRNG from host entropy and requires `Capability::Random`;
+`SeedRandom[n]` remains deterministic.
 
 There is no `RandomReal` in the current exact-number boundary. A script that
 needs a rational value in `[0, 1)` should draw

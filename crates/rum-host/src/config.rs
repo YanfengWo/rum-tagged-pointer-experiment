@@ -130,7 +130,7 @@ pub struct HostConfig {
     pub package_search_paths: Vec<PathBuf>,
     /// File I/O provider used by `Get`, `Needs`, `FindFile`, `Save`, and `DumpSave`.
     pub file_io: Option<FileIoProvider>,
-    /// Entropy provider used by `SeedRandom[]` and `RandomBytes`.
+    /// Entropy provider used by `ReseedRandom[]`, `RandomBytes`, and `RandomPassword`.
     pub entropy_source: Option<EntropyProvider>,
     /// Whether evaluation tracing is enabled.
     pub tracing_enabled: bool,

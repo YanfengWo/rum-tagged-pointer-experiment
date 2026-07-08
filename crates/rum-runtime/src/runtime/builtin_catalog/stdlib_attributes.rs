@@ -470,6 +470,7 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "ReplaceAll",
     "ReplaceList",
     "ReplaceRepeated",
+    "ReseedRandom",
     "Rest",
     "Return",
     "Reverse",

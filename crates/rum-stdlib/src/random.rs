@@ -1,7 +1,7 @@
 use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{
-    Capability, EntropyError, EvalError, Session, ToPrimitive, base64_encode,
-    expr_as_exact_integer, expr_as_string, list_items, system_expr,
+    EntropyError, EvalError, Session, ToPrimitive, base64_encode, expr_as_exact_integer,
+    expr_as_string, list_items, system_expr,
 };
 
 mod password_policy;
@@ -13,27 +13,30 @@ pub(crate) fn eval_seed_random(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    match args {
-        [] => {
-            if !random_capability_allowed(session, "SeedRandom") {
-                return Ok(system_expr("$Failed"));
-            }
-            match session.seed_random_from_entropy() {
-                Ok(()) => Ok(system_expr("Null")),
-                Err(error) => {
-                    push_entropy_error(session, "SeedRandom", error.message());
-                    Ok(system_expr("$Failed"))
-                }
-            }
+    let [seed] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("SeedRandom", args, 1));
+    };
+    let Some(seed) = expr_as_exact_integer(seed) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    session.seed_random_with_integer(&seed);
+    Ok(system_expr("Null"))
+}
+
+pub(crate) fn eval_reseed_random(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    if !args.is_empty() {
+        return Ok(session.invalid_call_with_exact_arg_count("ReseedRandom", args, 0));
+    }
+    match session.seed_random_from_entropy() {
+        Ok(()) => Ok(system_expr("Null")),
+        Err(error) => {
+            push_entropy_error(session, "ReseedRandom", error.message());
+            Ok(system_expr("$Failed"))
         }
-        [seed] => {
-            let Some(seed) = expr_as_exact_integer(seed) else {
-                return Ok(Expr::call(head.clone(), args.to_vec()));
-            };
-            session.seed_random_with_integer(&seed);
-            Ok(system_expr("Null"))
-        }
-        _ => Ok(session.invalid_call_with_arg_range("SeedRandom", args, 0, 1)),
     }
 }
 
@@ -435,20 +438,6 @@ fn bigint_from_unsigned_le_bytes(bytes: &[u8]) -> BigInt {
         value += BigInt::from(*byte);
     }
     value
-}
-
-fn random_capability_allowed(session: &mut Session, name: &str) -> bool {
-    let policy = session.capability_policy();
-    if policy.is_unrestricted() || policy.allows(Capability::Random) {
-        return true;
-    }
-
-    session.push_message(
-        "General",
-        "sandbox",
-        format!("{name} is not permitted in this sandbox."),
-    );
-    false
 }
 
 fn push_entropy_error(session: &mut Session, symbol: &str, message: &str) {

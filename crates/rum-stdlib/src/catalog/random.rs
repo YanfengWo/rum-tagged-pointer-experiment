@@ -5,7 +5,7 @@ use crate::random;
 pub(crate) const RANDOM_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "SeedRandom",
-        "Reseeds the deterministic session PRNG from an exact integer, or from host entropy in the zero-argument form.",
+        "Reseeds the deterministic session PRNG from an exact integer.",
         random::eval_seed_random,
     ),
     BuiltinSpec::ordinary(
@@ -48,6 +48,12 @@ pub(crate) const RANDOM_BUILTINS: &[BuiltinSpec] = &[
         "RandomBytes",
         "Returns entropy bytes as a ByteArray using the host entropy provider.",
         random::eval_random_bytes,
+    )
+    .with_capability(Capability::Random),
+    BuiltinSpec::ordinary(
+        "ReseedRandom",
+        "Reseeds the deterministic session PRNG from host entropy. Requires Capability::Random; denied under sandboxed().",
+        random::eval_reseed_random,
     )
     .with_capability(Capability::Random),
     BuiltinSpec::ordinary(

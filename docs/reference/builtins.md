@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 610
+Builtin count: 611
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -3059,6 +3059,14 @@ Repeatedly applies rules until an expression reaches a fixed point.
 - Attributes: `None`
 - Capability: `Pure`
 
+### ReseedRandom
+
+Reseeds the deterministic session PRNG from host entropy. Requires Capability::Random; denied under sandboxed().
+
+- Attributes: `None`
+- Capability: `Random`
+- Limits: reseeds the session PRNG from host entropy; requires Capability::Random and is denied under sandboxed().
+
 ### ResolveContextAliases
 
 Represents the current Names option symbol for context-alias resolution.
@@ -3209,11 +3217,11 @@ Returns path-keyed validation errors for a value checked against a symbolic sche
 
 ### SeedRandom
 
-Reseeds the deterministic session PRNG from an exact integer, or from host entropy in the zero-argument form.
+Reseeds the deterministic session PRNG from an exact integer.
 
 - Attributes: `None`
 - Capability: `Pure`
-- Limits: uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds. The zero-argument entropy form requires Capability::Random.
+- Limits: uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds.
 
 ### Select
 
