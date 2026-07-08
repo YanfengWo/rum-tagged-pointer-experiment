@@ -418,7 +418,7 @@ Maps a function over contiguous blocks in the current first-pass subset.
 
 Evaluates an expression while restoring the deterministic session PRNG state afterward.
 
-- Attributes: `HoldAll`
+- Attributes: `HoldAll`, `Protected`
 - Capability: `Pure`
 
 ### Boole
@@ -2881,7 +2881,7 @@ Returns the floor-division quotient of two integers.
 
 Returns entropy bytes as a ByteArray using the host entropy provider.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Random`
 - Limits: draws directly from the host entropy provider, not from the deterministic session PRNG.
 
@@ -2889,7 +2889,7 @@ Returns entropy bytes as a ByteArray using the host entropy provider.
 
 Chooses elements from a list using the deterministic session PRNG.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG; it is not cryptographic.
 
@@ -2897,7 +2897,7 @@ Chooses elements from a list using the deterministic session PRNG.
 
 Draws exact integers uniformly from the deterministic session PRNG.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG with rejection sampling for unbiased exact integers; it is not cryptographic. There is no RandomReal in the current exact-number boundary.
 
@@ -2905,7 +2905,7 @@ Draws exact integers uniformly from the deterministic session PRNG.
 
 Draws an entropy-backed password string from an alphabet, optionally enforcing policy constraints.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Random`
 - Limits: uses the host entropy provider directly with rejection sampling over the alphabet size to avoid modulo bias; it is not affected by SeedRandom or BlockRandom. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw. RandomPassword[n, opts...] and RandomPassword[alphabet, n, opts...] accept string-keyed policy rules "Require" -> {group, ...}, "NoAdjacentRepeats" -> True|False, "Exclude" -> {substr, ...}, and "IgnoreCase" -> True|False. Require groups are exact character sets and must be non-empty subsets of the alphabet; IgnoreCase affects only Exclude matching. NoAdjacentRepeats forbids identical adjacent characters only, not sequential runs. Policy sampling draws whole candidate passwords uniformly from alphabet^n and accepts only candidates satisfying every constraint, so accepted outputs are uniform over the satisfying set. Unsatisfied policies fail closed after 10000 attempts.
 
@@ -2913,7 +2913,7 @@ Draws an entropy-backed password string from an alphabet, optionally enforcing p
 
 Samples distinct positions from a list using the deterministic session PRNG.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG; it is not cryptographic.
 
@@ -2921,7 +2921,7 @@ Samples distinct positions from a list using the deterministic session PRNG.
 
 Draws a string of characters from an alphabet using the deterministic session PRNG.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG with rejection sampling over the alphabet size; it is not cryptographic. The default alphabet is the 62-character A-Za-z0-9 set. Alphabet strings are read as code points, and duplicate code points weight the draw.
 
@@ -2929,7 +2929,7 @@ Draws a string of characters from an alphabet using the deterministic session PR
 
 Returns a reproducible version-4-format UUID string from the deterministic session PRNG.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses the deterministic session PRNG and is reproducible under the same seed; use an entropy reseed first when global uniqueness matters.
 
@@ -3063,7 +3063,7 @@ Repeatedly applies rules until an expression reaches a fixed point.
 
 Reseeds the deterministic session PRNG from host entropy. Requires Capability::Random; denied under sandboxed().
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Random`
 - Limits: reseeds the session PRNG from host entropy; requires Capability::Random and is denied under sandboxed().
 
@@ -3219,7 +3219,7 @@ Returns path-keyed validation errors for a value checked against a symbolic sche
 
 Reseeds the deterministic session PRNG from an exact integer.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 - Limits: uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds.
 
@@ -4242,7 +4242,7 @@ Parses scheme://host[:port][/path][?query][#fragment] into an association of str
 
 Tests whether a string has version-4 UUID format and variant bits.
 
-- Attributes: `None`
+- Attributes: `Protected`
 - Capability: `Pure`
 
 ### ValueQ

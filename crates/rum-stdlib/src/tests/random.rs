@@ -133,6 +133,21 @@ fn character_class_constants_are_protected() {
 }
 
 #[test]
+fn random_family_heads_report_declared_attributes() {
+    let mut session = core_session();
+
+    let cases = [
+        ("Attributes[RandomInteger]", "List[Protected]"),
+        ("Attributes[RandomPassword]", "List[Protected]"),
+        ("Attributes[BlockRandom]", "List[HoldAll, Protected]"),
+    ];
+
+    for (source, expected) in cases {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
 fn random_text_composes_with_character_class_constants() {
     let mut password_session = core_session_with_entropy(&[
         0, 26, 52, 62, 1, 27, 53, 63, 2, 28, 54, 64, 3, 29, 55, 65, 4, 30, 56, 66,

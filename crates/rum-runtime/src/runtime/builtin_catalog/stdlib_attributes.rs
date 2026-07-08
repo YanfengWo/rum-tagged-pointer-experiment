@@ -16,6 +16,9 @@ const ATTR_FLAT_ONE_IDENTITY_PROTECTED_READ_PROTECTED: AttributeSet = AttributeS
 
 const ATTR_HOLD_ALL: AttributeSet = AttributeSet::from_hold(HoldAttribute::HoldAll);
 
+const ATTR_HOLD_ALL_PROTECTED: AttributeSet =
+    AttributeSet::from_hold(HoldAttribute::HoldAll).with(Attribute::Protected);
+
 const ATTR_HOLD_ALL_PROTECTED_READ_PROTECTED: AttributeSet =
     AttributeSet::from_hold(HoldAttribute::HoldAll)
         .with(Attribute::Protected)
@@ -102,7 +105,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("Blank", ATTR_PROTECTED),
     Spec::new("BlankNullSequence", ATTR_PROTECTED),
     Spec::new("BlankSequence", ATTR_PROTECTED),
-    Spec::new("BlockRandom", ATTR_HOLD_ALL),
+    Spec::new("BlockRandom", ATTR_HOLD_ALL_PROTECTED),
     Spec::new("Boole", ATTR_LISTABLE),
     Spec::new("ByteArrayQ", ATTR_PROTECTED),
     Spec::new("ByteArrayToString", ATTR_PROTECTED),
@@ -229,10 +232,19 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("PunctuationCharacter", ATTR_PROTECTED),
     Spec::new("PunctuationCharacters", ATTR_PROTECTED),
     Spec::new("Quotient", ATTR_LISTABLE),
+    Spec::new("RandomBytes", ATTR_PROTECTED),
+    Spec::new("RandomChoice", ATTR_PROTECTED),
+    Spec::new("RandomInteger", ATTR_PROTECTED),
+    Spec::new("RandomPassword", ATTR_PROTECTED),
+    Spec::new("RandomSample", ATTR_PROTECTED),
+    Spec::new("RandomString", ATTR_PROTECTED),
+    Spec::new("RandomUuid", ATTR_PROTECTED),
     Spec::new("RegularExpression", ATTR_PROTECTED),
+    Spec::new("ReseedRandom", ATTR_PROTECTED),
     Spec::new("RightComposition", ATTR_FLAT_ONE_IDENTITY),
     Spec::new("Round", ATTR_LISTABLE),
     Spec::new("SchemaErrors", ATTR_HOLD_REST_PROTECTED),
+    Spec::new("SeedRandom", ATTR_PROTECTED),
     Spec::new("Sha1", ATTR_PROTECTED),
     Spec::new("Sha256", ATTR_PROTECTED),
     Spec::new("Sha512", ATTR_PROTECTED),
@@ -270,6 +282,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("Until", ATTR_HOLD_ALL),
     Spec::new("UpperCaseQ", ATTR_PROTECTED),
     Spec::new("UppercaseLetters", ATTR_PROTECTED),
+    Spec::new("UuidQ", ATTR_PROTECTED),
     Spec::new("WhitespaceCharacter", ATTR_PROTECTED),
     Spec::new("Which", ATTR_HOLD_ALL),
     Spec::new("While", ATTR_HOLD_ALL),
@@ -455,13 +468,6 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "PropagateAborts",
     "Quantile",
     "Range",
-    "RandomBytes",
-    "RandomChoice",
-    "RandomInteger",
-    "RandomPassword",
-    "RandomSample",
-    "RandomString",
-    "RandomUuid",
     "RationalExpressionQ",
     "RealValuedNumberQ",
     "RealValuedNumericQ",
@@ -470,7 +476,6 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "ReplaceAll",
     "ReplaceList",
     "ReplaceRepeated",
-    "ReseedRandom",
     "Rest",
     "Return",
     "Reverse",
@@ -483,7 +488,6 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "SameAs",
     "SameQ",
     "Scan",
-    "SeedRandom",
     "Select",
     "SelectFirst",
     "SelectPositions",
@@ -558,7 +562,6 @@ const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &[
     "UrlDecode",
     "UrlEncode",
     "UrlParse",
-    "UuidQ",
     "Values",
     "VectorQ",
 ];
