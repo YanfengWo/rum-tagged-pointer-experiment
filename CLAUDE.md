@@ -108,17 +108,31 @@ rather than duplicating them.
   well" layer over every installed builtin (three axes:
   flexibility/convenience/safety), audit-then-fix per sweep unit. Tracker
   `docs/dev/usability-pass.md`; memory `usability-pass-line.md`. **Units
-  1-5 CLOSED** (strings, structure+functional, predicates+associations,
-  control+logic+rewrite, math — briefs 161-193, 396 builtins swept, all
-  fixes compat). **NEXT: unit 6** (codecs json/csv/ini/toml/xml/yaml/schema
-  + bytes + datetime, 34) — write the audit brief (194) mirroring
-  brief-186. Standing user directives: high coverage incl. the
+  1-6 CLOSED** (strings, structure+functional, predicates+associations,
+  control+logic+rewrite, math, codecs+bytes+datetime — briefs 161-199, 430
+  builtins swept, all fixes compat; workspace 1394, reference 611). **NEXT:
+  unit 7** (character_classes + random, 15, light re-check — 157-159 fresh;
+  random family gains `Protected` incl. the new `ReseedRandom`) — write the
+  audit brief (203). Standing user directives: high coverage incl. the
   WL-inherited surface; compat enhancement only (default behavior stays
   WL-conformant, new powers via options / rum-native siblings). Standing
-  design rulings from this line: arithmetic singularities stay INERT (no
-  special-value arithmetic — user decision); Orderless/Flat/OneIdentity on
-  folk numeric reducers and Equivalent, plus the Implies short-circuit, all
-  REJECTED (no-default-cost / WL-conformant-defaults).
+  design rulings: arithmetic singularities stay INERT (no special-value
+  arithmetic — user); Orderless/Flat/OneIdentity on folk numeric reducers +
+  Equivalent + the Implies short-circuit all REJECTED; ConformSchema/
+  SchemaErrors operator forms DEFERRED (HoldRest hold-semantics).
+- **STATEFUL↔PURE SEPARATION LINE — COMPLETE (2026-07-08, briefs 200-202).**
+  User rulings, spun out of unit-6 datetime. Killed the pure/impure
+  DUAL-FORM anti-pattern (one symbol mixing a pure + a stateful form).
+  Final: `AbsoluteTime[]` = the sole numeric wall-clock reader (`Clock`,
+  spec-level, reader-only, kernel); `FromDateList` = pure converter (`Pure`,
+  stdlib, inverse of DateList); `DateList`/`DateString` genuinely pure;
+  `Now` REMOVED (reserved for downstream rum-os); `SeedRandom` split →
+  `ReseedRandom[]` (`Random`) + `SeedRandom[seed]` (`Pure`). **Standing
+  rule: stateful reads are single-purpose symbols gated by a SPEC-level
+  capability — never crammed into a pure symbol, never gated by a runtime
+  check (stdlib now has ZERO runtime capability checks).** Whole-surface
+  audit done; lone mild kernel candidate `TestReport` flagged for units
+  8-10. Detail: `usability-pass-line.md` + tracker.
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-
