@@ -461,33 +461,49 @@ Close-out decisions (no further brief):
   patterns are fixed points in practice but not guaranteed). Shipping on a
   guess is out; needs its own hold-semantics design pass. `DatePlus` has no
   hold and a self-evaluating spec, so it shipped clean.
-- **Datetime layering boundary + stateful/pure separation (user rulings
-  2026-07-08).** Datetime = pure calendar math + a SINGLE stateful clock
-  reader. **Stateful/pure separation (brief-200, superseded the dual-form):**
-  the wall-clock read is now `Now[]` alone — declared `Capability::Clock` at
-  the SPEC level (dispatcher-enforced, denied in `sandboxed()`, like
-  `RandomBytes`; NOT a runtime check), returning an exact Unix timestamp with
-  no format option. `DateList`/`DateString` LOST their zero-arg now-forms and
-  are now genuinely pure conversions (`DateList[]`/`DateString[]` = arity
-  errors); current time = `DateList[Now[]]` / `DateString[Now[]]`. Rationale:
-  a dual-form (pure conversion + stateful now in one symbol) is a foot-gun —
-  a caller treating `DateList` as pure gets bitten by `DateList[]`, and the
-  `Pure` label was dishonest for the now-path. This DELIBERATELY diverges
-  from WL's stateful `DateList[]` (safety separation over WL-conformance).
-  The symmetric twin is brief-201: `SeedRandom` split → `ReseedRandom[]`
-  (`Capability::Random`) for the entropy reseed, `SeedRandom[seed]`
-  deterministic-only. Standing rule now: **stateful reads are single-purpose
-  symbols gated by a spec-level capability; never crammed into an otherwise-
-  pure symbol with a runtime check.** OPEN (kernel, units 8-10): `AbsoluteTime`
-  is the mirror-image case — declared `Capability::Clock` for the WHOLE
-  builtin, so its PURE `AbsoluteTime[datelist]` conversion is needlessly
-  Clock-gated, and its `AbsoluteTime[]` now-form duplicates `Now[]`; fold into
-  the kernel sweep (or a small brief) — make it pure conversion-only.
+- **Datetime/random stateful↔pure separation line (user rulings 2026-07-08;
+  briefs 200-202, all landed).** The pure/impure DUAL-FORM anti-pattern (one
+  symbol mixing a pure form and a stateful form, "hard to categorize") is
+  eliminated. FINAL shape (brief-202 corrected brief-200's naming):
+  - `AbsoluteTime[]` — the SINGLE numeric wall-clock reader, `Capability::
+    Clock`, spec-level (dispatcher-enforced, denied in `sandboxed()`, like
+    `RandomBytes`; NOT a runtime check), reader-ONLY (kernel, in the
+    debug/timing group). Its old dual-form datelist conversion + dead helpers
+    were deleted (dedup vs stdlib `calendar`).
+  - `FromDateList[datelist]` — NEW pure converter (`Capability::Pure`,
+    `Protected`, stdlib), the inverse of `DateList`, mirrors `FromDateString`,
+    reuses `calendar::timestamp_from_date_list_expr`.
+  - `DateList`/`DateString` — genuinely pure conversions (their zero-arg
+    now-forms removed in brief-200; `DateList[]`/`DateString[]` = arity
+    errors). Current time = `DateList[AbsoluteTime[]]` / `DateString[
+    AbsoluteTime[]]`.
+  - `Now` — REMOVED entirely (brief-200 added it, brief-202 removed it):
+    RESERVED for downstream rum-os (the DateObject / time-zone-aware layer;
+    WL's `Now` is a DateObject, which rum has no equivalent of). rum's
+    numeric timestamp is WL's `AbsoluteTime` sense, not WL's `Now`.
+  - `SeedRandom` split (brief-201): `ReseedRandom[]` (`Capability::Random`,
+    spec-level) for the entropy reseed; `SeedRandom[seed]` deterministic-only
+    (`Pure`, works in sandbox). Deliberate WL divergence, safety over
+    WL-conformance.
+  Whole-surface audit (2026-07-08): the two anti-pattern directions are
+  (A) Pure-declared + a hidden stateful form gated by a RUNTIME capability
+  check — now ZERO across the codebase (both cases, datetime + SeedRandom,
+  fixed); stdlib has zero runtime capability checks, all impurity is
+  spec-level. (B) capability-declared + an over-gated PURE sub-form —
+  `AbsoluteTime` was the one clear case (fixed). Remaining mild candidate for
+  the kernel sweep: **`TestReport`** is `Capability::Clock` because its report
+  includes elapsed time, though the test-RUNNING is pure — review in units
+  8-10 (could report pass/fail purely + timing behind an option). The other
+  Clock builtins (`Timing`/`AbsoluteTiming`/`RepeatedTiming`/`EvaluationData`/
+  `TimeConstrained`/`Pause`) are intrinsically timing — no surprise pure form.
+  **Standing rule: stateful reads are single-purpose symbols gated by a
+  spec-level capability; never crammed into an otherwise-pure symbol, and
+  never gated by a runtime check.**
   **Layering (still holds):** `Today`/`Yesterday`/`Tomorrow`, time zones,
-  locale, DST, `DateObject` are deliberately ABSENT — wall-clock conveniences
-  + tz/locale belong DOWNSTREAM in rum-os (OS authority), reusing these pure
-  primitives; stdlib stays UTC-only, exact-seconds, no tz database.
-  See [[usability-pass-line]].
+  locale, DST, `DateObject`, `Now` are deliberately ABSENT — wall-clock
+  conveniences + tz/locale belong DOWNSTREAM in rum-os (OS authority),
+  reusing these pure primitives; stdlib stays UTC-only, exact-seconds, no tz
+  database. See [[usability-pass-line]].
 
 Gate lesson (added to the standing set): the docgen `LIMITS` table is
 keyed by name (one note per builtin) — a brief that says "add a Limits
