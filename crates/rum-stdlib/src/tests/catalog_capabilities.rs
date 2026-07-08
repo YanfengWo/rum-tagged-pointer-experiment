@@ -49,7 +49,7 @@ fn datetime_catalog_capabilities_match_clock_separation_surface() {
 
     assert_eq!(capability("DateList"), Capability::Pure);
     assert_eq!(capability("DateString"), Capability::Pure);
-    assert_eq!(capability("Now"), Capability::Clock);
+    assert_eq!(capability("FromDateList"), Capability::Pure);
     assert_eq!(capability("FromDateString"), Capability::Pure);
     assert_eq!(capability("DatePlus"), Capability::Pure);
     assert_eq!(capability("DateDifference"), Capability::Pure);

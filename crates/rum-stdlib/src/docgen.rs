@@ -9,7 +9,7 @@ pub const REGEN_COMMAND: &str = "cargo run -p rum-stdlib --bin generate-builtin-
 pub const LIMITS: &[(&str, &str)] = &[
     (
         "AbsoluteTime",
-        "the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z; date-list conversion uses UTC, the proleptic Gregorian calendar, and no leap seconds.",
+        "the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z.",
     ),
     (
         "DateDifference",
@@ -56,10 +56,6 @@ pub const LIMITS: &[(&str, &str)] = &[
         "intended only for interoperability and checksums; it is not collision-resistant.",
     ),
     (
-        "Now",
-        "reads the host wall clock; requires Capability::Clock and is denied under sandboxed().",
-    ),
-    (
         "Crc32",
         "computes the IEEE CRC-32 checksum for integrity and interoperability, not security; it is not collision-resistant.",
     ),
@@ -74,6 +70,10 @@ pub const LIMITS: &[(&str, &str)] = &[
     (
         "FromCsv",
         "parses RFC 4180-style text into String fields only; plain rows may be ragged, while Headers -> True rejects duplicate headers and ragged data rows. Delimiter must be one non-quote, non-newline character.",
+    ),
+    (
+        "FromDateList",
+        "uses UTC, the proleptic Gregorian calendar, and no leap seconds; validates the date list and is the inverse of DateList.",
     ),
     (
         "FromDateString",

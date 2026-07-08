@@ -369,12 +369,11 @@ fn capability_policy_can_allow_clock_without_filesystem() {
 }
 
 #[test]
-fn sandboxed_host_config_blocks_now_but_allows_pure_datetime_forms() {
+fn sandboxed_host_config_allows_pure_datetime_forms() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::sandboxed())
         .build();
 
-    assert_sandbox_denied(&mut session, "Now[]");
     assert_arity_not_sandbox_denial(&mut session, "DateList[]", "DateList", "argx");
     assert_arity_not_sandbox_denial(&mut session, "DateString[]", "DateString", "argx");
 
@@ -392,21 +391,17 @@ fn sandboxed_host_config_blocks_now_but_allows_pure_datetime_forms() {
 }
 
 #[test]
-fn clock_policy_allows_now_and_composed_datetime_current_readers() {
+fn clock_policy_allows_composed_datetime_current_readers() {
     let policy = CapabilityPolicy::allow([Capability::Pure, Capability::Clock]);
     let mut session = HostSession::builder()
         .with_config(HostConfig::default().with_capability_policy(policy))
         .build();
 
-    let now = successful_eval(session.eval("Now[]"));
-    assert_ne!(now.value.text, "$Failed");
-    assert!(now.messages.is_empty(), "{:?}", now.messages);
-
-    let date_list = successful_eval(session.eval("DateList[Now[]]"));
+    let date_list = successful_eval(session.eval("DateList[AbsoluteTime[]]"));
     assert_ne!(date_list.value.text, "$Failed");
     assert!(date_list.messages.is_empty(), "{:?}", date_list.messages);
 
-    let date_string = successful_eval(session.eval("DateString[Now[]]"));
+    let date_string = successful_eval(session.eval("DateString[AbsoluteTime[]]"));
     assert_ne!(date_string.value.text, "$Failed");
     assert!(
         date_string.messages.is_empty(),

@@ -1,4 +1,4 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, Capability};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
 
 use crate::datetime;
 
@@ -16,12 +16,11 @@ pub(crate) const DATETIME_BUILTINS: &[BuiltinSpec] = &[
         datetime::eval_date_string,
     ),
     BuiltinSpec::ordinary_with_attributes(
-        "Now",
-        "Reads the current time as an exact Unix timestamp (seconds since the epoch). Requires Capability::Clock; compose with DateList/DateString for the current date.",
+        "FromDateList",
+        "Converts a UTC date list {y, mo, d, h, mi, s} to an exact Unix timestamp; the inverse of DateList.",
         AttributeSet::empty().with(Attribute::Protected),
-        datetime::eval_now,
-    )
-    .with_capability(Capability::Clock),
+        datetime::eval_from_date_list,
+    ),
     BuiltinSpec::ordinary_with_attributes(
         "FromDateString",
         "Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timestamp.",

@@ -1,6 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use rum_core::{BigInt, Expr, Rational};
+use rum_core::Expr;
 use rum_runtime::kernel_api::{EvalError, Session, expr_as_string, system_expr};
 
 mod calendar;
@@ -22,15 +20,18 @@ pub(crate) fn eval_date_list(
     }
 }
 
-pub(crate) fn eval_now(
+pub(crate) fn eval_from_date_list(
     session: &mut Session,
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
-    if !args.is_empty() {
-        return Ok(session.invalid_call_with_exact_arg_count("Now", args, 0));
+    let [date_list] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("FromDateList", args, 1));
+    };
+    match calendar::timestamp_from_date_list_expr(date_list) {
+        Ok(timestamp) => Ok(Expr::rational(timestamp)),
+        Err(error) => Ok(fail_datetime(session, "FromDateList", error)),
     }
-    Ok(Expr::rational(current_unix_time()))
 }
 
 pub(crate) fn eval_date_string(
@@ -210,25 +211,6 @@ pub(crate) fn eval_days_in_month(
     match calendar::days_in_month_from_exprs(year, month) {
         Ok(value) => Ok(Expr::small_integer(value)),
         Err(error) => Ok(fail_datetime(session, "DaysInMonth", error)),
-    }
-}
-
-fn current_unix_time() -> Rational {
-    unix_time_rational(SystemTime::now())
-}
-
-fn unix_time_rational(time: SystemTime) -> Rational {
-    match time.duration_since(UNIX_EPOCH) {
-        Ok(duration) => Rational::new(
-            BigInt::from(duration.as_nanos()),
-            BigInt::from(1_000_000_000_u64),
-        )
-        .expect("positive denominator should always build a rational"),
-        Err(error) => Rational::new(
-            -BigInt::from(error.duration().as_nanos()),
-            BigInt::from(1_000_000_000_u64),
-        )
-        .expect("positive denominator should always build a rational"),
     }
 }
 

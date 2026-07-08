@@ -176,7 +176,7 @@ Wall-clock and time-effect builtins such as `AbsoluteTime`, `Timing`,
 `AbsoluteTiming`, `RepeatedTiming`, `TimeConstrained`, `Pause`,
 `EvaluationData`, and `TestReport` are `Clock`.
 
-`Now[]` is the current-time reader and requires `Clock`. `DateList` and
+`AbsoluteTime[]` is the current-time reader and requires `Clock`. `DateList` and
 `DateString` are pure UTC calendar conversions (`DateList[ts]`,
 `DateString[ts]`, or `DateString[{y, mo, d, h, mi, s}]`) and remain available
 under a `{Pure}` policy.

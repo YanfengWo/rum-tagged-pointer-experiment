@@ -22,7 +22,7 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     .with_capability(Capability::Clock),
     BuiltinSpec::ordinary(
         "AbsoluteTime",
-        "Returns the current exact rational Unix timestamp, or converts a valid UTC date list to exact seconds since 1970-01-01T00:00:00Z.",
+        "Returns the current exact rational Unix timestamp (seconds since 1970-01-01T00:00:00Z); requires Capability::Clock.",
         Session::eval_absolute_time,
     )
     .with_capability(Capability::Clock),

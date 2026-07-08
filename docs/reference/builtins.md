@@ -99,11 +99,11 @@ Returns the absolute value of exact integers and rationals.
 
 ### AbsoluteTime
 
-Returns the current exact rational Unix timestamp, or converts a valid UTC date list to exact seconds since 1970-01-01T00:00:00Z.
+Returns the current exact rational Unix timestamp (seconds since 1970-01-01T00:00:00Z); requires Capability::Clock.
 
 - Attributes: `None`
 - Capability: `Clock`
-- Limits: the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z; date-list conversion uses UTC, the proleptic Gregorian calendar, and no leap seconds.
+- Limits: the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z.
 
 ### AbsoluteTiming
 
@@ -1435,6 +1435,14 @@ Parses CSV text into Lists of Strings, optionally using the first row as Associa
 - Capability: `Pure`
 - Limits: parses RFC 4180-style text into String fields only; plain rows may be ragged, while Headers -> True rejects duplicate headers and ragged data rows. Delimiter must be one non-quote, non-newline character.
 
+### FromDateList
+
+Converts a UTC date list {y, mo, d, h, mi, s} to an exact Unix timestamp; the inverse of DateList.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Limits: uses UTC, the proleptic Gregorian calendar, and no leap seconds; validates the date list and is the inverse of DateList.
+
 ### FromDateString
 
 Parses the documented ISO 8601 UTC/fixed-offset subset into an exact Unix timestamp.
@@ -2448,14 +2456,6 @@ Represents a list element that is removed from evaluated Lists.
 
 - Attributes: `None`
 - Capability: `Pure`
-
-### Now
-
-Reads the current time as an exact Unix timestamp (seconds since the epoch). Requires Capability::Clock; compose with DateList/DateString for the current date.
-
-- Attributes: `Protected`
-- Capability: `Clock`
-- Limits: reads the host wall clock; requires Capability::Clock and is denied under sandboxed().
 
 ### NumberQ
 

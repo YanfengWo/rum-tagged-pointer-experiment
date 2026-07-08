@@ -42,11 +42,11 @@ fn assert_arity_message(session: &mut Session, source: &str, symbol: &str, tag: 
 }
 
 #[test]
-fn absolute_time_and_date_list_epoch_pins_are_utc() {
+fn from_date_list_and_date_list_epoch_pins_are_utc() {
     let mut session = core_session();
 
     assert_eq!(
-        eval_to_string(&mut session, "AbsoluteTime[{1970,1,1,0,0,0}]"),
+        eval_to_string(&mut session, "FromDateList[{1970,1,1,0,0,0}]"),
         "0"
     );
     assert_eq!(
@@ -58,7 +58,7 @@ fn absolute_time_and_date_list_epoch_pins_are_utc() {
         "List[1970, 1, 2, 0, 0, 0]"
     );
     assert_eq!(
-        eval_to_string(&mut session, "AbsoluteTime[{2000,2,29,0,0,0}]"),
+        eval_to_string(&mut session, "FromDateList[{2000,2,29,0,0,0}]"),
         "951782400"
     );
     assert_eq!(
@@ -68,30 +68,30 @@ fn absolute_time_and_date_list_epoch_pins_are_utc() {
 }
 
 #[test]
-fn now_reads_exact_timestamp_and_composes_with_datetime_conversions() {
+fn absolute_time_reads_exact_timestamp_and_composes_with_date_list() {
     let mut session = core_session();
 
-    let now = session.eval_text("Now[]").unwrap();
-    assert!(now.messages.is_empty(), "{:?}", now.messages);
-    match now.value {
+    let timestamp = session.eval_text("AbsoluteTime[]").unwrap();
+    assert!(timestamp.messages.is_empty(), "{:?}", timestamp.messages);
+    match timestamp.value {
         Expr::Atom(Atom::Integer(_)) | Expr::Atom(Atom::Rational(_)) => {}
-        other => panic!("Now[] should return an exact numeric timestamp, got {other}"),
+        other => panic!("AbsoluteTime[] should return an exact numeric timestamp, got {other}"),
     }
 
-    assert_eq!(eval_to_string(&mut session, "Length[DateList[Now[]]]"), "6");
     assert_eq!(
-        eval_to_string(&mut session, "StringContainsQ[DateString[Now[]], \"T\"]"),
-        "True"
+        eval_to_string(&mut session, "Length[DateList[AbsoluteTime[]]]"),
+        "6"
     );
 }
 
 #[test]
-fn date_list_date_string_and_now_report_arity_errors() {
+fn date_list_date_string_absolute_time_and_from_date_list_report_arity_errors() {
     let mut session = core_session();
 
     assert_arity_message(&mut session, "DateList[]", "DateList", "argx");
     assert_arity_message(&mut session, "DateString[]", "DateString", "argx");
-    assert_arity_message(&mut session, "Now[1]", "Now", "argx");
+    assert_arity_message(&mut session, "AbsoluteTime[0]", "AbsoluteTime", "argx");
+    assert_arity_message(&mut session, "FromDateList[]", "FromDateList", "argx");
 }
 
 #[test]
@@ -102,7 +102,7 @@ fn date_list_round_trips_exact_rational_timestamps() {
         assert_eq!(
             eval_to_string(
                 &mut session,
-                &format!("AbsoluteTime[DateList[{timestamp}]] == {timestamp}")
+                &format!("FromDateList[DateList[{timestamp}]] == {timestamp}")
             ),
             "True",
             "timestamp {timestamp}"
@@ -110,7 +110,7 @@ fn date_list_round_trips_exact_rational_timestamps() {
     }
 
     assert_eq!(
-        eval_to_string(&mut session, "DateList[AbsoluteTime[{2026,7,7,1,2,1/3}]]"),
+        eval_to_string(&mut session, "DateList[FromDateList[{2026,7,7,1,2,1/3}]]"),
         "List[2026, 7, 7, 1, 2, 1/3]"
     );
 }
@@ -127,15 +127,15 @@ fn leap_year_and_month_length_edges_are_validated() {
         "List[False, True, 28, 29]"
     );
     assert_ne!(
-        eval_to_string(&mut session, "AbsoluteTime[{2000,2,29}]"),
+        eval_to_string(&mut session, "FromDateList[{2000,2,29}]"),
         "$Failed"
     );
-    assert_failed_with_message(&mut session, "AbsoluteTime[{1900,2,29}]", "AbsoluteTime");
-    assert_failed_with_message(&mut session, "AbsoluteTime[{2026,1,32}]", "AbsoluteTime");
+    assert_failed_with_message(&mut session, "FromDateList[{1900,2,29}]", "FromDateList");
+    assert_failed_with_message(&mut session, "FromDateList[{2026,1,32}]", "FromDateList");
     assert_failed_with_message(
         &mut session,
-        "AbsoluteTime[{2026,1,1,24,0,0}]",
-        "AbsoluteTime",
+        "FromDateList[{2026,1,1,24,0,0}]",
+        "FromDateList",
     );
 }
 

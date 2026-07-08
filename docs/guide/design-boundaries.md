@@ -181,12 +181,12 @@ needs a rational value in `[0, 1)` should draw
 ## Date And Time Boundary
 
 `AbsoluteTime[]` returns rum's timestamp value: exact rational seconds since
-the Unix epoch, `1970-01-01T00:00:00Z`.
+the Unix epoch, `1970-01-01T00:00:00Z`, by reading the host wall clock.
 
 The folk date/time subset is UTC-first and exact. Date lists have the form
 `{y, mo, d, h, mi, s}`; shorter lists fill omitted fields with Jan 1 and
 midnight defaults, and `s` may be an exact rational so sub-second values round
-trip through `DateList` and `AbsoluteTime`.
+trip through `DateList` and `FromDateList`.
 
 Civil-calendar conversion uses the proleptic Gregorian calendar for all years,
 including negative years. There is no leap-second model.
