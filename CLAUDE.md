@@ -108,12 +108,19 @@ rather than duplicating them.
   well" layer over every installed builtin (three axes:
   flexibility/convenience/safety), audit-then-fix per sweep unit. Tracker
   `docs/dev/usability-pass.md`; memory `usability-pass-line.md`. **Units
-  1-6 CLOSED** (strings, structure+functional, predicates+associations,
-  control+logic+rewrite, math, codecs+bytes+datetime — briefs 161-199, 430
-  builtins swept, all fixes compat; workspace 1394, reference 611). **NEXT:
-  unit 7** (character_classes + random, 15, light re-check — 157-159 fresh;
-  random family gains `Protected` incl. the new `ReseedRandom`) — write the
-  audit brief (203). Standing user directives: high coverage incl. the
+  1-7 CLOSED** (strings, structure+functional, predicates+associations,
+  control+logic+rewrite, math, codecs+bytes+datetime, character_classes+
+  random — briefs 161-207, 446 builtins swept, all fixes compat; reference
+  612). Unit 7 (203 audit + 204-207): both FRESH arcs held (157-159
+  RandomPassword, 200-202 separation); `Protected` on all 11 random heads,
+  nested `{dims}` for RandomInteger/RandomChoice, weighted RandomChoice
+  (exact rational, no floats), WhitespaceCharacters constant + RandomPassword
+  option discovery. Deferrals: RandomString `{dims}`/`[]` (WL surface
+  uncertain), string-keyed option-discovery wart (cross-cutting → the dun
+  host line), `Dimensions` absent (later structure touch). **NEXT: unit 8**
+  (kernel A — definitions/values/attributes/protection, ~50), then units
+  9-10, THEN the dun host-embedding API line (user sequencing ruling
+  2026-07-08). Standing user directives: high coverage incl. the
   WL-inherited surface; compat enhancement only (default behavior stays
   WL-conformant, new powers via options / rum-native siblings). Standing
   design rulings: arithmetic singularities stay INERT (no special-value
@@ -133,6 +140,20 @@ rather than duplicating them.
   check (stdlib now has ZERO runtime capability checks).** Whole-surface
   audit done; lone mild kernel candidate `TestReport` flagged for units
   8-10. Detail: `usability-pass-line.md` + tracker.
+- **DUN HOST-EMBEDDING LINE — QUEUED (after usability 8-10; user ruling
+  2026-07-08).** The downstream `dun` editor filed two plugin requirement
+  docs (`docs/dev/dun-*-requirements.md`) — the first real downstream pull,
+  squarely on the post-deferral direction (embedded scripting + sandbox
+  safety). Grounded gap analysis (rum-host is ~70% there): the genuine
+  new work is a rum-host line — richer `HostTyped` (Association/Rule/Bool
+  currently collapse to `Other`), a typed `call(name, args)` entrypoint,
+  structured termination classification (cancel/timeout return `Success` +
+  `TerminatedEvaluation[...]` text today), a named non-interactive plugin
+  profile, per-request isolation. Builtin-ergonomics asks (capture spans,
+  span-units, offset-preserving record parsers) fold into a later
+  editor-support batch; result-schema conventions stay dun-owned (don't
+  make rum an editor framework). Line opens with a diagnostic/inventory
+  brief. Memory: `dun-plugin-requirements-line.md`.
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-
