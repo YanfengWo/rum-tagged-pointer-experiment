@@ -577,13 +577,17 @@ byte-identical):
    empty→Protected + BlockRandom's const changed) + regen reference +
    attribute test. The brief-196 class — NOT attribute-driven planning, NO
    A/B. The 5 character-class heads are already `{Protected}` (untouched).
-2. **brief-205 — nested `{dims}` output + `RandomString[]`** (flexibility,
-   M): a shared `{n1,n2,...}` output-shape parser/builder for
-   `RandomInteger`/`RandomChoice`/`RandomString` (today the count arg is
-   scalar-only → `{dims}` stays inert), reusing the existing
-   generated-element + memory limits; plus `RandomString[]` = the
-   `RandomInteger[]`-analog single-char convenience form (folk-specified;
-   inert→useful). Per-dispatch generation, NOT call planning — no A/B.
+2. **brief-205 — nested `{dims}` output for `RandomInteger`/`RandomChoice`**
+   (flexibility, M): a shared `parse_dims` + `build_random_array` for the
+   two draw functions whose second arg is a SAMPLE COUNT (today scalar-only
+   → `{dims}` inert), reusing the per-draw primitives; allocation bounded by
+   a PREFIX-PRODUCT element-limit enforce (catches `{10^20, 0}` where leaf
+   count is 0 but the top level would allocate 10^20). Per-dispatch
+   generation, NOT call planning — no A/B. **DEFERRED out of 205 (WL surface
+   uncertain — unit-5 "never guess" discipline):** `RandomString[spec,
+   {dims}]` and `RandomString[]` — `RandomString`'s second arg is the string
+   LENGTH, not a sample count, so the tensor form + zero-arg convenience have
+   no confident WL target; revisit only with a confirmed WL surface.
 3. **brief-206 — weighted `RandomChoice`** (flexibility/safety, M):
    `RandomChoice[weights -> elements(, n)]` with EXACT non-negative
    rational weights. No floats: scale weights to a common denominator →
