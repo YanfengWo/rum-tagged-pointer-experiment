@@ -57,8 +57,8 @@ first (157), then flexibility (158), convenience + safety (159).
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
-| 9 | kernel B: scoping/eval control/patterns/forms | (of 104) | | |
-| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | (of 104) | | |
+| 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 | |
+| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | | |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
 after brief-201 split off `ReseedRandom`).
@@ -69,6 +69,42 @@ builtins**. Unit 8 takes **55** of them (assignment 7, compound assignment
 11, value tables + introspection + removal 12, attributes + protection 10,
 options 4, messages 11 — the authoritative list is in brief-208); **104
 remain** for units 9-10, split when their audit briefs are written.
+
+## Unit 9 (kernel B) — pre-audit findings + split, 2026-07-12
+
+Claude derived the unit-9/10 split mechanically and probed before writing
+brief-214; the brief verifies rather than re-derives these.
+
+- **Split derivation** (reproducible): reference 612 − stdlib catalog 453 =
+  159 kernel − 55 (unit 8) = 104. Unit 9 = **47** (scoping 5, eval
+  control/hold 12, pattern atoms + rule heads 12, structural/pattern-query
+  11, forms + markers 7 — authoritative list in brief-214); unit 10 = the
+  **57**-name complement (also pinned in brief-214). Registration spread:
+  `builtin_catalog/` scoping.rs 12, rules.rs 12, strings.rs 13,
+  namespace.rs 4, functional.rs 2, debug.rs 3, associations.rs 1.
+- **`Protected` is DONE for this unit** — all 47 already carry it
+  (brief-210's sweep). The battleground is SEMANTICS, not protection; no
+  whole-registry section this time.
+- **One real WL divergence found at probe time**: `f[Unevaluated[1 + 1]]` →
+  `f[2]` for undefined `f` — WL restores the `Unevaluated` wrapper when no
+  definition consumes the argument; rum evaluates the content into the
+  surviving form. The BUILTIN path is correct (`Length[Unevaluated[1 + 1]]`
+  → `2`, `Head[...]` → `Plus`). Brief-214 asks for the precise boundary +
+  the missing-restore `file:line`.
+- **Green on basics**: Module gensym (`x$1`), Block/With/Unique; `Evaluate`
+  pierces `Hold` but not `HoldComplete` (WL-correct); `HoldPattern` in the
+  matcher; `Repeated` count forms; `Longest`/`Shortest` in StringCases;
+  `ReplaceAt` (WL-13.1 shape); Part span; Thread; Position; Level `{-1}`.
+- **Two hard-coded-hold traces ordered** (the brief-208 `Set` discipline):
+  rum's `Evaluate` carries `HoldAll` (WL: no hold attribute) — load-bearing
+  or vestigial?; `Rule`/`RuleDelayed` carry no hold attribute yet behave
+  WL-correctly (rhs held; `Rule[a, Sequence[1, 2]]` does not splice) — WL
+  gets both from `HoldRest`/`SequenceHold`, and `SequenceHold` does not
+  exist in rum's `Attribute` enum, so the behavior is evaluator-coded.
+- **Design-input duty wired in**: the parked units-8-10 hold design
+  (`SubValuesHoldAll`-equivalent, `ReplaceAllUnheld`) gets a dedicated
+  factual appendix in the findings file (how held args flow through
+  matching/replacement today). Record, not design.
 
 ## Unit 8 (kernel A) — pre-audit findings, 2026-07-12
 
