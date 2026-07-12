@@ -223,9 +223,28 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
     DefaultValues deferred. Gate: workspace 1415/0 (10 new tests); A/B clean —
     unaffected controls moved MORE than the affected path (noise floor above
     the delta).
-  - [ ] Remaining unit-8 fix batches (triage in the findings file):
-    `Clear`/`Remove` name-pattern forms (`Clear["Global\`*"]` silent no-op);
-    `Information`/message discoverability. Then unit 8 is CLOSED → units 9-10.
+  - [x] **brief-213 = fix batch 5 DONE (868d2c6, 2026-07-12), closing:**
+    (a) wildcard name-pattern targets — `Clear`/`ClearAll`/`Remove`/`Protect`/
+    `Unprotect` share one normalizer and the matcher already existed (it is
+    what `Names` uses), so one change gave all five pattern support;
+    per-target protection preserved, no-match is a silent no-op creating no
+    symbol. (b) `Information` gains `{HoldFirst, Protected}` (it used to
+    EVALUATE its argument while sibling `Definition` held correctly), the
+    builtin catalog summary as its `Usage` fallback, and a `Messages` field.
+    Workspace 1418/0.
+- [ ] **DEFERRED from unit 8 — builtin message-tag registry.** `Messages[Set]`
+  is empty even right after `Set::argx` fires: builtin diagnostics come from
+  ~108 ad-hoc `push_message` sites with NO static catalog of a builtin's
+  possible tags/templates. Building one is its own project and pairs with
+  docgen (the reference should list message tags from the same source).
+  Batch 5's new `Messages` field lights up for free once it exists.
+- [x] **UNIT 8 CLOSED (2026-07-12):** 208 audit (55/55) + fixes 209-213.
+  Units 1-8 = **501 builtins swept**. Protection surface 129/612 → 608/612;
+  one real bug found and fixed at the gate (`ApplyTo` protection bypass);
+  three enforcement holes closed; value tables made round-trippable.
+  **Next: unit 9** (kernel B: scoping/eval control/patterns/forms), then unit
+  10 (104 kernel names remain across the two), THEN the dun host-embedding
+  line.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

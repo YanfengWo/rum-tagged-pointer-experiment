@@ -56,7 +56,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
-| 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 | |
+| 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
 | 9 | kernel B: scoping/eval control/patterns/forms | (of 104) | | |
 | 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | (of 104) | | |
 
@@ -158,9 +158,53 @@ line).
   affected path (immediate `head[args]=value`) was raw-faster on the candidate;
   the UNAFFECTED controls moved more (+3.6% / +1.7% vs +1.8%), so the noise floor
   sits above the delta — no regression.
-- **Still queued** (triage in `kernel-a-findings.md`): `Clear`/`Remove`
-  name-pattern forms (`Clear["Global\`*"]` silent no-op); `Information`/message
-  discoverability. Then unit 8 CLOSES → units 9-10.
+- **batch 5 — brief-213 (868d2c6), closing:** (a) wildcard name-pattern targets.
+  `Clear`/`ClearAll`/`Remove`/`Protect`/`Unprotect` share ONE normalizer, and the
+  wildcard matcher already existed (it is what `Names` uses) — so one
+  `normalize_clear_target_expr` gave all five pattern support. Per-target
+  protection preserved (a `Protected` match emits `wrsym` and survives while
+  unprotected matches are still cleared); a no-match pattern is a silent no-op
+  and creates no literal wildcard-named symbol. Note `@` is NOT a rum wildcard
+  (no `@` handling in `names.rs`), so keying on `*` matches the matcher's real
+  capability. (b) `Information` now carries `{HoldFirst, Protected}` — it used
+  to EVALUATE its argument (`Information[xq]` → inert `Information[5]`) while
+  its sibling `Definition` already held correctly; plus the builtin catalog
+  summary as the `Usage` fallback (was the bare qualified name) and a new
+  `Messages` field. Workspace 1418/0; reference regenerated.
+- **DEFERRED — builtin message-tag registry.** `Messages[Set]` / `MessageTags[Set]`
+  are empty even right after `Set::argx` fires: builtin diagnostics come from
+  ~108 ad-hoc `push_message` sites with NO static catalog of a builtin's possible
+  tags/templates. Building one is its own project (a design + a sweep of every
+  call site) and it pairs naturally with docgen — the builtin reference should
+  list each builtin's message tags from the same source. Batch 5's new
+  `Messages` field lights up for free once the registry exists; builtins
+  honestly report an empty list today. **Candidate for a later line, or for the
+  units 9-10 / docgen work.**
+
+**UNIT 8 CLOSED (2026-07-12).** 208 audit (55 names, 55/55) + fixes 209-213.
+Cumulative units 1-8 = **501 builtins swept** (446 stdlib + 55 kernel A).
+Kernel list derived exactly: reference 612 − stdlib catalog 453 = 159 kernel;
+unit 8 took 55, leaving **104 for units 9-10**.
+
+The unit's arc, in one line each:
+- **The audit found the protection surface was 129/612** — `Plus[a_,b_] := 42`
+  succeeded and `1+2` then returned `42`.
+- **209 (batch 1a)** — a REAL bug surfaced at the gate: `ApplyTo[x, f]` where `f`
+  protects `x` mid-update landed the write on a visibly `Protected` symbol
+  (`store_held_update` skipped the recheck; `ApplyTo` is the one compound
+  assignment whose update runs user code in that window). My first gate pass
+  wrongly ruled it "false" from a too-weak probe — see the CLAUDE.md lesson.
+- **210 (batch 2)** — whole-registry `Protected` sweep, 129/612 → **608/612**
+  (only the four writable session vars stay open).
+- **211 (batch 3)** — the three enforcement holes closed (`$ContextPath`/
+  `$Packages`/`$Path` setters, `SetAttributes`, `SetOptions`), escape hatches
+  (`Unprotect`, `ClearAttributes[f, Protected]`) preserved.
+- **212 (batch 4)** — round-trippable value tables (the WL feature; batch 2 had
+  already killed the silent false round-trip).
+- **213 (batch 5)** — name patterns + `Information`.
+
+Next: **unit 9** (kernel B: scoping / eval control / patterns / forms), then
+unit 10, THEN the dun host-embedding line (user sequencing ruling 2026-07-08).
 
 ## Unit 1 (strings) triage — 2026-07-07
 
