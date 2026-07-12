@@ -56,14 +56,54 @@ first (157), then flexibility (158), convenience + safety (159).
 | 5 | arithmetic + number_theory + combinatorics + integer_digits + polynomials + calculus | 62 | brief-186 ✓ | 187-193 ✓ CLOSED |
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
-| 8 | kernel A: definitions/values/attributes/protection | ~50 | | |
-| 9 | kernel B: scoping/eval control/patterns/forms | ~55 | | |
-| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | ~55 | | |
+| 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 | |
+| 9 | kernel B: scoping/eval control/patterns/forms | (of 104) | | |
+| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | (of 104) | | |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
-after brief-201 split off `ReseedRandom`); units 8-10
-split the 160-name kernel list (installed reference minus stdlib
-catalog) and are enumerated exactly when their audit brief is written.
+after brief-201 split off `ReseedRandom`).
+
+**Kernel list derived 2026-07-12** (it was "~160, enumerated at audit
+time"): installed reference 612 − stdlib catalog names 453 = **159 kernel
+builtins**. Unit 8 takes **55** of them (assignment 7, compound assignment
+11, value tables + introspection + removal 12, attributes + protection 10,
+options 4, messages 11 — the authoritative list is in brief-208); **104
+remain** for units 9-10, split when their audit briefs are written.
+
+## Unit 8 (kernel A) — pre-audit findings, 2026-07-12
+
+Claude probed before writing brief-208; these are the spine of the unit and
+brief-208 verifies rather than re-derives them.
+
+- The `Protected` **enforcement point works**: `RandomInteger[x_] := 99` →
+  `! SetDelayed::wrsym: Symbol RandomInteger is Protected.` (brief-204 gave
+  it the attribute).
+- The `Protected` **enforcement surface is 129 of 612** — 483 installed
+  builtins carry no `Protected`. `Plus[a_, b_] := 42` SUCCEEDS, after which
+  `1 + 2` → `42`; same for `Times`/`Power`/`Equal`/`If`/`Map`/`Part`.
+- **All 55 unit-8 names lack `Protected`, the protection machinery
+  included**: `Attributes[Set]` = `{}`, `Attributes[Protect]` = `{HoldAll}`,
+  and `Unprotect[q_] := 7` succeeds.
+- The three prior `Protected` sweeps (162b pattern symbols, 196 codecs, 204
+  random) were each unit-local; the surface was never swept whole. WL
+  protects essentially every `System\`` builtin, so this is an
+  attribute-hygiene / WL-conformance gap — and `Protected` is zero
+  eval-cost (checked only on the definition-mutation path), unlike the
+  call-planning attributes brief-193 rejected.
+- **Honest boundary**: `Protected` is a mistake-guard, NOT a sandbox
+  boundary — a program may always `Unprotect[Plus]`. Real plugin isolation
+  (per-request definition rollback) belongs to the host-embedding line,
+  where it is already on the gap list. Do not conflate the two.
+- Instrument warning: `docs/reference/builtins.md` backticks each attribute
+  separately (`` `Listable`, `Protected` ``); a regex capturing only the
+  first token under-reports (Claude's first count said 527 unprotected —
+  wrong). Calibrate before trusting a count.
+
+USER RULING (2026-07-12): fold this into the unit-8 audit — brief-208
+carries a dedicated whole-registry `Protected` coverage section, and the
+mechanical cross-cutting fix batch is triaged out of its data (rather than
+inserting a blind fix batch first, or deferring the whole thing to the host
+line).
 
 ## Unit 1 (strings) triage — 2026-07-07
 

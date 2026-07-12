@@ -155,7 +155,32 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
 - [x] **UNIT 5 CLOSED (2026-07-07):** 186 audit + 187-193. Units 1-5 =
   396 builtins swept. Close-out decisions in the tracker (singularities
   inert per user; Orderless/Flat/OneIdentity rejected; FromDigits list
-  form WL-conformant). Next sweep unit: 6 (codecs + bytes + datetime, 34).
+  form WL-conformant).
+- [x] **UNIT 6 CLOSED (2026-07-08):** 194 audit + 195-199 (digest-format
+  fail-closed, Protected sweep, option discovery, datetime ergonomics,
+  DatePlus operator form). Spun out the **stateful↔pure separation line**
+  (briefs 200-202, COMPLETE): `AbsoluteTime[]` = the sole numeric
+  wall-clock reader; `FromDateList` = pure converter; `Now` removed;
+  `SeedRandom` split → `ReseedRandom[]` + `SeedRandom[seed]`. Standing
+  rule: stateful reads are single-purpose symbols gated by a SPEC-level
+  capability — never crammed into a pure symbol, never a runtime check.
+- [x] **UNIT 7 CLOSED (2026-07-08):** 203 audit + 204-207 (`Protected` on
+  all 11 random heads; nested `{dims}` for RandomInteger/RandomChoice;
+  weighted RandomChoice, exact rationals; `WhitespaceCharacters` +
+  RandomPassword option discovery). Units 1-7 = 446 builtins swept, all
+  fixes compat; reference 612. Deferrals in the tracker.
+- [ ] **UNIT 8 (kernel A, 55) — brief-208 DISPATCHED (2026-07-12).** First
+  kernel unit. Kernel list derived: reference 612 − stdlib catalog 453 =
+  159 kernel builtins; unit 8 = 55, leaving 104 for units 9-10.
+  **Headline pre-finding**: the `Protected` enforcement surface is only
+  129/612 — `Plus[a_,b_] := 42` succeeds and `1+2` then returns `42`; all
+  55 unit-8 names lack `Protected`, the protection machinery (`Set`,
+  `Protect`, `Unprotect`) included. Enforcement point itself works
+  (`RandomInteger` correctly rejects). Per user ruling 2026-07-12, 208
+  carries a whole-registry `Protected` coverage section and the
+  cross-cutting fix batch is triaged out of its data. Boundary kept
+  honest: `Protected` is a mistake-guard + WL conformance, NOT a sandbox
+  boundary (real plugin isolation = the host-embedding line).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
