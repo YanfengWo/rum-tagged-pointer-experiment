@@ -126,11 +126,24 @@ line).
   attribute sets (each value verified empirically — the test-control session's
   `If`/`Plus` keep harness attrs while `Identity`/`HoldAllComplete` fall
   through to the now-protected catalog).
-- **Still queued** (triage in `kernel-a-findings.md`): enforcement holes
-  (`$ContextPath`/`$Packages`/`$Path` setters bypass an explicit `Protect`;
-  `SetAttributes` on a protected symbol; verify `SetOptions`); value-table
-  round-trip (touches the `Set` hot path → needs A/B); `Clear`/`Remove`
-  name-pattern forms; `Information`/message discoverability.
+- **batch 3 — brief-211 (d6cbd34):** closed the three protection-enforcement
+  holes. (a) The `$ContextPath`/`$Packages`/`$Path` special setters
+  (`definitions.rs`) returned before the guard — now check first, still open by
+  default (guard fires only after an explicit `Protect`). (b) `SetAttributes`/
+  `ClearAttributes` (`attributes.rs`) skip a protected target UNLESS the op
+  removes `Protected` — so `ClearAttributes[f, Protected]` and combined removal
+  stay the escape, alongside `Unprotect` (separate path). (c) `SetOptions`
+  (`options/builtins.rs`) guards before writing — the hole was reachable only
+  with a KNOWN option (the `optnf` unknown-option check had masked it; I
+  confirmed it at brief time with `SetOptions[FromCsv, Delimiter -> ";"]`). All
+  reuse `ensure_symbol_not_protected_for_write`. Five regression tests + nine
+  `Unprotect`-ripple edits (existing tests doing option/attribute writes on
+  now-protected system symbols). Workspace 1405/0.
+- **Still queued** (triage in `kernel-a-findings.md`): value-table round-trip
+  (`DownValues[g] = DownValues[f]` false round-trip; touches the `Set` hot path
+  → needs A/B); `Clear`/`Remove` name-pattern forms (`Clear["Global\`*"]`
+  silent no-op); `Information`/message discoverability. Then unit 8 CLOSES →
+  units 9-10.
 
 ## Unit 1 (strings) triage — 2026-07-07
 

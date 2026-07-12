@@ -203,11 +203,18 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
     each value verified empirically (the test-control session's `If`/`Plus`
     keep harness attrs while `Identity`/`HoldAllComplete` fall through to the
     now-protected catalog).
-  - [ ] Remaining unit-8 fix batches (triage in the findings file): the
-    enforcement holes (`$ContextPath`/`$Packages`/`$Path` setters bypass
-    `Protect`; `SetAttributes` on a protected symbol; verify `SetOptions`);
-    value-table round-trip (touches `Set` hot path → A/B); `Clear`/`Remove`
-    name-pattern forms; `Information`/message discoverability.
+  - [x] **brief-211 = fix batch 3 DONE (d6cbd34, 2026-07-12):** closed the
+    three protection-enforcement holes — `$ContextPath`/`$Packages`/`$Path`
+    special setters, `SetAttributes`/`ClearAttributes`, and `SetOptions` (the
+    last reachable only with a known option; `optnf` had masked it). All reuse
+    `ensure_symbol_not_protected_for_write`; the `ClearAttributes[f, Protected]`
+    + `Unprotect` escape hatches preserved. Five regression tests + nine
+    `Unprotect` ripple edits. Gate: workspace 1405/0, four probes reproduced.
+  - [ ] Remaining unit-8 fix batches (triage in the findings file):
+    value-table round-trip (`DownValues[g] = DownValues[f]` false round-trip;
+    touches `Set` hot path → needs A/B); `Clear`/`Remove` name-pattern forms
+    (`Clear["Global\`*"]` silent no-op); `Information`/message
+    discoverability. Then unit 8 is CLOSED → units 9-10.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
