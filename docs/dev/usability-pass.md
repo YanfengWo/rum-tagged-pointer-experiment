@@ -105,6 +105,33 @@ mechanical cross-cutting fix batch is triaged out of its data (rather than
 inserting a blind fix batch first, or deferring the whole thing to the host
 line).
 
+### Unit-8 fixes landed (2026-07-12)
+
+- **batch 1a — brief-209 (b0c7113):** REAL bug found at the gate. `ApplyTo[x, f]`
+  where `f` protects `x` mid-update landed the write on a visibly `Protected`
+  symbol (`x = 101`, no message); root cause = `store_held_update` did not
+  re-run the protection guard the check step uses, and `ApplyTo`'s update
+  (`f[current]`) runs user code in that window. Fixed by re-running the guard
+  at the store step (Symbol + Part owner). The other ten compound assignments
+  share the path but evaluate no user code in the window (fail closed). NOTE:
+  my first gate pass wrongly ruled this "false" from a too-weak probe — see the
+  CLAUDE.md diagnosis lesson and [[usability-pass-line]].
+- **batch 2 — brief-210 (5872796):** whole-registry `Protected` sweep,
+  129/612 → 608/612. Only `$AssertFunction`/`$ContextPath`/`$Packages`/`$Path`
+  stay open (writable session vars). One `BuiltinSpec::protected()` const
+  builder + `.protected()` per catalog entry + mirror lockstep + regenerated
+  reference; constructor defaults unchanged (downstream plugins still choose).
+  WL-conformant + reversible. Completeness proven by SWEEP-OK (exactly the 4
+  exclusions unprotected); workspace 1400/0. Four tests updated for the new
+  attribute sets (each value verified empirically — the test-control session's
+  `If`/`Plus` keep harness attrs while `Identity`/`HoldAllComplete` fall
+  through to the now-protected catalog).
+- **Still queued** (triage in `kernel-a-findings.md`): enforcement holes
+  (`$ContextPath`/`$Packages`/`$Path` setters bypass an explicit `Protect`;
+  `SetAttributes` on a protected symbol; verify `SetOptions`); value-table
+  round-trip (touches the `Set` hot path → needs A/B); `Clear`/`Remove`
+  name-pattern forms; `Information`/message discoverability.
+
 ## Unit 1 (strings) triage — 2026-07-07
 
 Audit brief-161: 101 rows / 99 names, findings in

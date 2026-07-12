@@ -192,8 +192,18 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
     (operator threaded through; Symbol + Part owner) + `ApplyTo` regression
     test. Gate-reproduced: bypass closed, legitimate `ApplyTo` unaffected,
     Part-owner covered. Workspace 1400/0. Not a hot path; no A/B.
+  - [x] **brief-210 = fix batch 2 DONE (5872796, 2026-07-12):** whole-registry
+    `Protected` sweep, 129/612 → 608/612 (only `$AssertFunction`/`$ContextPath`/
+    `$Packages`/`$Path` stay open). One `BuiltinSpec::protected()` const builder
+    + `.protected()` per catalog entry (stdlib catalog + kernel builtin_catalog
+    + mirror lockstep + regenerated reference). `Plus`/`If`/`Set`/… no longer
+    redefinable by accident; WL-conformant + reversible via `Unprotect`.
+    Gate: SWEEP-OK (exactly the 4 exclusions unprotected), workspace 1400/0.
+    Four tests updated for the new (correct) attribute sets — necessary ripple,
+    each value verified empirically (the test-control session's `If`/`Plus`
+    keep harness attrs while `Identity`/`HoldAllComplete` fall through to the
+    now-protected catalog).
   - [ ] Remaining unit-8 fix batches (triage in the findings file): the
-    whole-registry `Protected` sweep (479 names, mechanical, no A/B); the
     enforcement holes (`$ContextPath`/`$Packages`/`$Path` setters bypass
     `Protect`; `SetAttributes` on a protected symbol; verify `SetOptions`);
     value-table round-trip (touches `Set` hot path → A/B); `Clear`/`Remove`
