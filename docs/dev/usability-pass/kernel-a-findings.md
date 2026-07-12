@@ -748,8 +748,8 @@ The code-visible cause is ordering: all three branches return from
    retain the explicit `Unprotect` / `ClearAttributes[..., Protected]` escape.
    These are cold mutation paths, not call planning; no A/B gate.
 
-1a. **`store_held_update` protection recheck** (safety, M — REAL BUG, gate-
-   reproduced): before writing in `store_held_update`
+1a. **`store_held_update` protection recheck** (safety, M — REAL BUG — **DONE,
+   brief-209 / b0c7113**): before writing in `store_held_update`
    (`definition_updates.rs:377-418`), recheck `ensure_symbol_not_protected_for_write`
    on the target (both the `Symbol` and `Part` owner cases). Today `ApplyTo[x, f]`
    with an `f` that protects `x` mid-update lands the write on a visibly

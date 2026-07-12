@@ -187,9 +187,11 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
     is the one compound assignment whose update (`f[current]`) runs user code
     in the store window. NOTE: my first gate pass wrongly ruled this "false"
     from a too-weak probe — see CLAUDE.md diagnosis lesson.
-  - [ ] **brief-209 = fix batch 1a (DISPATCHED 2026-07-12):** re-run
+  - [x] **brief-209 = fix batch 1a DONE (b0c7113, 2026-07-12):** re-run
     `ensure_symbol_not_protected_for_write` at the top of `store_held_update`
-    + `ApplyTo` regression test. Not a hot path; no A/B.
+    (operator threaded through; Symbol + Part owner) + `ApplyTo` regression
+    test. Gate-reproduced: bypass closed, legitimate `ApplyTo` unaffected,
+    Part-owner covered. Workspace 1400/0. Not a hot path; no A/B.
   - [ ] Remaining unit-8 fix batches (triage in the findings file): the
     whole-registry `Protected` sweep (479 names, mechanical, no A/B); the
     enforcement holes (`$ContextPath`/`$Packages`/`$Path` setters bypass
