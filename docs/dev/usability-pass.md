@@ -57,7 +57,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
-| 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 | |
+| 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 ✓ | |
 | 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | | |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
@@ -98,13 +98,104 @@ brief-214; the brief verifies rather than re-derives these.
 - **Two hard-coded-hold traces ordered** (the brief-208 `Set` discipline):
   rum's `Evaluate` carries `HoldAll` (WL: no hold attribute) — load-bearing
   or vestigial?; `Rule`/`RuleDelayed` carry no hold attribute yet behave
-  WL-correctly (rhs held; `Rule[a, Sequence[1, 2]]` does not splice) — WL
-  gets both from `HoldRest`/`SequenceHold`, and `SequenceHold` does not
-  exist in rum's `Attribute` enum, so the behavior is evaluator-coded.
+  WL-correctly (rhs held; `Rule[a, Sequence[1, 2]]` does not splice).
+  CORRECTED BY THE AUDIT: the brief's premise "`SequenceHold` does not
+  exist in rum's `Attribute` enum" was STALE — `SequenceHold` (and
+  `NHoldAll`) are in the enum (`runtime/metadata.rs:32-48`, verified from
+  source at the gate). The durable fact is narrower: the special-form
+  dispatch path for `Rule`/`RuleDelayed` never consults those attributes,
+  so their hold behavior is still evaluator-coded, and adding the
+  attributes would be dead-weight metadata (audit trace confirmed).
 - **Design-input duty wired in**: the parked units-8-10 hold design
   (`SubValuesHoldAll`-equivalent, `ReplaceAllUnheld`) gets a dedicated
   factual appendix in the findings file (how held args flow through
   matching/replacement today). Record, not design.
+
+## Unit 9 (kernel B) triage — 2026-07-12
+
+Audit brief-214: 47/47 (COVERAGE-OK), findings in
+`usability-pass/kernel-b-findings.md`. Gate: scope clean (findings file
+only), fmt clean, `cargo test` NOT rerun (docs-only diff, no code touched),
+six load-bearing claims reproduced by hand at the gate (Module leak probe
+verbatim; `Unevaluated` both faces; `HoldAll`-blocks-`Sequence`;
+`ReleaseHold[HoldForm[…]]` miss; the E7 consumer-divergence probe incl.
+`c = 110` and the `HoldAllComplete` splice bypass; `ReplacePart` Span
+silent no-op + the reference's explicit Span promise). The audit also
+CORRECTED a stale brief premise (`SequenceHold` exists — see the pre-audit
+section above). Semantics, not protection, is the battleground: all 47
+were already `Protected`.
+
+**TWO DECISION ITEMS — USER RULING PENDING (both excluded from all fix
+batches below):**
+
+- **Module error-path gensym leak (trust boundary).** After
+  `Catch[Module[{auditLocal = 1}, Throw[fail]]]`, the fresh local remains
+  enumerable AND readable (`Names` shows it; `auditLocal$1` → `1`).
+  `finish_module_scope` reclaims immediately only on `Ok`; error-path
+  gensyms wait for the GC sweep (default threshold 200,000 —
+  `module.rs:207-280`, `gensym_gc.rs:164-172`). Module gensym is the
+  LCF-style encapsulation boundary for downstream mma-hol, so the fix
+  choice (eager reclamation on error exits / lower GC threshold /
+  accept-and-document) is the user's; any evaluator fix here also needs
+  the mma-hol Strict-mode suite gate + A/B (standing rule).
+- **Staged `With[{…}, {…}, body]` form (WL 12.2+).** Missing; arity-3 is
+  an inert `argx` loop today. Bolting it on touches the same scoping
+  special form; decide together with (or after) the Module ruling.
+
+Fix batches (dispatch order — safety first; every WL-name default change
+below is a move TOWARD documented WL semantics, the unit-5-sanctioned
+class):
+
+1. **brief-215 — evaluator hold correctness** (safety, L; ONE A/B gate for
+   the batch): (a) `Unevaluated` wrapper restore on the true no-consumer
+   path — today undefined heads lose it (`f[2]`) and, worse, a
+   nonmatching definition can then FIRE (`q[x_Integer]` catches
+   `Unevaluated[1+1]` → `hit[2]`); provenance must be recorded only when
+   a wrapper is actually stripped (zero default-path cost), restore only
+   in no-match reconstruction (`eval_call_prepare.rs:50-55`,
+   `eval_core/call.rs:97-101`). (b) ordinary `HoldAll` must ALLOW raw
+   `Sequence` splicing (WL: only `SequenceHold`/`HoldAllComplete` block);
+   today `allow_sequence_splice:false` is hard-wired to holding. (c)
+   `ReleaseHold` gains `HoldForm` (its own supported wrapper today
+   missing) and the layer contract is pinned to WL's ONE layer per call
+   (today it strips ALL consecutive layers: `ReleaseHold[Hold[Hold[x]]]`
+   evaluates to the value — reproduced at the gate). MAY list must span
+   every test asserting old non-splice / multi-strip behavior
+   (cross-crate lesson).
+2. **brief-216 — rule firing in held replacement** (safety, L; A/B):
+   align `ReplacePart`/`ReplaceAt` delayed-RHS to WL insert-unevaluated
+   (today both evaluate before insertion while `ReplaceAll` correctly
+   inserts raw); stop substitution-time `Sequence` splicing from
+   bypassing `HoldAllComplete` destinations
+   (`binding_substitution.rs:281-323`). Record — NOT design —
+   `ReplaceAllUnheld` implications (the design-input appendix in the
+   findings file is the base).
+3. **brief-217 — fail-closed / truthful contracts** (safety/flexibility,
+   M): unify `Repeated`/`RepeatedNull` count shapes across expression and
+   string matchers (string side rejects numeric `n`) + diagnose malformed
+   bounds (matcher portion → A/B; the rest is builtin-local); implement
+   the reference-PROMISED `ReplacePart` Span positions; reject
+   `SpellingCorrection -> True` (advertised, never read); fail closed on
+   unsupported known `Once` expiration values (keep `Pure`, no clock).
+4. **brief-218 — pattern-query operator forms** (flexibility, M; A/B):
+   `Position[patt]` / `Count[patt]` / `MemberQ[patt]` / `FreeQ[patt]`
+   (WL-documented; the unit-1 deferral now unblocked; `Extract[pos]`
+   already exists).
+5. **brief-219 — presentation truthfulness** (convenience, S/M):
+   terminal value rendering uses the existing transparent `HoldForm`
+   output arm (today CLI prints the literal wrapper while `ToString`
+   output-forms hide it); reference summaries for
+   `InputForm`/`StandardForm` name their implemented `ToString` consumer
+   (docgen MERGE, not replace — the brief-198 lesson). Renderer/docs
+   only; no evaluator A/B if kept out of evaluation.
+
+Close-out notes (no brief): `Rule`/`RuleDelayed` attribute additions
+REJECTED (special-form path never consults them — dead metadata);
+`Evaluate`'s `HoldAll` KEPT (load-bearing for standalone calls:
+`builtin_adapters.rs:771-781`); `Nothing` list-only removal, `Sow` outside
+`Reap`, `Once` cache lifecycle (session-owned, snapshot/reset-correct),
+sequential `Block`/`With` initializers all confirmed OK-intended;
+`Function` surplus-args behavior is the established contract.
 
 ## Unit 8 (kernel A) — pre-audit findings, 2026-07-12
 
