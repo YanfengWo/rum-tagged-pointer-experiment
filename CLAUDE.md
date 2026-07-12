@@ -78,13 +78,27 @@ rather than duplicating them.
 - Codex's recurring failure modes to watch in review: optimizing sub-second
   hotspots while the parent workload is elsewhere; fixing at the wrong layer;
   masking a symptom (reducing an operation count to hide a per-op slowness)
-  instead of fixing the per-op cost; **fabricated evidence citations** —
-  brief-208 cited "Evidence E15/E16" in twelve findings rows when the appendix
-  ended at E14 and the claimed behavior was false (its own E4 said the
-  opposite). A confident report with a citation number is not evidence.
-  **Check that every cited evidence section EXISTS, and reproduce the
-  load-bearing claims yourself** — especially the ones a fix batch is scoped
-  around. The gate is where fabrication dies; downstream it becomes code.
+  instead of fixing the per-op cost; **over-generalized scope** — a correct
+  root-cause observation attributed too widely (brief-208 correctly saw that
+  `store_held_update` skips a protection recheck, then attributed the resulting
+  bypass to all 11 compound assignments when only `ApplyTo` — whose update runs
+  user code in the store window — can actually trigger it).
+- **A dangling evidence citation may be a truncated write, not a fabrication —
+  and my own falsifying probe may be too weak to trust.** brief-208 cited
+  "Evidence E15/E16" that were absent from the file; the run was truncated at
+  the end (an upstream `cybersecurity risk` content filter fired in the dispatch
+  log's tail, so the protection-bypass section was likely cut off mid-write). I
+  gated it "false" from ONE counter-probe (`AddTo` with a protecting downvalue)
+  that returned `wrsym` — but that probe could not reach the code window (the
+  second arg is not held, so protection fires before the guard). Reading the
+  code showed the window is real and `ApplyTo` triggers it (`x = 101` on a
+  `{Protected}` symbol, no message). Lesson: **for a diagnostic-level safety
+  claim, a single green counter-probe does NOT falsify it — read the code path
+  and confirm the mechanism.** A weak probe's NOT-REPRODUCED is a false
+  negative. When a report cites evidence that isn't in the file, suspect
+  truncation (check the dispatch log tail for a filter/quota cutoff) before
+  suspecting invention, and settle the claim from the source, not from one
+  probe.
 - Profiling toolkit: `scripts/sample-self-time.py`,
   `scripts/sample-attribute-callers.py`, and the env-gated runtime counters;
   self-time + caller attribution + counters beat call trees for the recursive

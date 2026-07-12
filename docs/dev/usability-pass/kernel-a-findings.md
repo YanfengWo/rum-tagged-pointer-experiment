@@ -201,14 +201,17 @@ proposed by this audit.
 
 1. **Safety:** only 129/612 installed names are protected; after four explicit
    writable-session exceptions, 479 heads/symbols should gain `Protected`.
-2. **Safety:** two paths mutate an explicitly protected symbol with no
-   `wrsym`-class diagnostic — the special `Set` setters for `$ContextPath`/
-   `$Packages`/`$Path` (E14), and `SetAttributes` (E5: `Protect[s]` then
-   `SetAttributes[s, Listable]` succeeds → `{Listable, Protected}`). Both
-   gate-reproduced. (`SetOptions` was claimed too but is NOT verified — the
-   gate probe was deflected by an `optnf` unknown-option error before reaching
-   the protection path; confirm during the fix.) Compound assignment and
-   association-lvalue `Set` are fail-closed — see the GATE CORRECTION.
+2. **Safety:** three paths mutate an explicitly protected symbol with no
+   `wrsym`-class diagnostic — (a) `ApplyTo[x, f]` where `f` protects `x` during
+   the update, because the shared `store_held_update` does not recheck before
+   writing (`x = 101`, `Attributes[x] = {Protected}`); (b) the special `Set`
+   setters for `$ContextPath`/`$Packages`/`$Path` (E14); (c) `SetAttributes`
+   (E5: `Protect[s]` then `SetAttributes[s, Listable]` succeeds → `{Listable,
+   Protected}`). All three gate-reproduced. (`SetOptions` was claimed too but is
+   NOT verified — the gate probe was deflected by an `optnf` unknown-option
+   error; confirm during the fix.) The arithmetic/list compound assignments and
+   the association-lvalue `Set` path are fail-closed (their update runs no user
+   code in the window) — see the compound-assignment GATE block.
 3. **Convenience/safety:** assigning an inspection table such as
    `DownValues[g] = DownValues[f]` does not install definitions on `g`; it
    silently defines the inspector head and creates a convincing false round-trip.
@@ -252,24 +255,44 @@ Their shared target normalization rejects a target that is already protected
 (`definition_updates.rs:244-304`), and the batched probe shows all 11 leave such
 values unchanged (Evidence E4).
 
-> **GATE CORRECTION (Claude, 2026-07-12).** The submitted draft additionally
-> claimed a shared "check-to-store hole" here — that the derived update is
-> evaluated after the guard and `store_held_update` writes without rechecking,
-> so an upvalue could protect the target mid-update and `AddTo` would still
-> store. It cited "Evidence E15" and "E16". **Those evidence sections do not
-> exist, and the claim is false.** Reproduced at the gate: with `t = 1` and
-> `g[x_] := (Protect[t]; 98)`, `AddTo[t, g[0]]` emits `AddTo::wrsym` and leaves
-> `t` at `1`; `AppendTo[L, f2[]]` with a protecting `f2` likewise emits
-> `AppendTo::wrsym` and leaves `L` unchanged; the association-lvalue path
-> (`a = <|"x" -> 1|>; Protect[a]; a["x"] = 99`) emits `Set::wrsym` and leaves
-> `a` unchanged. The final store DOES recheck. The 11 rows below therefore
-> report only the real gap — the missing `Protected` attribute on the heads
-> themselves — and E4 (which is genuine, and titled "All Compound Assignments
-> Fail Closed") stands as the evidence.
+> **GATE — CORRECTED TWICE (Claude, 2026-07-12).** The submitted draft claimed
+> a shared "check-to-store window": the guard runs on the initial target, the
+> update is evaluated afterwards (`finish_held_update`, `definition_updates.rs:361-375`),
+> and `store_held_update` (`:377-418`) writes without rechecking — citing
+> "Evidence E15/E16", which the truncated run never wrote into the file.
+>
+> My first gate pass judged this "false, final store DOES recheck", from a probe
+> (`AddTo[t, g[0]]` with `g` protecting `t`) that returned `AddTo::wrsym`. **That
+> pass was wrong** — the probe could not reach the window (the second argument is
+> not held, so `g[0]` evaluates and `Protect[t]` fires BEFORE the guard). Reading
+> the code settles it: the window is real. `finish_held_update` evaluates `update`
+> and only then calls `store_held_update`, which stores with no protection
+> recheck.
+>
+> **The window IS reachable — via `ApplyTo`**, the one compound assignment whose
+> update runs user code. `ApplyTo[x, f]` builds `update = f[x]` (`:102`), so `f`'s
+> body executes inside the window. Gate-reproduced:
+>
+> ```
+> $ printf '' | cargo run -q -p rum-cli -- --eval 'ClearAll[x, f]; x = 1; f = Function[v, (Protect[x]; v + 100)]; ApplyTo[x, f]; Print[{x, Attributes[x]}]'
+> {101, {Protected}}
+> ```
+>
+> The write landed (`x = 101`) on a visibly `Protected` symbol, with **no
+> message**. This is a genuine safety bug — the fix is a recheck in
+> `store_held_update` before the write (queued as triage batch 1a below).
+>
+> **But the draft over-generalized it to all 11 forms; that half is wrong.** The
+> other ten build `update = Plus[current, arg]` / `Append[current, arg]` (`:41`,
+> `:59`, `:117`) where `arg` is already evaluated, so `evaluate(update)` runs no
+> user code and the window is not reachable: `AddTo[t, (Protect[t]; 5)]` returns
+> `AddTo::wrsym` and leaves `t` unchanged. So the corrected finding is narrow and
+> exact: **`store_held_update` lacks a recheck (root cause, all forms share it),
+> but only `ApplyTo` can actually trigger it today.** The rows below reflect that.
 
 | Builtin | Origin | Verdict | Axis | Finding | Proposal | Size |
 |---|---|---|---|---|---|---|
-| AddTo | WL | gap | safety | The head itself lacks `Protected`; the mutation guard works (a protected target emits `AddTo::wrsym` and is left unchanged, including when protection is added during update evaluation — gate-verified) (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. Mutation-path-only metadata; no A/B gate. | S |
+| AddTo | WL | gap | safety | The head lacks `Protected`. The `store_held_update` recheck gap (see the block above) is SHARED but not reachable through `AddTo`: its update is `Plus[current, arg]` with `arg` already evaluated, so `AddTo[t, (Protect[t]; 5)]` fails closed with `AddTo::wrsym` (gate-verified) (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. Mutation-path-only metadata; no A/B gate. The store recheck lands once (batch 1a) and covers all forms. | S |
 | SubtractFrom | WL | gap | safety | The head itself lacks `Protected`; the mutation guard is fail-closed (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. | S |
 | TimesBy | WL | gap | safety | The head itself lacks `Protected`; the mutation guard is fail-closed (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. | S |
 | DivideBy | WL | gap | safety | The head itself lacks `Protected`; the mutation guard is fail-closed (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. | S |
@@ -279,7 +302,7 @@ values unchanged (Evidence E4).
 | PreDecrement | WL | gap | safety | The head itself lacks `Protected`; the mutation guard is fail-closed (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. | S |
 | AppendTo | WL | gap | safety | The head itself lacks `Protected`; the mutation guard is fail-closed, including exact `Part` owners and updates that protect mid-evaluation (gate-verified) (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. | S |
 | PrependTo | WL | gap | safety | The head itself lacks `Protected`; the mutation guard is fail-closed (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. | S |
-| ApplyTo | rum | gap | safety | The rum-native head lacks `Protected`; the mutation guard is fail-closed (Evidence E2-E4). | Add `Protected`, preserve `HoldFirst`. No WL-parity expansion needed. | S |
+| ApplyTo | rum | gap | safety | **REAL PROTECTION-BYPASS (gate-reproduced).** The rum-native head lacks `Protected`, AND it is the one compound assignment that reaches the shared `store_held_update` recheck gap: its update is `f[current]` (`definition_updates.rs:102`), so a function that protects the target mid-update still lands the write. `x = 1; f = Function[v, (Protect[x]; v+100)]; ApplyTo[x, f]` → `x = 101` with `Attributes[x] = {Protected}`, no message. | Add `Protected` (S). Separately, recheck the target in `store_held_update` before the write (batch 1a, M) — this is the load-bearing fix; the attribute alone does not close it. | M |
 
 ### Value Tables / Introspection / Removal
 
@@ -399,22 +422,36 @@ Twenty bounded CLI invocations were used, below the ~40 probe budget. Every
 CLI probe fed empty stdin. No external engine or network was used.
 
 > **GATE RECORD (Claude, 2026-07-12).** This appendix ends at **E14**. The
-> submitted draft's findings table cited "Evidence E15" and "Evidence E16" in
-> twelve rows; **neither section was ever written, and the behavior they
-> described is false.** The gate reproduced the opposite: compound assignment,
-> `AppendTo` with a mid-update `Protect`, and association-lvalue `Set` all fail
-> closed with a `wrsym` message and leave the value unchanged. The genuine E4 —
-> titled "All Compound Assignments Fail Closed" — says exactly that, so the
-> draft contradicted its own evidence. Those twelve rows are corrected in place
-> and the triage batch is rescoped.
+> findings table cited "Evidence E15/E16" in twelve rows; those sections were
+> never written into the file — the run was truncated at the end (the report
+> cut off mid-sentence, and the tail of the dispatch log shows an upstream
+> `cybersecurity risk` content filter firing). The most likely reading is that
+> E15/E16 described a protection-bypass and the write was cut off there, leaving
+> the table's forward-references dangling. **The claim they backed is
+> substantially TRUE.**
 >
-> What the gate DID reproduce, and what the fix batches rest on: the 129/612
-> `Protected` count (E1), the unit-8 attribute sweep (E2), the `$ContextPath`
-> setter bypass (E14), `SetAttributes` on a protected symbol (E5), the
-> value-table false round-trip (E7), and the silent literal-wildcard `Clear`
-> (E6). One claim inside E5 — `SetOptions` on a protected symbol — is NOT
-> verified: the gate probe hit an `optnf` unknown-option error before reaching
-> the protection path. Treat it as unconfirmed until the fix re-probes it.
+> My first gate pass wrongly judged it false, using a probe that could not reach
+> the code window. Reading `definition_updates.rs` settles it: `finish_held_update`
+> (`:361-375`) evaluates the update and then `store_held_update` (`:377-418`)
+> writes with no protection recheck. The window is reachable through `ApplyTo`
+> (update = `f[current]`, `:102`): `x = 1; f = Function[v, (Protect[x]; v+100)];
+> ApplyTo[x, f]` → `x = 101` with `Attributes[x] = {Protected}`, no message
+> (reproduced twice). The draft's error was scope — it attributed the hole to all
+> eleven compound assignments, but the other ten evaluate their update as pure
+> arithmetic/list ops (no user code in the window) and fail closed. Corrected
+> finding: the shared `store_held_update` lacks a recheck (root cause), and
+> `ApplyTo` is the reachable trigger today. Rows corrected in place; the fix is
+> triage batch 1a.
+>
+> Independently gate-reproduced and standing: the 129/612 `Protected` count (E1),
+> the unit-8 attribute sweep (E2), the `$ContextPath`/`$Packages`/`$Path` setter
+> bypass (E14), `SetAttributes` on a protected symbol (E5), the value-table false
+> round-trip (E7), and the silent literal-wildcard `Clear` (E6). The
+> association-lvalue `Set` half of the draft's claim is genuinely fail-closed
+> (`a["k"] = (Protect[a]; 99)` → `Set::wrsym`), so that OK row stands. One E5
+> claim — `SetOptions` on a protected symbol — is NOT verified: the gate probe
+> hit an `optnf` unknown-option error before reaching the protection path. Treat
+> it as unconfirmed until the fix re-probes it.
 
 ### E1: Calibrated Protected Parser And Live Cross-Check
 
@@ -710,10 +747,18 @@ The code-visible cause is ordering: all three branches return from
    `SetOptions` path first — it is the one claim the gate could not reproduce);
    retain the explicit `Unprotect` / `ClearAttributes[..., Protected]` escape.
    These are cold mutation paths, not call planning; no A/B gate.
-   **Scope correction (gate):** this batch does NOT include a compound-assignment
-   or association-lvalue "final store recheck" — those paths are already
-   fail-closed and need no change. Do not let that fabricated claim re-enter
-   the fix.
+
+1a. **`store_held_update` protection recheck** (safety, M — REAL BUG, gate-
+   reproduced): before writing in `store_held_update`
+   (`definition_updates.rs:377-418`), recheck `ensure_symbol_not_protected_for_write`
+   on the target (both the `Symbol` and `Part` owner cases). Today `ApplyTo[x, f]`
+   with an `f` that protects `x` mid-update lands the write on a visibly
+   protected symbol with no message. The other ten compound assignments share
+   the code path but cannot trigger it (pure-arithmetic/list update, no user
+   code in the window); the single recheck closes all of them. This touches the
+   held-update store path, not call planning — no microbench A/B, but add an
+   `ApplyTo` regression test. Pair with the `Protected` attribute on the eleven
+   heads (batch 2), which is necessary but NOT sufficient here.
 2. **Whole-registry `Protected` sweep** (safety, L but mechanical): add the
    attribute to the 479 names in the file map, preserve the four deliberate-open
    session values, sync `stdlib_attributes.rs`, regenerate the reference, and
