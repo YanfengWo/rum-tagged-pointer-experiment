@@ -1704,7 +1704,7 @@ Increments a held symbol or exact Part target and returns its previous value.
 
 Returns a first-pass InformationData summary for a symbol or symbol-name string.
 
-- Attributes: `Protected`
+- Attributes: `HoldFirst`, `Protected`
 - Capability: `Pure`
 
 ### Inner

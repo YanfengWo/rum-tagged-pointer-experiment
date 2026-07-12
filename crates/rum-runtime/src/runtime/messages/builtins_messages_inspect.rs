@@ -247,6 +247,7 @@ impl Session {
             information_rule("ObjectType", Expr::string("Symbol")),
             information_rule("Usage", self.usage_message_expr_for_symbol(symbol)),
             information_rule("Documentation", system_expr("None")),
+            information_rule("Messages", self.message_tags_expr_for_symbol(Some(symbol))),
             information_values_rule("OwnValues", symbol, self.own_values_expr_for_symbol(symbol)),
             information_values_rule("UpValues", symbol, self.up_values_expr_for_symbol(symbol)),
             information_values_rule(
@@ -289,6 +290,10 @@ impl Session {
                     .immediate
                     .clone()
                     .or_else(|| definition.delayed.clone())
+            })
+            .or_else(|| {
+                self.builtin_spec_for_symbol(symbol)
+                    .map(|spec| Expr::string(spec.summary))
             })
             .unwrap_or_else(|| Expr::string(symbol.fully_qualified_name()))
     }

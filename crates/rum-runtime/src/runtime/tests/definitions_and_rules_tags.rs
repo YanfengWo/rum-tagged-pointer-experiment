@@ -421,6 +421,123 @@ fn string_targets_flow_through_clear_tag_and_unset_normalization() {
 }
 
 #[test]
+fn clear_name_patterns_expand_before_mutation_and_preserve_exact_targets() {
+    let mut session = Session::new();
+
+    session.eval_text("cl213Exact = 7").unwrap();
+    let exact = session.eval_text("Clear[\"cl213Exact\"]").unwrap();
+    assert!(exact.messages.is_empty());
+    assert_eq!(
+        session.eval_text("cl213Exact").unwrap().value.to_string(),
+        "cl213Exact"
+    );
+
+    session.eval_text("cl213Symbol = 8").unwrap();
+    session.eval_text("Clear[cl213Symbol]").unwrap();
+    assert_eq!(
+        session.eval_text("cl213Symbol").unwrap().value.to_string(),
+        "cl213Symbol"
+    );
+
+    session.eval_text("cl213Protected = 5").unwrap();
+    session.eval_text("cl213Open = 6").unwrap();
+    session.eval_text("Protect[cl213Protected]").unwrap();
+    let cleared = session.eval_text("Clear[\"Global`cl213*\"]").unwrap();
+    assert!(
+        cleared
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Clear" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("cl213Protected")
+            .unwrap()
+            .value
+            .to_string(),
+        "5"
+    );
+    assert_eq!(
+        session.eval_text("cl213Open").unwrap().value.to_string(),
+        "cl213Open"
+    );
+
+    let unmatched = session
+        .eval_text("Clear[\"Global`cl213NoMatch*\"]")
+        .unwrap();
+    assert!(unmatched.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"Global`cl213NoMatch*\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
+fn clearall_and_remove_expand_name_patterns() {
+    let mut session = Session::new();
+
+    session.eval_text("cl213All = 1").unwrap();
+    session.eval_text("cl213All::tag = \"tag\"").unwrap();
+    session
+        .eval_text("SetAttributes[cl213All, HoldFirst]")
+        .unwrap();
+    session.eval_text("ClearAll[\"Global`cl213All*\"]").unwrap();
+    assert_eq!(
+        session.eval_text("cl213All").unwrap().value.to_string(),
+        "cl213All"
+    );
+    assert_eq!(
+        session
+            .eval_text("Messages[cl213All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[cl213All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+
+    session.eval_text("cl213RemoveKeep = 1").unwrap();
+    session.eval_text("cl213RemoveDrop = 2").unwrap();
+    session.eval_text("Protect[cl213RemoveKeep]").unwrap();
+    let removed = session
+        .eval_text("Remove[\"Global`cl213Remove*\"]")
+        .unwrap();
+    assert!(
+        removed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Remove" && message.tag == "rmptc")
+    );
+    assert_eq!(
+        session
+            .eval_text("cl213RemoveKeep")
+            .unwrap()
+            .value
+            .to_string(),
+        "1"
+    );
+    assert_eq!(
+        session
+            .eval_text("cl213RemoveDrop")
+            .unwrap()
+            .value
+            .to_string(),
+        "cl213RemoveDrop"
+    );
+}
+
+#[test]
 fn upset_stores_immediate_upvalues_on_inferred_argument_heads() {
     let mut session = Session::new();
 

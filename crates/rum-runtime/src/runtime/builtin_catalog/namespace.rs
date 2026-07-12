@@ -180,9 +180,10 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         builtin_message_tags,
     ).protected(),
-    BuiltinSpec::ordinary(
+    BuiltinSpec::ordinary_with_hold(
         "Information",
         "Returns a first-pass InformationData summary for a symbol or symbol-name string.",
+        HoldAttribute::HoldFirst,
         Session::eval_information,
     ).protected(),
     BuiltinSpec::ordinary_with_hold(

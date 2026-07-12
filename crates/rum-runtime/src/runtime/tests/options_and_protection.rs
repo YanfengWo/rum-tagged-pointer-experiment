@@ -109,6 +109,71 @@ fn protected_attribute_removal_and_unprotect_remain_escape_hatches() {
 }
 
 #[test]
+fn protect_and_unprotect_expand_name_patterns_without_literal_wildcards() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text("cl213ProtectA = 1; cl213ProtectB = 2")
+        .unwrap();
+
+    let protected = session
+        .eval_text("Protect[\"Global`cl213Protect*\"]")
+        .unwrap();
+    assert!(protected.messages.is_empty());
+    assert_eq!(
+        protected.value.to_string(),
+        "List[\"cl213ProtectA\", \"cl213ProtectB\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("{Attributes[cl213ProtectA], Attributes[cl213ProtectB]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Protected], List[Protected]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"Global`cl213Protect*\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+
+    let unprotected = session
+        .eval_text("Unprotect[\"Global`cl213Protect*\"]")
+        .unwrap();
+    assert!(unprotected.messages.is_empty());
+    assert_eq!(
+        unprotected.value.to_string(),
+        "List[\"cl213ProtectA\", \"cl213ProtectB\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("{Attributes[cl213ProtectA], Attributes[cl213ProtectB]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[], List[]]"
+    );
+
+    let unmatched = session
+        .eval_text("Protect[\"Global`cl213ProtectMissing*\"]")
+        .unwrap();
+    assert!(unmatched.messages.is_empty());
+    assert_eq!(unmatched.value.to_string(), "List[]");
+    assert_eq!(
+        session
+            .eval_text("NameQ[\"Global`cl213ProtectMissing*\"]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
 fn options_assignment_and_queries_cover_current_first_pass_subset() {
     let mut session = session_with_test_control_builtins();
 

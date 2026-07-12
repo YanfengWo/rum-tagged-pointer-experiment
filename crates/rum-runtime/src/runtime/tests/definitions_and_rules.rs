@@ -244,38 +244,33 @@ fn information_returns_first_pass_symbol_summary() {
     );
     assert!(!rendered.contains("Rule[\"Symbol\""));
 
-    session.eval_text("x = f").unwrap();
-    let resolved = session.eval_text("Information[x]").unwrap();
+    session.eval_text("xq = 5").unwrap();
+    let direct = session.eval_text("Information[xq]").unwrap();
     assert!(
-        resolved
+        direct
             .value
             .to_string()
-            .contains("Rule[\"FullName\", \"Global`f\"]")
+            .contains("Rule[\"FullName\", \"Global`xq\"]")
     );
-
-    session.eval_text("f = 1").unwrap();
+    assert!(
+        direct.value.to_string().contains(
+            "Rule[\"OwnValues\", Information`InformationValueForm[OwnValues, xq, List[RuleDelayed[HoldPattern[xq], 5]]]]"
+        )
+    );
+    let by_name = session.eval_text("Information[\"xq\"]").unwrap();
+    assert_eq!(direct.value, by_name.value);
     assert_eq!(
         session
-            .eval_text("Information[f]")
+            .eval_text("Attributes[Information]")
             .unwrap()
             .value
             .to_string(),
-        "Information[1]"
-    );
-    assert!(
-        session
-            .eval_text("Information[\"f\"]")
-            .unwrap()
-            .value
-            .to_string()
-            .contains(
-                "Rule[\"OwnValues\", Information`InformationValueForm[OwnValues, f, List[RuleDelayed[HoldPattern[f], 1]]]]"
-            )
+        "List[HoldFirst, Protected]"
     );
 }
 
 #[test]
-fn information_uses_symbol_name_usage_fallback_and_value_forms() {
+fn information_uses_catalog_and_symbol_name_usage_fallbacks_and_stored_message_tags() {
     let mut session = session_with_test_control_builtins();
 
     session.eval_text("Default[g] = 3").unwrap();
@@ -290,6 +285,24 @@ fn information_uses_symbol_name_usage_fallback_and_value_forms() {
     assert!(
         rendered.contains("Rule[\"DefaultValues\", Information`InformationValueForm[DefaultValues, g, List[RuleDelayed[HoldPattern[Default[g]], 3]]]]")
     );
+
+    session.eval_text("m::tag = \"detail\"").unwrap();
+    let message_info = session
+        .eval_text("Information[m]")
+        .unwrap()
+        .value
+        .to_string();
+    assert!(message_info.contains("Rule[\"Messages\", List[\"tag\"]]"));
+
+    let builtin = session
+        .eval_text("Information[\"Set\"]")
+        .unwrap()
+        .value
+        .to_string();
+    assert!(
+        builtin.contains("Rule[\"Usage\", \"Assigns an immediate value to a symbol or pattern.\"]")
+    );
+    assert!(builtin.contains("Rule[\"Messages\", List[]]"));
 }
 
 #[test]

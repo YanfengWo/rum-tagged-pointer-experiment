@@ -126,12 +126,26 @@ impl Session {
 
         for arg in args {
             let targets = self
-                .normalize_symbol_target_exprs(arg, true)
+                .normalize_clear_target_expr(arg)
                 .ok_or(DefinitionTargetNormalizationError::InvalidClearTarget)?;
             symbols.extend(targets);
         }
 
         Ok(symbols)
+    }
+
+    fn normalize_clear_target_expr(&self, expr: &Expr) -> Option<Vec<Symbol>> {
+        match expr {
+            Expr::Atom(Atom::String(pattern)) if pattern.contains('*') => {
+                self.resolve_names_matching_expr(expr)
+            }
+            Expr::Call { head, args } if is_system_symbol_name(head, "List") => args
+                .iter()
+                .map(|item| self.normalize_clear_target_expr(item))
+                .collect::<Option<Vec<_>>>()
+                .map(|items| items.into_iter().flatten().collect()),
+            _ => self.normalize_symbol_target_exprs(expr, true),
+        }
     }
 
     pub(in crate::runtime) fn normalize_unset_target(
