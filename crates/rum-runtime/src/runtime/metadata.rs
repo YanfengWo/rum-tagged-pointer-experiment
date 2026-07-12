@@ -417,6 +417,12 @@ impl BuiltinSpec {
         }
     }
 
+    pub const fn protected(self) -> Self {
+        let mut spec = self;
+        spec.attributes = spec.attributes.with(Attribute::Protected);
+        spec
+    }
+
     pub const fn with_capability(mut self, capability: Capability) -> Self {
         self.capability = capability;
         self

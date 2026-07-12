@@ -134,6 +134,10 @@ fn protect_blocks_direct_syntax_information_assignment_and_unset() {
 fn unsetting_system_syntax_information_reverts_to_default_rules() {
     let mut session = session_with_test_control_builtins();
 
+    // Options is Protected (whole-registry sweep, brief-210); setting syntax
+    // information on it requires Unprotect first, as in WL. This test uses
+    // Options as the vehicle because it carries a built-in default to revert to.
+    session.eval_text("Unprotect[Options]").unwrap();
     session
         .eval_text("SyntaxInformation[Options] = {\"LocalVariables\" -> {x}}")
         .unwrap();

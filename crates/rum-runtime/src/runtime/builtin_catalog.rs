@@ -120,7 +120,7 @@ mod tests {
         assert_eq!(spec.dispatch, BuiltinDispatch::SpecialForm);
         assert_eq!(
             spec.attributes,
-            AttributeSet::from_hold(HoldAttribute::HoldAll)
+            AttributeSet::from_hold(HoldAttribute::HoldAll).with(Attribute::Protected)
         );
         assert_eq!(default_system_attribute_set(&module), spec.attributes);
     }

@@ -7,4 +7,4 @@ pub(crate) const CALCULUS_BUILTINS: &[BuiltinSpec] = &[BuiltinSpec::ordinary_wit
     "Differentiates exact arithmetic, rational-function, and abstract-function expressions with held differentiation variables.",
     HoldAttribute::HoldRest,
     calculus::eval_d,
-)];
+).protected()];

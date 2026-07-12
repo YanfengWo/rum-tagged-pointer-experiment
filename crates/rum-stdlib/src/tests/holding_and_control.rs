@@ -316,7 +316,7 @@ fn unevaluated_temporarily_preserves_direct_function_arguments() {
             .unwrap()
             .value
             .to_string(),
-        "List[HoldAllComplete]"
+        "List[HoldAllComplete, Protected]"
     );
 }
 

@@ -6,7 +6,8 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         "Creates a pure function.",
         HoldAttribute::HoldAll,
         builtin_hold_literal,
-    ),
+    )
+    .protected(),
     BuiltinSpec::with_attributes(
         "HoldForm",
         "Holds an expression while rendering transparently in output-like forms.",

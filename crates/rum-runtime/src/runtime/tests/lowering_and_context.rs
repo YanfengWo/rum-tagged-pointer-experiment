@@ -134,13 +134,19 @@ fn attributes_reports_builtin_and_user_defined_attribute_sets() {
             .to_string(),
         "List[HoldRest]"
     );
+    // HoldAllComplete and Identity resolve to the real catalog and now carry
+    // Protected (whole-registry sweep, brief-210): HoldAllComplete has no
+    // test-control builtin, and Identity's test-control registration has empty
+    // attributes, so both fall through to the catalog default. If and Plus keep
+    // their harness attributes — their test registrations set non-empty sets
+    // that override the catalog. The sweep does not touch test_builtins.rs.
     assert_eq!(
         session
             .eval_text("Attributes[HoldAllComplete]")
             .unwrap()
             .value
             .to_string(),
-        "List[HoldAllComplete]"
+        "List[HoldAllComplete, Protected]"
     );
     assert_eq!(
         session
@@ -148,7 +154,7 @@ fn attributes_reports_builtin_and_user_defined_attribute_sets() {
             .unwrap()
             .value
             .to_string(),
-        "List[]"
+        "List[Protected]"
     );
     assert_eq!(
         session
