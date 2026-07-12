@@ -363,3 +363,28 @@ fn held_updates_respect_protected_symbols() {
     assert_eq!(blocked.messages[0].tag, "wrsym");
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
 }
+
+#[test]
+fn apply_to_rechecks_protection_at_store_time() {
+    let mut session = core_session();
+
+    session
+        .eval_text("x = 1; f = Function[v, (Protect[x]; v + 100)]")
+        .unwrap();
+    let blocked = session.eval_text("ApplyTo[x, f]").unwrap();
+
+    // message emitted by the store-time guard
+    assert_eq!(blocked.messages[0].symbol, "ApplyTo");
+    assert_eq!(blocked.messages[0].tag, "wrsym");
+    // the write did NOT land: x is still its pre-update value
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+    // and the symbol is (now) protected
+    assert_eq!(
+        session
+            .eval_text("Attributes[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+}

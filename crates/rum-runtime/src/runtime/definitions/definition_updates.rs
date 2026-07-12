@@ -39,7 +39,7 @@ impl Session {
         };
 
         let update = Expr::call(system_expr("Plus"), vec![current, increment.clone()]);
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("AddTo", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_subtract_from(
@@ -57,7 +57,7 @@ impl Session {
             };
 
         let update = Expr::call(system_expr("Subtract"), vec![current, decrement.clone()]);
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("SubtractFrom", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_times_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -71,7 +71,7 @@ impl Session {
         };
 
         let update = Expr::call(system_expr("Times"), vec![current, factor.clone()]);
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("TimesBy", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_divide_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -86,7 +86,7 @@ impl Session {
         };
 
         let update = Expr::call(system_expr("Divide"), vec![current, divisor.clone()]);
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("DivideBy", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_apply_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -100,7 +100,7 @@ impl Session {
         };
 
         let update = Expr::call(function.clone(), vec![current]);
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("ApplyTo", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_append_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -134,7 +134,7 @@ impl Session {
             }
         };
 
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("AppendTo", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_prepend_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -168,7 +168,7 @@ impl Session {
             }
         };
 
-        self.finish_held_update(target, update, HeldUpdateReturn::Updated)
+        self.finish_held_update("PrependTo", target, update, HeldUpdateReturn::Updated)
     }
 
     pub(in crate::runtime) fn eval_increment(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -186,7 +186,12 @@ impl Session {
             vec![current.clone(), Expr::integer(BigInt::from(1))],
         );
 
-        self.finish_held_update(target, update, HeldUpdateReturn::Previous(current))
+        self.finish_held_update(
+            "Increment",
+            target,
+            update,
+            HeldUpdateReturn::Previous(current),
+        )
     }
 
     pub(in crate::runtime) fn eval_decrement(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -239,7 +244,7 @@ impl Session {
             HeldUpdateReturn::Updated
         };
 
-        self.finish_held_update(target, update, return_value)
+        self.finish_held_update(operator, target, update, return_value)
     }
 
     fn current_held_update_value(
@@ -360,6 +365,7 @@ impl Session {
 
     fn finish_held_update(
         &mut self,
+        operator: &'static str,
         target: HeldUpdateTarget,
         update: Expr,
         return_value: HeldUpdateReturn,
@@ -368,18 +374,33 @@ impl Session {
         let updated = self.suspend_with_frame(update_result, {
             let target = target.clone();
             let return_value = return_value.clone();
-            move |session, updated| session.store_held_update(target, updated, return_value)
+            move |session, updated| {
+                session.store_held_update(operator, target, updated, return_value)
+            }
         })?;
 
-        self.store_held_update(target, updated, return_value)
+        self.store_held_update(operator, target, updated, return_value)
     }
 
     fn store_held_update(
         &mut self,
+        operator: &'static str,
         target: HeldUpdateTarget,
         updated: Expr,
         return_value: HeldUpdateReturn,
     ) -> Result<Expr, EvalError> {
+        let owner = match &target {
+            HeldUpdateTarget::Symbol(symbol) | HeldUpdateTarget::Part { symbol, .. } => symbol,
+        };
+        if !self.ensure_symbol_not_protected_for_write(operator, owner) {
+            let current = self
+                .definitions
+                .get(owner)
+                .and_then(|definition| definition.own_value.clone())
+                .unwrap_or_else(|| Expr::Atom(Atom::Symbol(owner.clone())));
+            return Ok(current);
+        }
+
         match target {
             HeldUpdateTarget::Symbol(symbol) => {
                 let definition = self.definitions.entry(symbol).or_default();
