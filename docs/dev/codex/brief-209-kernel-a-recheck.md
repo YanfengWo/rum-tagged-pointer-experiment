@@ -1,139 +1,171 @@
-# Brief 209 — Re-verification of the unit-8 audit's disputed safety claims
+# Brief 209 — Re-run the write guard in the held-update store step (unit-8 fix batch 1a)
 
-Re-check brief. Your brief-208 audit (`docs/dev/usability-pass/kernel-a-findings.md`)
-is otherwise strong work — the count reconciliation, the whole-registry
-`Protected` coverage table, the per-file fix map, and the hard-coded-hold
-trace all reproduced exactly at the gate. Two of its safety claims did NOT
-reproduce, and the evidence sections they cite are absent from the document.
-Your run may have been cut short (the report was truncated at the very end),
-so this is a genuine re-check, not a reprimand: it is entirely possible that
-you found something real and never got to write it down.
+Implementation brief (repurposed — see the note at the end). A single
+localized correctness fix in the compound-assignment store path, plus one
+regression test. Read `AGENTS.md` (Testing Policy) and
+`docs/dev/usability-pass/kernel-a-findings.md` (the compound-assignment
+section and its GATE block, and Evidence E4) before starting.
 
-**Both outcomes are a passing deliverable.** "NOT REPRODUCED — the claim was
-wrong" is exactly as good as "REPRODUCED — here is the trigger." What is NOT
-acceptable is a third option: manufacturing a contrived scenario to make the
-original claim look right. Do not do that. Follow the evidence.
+## Goal
 
-## The facts (verbatim, no interpretation)
+The held-update path guards the target once, at the CHECK step, then
+evaluates the update, then stores — and the store step writes without
+re-running the guard. For `ApplyTo`, whose update is `function[current]`
+and therefore runs user code, that user code can change the target's
+`Protected` state during the update, and the store step then writes anyway.
 
-**Fact 1 — two evidence sections are missing.** The findings table cites
-`Evidence E15` and `Evidence E16` in twelve rows (the eleven compound
-assignments and one `Set` row). The Evidence Appendix in the document you
-produced ends at **E14**. E15 and E16 do not exist in the file.
+Make the store step re-run the same guard the check step already uses, so a
+target that is protected at store time is not written. When you are done:
+the eleven compound-assignment heads all pass their guard at the moment of
+the write, `ApplyTo` with an update that protects its target during
+evaluation fails closed with the standard `wrsym` message and leaves the
+target unchanged, and every existing test stays green.
 
-**Fact 2 — what those rows claim.** That the compound-assignment shared final
-store has a check-to-store window: the guard runs on the initial target, the
-derived update is evaluated afterwards, and `store_held_update`
-(`crates/rum-runtime/src/runtime/definitions/definition_updates.rs:352-412`)
-then writes without rechecking — so an upvalue that adds protection *during
-update evaluation* would leave the target visibly `Protected` while the write
-still lands. The `Set` row makes the parallel claim for the association-lvalue
-path (`crates/rum-runtime/src/runtime/kernel_data/association_data.rs:366-484`):
-selectors evaluate after an initial guard, and the final store does not
-recheck.
+## The exact mechanism (already diagnosed — no re-investigation needed)
 
-**Fact 3 — the gate could not reproduce any of it.** Three probes, run on the
-current tree, verbatim:
+- CHECK step: `current_symbol_held_update_value` / `current_part_held_update_value`
+  call `self.ensure_symbol_not_protected_for_write(operator, &target)`
+  (`crates/rum-runtime/src/runtime/definitions/definition_updates.rs:269`,
+  `:298`). This returns `false` and emits the message if the target is
+  protected. Good — but this runs BEFORE the update is evaluated.
+- STORE step: `finish_held_update` (`:361-375`) evaluates the update
+  (`self.evaluate(update)`), then calls `store_held_update` (`:377-418`),
+  which writes `definition.own_value` with NO guard call.
+- Only `ApplyTo` builds an update that runs user code:
+  `update = Expr::call(function.clone(), vec![current])` (`:102`). The other
+  ten build `Plus[current, arg]` / `Subtract[...]` / an `Append`-shaped call
+  etc. (`:41`, `:59`, `:73`, `:88`, `:117`, `:159`, …) whose arguments are
+  already evaluated, so their update evaluation runs no user code and cannot
+  change protection state. The fix is shared regardless; `ApplyTo` is the
+  reachable case and the one the test must cover.
 
+`ensure_symbol_not_protected_for_write(operator: &str, symbol: &Symbol) -> bool`
+(`crates/rum-runtime/src/runtime/attributes.rs:210`) is the guard: it pushes
+the `wrsym` message and returns `false` when protected. Reuse it verbatim —
+do not write a second protection check.
+
+## The change
+
+1. Thread the operator name into the store path. Add an
+   `operator: &'static str` parameter to `finish_held_update` and
+   `store_held_update`. All nine `finish_held_update` call sites (`:42`,
+   `:60`, `:74`, `:89`, `:103`, `:137`, `:171`, `:189`, `:242`) already have
+   the operator string literal in hand (they pass it to
+   `current_held_update_value` on the line just above) — pass the same
+   literal. Update the `suspend_with_frame` closure at `:371` (which also
+   calls `store_held_update`) to capture and forward it.
+2. At the TOP of `store_held_update`, before any `definitions` mutation,
+   pull the owner symbol from the target — `HeldUpdateTarget::Symbol(sym)`
+   and `HeldUpdateTarget::Part { symbol, .. }` both carry one — and call
+   `self.ensure_symbol_not_protected_for_write(operator, &owner)`. If it
+   returns `false`, DO NOT write: return a fail-closed value and skip the
+   store entirely. The message is already emitted by the guard.
+3. Fail-closed return shape: match the existing CHECK-stage behavior as
+   closely as the available data allows. The CHECK stage returns the inert
+   held call (`Expr::call(system_expr(operator), args.to_vec())`); at store
+   time you no longer hold the original `args`, so returning the inert head
+   call is not reconstructable identically. Return the pre-update value
+   instead: read the owner's current `own_value` and return it (the target
+   is unchanged, and the caller sees the un-mutated value). Do NOT return
+   `updated` — that would surface a value that was never stored. Whatever you
+   choose, it MUST NOT look like a silent success and MUST NOT store; the
+   test pins the observable contract (message + unchanged target).
+
+Keep the diff minimal: the parameter threading plus the guard call plus the
+early return. No refactor of the surrounding held-update machinery, no
+behavior change to the ten arithmetic/list forms (their update cannot
+trigger the guard, so they are byte-identical), no new `unsafe`, no change
+to any public type.
+
+## Regression test
+
+Add to `crates/rum-stdlib/src/tests/incidental_definitions_updates.rs`,
+right after the existing `held_updates_respect_protected_symbols` (line
+354). Model it on that test. Assert all three observations:
+
+```rust
+#[test]
+fn apply_to_rechecks_protection_at_store_time() {
+    let mut session = core_session();
+
+    session
+        .eval_text("x = 1; f = Function[v, (Protect[x]; v + 100)]")
+        .unwrap();
+    let blocked = session.eval_text("ApplyTo[x, f]").unwrap();
+
+    // message emitted by the store-time guard
+    assert_eq!(blocked.messages[0].symbol, "ApplyTo");
+    assert_eq!(blocked.messages[0].tag, "wrsym");
+    // the write did NOT land: x is still its pre-update value
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+    // and the symbol is (now) protected
+    assert_eq!(
+        session.eval_text("Attributes[x]").unwrap().value.to_string(),
+        "{Protected}"
+    );
+}
 ```
-$ printf '' | cargo run -q -p rum-cli -- --eval 'ClearAll[t, g]; t = 1; g[x_] := (Protect[t]; 98); AddTo[t, g[0]]; Print[{t, Attributes[t]}]'
-{1, {Protected}}
-! AddTo::wrsym: Symbol t is Protected.
-! AddTo::wrsym: Symbol t is Protected.
 
-$ printf '' | cargo run -q -p rum-cli -- --eval 'ClearAll[L, f2]; L = {1}; f2[] := (Protect[L]; 7); AppendTo[L, f2[]]; Print[{L, Attributes[L]}]'
-{{1}, {Protected}}
-! AppendTo::wrsym: Symbol L is Protected.
-! AppendTo::wrsym: Symbol L is Protected.
-
-$ printf '' | cargo run -q -p rum-cli -- --eval 'ClearAll[a, k]; a = <|"x" -> 1|>; Protect[a]; a["x"] = 99; Print[{a, Attributes[a]}]'
-{<|"x" -> 1|>, {Protected}}
-! Set::wrsym: Symbol a is Protected.
-```
-
-In each case the write was refused and the value is unchanged.
-
-**Fact 4 — your own E4 says the same thing.** The genuine evidence section E4,
-which you did write, is titled "All Compound Assignments Fail Closed" and its
-transcript shows all eleven forms refusing a protected target.
-
-Note that the gate's `AddTo`/`AppendTo` probes protect the target from a
-DOWNVALUE evaluated as part of the update, not from an upvalue on the target
-symbol. If the ordering hole is real but only reachable through a different
-mechanism, that mechanism is precisely what this brief is asking you to
-produce.
-
-## Your task
-
-1. **Settle the compound-assignment claim.** Read the actual path —
-   target normalization / guard (`definition_updates.rs:244-304`), update
-   evaluation, and the final store (`:352-412`). Determine whether a
-   check-to-store window exists at all. If it does, construct a probe that
-   TRIGGERS it and paste the verbatim transcript: the exact `--eval` line, the
-   output, and the value/attributes afterwards showing a write that landed on a
-   visibly protected symbol. If it does not, say NOT REPRODUCED and explain
-   what the code actually does (where the recheck happens, or why the window is
-   not reachable).
-2. **Settle the association-lvalue claim** the same way
-   (`association_data.rs:366-484`, the `Set` path in
-   `definitions/definitions.rs`).
-3. **Settle `SetOptions` on a protected symbol.** Your E5 grouped it with
-   `SetAttributes` as a leak. `SetAttributes` REPRODUCED at the gate
-   (`Protect[s]` then `SetAttributes[s, Listable]` succeeds → `{Listable,
-   Protected}`, no message — this one is real and is already queued for the
-   fix). The `SetOptions` half did NOT get verified: the gate probe used an
-   unregistered option name and was deflected by `SetOptions::optnf` before
-   reaching any protection check. Use a head that HAS registered options, and
-   determine whether `SetOptions` on a protected symbol is refused or lands.
-4. **Audit your own safety rows.** Every row in the findings table with
-   `verdict = gap` and `axis = safety` must be backed by either a verbatim
-   probe transcript in the appendix or a `file:line` citation that actually
-   supports it. List any row that is not — including rows whose cited evidence
-   section exists but does not in fact show the claimed behavior. Report the
-   list even if it is empty.
-
-## Deliverable
-
-`docs/dev/usability-pass/kernel-a-recheck.md`, structured as:
-
-- **Verdict table**: one row per disputed claim — `Claim | REPRODUCED /
-  NOT REPRODUCED / PARTIAL | Evidence (probe or file:line) | What the code
-  actually does`.
-- **Transcripts**: verbatim, for every verdict. A REPRODUCED verdict needs a
-  copy-pasteable `--eval` line that a reader can run to see the hole. A NOT
-  REPRODUCED verdict needs the probe that shows fail-closed plus the code
-  citation for where the check happens.
-- **Unsupported-rows list** (task 4).
-- **Post-mortem, one short paragraph**: if the original claims do not hold, say
-  what you can reconstruct about how they got written. If you cannot
-  reconstruct it, write "cannot reconstruct" — do not invent a story.
+Before your fix this test FAILS (x becomes 101, no message). Run it once
+before the fix to confirm it captures the bug, then after to confirm green
+— paste both. Keep the existing `held_updates_respect_protected_symbols`
+passing (the already-protected `AddTo[x, 2]` path is unchanged).
 
 ## Scope
 
-- MAY create: `docs/dev/usability-pass/kernel-a-recheck.md` — the ONLY file in
-  the diff.
-- MUST NOT touch: any crate code, tests, `docs/dev/usability-pass/kernel-a-findings.md`
-  (the gate already annotated it in place; leave it alone), the tracker,
-  `TODO.md`, or anything else. This is a read-and-probe brief.
+- Files you MAY modify:
+  - `crates/rum-runtime/src/runtime/definitions/definition_updates.rs` (the
+    parameter threading + the store-step guard + early return).
+  - `crates/rum-stdlib/src/tests/incidental_definitions_updates.rs` (the one
+    new test).
+- MUST NOT touch: `attributes.rs` (reuse the existing guard as-is), any
+  other crate file, `docs/**`, `TODO.md`, the tracker, the findings file,
+  `Cargo.*`, git.
+
+## Verification (MANDATORY — run all, paste verbatim)
+
+```
+# the new test fails BEFORE the fix (run once to prove it catches the bug):
+cargo test -p rum-stdlib apply_to_rechecks_protection_at_store_time
+# ... apply the fix ...
+cargo test -p rum-stdlib apply_to_rechecks_protection_at_store_time   # now green
+cargo test -p rum-stdlib incidental_definitions_updates               # the whole file green
+cargo fmt --check
+cargo test --workspace                                                # full tree green
+```
+
+Paste the pass/fail line for the new test both before and after, the file
+suite total, and the workspace total.
 
 ## Hard rules
 
-- No code changes, no `git commit`, no branch, no push, no network.
-- **Never cite an evidence section that does not exist.** Every citation must
-  resolve to a section you actually wrote in this document, or to a real
-  `file:line`. This is the specific failure being re-checked; do not repeat it.
-- **NOT REPRODUCED is a passing result.** Do not manufacture an artificial
-  scenario to rescue the original claim. If the hole needs a contortion no
-  script would ever write, say so explicitly and call it out as such rather
-  than presenting it as a finding.
-- Probe budget: ~15 evals. Feed stdin (`printf '' | …`). Keep the report short
-  and evidence-first — verdicts and transcripts, not prose.
-- Stop-loss: if a probe misbehaves twice the same way, STOP and report it.
+- No `git commit`, branch, push, or git config. Leave changes in the working
+  tree for the gate.
+- No new `unsafe`; `rum-core`/`rum-runtime` stay zero-`unsafe`.
+- This is NOT a hot path (the held-update store runs once per compound
+  assignment, not per eval step), so no microbench A/B is required — but do
+  not add per-call cost to the ten forms that already fail closed; the guard
+  call is one `symbol_is_protected` lookup at store time, which is
+  acceptable and paid only on the mutation path.
+- Minimal diff; no drive-by reformatting or renaming.
+- Reuse `ensure_symbol_not_protected_for_write` — do not hand-roll a second
+  protection check or a second message.
+- Paste real verbatim output. If the workspace suite is not green, say so;
+  do not claim a total you did not see.
 
-## Report format (your final message — keep it SHORT)
+## Report format (final message)
 
-1. The verdict table (4 rows: compound assignment, association lvalue,
-   SetOptions, unsupported-rows count).
-2. For each REPRODUCED verdict: the trigger probe, verbatim.
-3. The unsupported-rows list.
-4. Stop-loss / open questions.
+1. What changed — per file, line ranges, one-line why.
+2. Verification — the before/after lines for the new test, the file suite
+   total, the workspace total, `fmt` clean, all verbatim.
+3. Confirmation that the ten arithmetic/list forms are behaviorally
+   unchanged (their update evaluates no user code).
+4. Stop-loss / open questions (empty if none).
+
+## Repurpose note
+
+This file previously held a re-verification brief (have Codex re-check the
+disputed claim). That step is superseded: the claim was settled directly —
+the `ApplyTo` bypass is real and reproduced, the other ten forms fail
+closed, and the root cause is the missing store-step guard fixed here. The
+findings file records the full reversal. Straight to the fix.

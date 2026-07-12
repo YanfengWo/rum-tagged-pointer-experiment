@@ -169,18 +169,33 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   weighted RandomChoice, exact rationals; `WhitespaceCharacters` +
   RandomPassword option discovery). Units 1-7 = 446 builtins swept, all
   fixes compat; reference 612. Deferrals in the tracker.
-- [ ] **UNIT 8 (kernel A, 55) — brief-208 DISPATCHED (2026-07-12).** First
-  kernel unit. Kernel list derived: reference 612 − stdlib catalog 453 =
-  159 kernel builtins; unit 8 = 55, leaving 104 for units 9-10.
-  **Headline pre-finding**: the `Protected` enforcement surface is only
-  129/612 — `Plus[a_,b_] := 42` succeeds and `1+2` then returns `42`; all
-  55 unit-8 names lack `Protected`, the protection machinery (`Set`,
-  `Protect`, `Unprotect`) included. Enforcement point itself works
-  (`RandomInteger` correctly rejects). Per user ruling 2026-07-12, 208
-  carries a whole-registry `Protected` coverage section and the
-  cross-cutting fix batch is triaged out of its data. Boundary kept
-  honest: `Protected` is a mistake-guard + WL conformance, NOT a sandbox
-  boundary (real plugin isolation = the host-embedding line).
+- [ ] **UNIT 8 (kernel A, 55) — AUDIT LANDED (brief-208, c640d8c; 2026-07-12).**
+  First kernel unit. Kernel list derived: reference 612 − stdlib catalog 453 =
+  159 kernel builtins; unit 8 = 55, leaving 104 for units 9-10. Findings:
+  `docs/dev/usability-pass/kernel-a-findings.md`.
+  **Headline**: the `Protected` enforcement surface is only 129/612 —
+  `Plus[a_,b_] := 42` succeeds and `1+2` then returns `42`; all 55 unit-8
+  names lack `Protected`, the protection machinery (`Set`, `Protect`,
+  `Unprotect`) included. Enforcement point itself works (`RandomInteger`
+  rejects). 208 carries a whole-registry `Protected` coverage section + the
+  per-file fix map. Boundary kept honest: `Protected` is a mistake-guard + WL
+  conformance, NOT a sandbox boundary (real plugin isolation = the host line).
+  - **REAL BUG found (gate reversal, bdb125f):** `ApplyTo[x, f]` where `f`
+    protects `x` mid-update lands the write on a visibly `Protected` symbol
+    with no message (`x = 101`). Root cause: `store_held_update` writes without
+    re-running the protection guard that the check step already uses; `ApplyTo`
+    is the one compound assignment whose update (`f[current]`) runs user code
+    in the store window. NOTE: my first gate pass wrongly ruled this "false"
+    from a too-weak probe — see CLAUDE.md diagnosis lesson.
+  - [ ] **brief-209 = fix batch 1a (DISPATCHED 2026-07-12):** re-run
+    `ensure_symbol_not_protected_for_write` at the top of `store_held_update`
+    + `ApplyTo` regression test. Not a hot path; no A/B.
+  - [ ] Remaining unit-8 fix batches (triage in the findings file): the
+    whole-registry `Protected` sweep (479 names, mechanical, no A/B); the
+    enforcement holes (`$ContextPath`/`$Packages`/`$Path` setters bypass
+    `Protect`; `SetAttributes` on a protected symbol; verify `SetOptions`);
+    value-table round-trip (touches `Set` hot path → A/B); `Clear`/`Remove`
+    name-pattern forms; `Information`/message discoverability.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
