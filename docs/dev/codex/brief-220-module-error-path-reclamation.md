@@ -56,10 +56,19 @@ Contract after the fix:
   eager reclamation happens on EITHER arm — conservative, exactly as
   today. A `Throw` after `g[y_] := x + y` therefore still defers to the
   GC; assert that in a test and mark it intended.
-- **Nested Modules**: an inner `Throw` propagating through two activations
-  reclaims each level's unreferenced locals as the frames unwind. Test
-  `Catch[Module[{a = 1}, Module[{b = 2}, Throw[fail]]]]` → both `a$n` and
-  `b$n` gone.
+- **Nested Modules — REVISED (rev2, after the first run's stop-loss):
+  mirror the Ok arm's existing conservatism exactly.** The inner local is
+  reclaimed eagerly; the OUTER local stays deferred to GC, because the
+  inner Module's own gensym write moves the side-table stamp and marks the
+  outer activation escaped — and that is ALREADY the Ok arm's behavior
+  today (director-verified on HEAD: `Module[{aa = 1}, Module[{bb = 2},
+  42]]` leaves `aa$1` enumerable while `bb$*` is empty). Test BOTH arms
+  pinning this symmetry: `Catch[Module[{a = 1}, Module[{b = 2},
+  Throw[fail]]]]` → `b$n` gone, `a$n` deferred (intended); the Ok-arm
+  nested twin asserts the same shape. Do NOT change activation
+  bookkeeping to make descendant gensym writes not mark ancestors —
+  that is a PARKED improvement candidate (it would benefit both arms;
+  record it in your report as parked, do not implement).
 - Ok-path behavior, the renaming scheme, activation bookkeeping,
   `gensym_gc` threshold and sweep logic: **byte-identical**. This brief
   adds reclamation to the Err arm and nothing else.
@@ -86,10 +95,12 @@ cargo test --workspace          # full gate
 # 1. the defect probe above (after: Names -> {}, symbol undefined, no message)
 # 2. Abort variant via CheckAbort
 # 3. payload escape: Catch[Module[{x=1},Throw[Hold[x]]]] then ReleaseHold -> 1
-# 4. nested-module double reclaim
+# 4. nested-module SYMMETRY (rev2): on BOTH arms inner local reclaimed,
+#    outer local deferred (escaped guard) — Err mirrors Ok exactly
 # 5. escaped-guard conservatism (definition created in body -> deferred to GC)
 # 6. Ok-path regression: Module[{x}, x] -> x$n; Module[{x=2}, x+1] -> 3;
-#    a closure escaping via the RESULT retains its local (existing tests)
+#    flat Module locals reclaimed; a closure escaping via the RESULT
+#    retains its local (existing tests)
 ```
 
 Also run the microbench A/B (`scripts/core-language-microbench.sh`,
