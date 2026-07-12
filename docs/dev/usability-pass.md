@@ -125,8 +125,41 @@ CORRECTED a stale brief premise (`SequenceHold` exists — see the pre-audit
 section above). Semantics, not protection, is the battleground: all 47
 were already `Protected`.
 
-**TWO DECISION ITEMS — USER RULING PENDING (both excluded from all fix
-batches below):**
+**USER RULINGS (2026-07-13) on the two decision items:** (1) Module
+error-path gensym leak → **eager reclamation** (= WL semantics; the Err
+arm reuses the Ok arm's retained/reclaim computation with
+`gensym_gc_extra_roots_for_outcome` as roots; escaped guard unchanged) =
+**brief-220**. (2) staged `With[{…},{…},body]` → **build it**, as its own
+batch immediately after the Module fix = **brief-221**. Dispatch order:
+215 → 220 → 221 → 216 → 217 → 218 → 219.
+
+### Unit-9 fixes landed
+
+- **batch 1 — brief-215 (02ce0a8):** evaluator hold correctness.
+  (a) `Unevaluated` restored on the true no-consumer path — sparse
+  `(position, wrapper)` provenance recorded ONLY when a wrapper is
+  stripped (`Option<Box<UnevaluatedRestorePlan>>`, pointer-sized per
+  dispatch frame), applied only in terminal no-match reconstruction;
+  kills `f[Unevaluated[1+1]]` → `f[2]` AND the worse false-match
+  (`q[x_Integer]:=hit[x]` no longer fires). Fixed point asserted.
+  (b) ordinary `HoldAll` now allows raw `Sequence` splicing
+  (`Hold[Sequence[a,b]]` → `Hold[a,b]`); blocking = `sequence_hold()`
+  exactly; stability wakes held literals containing a direct Sequence.
+  (c) `ReleaseHold` gains `HoldForm` + releases exactly ONE outer layer;
+  deep positions unchanged (reported boundary: `ReleaseHold[g[Hold[…]]]`
+  inert as before — triage later if wanted). Pinned-not-WL edge
+  documented in test: `Unevaluated[Sequence[…]]` provenance dropped after
+  splicing. Gate: workspace 1422/0 reproduced; 16-position probe list
+  reproduced verbatim; candidate binary byte-identical to tree; A/B
+  reproduced independently (affected no-match labels -0.4..-3.4%, hit
+  labels +1.6..+3.1%, controls ±5..7.6% = noise floor above delta).
+  NOTE: Codex's FIRST provenance carrier fattened the dispatch frame and
+  blew the near-stack-limit recursion stress test — it correctly fixed
+  the FRAME COST (pointer-sized carrier), not the guard; verified no
+  guard/stress files in the diff. Pre-existing debt spotted: dead
+  `source_template` field warning in `vm_rhs_template/model.rs` (VM
+  line, untouched); old `PrepareArguments` arm in `eval_dispatch/mod.rs`
+  is now dead code (harmless hygiene item).
 
 - **Module error-path gensym leak (trust boundary).** After
   `Catch[Module[{auditLocal = 1}, Throw[fail]]]`, the fresh local remains
