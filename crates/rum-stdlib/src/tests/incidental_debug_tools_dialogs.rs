@@ -39,6 +39,7 @@ fn dialog_without_body_uses_a_current_single_input_line_subset() {
 #[test]
 fn dialog_uses_current_default_options_from_setoptions() {
     let mut session = core_session();
+    session.eval_text("Unprotect[Dialog]").unwrap();
     session
         .eval_text("SetOptions[Dialog, DialogProlog :> Print[\"hi\"]]")
         .unwrap();

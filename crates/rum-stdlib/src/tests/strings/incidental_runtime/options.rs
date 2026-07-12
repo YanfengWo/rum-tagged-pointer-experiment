@@ -5,6 +5,9 @@ use super::super::*;
 #[test]
 fn delayed_system_default_options_feed_current_builtin_consumers() {
     let mut session = core_session();
+    session
+        .eval_text("Unprotect[StringContainsQ, Depth]")
+        .unwrap();
 
     assert_eq!(
         session
@@ -46,6 +49,9 @@ fn delayed_system_default_options_feed_current_builtin_consumers() {
 #[test]
 fn setoptions_updates_current_system_default_subset_behavior() {
     let mut session = core_session();
+    session
+        .eval_text("Unprotect[StringContainsQ, StringCount]")
+        .unwrap();
 
     assert_eq!(
         session

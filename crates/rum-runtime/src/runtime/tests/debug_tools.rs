@@ -41,6 +41,7 @@ fn trace_returns_a_first_pass_structured_expression_list_without_leaking_session
         "List[Hold[f], List[Hold[Plus]]]"
     );
 
+    session.eval_text("Unprotect[Trace]").unwrap();
     session
         .eval_text("SetOptions[Trace, Heads -> True]")
         .unwrap();
@@ -117,6 +118,7 @@ fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
     assert_eq!(with_heads.value.to_string(), "2");
     assert_eq!(with_heads.prints, vec!["f", "  Plus"]);
 
+    session.eval_text("Unprotect[TracePrint]").unwrap();
     session
         .eval_text("SetOptions[TracePrint, Heads -> True]")
         .unwrap();

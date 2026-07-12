@@ -199,7 +199,9 @@ fn protect_and_unprotect_round_trip_and_leave_attribute_updates_available() {
         "List[Protected]"
     );
 
+    session.eval_text("Unprotect[f]").unwrap();
     session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    session.eval_text("Protect[f]").unwrap();
     assert_eq!(
         session
             .eval_text("Attributes[f]")

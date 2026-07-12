@@ -148,6 +148,7 @@ fn names_accepts_current_options_subset() {
         "List[\"CasePkg`Alpha\"]"
     );
 
+    session.eval_text("Unprotect[Names]").unwrap();
     session
         .eval_text("SetOptions[Names, IgnoreCase -> True]")
         .unwrap();

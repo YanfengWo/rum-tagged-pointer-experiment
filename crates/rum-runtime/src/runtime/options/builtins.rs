@@ -189,6 +189,10 @@ impl Session {
         original_args: &[Expr],
         updates: &[SymbolOptionEntry],
     ) -> Expr {
+        if !self.ensure_symbol_not_protected_for_write("SetOptions", target) {
+            return self.invalid_call("SetOptions", original_args);
+        }
+
         let mut current = self.options_for_symbol(target);
 
         for update in updates {

@@ -74,6 +74,7 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
         .expect("resuming masked Input should parse and evaluate the supplied expression");
     assert_eq!(response.value.to_string(), "5");
 
+    session.eval_text("Unprotect[Input, InputString]").unwrap();
     session
         .eval_text("SetOptions[Input, FieldMasked -> True]")
         .unwrap();

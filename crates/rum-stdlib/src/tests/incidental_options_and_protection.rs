@@ -10,6 +10,9 @@ fn core_session() -> Session {
 #[test]
 fn setoptions_updates_system_heads_defaults_for_cases_position_and_depth() {
     let mut session = core_session();
+    session
+        .eval_text("Unprotect[Cases, Position, Depth]")
+        .unwrap();
 
     assert_eq!(
         session

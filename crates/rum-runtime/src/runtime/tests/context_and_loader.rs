@@ -52,6 +52,66 @@ fn context_path_and_packages_assignments_update_session_fields() {
 }
 
 #[test]
+fn explicitly_protected_session_configuration_variables_reject_assignments() {
+    let mut session = session_with_test_control_builtins();
+
+    let context_path = session.eval_text("$ContextPath").unwrap().value.to_string();
+    let packages = session.eval_text("$Packages").unwrap().value.to_string();
+    let path = session.eval_text("$Path").unwrap().value.to_string();
+
+    session
+        .eval_text("Protect[$ContextPath, $Packages, $Path]")
+        .unwrap();
+
+    for (source, target, expected) in [
+        (
+            "$ContextPath = {\"System`\", \"Leak`\"}",
+            "$ContextPath",
+            context_path,
+        ),
+        ("$Packages = {\"Leak`\"}", "$Packages", packages),
+        ("$Path = {\"/tmp/rum-protected-path\"}", "$Path", path),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Set" && message.tag == "wrsym"),
+            "{source}: {:?}",
+            outcome.messages
+        );
+        assert_eq!(
+            session.eval_text(target).unwrap().value.to_string(),
+            expected,
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn path_assignment_remains_writable_without_explicit_protect() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Attributes[$Path]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+    let outcome = session
+        .eval_text("$Path = {\"/tmp/rum-a\", \"/tmp/rum-a\", \"/tmp/rum-b\"}")
+        .unwrap();
+    assert!(outcome.messages.is_empty());
+    assert_eq!(
+        session.eval_text("$Path").unwrap().value.to_string(),
+        "List[\"/tmp/rum-a\", \"/tmp/rum-b\"]"
+    );
+}
+
+#[test]
 fn bare_symbols_search_context_path_before_current_context() {
     let mut session = session_with_test_control_builtins();
 

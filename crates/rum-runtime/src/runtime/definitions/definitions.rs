@@ -204,6 +204,10 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         if !delayed {
             if is_context_path_symbol_expr(&lhs) {
+                let sym = Symbol::system("$ContextPath");
+                if !self.ensure_symbol_not_protected_for_write(symbol, &sym) {
+                    return Ok(rhs);
+                }
                 let Some(contexts) = expr_as_string_list(&rhs) else {
                     return Ok(self.invalid_call_with_arg_form(
                         symbol,
@@ -217,6 +221,10 @@ impl Session {
             }
 
             if is_packages_symbol_expr(&lhs) {
+                let sym = Symbol::system("$Packages");
+                if !self.ensure_symbol_not_protected_for_write(symbol, &sym) {
+                    return Ok(rhs);
+                }
                 let Some(packages) = expr_as_string_list(&rhs) else {
                     return Ok(self.invalid_call_with_arg_form(
                         symbol,
@@ -230,6 +238,10 @@ impl Session {
             }
 
             if is_path_symbol_expr(&lhs) {
+                let sym = Symbol::system("$Path");
+                if !self.ensure_symbol_not_protected_for_write(symbol, &sym) {
+                    return Ok(rhs);
+                }
                 let Some(paths) = expr_as_string_list(&rhs) else {
                     return Ok(self.invalid_call_with_arg_form(
                         symbol,

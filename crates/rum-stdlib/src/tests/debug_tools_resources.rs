@@ -110,6 +110,7 @@ fn monitor_runs_current_display_and_callback_subset() {
     assert_eq!(changing.value.to_string(), "1");
     assert_eq!(changing.prints, vec!["0", "1"]);
 
+    session.eval_text("Unprotect[Monitor]").unwrap();
     session
         .eval_text("SetOptions[Monitor, StepMonitor :> Sow[stepDefault]]")
         .unwrap();

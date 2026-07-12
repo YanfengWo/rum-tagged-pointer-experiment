@@ -1,6 +1,114 @@
 use super::*;
 
 #[test]
+fn protected_targets_reject_attribute_updates_and_preserve_attributes() {
+    let mut session = session_with_test_control_builtins();
+
+    session.eval_text("SetAttributes[s, HoldFirst]").unwrap();
+    session.eval_text("Protect[s]").unwrap();
+
+    let inserted = session.eval_text("SetAttributes[s, Listable]").unwrap();
+    assert!(
+        inserted
+            .messages
+            .iter()
+            .any(|message| message.symbol == "SetAttributes" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[s]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst, Protected]"
+    );
+
+    let removed = session.eval_text("ClearAttributes[s, HoldFirst]").unwrap();
+    assert!(
+        removed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "ClearAttributes" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[s]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst, Protected]"
+    );
+}
+
+#[test]
+fn protected_attribute_removal_and_unprotect_remain_escape_hatches() {
+    let mut session = session_with_test_control_builtins();
+
+    session.eval_text("SetAttributes[s, HoldFirst]").unwrap();
+    session.eval_text("Protect[s]").unwrap();
+
+    let cleared = session.eval_text("ClearAttributes[s, Protected]").unwrap();
+    assert!(cleared.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("Attributes[s]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst]"
+    );
+
+    let updated = session.eval_text("SetAttributes[s, Listable]").unwrap();
+    assert!(updated.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("Attributes[s]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst, Listable]"
+    );
+
+    session.eval_text("Protect[s]").unwrap();
+    let unprotected = session.eval_text("Unprotect[s]").unwrap();
+    assert!(unprotected.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("Attributes[s]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldFirst, Listable]"
+    );
+
+    let user_update = session.eval_text("SetAttributes[u, HoldRest]").unwrap();
+    assert!(user_update.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("Attributes[u]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldRest]"
+    );
+
+    session.eval_text("SetAttributes[t, HoldFirst]").unwrap();
+    session.eval_text("Protect[t]").unwrap();
+    let cleared_many = session
+        .eval_text("ClearAttributes[t, {Protected, HoldFirst}]")
+        .unwrap();
+    assert!(cleared_many.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("Attributes[t]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
 fn options_assignment_and_queries_cover_current_first_pass_subset() {
     let mut session = session_with_test_control_builtins();
 
@@ -116,7 +224,7 @@ fn options_assignment_unset_and_clearall_interact_with_symbol_state() {
 }
 
 #[test]
-fn protect_blocks_direct_options_assignment_but_not_setoptions_updates() {
+fn protect_blocks_direct_options_assignment_and_unset_until_unprotected() {
     let mut session = session_with_test_control_builtins();
 
     session.eval_text("Options[f] = {a -> 0}").unwrap();
@@ -148,6 +256,7 @@ fn protect_blocks_direct_options_assignment_but_not_setoptions_updates() {
         "List[Rule[a, 0]]"
     );
 
+    session.eval_text("Unprotect[f]").unwrap();
     let updated = session.eval_text("SetOptions[f, a -> 1]").unwrap();
     assert_eq!(updated.value.to_string(), "List[Rule[a, 1]]");
     assert_eq!(
@@ -157,6 +266,53 @@ fn protect_blocks_direct_options_assignment_but_not_setoptions_updates() {
             .value
             .to_string(),
         "1"
+    );
+}
+
+#[test]
+fn setoptions_blocks_protected_system_head_and_unprotect_allows_update() {
+    let mut session = session_with_test_control_builtins();
+    let expected = "List[Rule[Delimiter, \",\"], Rule[Headers, False]]";
+
+    assert_eq!(
+        session
+            .eval_text("Options[System`FromCsv]")
+            .unwrap()
+            .value
+            .to_string(),
+        expected
+    );
+
+    let blocked = session
+        .eval_text("SetOptions[System`FromCsv, Delimiter -> \";\"]")
+        .unwrap();
+    assert!(
+        blocked
+            .messages
+            .iter()
+            .any(|message| message.symbol == "SetOptions" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[System`FromCsv]")
+            .unwrap()
+            .value
+            .to_string(),
+        expected
+    );
+
+    session.eval_text("Unprotect[System`FromCsv]").unwrap();
+    let updated = session
+        .eval_text("SetOptions[System`FromCsv, Delimiter -> \";\"]")
+        .unwrap();
+    assert!(updated.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("Options[System`FromCsv]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Delimiter, \";\"], Rule[Headers, False]]"
     );
 }
 
@@ -333,6 +489,7 @@ fn delayed_option_rules_are_preserved_and_evaluated_on_lookup() {
 fn setoptions_and_optionvalue_match_known_system_options_by_name() {
     let mut session = session_with_test_control_builtins();
 
+    session.eval_text("Unprotect[Save]").unwrap();
     assert_eq!(
         session
             .eval_text("SetOptions[Save, IncludedContexts -> None]")

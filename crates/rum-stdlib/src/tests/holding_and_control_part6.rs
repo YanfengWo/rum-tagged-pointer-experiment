@@ -100,6 +100,7 @@ fn abort_and_checkabort_cover_current_first_pass_subset() {
             .to_string(),
         "rescued"
     );
+    session.eval_text("Unprotect[CheckAbort]").unwrap();
     session
         .eval_text("SetOptions[CheckAbort, PropagateAborts -> True]")
         .unwrap();

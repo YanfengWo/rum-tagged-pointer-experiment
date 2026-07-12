@@ -122,6 +122,13 @@ impl Session {
             };
 
         for target in config.targets {
+            let removes_protected = update == AttributeUpdate::Remove
+                && config.attributes.contains(Attribute::Protected);
+            if self.symbol_is_protected(&target) && !removes_protected {
+                self.push_protected_write_message(symbol, &target);
+                continue;
+            }
+
             let mut current = self.attribute_set_for_symbol(&target);
 
             for attribute in config.attributes.attributes() {
