@@ -139,11 +139,28 @@ line).
   reuse `ensure_symbol_not_protected_for_write`. Five regression tests + nine
   `Unprotect`-ripple edits (existing tests doing option/attribute writes on
   now-protected system symbols). Workspace 1405/0.
-- **Still queued** (triage in `kernel-a-findings.md`): value-table round-trip
-  (`DownValues[g] = DownValues[f]` false round-trip; touches the `Set` hot path
-  → needs A/B); `Clear`/`Remove` name-pattern forms (`Clear["Global\`*"]`
-  silent no-op); `Information`/message discoverability. Then unit 8 CLOSES →
-  units 9-10.
+- **batch 4 — brief-212 (87b9067):** round-trippable value-table assignment.
+  `OwnValues`/`DownValues`/`UpValues`/`SubValues[f] = rules` install the rules
+  as `f`'s table (atomic replace). **Scope correction found at diagnosis time:**
+  the audit's E7 "silent false round-trip" had ALREADY been closed by batch 2 —
+  once the inspector heads became `Protected`, the assignment failed loudly
+  (`Set::wrsym`) instead of silently defining the inspector. So batch 4 is the
+  FEATURE half (real WL round-trip), not a safety fix; the user chose to build
+  it. New `value_table_assignment.rs` reuses `store_definition_target` (the
+  TagSet/UpSet install that compiles matchers + derived fields — hand-rolling a
+  partial install would silently break matching) and `classify_tagged_definition`
+  (head-matching identical to `f /: … := …`). Contract: parse+validate the whole
+  list before ANY mutation → a bad later rule can never leave a partial table;
+  `<Inspector>::setval` names the offending rule. Cross-symbol copy fails closed
+  (rules' lhs head is `f`, not `g` — it could never fire); working form is
+  `DownValues[g] = (DownValues[f] /. f -> g)`. DefaultValues deferred (not a
+  `TaggedDefinitionTarget` kind). Workspace 1415/0 (10 new tests). A/B: the
+  affected path (immediate `head[args]=value`) was raw-faster on the candidate;
+  the UNAFFECTED controls moved more (+3.6% / +1.7% vs +1.8%), so the noise floor
+  sits above the delta — no regression.
+- **Still queued** (triage in `kernel-a-findings.md`): `Clear`/`Remove`
+  name-pattern forms (`Clear["Global\`*"]` silent no-op); `Information`/message
+  discoverability. Then unit 8 CLOSES → units 9-10.
 
 ## Unit 1 (strings) triage — 2026-07-07
 

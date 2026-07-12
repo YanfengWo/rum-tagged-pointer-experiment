@@ -210,11 +210,22 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
     `ensure_symbol_not_protected_for_write`; the `ClearAttributes[f, Protected]`
     + `Unprotect` escape hatches preserved. Five regression tests + nine
     `Unprotect` ripple edits. Gate: workspace 1405/0, four probes reproduced.
+  - [x] **brief-212 = fix batch 4 DONE (87b9067, 2026-07-12):** round-trippable
+    value-table assignment. `OwnValues`/`DownValues`/`UpValues`/`SubValues[f] =
+    rules` install the rules as `f`'s table (atomic replace). NOTE: the audit's
+    "silent false round-trip" (E7) had ALREADY been closed by batch 2's sweep
+    (the protected inspector head made it fail loudly); this batch is the
+    feature half. New `value_table_assignment.rs` reuses
+    `store_definition_target` (matcher-compiling install) +
+    `classify_tagged_definition` (head-matching identical to `f /: … := …`).
+    Validate-all-then-replace → no partial tables. Cross-symbol copy fails
+    closed (head is `f`, not `g`); working form is `(DownValues[f] /. f -> g)`.
+    DefaultValues deferred. Gate: workspace 1415/0 (10 new tests); A/B clean —
+    unaffected controls moved MORE than the affected path (noise floor above
+    the delta).
   - [ ] Remaining unit-8 fix batches (triage in the findings file):
-    value-table round-trip (`DownValues[g] = DownValues[f]` false round-trip;
-    touches `Set` hot path → needs A/B); `Clear`/`Remove` name-pattern forms
-    (`Clear["Global\`*"]` silent no-op); `Information`/message
-    discoverability. Then unit 8 is CLOSED → units 9-10.
+    `Clear`/`Remove` name-pattern forms (`Clear["Global\`*"]` silent no-op);
+    `Information`/message discoverability. Then unit 8 is CLOSED → units 9-10.
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.
