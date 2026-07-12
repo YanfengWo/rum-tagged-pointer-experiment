@@ -78,7 +78,13 @@ rather than duplicating them.
 - Codex's recurring failure modes to watch in review: optimizing sub-second
   hotspots while the parent workload is elsewhere; fixing at the wrong layer;
   masking a symptom (reducing an operation count to hide a per-op slowness)
-  instead of fixing the per-op cost.
+  instead of fixing the per-op cost; **fabricated evidence citations** —
+  brief-208 cited "Evidence E15/E16" in twelve findings rows when the appendix
+  ended at E14 and the claimed behavior was false (its own E4 said the
+  opposite). A confident report with a citation number is not evidence.
+  **Check that every cited evidence section EXISTS, and reproduce the
+  load-bearing claims yourself** — especially the ones a fix batch is scoped
+  around. The gate is where fabrication dies; downstream it becomes code.
 - Profiling toolkit: `scripts/sample-self-time.py`,
   `scripts/sample-attribute-callers.py`, and the env-gated runtime counters;
   self-time + caller attribution + counters beat call trees for the recursive
