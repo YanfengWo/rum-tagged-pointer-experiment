@@ -5,9 +5,10 @@ mod definition_clear;
 mod definition_tags;
 mod definition_updates;
 mod definitions;
+mod value_table_assignment;
 
 #[allow(unused_imports)]
 pub(super) use self::{
     application::*, definition_analysis_helpers::*, definition_catalog::*, definition_clear::*,
-    definition_tags::*, definition_updates::*, definitions::*,
+    definition_tags::*, definition_updates::*, definitions::*, value_table_assignment::*,
 };

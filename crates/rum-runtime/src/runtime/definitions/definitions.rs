@@ -284,6 +284,15 @@ impl Session {
                 return Ok(rhs);
             }
 
+            if let Some((kind, target)) = self.normalize_value_table_target_expr(&lhs) {
+                if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
+                    return Ok(rhs);
+                }
+
+                self.replace_value_table_from_expr(kind, target, &rhs);
+                return Ok(rhs);
+            }
+
             if let Some(target) = self.normalize_syntax_information_target_expr(&lhs) {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
                     return Ok(rhs);
