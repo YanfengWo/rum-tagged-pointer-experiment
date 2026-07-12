@@ -75,6 +75,13 @@ rather than duplicating them.
   loudest leaf; decompose a composite probe into factors before attributing
   its cost; estimate the expected win from the profile before keeping a
   change.
+- **Re-probe an audit finding before briefing a fix for it — an earlier batch
+  may have already changed it.** Unit 8's audit recorded a "silent false
+  round-trip" for `DownValues[g] = DownValues[f]`; by the time I got to that
+  batch, the `Protected` sweep (two batches earlier) had already turned it into
+  a loud failure. The premise had shifted from "fix a safety hole" to "build a
+  WL feature" — a different decision, which belonged to the user, not to me
+  silently. Findings age; verify, then brief.
 - Codex's recurring failure modes to watch in review: optimizing sub-second
   hotspots while the parent workload is elsewhere; fixing at the wrong layer;
   masking a symptom (reducing an operation count to hide a per-op slowness)
@@ -99,6 +106,28 @@ rather than duplicating them.
   truncation (check the dispatch log tail for a filter/quota cutoff) before
   suspecting invention, and settle the claim from the source, not from one
   probe.
+- **Calibrate the instrument before believing it — three ways it lied to me in
+  one session (unit 8):**
+  - *A timing harness that measured nothing.* An A/B over `Do[…, {300000}]`
+    showed both arms identical — because the big `N` silently hit the iteration
+    ceiling and bailed out, so I was timing process startup. **The tell: `N=1e6`
+    came back FASTER than `N=1e5`.** Always check that time SCALES with `N`
+    before trusting a single timing number.
+  - *A parser that under-reported.* `docs/reference/builtins.md` backticks each
+    attribute separately (`` `Listable`, `Protected` ``); a regex capturing only
+    the first backticked token said "527 unprotected" when the truth was 483.
+    Cross-check any script-derived count against a few live probes.
+  - *A hybrid test session.* `session_with_test_control_builtins()` resolves SOME
+    symbols to test-registered builtins and others to the real catalog (a test
+    registration with EMPTY attributes falls through to the catalog). My
+    "obvious" uniform fix to four attribute assertions was wrong for two of them.
+    Probe ground truth per symbol; never assume a uniform rule across a test
+    harness.
+- **Noise discipline for an A/B**: if the UNAFFECTED control labels move as much
+  as (or more than) the affected one, that IS the noise floor — report no
+  regression, and do not "fix" noise. Say plainly when you did NOT re-run a
+  gate and why (e.g. no eval-hot-path code changed and the panel never calls the
+  changed symbol) rather than performing the ceremony.
 - Profiling toolkit: `scripts/sample-self-time.py`,
   `scripts/sample-attribute-callers.py`, and the env-gated runtime counters;
   self-time + caller attribution + counters beat call trees for the recursive
@@ -127,26 +156,40 @@ rather than duplicating them.
 - **USABILITY PASS — ACTIVE MAINLINE (opened 2026-07-07).** The "works
   well" layer over every installed builtin (three axes:
   flexibility/convenience/safety), audit-then-fix per sweep unit. Tracker
-  `docs/dev/usability-pass.md`; memory `usability-pass-line.md`. **Units
-  1-7 CLOSED** (strings, structure+functional, predicates+associations,
-  control+logic+rewrite, math, codecs+bytes+datetime, character_classes+
-  random — briefs 161-207, 446 builtins swept, all fixes compat; reference
-  612). Unit 7 (203 audit + 204-207): both FRESH arcs held (157-159
-  RandomPassword, 200-202 separation); `Protected` on all 11 random heads,
-  nested `{dims}` for RandomInteger/RandomChoice, weighted RandomChoice
-  (exact rational, no floats), WhitespaceCharacters constant + RandomPassword
-  option discovery. Deferrals: RandomString `{dims}`/`[]` (WL surface
-  uncertain), string-keyed option-discovery wart (cross-cutting → the dun
-  host line), `Dimensions` absent (later structure touch). **NEXT: unit 8**
-  (kernel A — definitions/values/attributes/protection, ~50), then units
-  9-10, THEN the dun host-embedding API line (user sequencing ruling
-  2026-07-08). Standing user directives: high coverage incl. the
-  WL-inherited surface; compat enhancement only (default behavior stays
-  WL-conformant, new powers via options / rum-native siblings). Standing
-  design rulings: arithmetic singularities stay INERT (no special-value
-  arithmetic — user); Orderless/Flat/OneIdentity on folk numeric reducers +
-  Equivalent + the Implies short-circuit all REJECTED; ConformSchema/
-  SchemaErrors operator forms DEFERRED (HoldRest hold-semantics).
+  `docs/dev/usability-pass.md`; memory `usability-pass-line.md`. **Units 1-8
+  CLOSED — 501 builtins swept** (units 1-7 = 446 stdlib, briefs 161-207;
+  unit 8 = 55 kernel A, briefs 208-213).
+  **Unit 8 (kernel A — definitions/values/attributes/protection) was the
+  richest unit so far**; its arc is worth remembering:
+  - The audit found the `Protected` **enforcement surface was 129/612** —
+    `Plus[a_,b_] := 42` succeeded and `1+2` then returned `42`.
+  - **A REAL protection-bypass bug** surfaced at the gate (209): `ApplyTo[x, f]`
+    where `f` protects `x` mid-update landed the write on a visibly `Protected`
+    symbol, because `store_held_update` skipped the recheck and `ApplyTo` is the
+    one compound assignment whose update runs user code in that window.
+  - Sweep (210): **129/612 → 608/612** (only `$AssertFunction`/`$ContextPath`/
+    `$Packages`/`$Path` stay open). Three enforcement holes closed (211).
+    Value tables made round-trippable (212). Name patterns + `Information`
+    hold/usage (213).
+  - **Kernel list derived exactly**: reference 612 − stdlib catalog 453 = 159
+    kernel names; unit 8 took 55, **104 remain for units 9-10**.
+  - Standing boundary: **`Protected` is a mistake-guard + WL conformance, NOT a
+    sandbox boundary** (a program may always `Unprotect[Plus]`). Real plugin
+    isolation = per-request rollback = the dun host line. Do not conflate.
+  - DEFERRED from unit 8: the **builtin message-tag registry** (`Messages[Set]`
+    is empty even after `Set::argx`; ~108 ad-hoc `push_message` sites, no static
+    catalog). Its own project; pairs with docgen. `Information`'s new `Messages`
+    field lights up for free once it exists.
+  **NEXT: unit 9** (kernel B — scoping/eval control/patterns/forms), then unit
+  10 (the 104 kernel names split across the two), THEN the dun host-embedding
+  API line (user sequencing ruling 2026-07-08).
+  Standing user directives: high coverage incl. the WL-inherited surface;
+  compat enhancement only (default behavior stays WL-conformant, new powers via
+  options / rum-native siblings). Standing design rulings: arithmetic
+  singularities stay INERT (no special-value arithmetic — user);
+  Orderless/Flat/OneIdentity on folk numeric reducers + Equivalent + the Implies
+  short-circuit all REJECTED; ConformSchema/SchemaErrors operator forms DEFERRED
+  (HoldRest hold-semantics).
 - **STATEFUL↔PURE SEPARATION LINE — COMPLETE (2026-07-08, briefs 200-202).**
   User rulings, spun out of unit-6 datetime. Killed the pure/impure
   DUAL-FORM anti-pattern (one symbol mixing a pure + a stateful form).
