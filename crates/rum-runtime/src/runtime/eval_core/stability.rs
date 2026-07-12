@@ -333,7 +333,8 @@ impl Session {
 }
 
 fn hold_all_literal_args_are_stable(args: &[Expr]) -> bool {
-    args.iter().all(|arg| !is_direct_hold_escape_wrapper(arg))
+    args.iter()
+        .all(|arg| !is_direct_hold_escape_wrapper(arg) && sequence_items(arg).is_none())
 }
 
 fn is_direct_hold_escape_wrapper(expr: &Expr) -> bool {

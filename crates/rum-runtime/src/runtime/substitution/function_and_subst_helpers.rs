@@ -42,6 +42,7 @@ pub(in crate::runtime) fn release_hold_once(expr: &Expr) -> Option<Expr> {
             matches!(
                 symbol.name(),
                 "Hold"
+                    | "HoldForm"
                     | "HoldFirst"
                     | "HoldRest"
                     | "HoldAll"

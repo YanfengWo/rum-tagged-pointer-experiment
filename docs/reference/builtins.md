@@ -2977,7 +2977,7 @@ Represents the current regular-expression string-pattern wrapper.
 
 ### ReleaseHold
 
-Removes supported hold wrappers and resumes evaluation.
+Removes one outer layer of Hold, HoldForm, HoldComplete, HoldPattern, HoldFirst, HoldRest, HoldAll, or HoldAllComplete, then resumes evaluation.
 
 - Attributes: `HoldAll`, `Protected`
 - Capability: `Pure`

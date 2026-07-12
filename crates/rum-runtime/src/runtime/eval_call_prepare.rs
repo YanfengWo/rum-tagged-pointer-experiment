@@ -3,8 +3,25 @@ use super::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CallArgumentPlan {
     expr: Expr,
-    should_evaluate: bool,
+    mode: CallArgumentMode,
     allow_sequence_splice: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CallArgumentMode {
+    Evaluate,
+    Hold,
+    StrippedUnevaluated,
+}
+
+pub(super) struct PreparedCallArguments {
+    pub(super) evaluated_args: SharedArgs,
+    pub(super) unevaluated_restore: Option<Box<UnevaluatedRestorePlan>>,
+}
+
+pub(super) struct UnevaluatedRestorePlan {
+    pub(super) prepared_args: SharedArgs,
+    pub(super) wrappers: Vec<(usize, Expr)>,
 }
 
 fn plan_call_argument_preparation(
@@ -19,7 +36,7 @@ fn plan_call_argument_preparation(
         if blocks_evaluate_override {
             return CallArgumentPlan {
                 expr: arg,
-                should_evaluate: false,
+                mode: CallArgumentMode::Hold,
                 allow_sequence_splice: false,
             };
         }
@@ -27,37 +44,37 @@ fn plan_call_argument_preparation(
         if let Some(inner) = unevaluated_wrapper_arg(&arg) {
             return CallArgumentPlan {
                 expr: inner.clone(),
-                should_evaluate: false,
-                allow_sequence_splice: false,
+                mode: CallArgumentMode::StrippedUnevaluated,
+                allow_sequence_splice: true,
             };
         }
 
         if let Some(inner) = evaluate_wrapper_arg(&arg) {
             return CallArgumentPlan {
                 expr: inner.clone(),
-                should_evaluate: true,
+                mode: CallArgumentMode::Evaluate,
                 allow_sequence_splice: true,
             };
         }
 
         return CallArgumentPlan {
             expr: arg,
-            should_evaluate: false,
-            allow_sequence_splice: false,
+            mode: CallArgumentMode::Hold,
+            allow_sequence_splice: true,
         };
     }
 
     if let Some(inner) = unevaluated_wrapper_arg(&arg) {
         return CallArgumentPlan {
             expr: inner.clone(),
-            should_evaluate: false,
+            mode: CallArgumentMode::StrippedUnevaluated,
             allow_sequence_splice: true,
         };
     }
 
     CallArgumentPlan {
         expr: arg,
-        should_evaluate: true,
+        mode: CallArgumentMode::Evaluate,
         allow_sequence_splice: true,
     }
 }
@@ -165,53 +182,88 @@ impl Session {
         attributes: AttributeSet,
         args: SharedArgs,
     ) -> Result<SharedArgs, EvalError> {
+        self.prepare_arguments_for_call_with_unevaluated_restore(head, attributes, args)
+            .map(|prepared| prepared.evaluated_args)
+    }
+
+    pub(super) fn prepare_arguments_for_call_with_unevaluated_restore(
+        &mut self,
+        head: Expr,
+        attributes: AttributeSet,
+        args: SharedArgs,
+    ) -> Result<PreparedCallArguments, EvalError> {
         let runtime_profile = runtime_path_timing_start("prepare_arguments.total");
         let result = (|| {
             let sequence_hold = attributes.sequence_hold();
             let list_drops_nothing = is_system_symbol_name(&head, heads::structure::LIST);
             let mut built: Option<Vec<Expr>> = None;
+            let mut unevaluated_restores: Option<Vec<(usize, Expr)>> = None;
 
             for index in 0..args.len() {
                 let runtime_profile_plan = runtime_path_timing_start("prepare_arguments.plan_arg");
-                let plan = plan_call_argument_preparation(attributes, index, args[index].clone());
+                let raw_arg = args[index].clone();
+                let plan = plan_call_argument_preparation(attributes, index, raw_arg.clone());
                 record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
 
-                let prepared_arg = if plan.should_evaluate {
-                    let allow_sequence_splice = plan.allow_sequence_splice;
-                    let runtime_profile_evaluate =
-                        runtime_path_timing_start("prepare_arguments.evaluate_arg");
-                    let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
-                    record_profile_runtime_path_timing(
-                        runtime_profile_evaluate,
-                        runtime_profile_outcome_for_expr_result(&evaluated_result),
-                    );
-                    match evaluated_result {
-                        Ok(value) => value,
-                        Err(EvalError::InputRequired { request }) => {
-                            let head_for_resume = head.clone();
-                            let attributes_for_resume = attributes;
-                            let evaluated_for_resume =
-                                built.take().unwrap_or_else(|| args[..index].to_vec());
-                            let remaining_for_resume = args[index + 1..].to_vec();
-                            self.suspend_with_frame(
-                                Err(EvalError::InputRequired { request }),
-                                move |session, value| {
-                                    session.resume_call_after_argument(
-                                        head_for_resume,
-                                        attributes_for_resume,
-                                        evaluated_for_resume,
-                                        remaining_for_resume,
-                                        index + 1,
-                                        value,
-                                        allow_sequence_splice,
-                                    )
-                                },
-                            )?
+                let prepared_arg = match plan.mode {
+                    CallArgumentMode::Evaluate => {
+                        let allow_sequence_splice = plan.allow_sequence_splice;
+                        let runtime_profile_evaluate =
+                            runtime_path_timing_start("prepare_arguments.evaluate_arg");
+                        let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
+                        record_profile_runtime_path_timing(
+                            runtime_profile_evaluate,
+                            runtime_profile_outcome_for_expr_result(&evaluated_result),
+                        );
+                        match evaluated_result {
+                            Ok(value) => value,
+                            Err(EvalError::InputRequired { request }) => {
+                                let head_for_resume = head.clone();
+                                let attributes_for_resume = attributes;
+                                let evaluated_for_resume =
+                                    built.take().unwrap_or_else(|| args[..index].to_vec());
+                                let remaining_for_resume = args[index + 1..].to_vec();
+                                let unevaluated_restores_for_resume = unevaluated_restores.clone();
+                                self.suspend_with_frame(
+                                    Err(EvalError::InputRequired { request }),
+                                    move |session, value| {
+                                        session.resume_call_after_argument_with_unevaluated_restore(
+                                            head_for_resume,
+                                            attributes_for_resume,
+                                            evaluated_for_resume,
+                                            remaining_for_resume,
+                                            index + 1,
+                                            value,
+                                            allow_sequence_splice,
+                                            unevaluated_restores_for_resume,
+                                        )
+                                    },
+                                )?
+                            }
+                            Err(error) => return Err(error),
                         }
-                        Err(error) => return Err(error),
                     }
-                } else {
-                    plan.expr
+                    CallArgumentMode::Hold => plan.expr,
+                    CallArgumentMode::StrippedUnevaluated => {
+                        let splices = prepared_argument_splices(
+                            &plan.expr,
+                            plan.allow_sequence_splice,
+                            sequence_hold,
+                        );
+                        let drops_nothing = list_drops_nothing
+                            && prepared_list_argument_drops_nothing(
+                                &plan.expr,
+                                plan.allow_sequence_splice,
+                                sequence_hold,
+                            );
+                        if !splices && !drops_nothing {
+                            let prepared_position = built.as_ref().map_or(index, Vec::len);
+                            unevaluated_restores
+                                .get_or_insert_with(Vec::new)
+                                .push((prepared_position, raw_arg));
+                        }
+                        plan.expr
+                    }
                 };
 
                 let splices = prepared_argument_splices(
@@ -280,7 +332,18 @@ impl Session {
                 }
             }
 
-            Ok(built.map(SharedArgs::new).unwrap_or(args))
+            let evaluated_args = built.map(SharedArgs::new).unwrap_or(args);
+            let unevaluated_restore = unevaluated_restores.map(|wrappers| {
+                Box::new(UnevaluatedRestorePlan {
+                    prepared_args: evaluated_args.clone(),
+                    wrappers,
+                })
+            });
+
+            Ok(PreparedCallArguments {
+                evaluated_args,
+                unevaluated_restore,
+            })
         })();
         record_profile_runtime_path_timing(
             runtime_profile,
@@ -289,62 +352,86 @@ impl Session {
         result
     }
 
-    pub(super) fn resume_prepared_call_arguments(
+    fn resume_prepared_call_arguments_with_unevaluated_restore(
         &mut self,
         head: Expr,
         attributes: AttributeSet,
         mut evaluated_args: Vec<Expr>,
         remaining_args: Vec<Expr>,
         start_index: usize,
-    ) -> Result<Vec<Expr>, EvalError> {
+        mut unevaluated_restores: Option<Vec<(usize, Expr)>>,
+    ) -> Result<PreparedCallArguments, EvalError> {
         let sequence_hold = attributes.sequence_hold();
         let list_drops_nothing = is_system_symbol_name(&head, heads::structure::LIST);
         let mut remaining_args = remaining_args.into_iter().enumerate();
 
         while let Some((offset, arg)) = remaining_args.next() {
             let index = start_index + offset;
+            let raw_arg = arg.clone();
 
             let runtime_profile_plan = runtime_path_timing_start("prepare_arguments.plan_arg");
             let plan = plan_call_argument_preparation(attributes, index, arg);
             record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
-            let prepared_arg = if plan.should_evaluate {
-                let allow_sequence_splice = plan.allow_sequence_splice;
-                let runtime_profile_evaluate =
-                    runtime_path_timing_start("prepare_arguments.evaluate_arg");
-                let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
-                record_profile_runtime_path_timing(
-                    runtime_profile_evaluate,
-                    runtime_profile_outcome_for_expr_result(&evaluated_result),
-                );
-                match evaluated_result {
-                    Ok(value) => value,
-                    Err(EvalError::InputRequired { request }) => {
-                        let head_for_resume = head.clone();
-                        let attributes_for_resume = attributes;
-                        let evaluated_for_resume = evaluated_args.clone();
-                        let remaining_for_resume = remaining_args
-                            .by_ref()
-                            .map(|(_, arg)| arg)
-                            .collect::<Vec<_>>();
-                        self.suspend_with_frame(
-                            Err(EvalError::InputRequired { request }),
-                            move |session, value| {
-                                session.resume_call_after_argument(
-                                    head_for_resume,
-                                    attributes_for_resume,
-                                    evaluated_for_resume,
-                                    remaining_for_resume,
-                                    index + 1,
-                                    value,
-                                    allow_sequence_splice,
-                                )
-                            },
-                        )?
+            let prepared_arg = match plan.mode {
+                CallArgumentMode::Evaluate => {
+                    let allow_sequence_splice = plan.allow_sequence_splice;
+                    let runtime_profile_evaluate =
+                        runtime_path_timing_start("prepare_arguments.evaluate_arg");
+                    let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
+                    record_profile_runtime_path_timing(
+                        runtime_profile_evaluate,
+                        runtime_profile_outcome_for_expr_result(&evaluated_result),
+                    );
+                    match evaluated_result {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            let head_for_resume = head.clone();
+                            let attributes_for_resume = attributes;
+                            let evaluated_for_resume = evaluated_args.clone();
+                            let remaining_for_resume = remaining_args
+                                .by_ref()
+                                .map(|(_, arg)| arg)
+                                .collect::<Vec<_>>();
+                            let unevaluated_restores_for_resume = unevaluated_restores.clone();
+                            self.suspend_with_frame(
+                                Err(EvalError::InputRequired { request }),
+                                move |session, value| {
+                                    session.resume_call_after_argument_with_unevaluated_restore(
+                                        head_for_resume,
+                                        attributes_for_resume,
+                                        evaluated_for_resume,
+                                        remaining_for_resume,
+                                        index + 1,
+                                        value,
+                                        allow_sequence_splice,
+                                        unevaluated_restores_for_resume,
+                                    )
+                                },
+                            )?
+                        }
+                        Err(error) => return Err(error),
                     }
-                    Err(error) => return Err(error),
                 }
-            } else {
-                plan.expr
+                CallArgumentMode::Hold => plan.expr,
+                CallArgumentMode::StrippedUnevaluated => {
+                    let splices = prepared_argument_splices(
+                        &plan.expr,
+                        plan.allow_sequence_splice,
+                        sequence_hold,
+                    );
+                    let drops_nothing = list_drops_nothing
+                        && prepared_list_argument_drops_nothing(
+                            &plan.expr,
+                            plan.allow_sequence_splice,
+                            sequence_hold,
+                        );
+                    if !splices && !drops_nothing {
+                        unevaluated_restores
+                            .get_or_insert_with(Vec::new)
+                            .push((evaluated_args.len(), raw_arg));
+                    }
+                    plan.expr
+                }
             };
 
             let runtime_profile_append = runtime_path_timing_start("prepare_arguments.append_arg");
@@ -366,10 +453,21 @@ impl Session {
             record_profile_runtime_path_timing(runtime_profile_append, RuntimeProfileOutcome::Ok);
         }
 
-        Ok(evaluated_args)
+        let evaluated_args = SharedArgs::new(evaluated_args);
+        let unevaluated_restore = unevaluated_restores.map(|wrappers| {
+            Box::new(UnevaluatedRestorePlan {
+                prepared_args: evaluated_args.clone(),
+                wrappers,
+            })
+        });
+
+        Ok(PreparedCallArguments {
+            evaluated_args,
+            unevaluated_restore,
+        })
     }
 
-    pub(super) fn resume_call_after_argument(
+    fn resume_call_after_argument_with_unevaluated_restore(
         &mut self,
         head: Expr,
         attributes: AttributeSet,
@@ -378,6 +476,7 @@ impl Session {
         next_index: usize,
         value: Expr,
         allow_sequence_splice: bool,
+        unevaluated_restores: Option<Vec<(usize, Expr)>>,
     ) -> Result<Expr, EvalError> {
         if is_system_symbol_name(&head, heads::structure::LIST) {
             append_prepared_list_argument(
@@ -395,14 +494,15 @@ impl Session {
             );
         }
 
-        let prepared = self.resume_prepared_call_arguments(
+        let prepared = self.resume_prepared_call_arguments_with_unevaluated_restore(
             head.clone(),
             attributes,
             evaluated_args,
             remaining_args,
             next_index,
+            unevaluated_restores,
         )?;
-        self.resume_call_from_prepared_args(head, prepared)
+        self.resume_call_from_prepared_args_with_unevaluated_restore(head, prepared)
     }
 
     pub(super) fn resume_call_from_prepared_args(
@@ -410,17 +510,31 @@ impl Session {
         head: Expr,
         prepared_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
+        self.resume_call_from_prepared_args_with_unevaluated_restore(
+            head,
+            PreparedCallArguments {
+                evaluated_args: SharedArgs::new(prepared_args),
+                unevaluated_restore: None,
+            },
+        )
+    }
+
+    fn resume_call_from_prepared_args_with_unevaluated_restore(
+        &mut self,
+        head: Expr,
+        prepared: PreparedCallArguments,
+    ) -> Result<Expr, EvalError> {
         let plan = self.build_call_dispatch_plan(&head);
         let state = CallDispatchState {
             raw_args: SharedArgs::default(),
-            evaluated_args: Some(SharedArgs::new(self.normalize_call_args_by_attributes(
+            evaluated_args: Some(self.normalize_call_args_shared(
                 &head,
-                prepared_args,
+                prepared.evaluated_args,
                 plan.attributes,
-            ))),
+            )),
         };
 
-        self.resume_call_with_dispatch_plan(head, plan, state, 0)
+        self.resume_call_with_dispatch_plan(head, plan, state, 0, prepared.unevaluated_restore)
     }
 
     pub(super) fn attribute_set_for_head(&self, head: &Expr) -> AttributeSet {
@@ -514,8 +628,8 @@ fn runtime_profile_outcome_for_expr_result(
     }
 }
 
-fn runtime_profile_outcome_for_shared_args_result(
-    result: &Result<SharedArgs, EvalError>,
+fn runtime_profile_outcome_for_shared_args_result<T>(
+    result: &Result<T, EvalError>,
 ) -> RuntimeProfileOutcome {
     match result {
         Ok(_) => RuntimeProfileOutcome::Ok,
@@ -542,7 +656,7 @@ mod tests {
             plan,
             CallArgumentPlan {
                 expr: arg,
-                should_evaluate: false,
+                mode: CallArgumentMode::Hold,
                 allow_sequence_splice: false,
             }
         );
@@ -559,7 +673,26 @@ mod tests {
             plan,
             CallArgumentPlan {
                 expr: inner,
-                should_evaluate: true,
+                mode: CallArgumentMode::Evaluate,
+                allow_sequence_splice: true,
+            }
+        );
+    }
+
+    #[test]
+    fn planner_allows_raw_sequence_splicing_for_held_arguments() {
+        let arg = Expr::call(
+            system_expr("Sequence"),
+            vec![Expr::integer(1_i64.into()), Expr::integer(2_i64.into())],
+        );
+        let attributes = AttributeSet::from_attribute(Attribute::HoldAll);
+        let plan = plan_call_argument_preparation(attributes, 0, arg.clone());
+
+        assert_eq!(
+            plan,
+            CallArgumentPlan {
+                expr: arg,
+                mode: CallArgumentMode::Hold,
                 allow_sequence_splice: true,
             }
         );
@@ -575,7 +708,7 @@ mod tests {
             plan,
             CallArgumentPlan {
                 expr: inner,
-                should_evaluate: false,
+                mode: CallArgumentMode::StrippedUnevaluated,
                 allow_sequence_splice: true,
             }
         );

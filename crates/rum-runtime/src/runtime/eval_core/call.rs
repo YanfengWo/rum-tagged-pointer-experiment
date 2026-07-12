@@ -74,7 +74,7 @@ impl Session {
         let state = CallDispatchState::new(args);
 
         let runtime_profile_dispatch = runtime_path_timing_start("evaluate_call.dispatch");
-        let result = self.resume_call_with_dispatch_plan(evaluated_head, plan, state, 0);
+        let result = self.resume_call_with_dispatch_plan(evaluated_head, plan, state, 0, None);
         record_profile_runtime_path_timing(
             runtime_profile_dispatch,
             runtime_profile_outcome_for_expr_result(&result),
@@ -92,13 +92,25 @@ impl Session {
         plan: CallDispatchPlan,
         state: CallDispatchState,
         stage_index: usize,
+        unevaluated_restore: Option<Box<UnevaluatedRestorePlan>>,
     ) -> Result<Expr, EvalError> {
         let evaluated_head = evaluated_head.into();
         if stage_index >= plan.len() {
-            return Ok(Expr::call_shared(
-                evaluated_head,
-                state.into_final_shared_args(),
-            ));
+            let final_args = match unevaluated_restore {
+                Some(restore) => {
+                    let mut restored_args = restore.prepared_args.into_vec();
+                    for (position, wrapper) in restore.wrappers {
+                        restored_args[position] = wrapper;
+                    }
+                    self.normalize_call_args_shared(
+                        evaluated_head.as_ref(),
+                        SharedArgs::new(restored_args),
+                        plan.attributes,
+                    )
+                }
+                None => state.into_final_shared_args(),
+            };
+            return Ok(Expr::call_shared(evaluated_head, final_args));
         }
 
         let stage = plan.stage(stage_index);
@@ -109,18 +121,38 @@ impl Session {
                 plan,
                 state,
                 stage_index + 1,
+                unevaluated_restore,
             );
         }
 
         let runtime_profile_stage =
             runtime_path_timing_start(call_dispatch_stage_profile_name(stage));
-        let stage_result = self.run_call_dispatch_stage(
-            stage,
-            evaluated_head.as_ref(),
-            plan.attributes,
-            plan.builtin_spec,
-            &mut state,
-        );
+        let mut unevaluated_restore = unevaluated_restore;
+        let stage_result = if stage == CallDispatchStage::PrepareArguments {
+            let raw_args = std::mem::take(&mut state.raw_args);
+            self.prepare_arguments_for_call_with_unevaluated_restore(
+                evaluated_head.as_ref().clone(),
+                plan.attributes,
+                raw_args,
+            )
+            .map(|prepared| {
+                state.evaluated_args = Some(self.normalize_call_args_shared(
+                    evaluated_head.as_ref(),
+                    prepared.evaluated_args,
+                    plan.attributes,
+                ));
+                unevaluated_restore = prepared.unevaluated_restore;
+                None
+            })
+        } else {
+            self.run_call_dispatch_stage(
+                stage,
+                evaluated_head.as_ref(),
+                plan.attributes,
+                plan.builtin_spec,
+                &mut state,
+            )
+        };
         record_profile_runtime_path_timing(
             runtime_profile_stage,
             runtime_profile_outcome_for_optional_result(&stage_result),
@@ -128,9 +160,13 @@ impl Session {
 
         self.drive_internal_value(stage_result, move |session, outcome| match outcome {
             Some(result) => Ok(result),
-            None => {
-                session.resume_call_with_dispatch_plan(evaluated_head, plan, state, stage_index + 1)
-            }
+            None => session.resume_call_with_dispatch_plan(
+                evaluated_head,
+                plan,
+                state,
+                stage_index + 1,
+                unevaluated_restore,
+            ),
         })
     }
 }

@@ -19,11 +19,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("ReleaseHold", args, 1));
         }
 
-        let mut released = args[0].clone();
-
-        while let Some(next) = release_hold_once(&released) {
-            released = next;
-        }
+        let released = release_hold_once(&args[0]).unwrap_or_else(|| args[0].clone());
 
         let released_result = self.evaluate(released);
         self.suspend_with_frame(released_result, |_, value| Ok(value))

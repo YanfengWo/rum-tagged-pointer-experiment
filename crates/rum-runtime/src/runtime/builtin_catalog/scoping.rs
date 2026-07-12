@@ -80,7 +80,7 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
     ).protected(),
     BuiltinSpec::ordinary_with_hold(
         "ReleaseHold",
-        "Removes supported hold wrappers and resumes evaluation.",
+        "Removes one outer layer of Hold, HoldForm, HoldComplete, HoldPattern, HoldFirst, HoldRest, HoldAll, or HoldAllComplete, then resumes evaluation.",
         HoldAttribute::HoldAll,
         builtin_release_hold,
     ).protected(),

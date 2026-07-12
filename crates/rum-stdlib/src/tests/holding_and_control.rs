@@ -29,7 +29,7 @@ fn evaluate_forces_evaluation_inside_held_arguments() {
 }
 
 #[test]
-fn sequence_splices_in_non_held_calls_but_not_in_raw_held_ones() {
+fn sequence_splices_in_non_held_and_ordinary_held_calls() {
     let mut session = core_session();
 
     assert_eq!(
@@ -54,7 +54,7 @@ fn sequence_splices_in_non_held_calls_but_not_in_raw_held_ones() {
             .unwrap()
             .value
             .to_string(),
-        "Hold[Sequence[1, 2], 3]"
+        "Hold[1, 2, 3]"
     );
     assert_eq!(
         session
@@ -63,6 +63,25 @@ fn sequence_splices_in_non_held_calls_but_not_in_raw_held_ones() {
             .value
             .to_string(),
         "Hold[1, 2, 3]"
+    );
+
+    session.eval_text("SetAttributes[h, HoldAll]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("h[Sequence[a, b], Identity[1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "h[a, b, Identity[1]]"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("Reap[Sequence[a, b]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[a, List[]]"
     );
 }
 #[test]
@@ -323,6 +342,63 @@ fn unevaluated_temporarily_preserves_direct_function_arguments() {
 }
 
 #[test]
+fn unevaluated_is_restored_only_when_no_call_stage_consumes_it() {
+    let mut session = core_session();
+    session.eval_text("q[x_Integer] := hit[x]").unwrap();
+
+    let undefined = session.eval_text("f[Unevaluated[1 + 1]]").unwrap();
+    assert!(undefined.messages.is_empty());
+    assert_eq!(undefined.value.to_string(), "f[Unevaluated[Plus[1, 1]]]");
+
+    let stable = session.evaluate(undefined.value.clone()).unwrap();
+    assert_eq!(stable, undefined.value);
+    assert!(session.take_messages().is_empty());
+
+    let nonmatching = session.eval_text("q[Unevaluated[1 + 1]]").unwrap();
+    assert!(nonmatching.messages.is_empty());
+    assert_eq!(nonmatching.value.to_string(), "q[Unevaluated[Plus[1, 1]]]");
+}
+
+#[test]
+fn unevaluated_consumers_still_receive_the_raw_unwrapped_argument() {
+    let mut session = core_session();
+    session.eval_text("g[x_] := HoldComplete[x]").unwrap();
+    session.eval_text("u /: h[u] := caught").unwrap();
+
+    for (source, expected) in [
+        ("Length[Unevaluated[1 + 1]]", "2"),
+        ("Hold[Unevaluated[1 + 1]]", "Hold[Plus[1, 1]]"),
+        ("g[Unevaluated[1 + 1]]", "HoldComplete[Plus[1, 1]]"),
+        (
+            "Function[x, HoldComplete[x]][Unevaluated[1 + 1]]",
+            "HoldComplete[Plus[1, 1]]",
+        ),
+        ("h[Unevaluated[u]]", "caught"),
+        ("Unevaluated[1 + 1]", "2"),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert!(
+            outcome.messages.is_empty(),
+            "{source}: {:?}",
+            outcome.messages
+        );
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+    }
+}
+
+#[test]
+fn unevaluated_sequence_splicing_drops_single_position_provenance() {
+    let mut session = core_session();
+
+    // Pinned rum contract: once raw Sequence content splices into multiple
+    // positions, there is no single argument position where Unevaluated can
+    // be restored. This edge is intentionally not asserted as WL parity.
+    let outcome = session.eval_text("f[Unevaluated[Sequence[a, b]]]").unwrap();
+    assert!(outcome.messages.is_empty());
+    assert_eq!(outcome.value.to_string(), "f[a, b]");
+}
+
+#[test]
 fn holdpattern_preserves_patterns_without_prior_evaluation() {
     let mut session = core_session();
     session.eval_text("f = 1").unwrap();
@@ -349,30 +425,22 @@ fn holdpattern_preserves_patterns_without_prior_evaluation() {
 fn releasehold_releases_supported_hold_wrappers() {
     let mut session = core_session();
 
-    assert_eq!(
-        session
-            .eval_text("ReleaseHold[Hold[Identity[1]]]")
-            .unwrap()
-            .value
-            .to_string(),
-        "1"
-    );
-    assert_eq!(
-        session
-            .eval_text("ReleaseHold[HoldAllComplete[Identity[1]]]")
-            .unwrap()
-            .value
-            .to_string(),
-        "1"
-    );
-    assert_eq!(
-        session
-            .eval_text("ReleaseHold[HoldComplete[Identity[1]]]")
-            .unwrap()
-            .value
-            .to_string(),
-        "1"
-    );
+    for wrapper in [
+        "Hold",
+        "HoldForm",
+        "HoldFirst",
+        "HoldRest",
+        "HoldAll",
+        "HoldAllComplete",
+        "HoldComplete",
+    ] {
+        let source = format!("ReleaseHold[{wrapper}[Identity[1]]]");
+        assert_eq!(
+            session.eval_text(&source).unwrap().value.to_string(),
+            "1",
+            "{source}"
+        );
+    }
     assert_eq!(
         session
             .eval_text("ReleaseHold[HoldPattern[f[x_Integer]]]")
@@ -380,6 +448,46 @@ fn releasehold_releases_supported_hold_wrappers() {
             .value
             .to_string(),
         "f[Pattern[x, Blank[Integer]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReleaseHold[HoldPattern[1 + 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReleaseHold[1 + 1]")
+            .unwrap()
+            .value
+            .to_string(),
+        "2"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReleaseHold[Hold[Hold[1 + 1]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Hold[Plus[1, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReleaseHold[g[Hold[1 + 1]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "g[Hold[Plus[1, 1]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("ReleaseHold[{Hold[1 + 1]}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[Plus[1, 1]]]"
     );
 }
 
