@@ -135,6 +135,26 @@ batch immediately after the Module fix = **brief-221**. Dispatch order:
 
 ### Unit-9 fixes landed
 
+- **ruling fix 3 — brief-222 (8333a44):** replacement-produced `Sequence`
+  splices into the parent rebuild (USER-RULED; the boundary 216 pinned).
+  `ReplaceAllTraversalOutcome`/`ReplaceOutcome` thread a `changed` flag
+  (continuation-serializable); a rewrite-CHANGED argument whose result is
+  a `Sequence` call splices into the rebuilt parent unless the parent has
+  `sequence_hold()`: `Hold[g[a]] /. a -> Sequence[1,2]` → `Hold[g[1,2]]`.
+  Unchanged args (incl. pre-existing literal Sequences in held data) come
+  back byte-identical; attribute lookup only runs on a changed
+  Sequence-headed arg. Pinned-not-WL: `sh`/`hc` parents keep nesting; top
+  level unchanged. `//.`/levelspec `Replace` consistent (once.rs shares
+  the splice helper + recomputes spliced depth); `ReplacePart[…, pos ->
+  Sequence[…]]` already spliced (recorded, untouched); 216's
+  literal-in-RHS contract intact. Gate: workspace 1442/0; probe panel;
+  Codex hit the load stop-loss twice (Spotlight) and shipped no numbers —
+  correct; its parked binaries mismatched my rebuild (ITS OWN temp build
+  path — build-path bytes; same-path stash rebuild matched 216's HEAD
+  build byte-for-byte = determinism confirmed), so the A/B ran on my
+  same-path pair: `replaceall-simple` +2.61% vs controls ±4..7% noise
+  floor, no regression. GATE NOTE for future briefs: have Codex build
+  A/B binaries IN THE REPO PATH so checksums are comparable.
 - **batch 2 — brief-216 rev2 (606b96f):** rule firing in held replacement.
   (a) `ReplacePart`/`ReplaceAt` insert the binding-substituted delayed RHS
   UNEVALUATED (pure deletions — delayed rules join the shared plan path);
