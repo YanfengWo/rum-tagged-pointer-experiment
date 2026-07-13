@@ -58,7 +58,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
 | 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 ✓ | 215-222 ✓ CLOSED |
-| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | brief-223 | |
+| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | brief-223 ✓ | |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
 after brief-201 split off `ReseedRandom`).
@@ -132,6 +132,88 @@ arm reuses the Ok arm's retained/reclaim computation with
 **brief-220**. (2) staged `With[{…},{…},body]` → **build it**, as its own
 batch immediately after the Module fix = **brief-221**. Dispatch order:
 215 → 220 → 221 → 216 → 217 → 218 → 219.
+
+## Unit 10 (kernel C) triage — 2026-07-13
+
+Audit brief-223 rev2: 57/57 (COVERAGE-OK + CAPABILITY-REVIEW-OK),
+findings in `usability-pass/kernel-c-findings.md`. rev1 was killed by the
+Codex CLI's upstream `cybersecurity risk` content filter mid-run (zero
+output; the same filter truncated brief-208) — rev2 reframed the
+capability review in engineering-hygiene register + ordered a
+write-findings-first discipline, and ran clean (0 filter hits). Gate:
+scope clean (findings file only), fmt clean, no code changed (audit).
+Load-bearing claims reproduced by hand:
+
+- **REAL capability-enforcement bug (code-confirmed, the ApplyTo-class
+  find of this unit):** `eval_begin_package` calls `self.eval_needs(...)`
+  DIRECTLY after dispatch (`builtins_context_loader.rs:308-310`),
+  bypassing the ONLY `FileRead` capability check
+  (`eval_dispatch/mod.rs:123-127`). `DeclarePackage` stub autoload has
+  the same shape via `eval_core/symbol.rs`. Honest boundary: `sandboxed()`
+  omits the file provider (`config.rs:171`), so a BARE sandbox can't read
+  — but `sandboxed().with_file_io(provider)` (a legitimate host config:
+  sandbox the plugin, give it a controlled provider) is exactly where the
+  bypass bites, since direct `Get` is denied there while
+  `BeginPackage[…, {"Dep\`"}]` reads through the hole.
+- **REAL panic:** `Pause[10^100]` → `Duration::from_secs_f64` panic,
+  process exit 101 (a script can crash the host process). `Pause[-1]`
+  correctly fails closed (`Pause::numnm`).
+- **My pre-audit exit-code probe was WRONG** (Codex corrected it): the
+  head-start said `Input[]` exits 0; that was the PIPE's `tail` exit code,
+  not rum-cli's. `printf '' | rum-cli --eval 'Input[]'` (measured
+  directly) exits **1** — the CLI contract holds; only the capability-KIND
+  question (Input/InputString/Dialog `Pure` while requesting host
+  interaction) survives, as a decision candidate. Instrument-calibration
+  lesson again: a pipe masks the exit code
+  ([[diagnostic-tool-trust]]).
+
+**USER-DECISION candidates (do NOT relabel unilaterally — the Exit
+precedent was a user call):** (1) `Input`/`InputString`/`Dialog`
+capability kind (Pure vs a host-interaction capability); (2) `TestReport`
+Clock (test-running is pure; only elapsed-time needs Clock — could be
+optional); (3) `FileNames` addition (absent post-FS-purity; mma-hol
+run_all.wls wants the read-only glob; a long-tail provider-mediated
+`FileRead` folk head — a scope decision, not an auto-gap).
+
+Fix batches (dispatch order — safety first; loader batches carry the
+mma-hol Strict gate flag):
+
+1. **brief-224 — Pause bounds hardening** (safety, S): checked
+   float→Duration conversion, huge-finite and negative pinned, no panic.
+   No A/B, no mma-hol gate — focused runtime/CLI tests. The cheapest real
+   safety win; goes first.
+2. **brief-225 — loader capability enforcement** (safety, L; A/B +
+   mma-hol gate): route `BeginPackage` dependency loads and
+   `DeclarePackage` stub autoload through a `FileRead`-checked internal
+   seam (the `eval_needs` bypass). Touches symbol evaluation (stub
+   autoload) → A/B; touches `Needs`/loader → mma-hol Strict gate at my
+   gate. Honest-boundary note carried into the brief: this is real
+   enforcement (matters under `sandboxed().with_file_io`), not sandbox
+   theater.
+3. **brief-226 — loader integrity** (safety, M; mma-hol gate): missing
+   `BeginPackage` dependency should fail closed + restore the just-opened
+   frame (today: enters the package, puts the missing context on
+   `$ContextPath`); decide the unbalanced-`Begin`-in-`Get` context-leak
+   contract (host-isolation input — record for the dun line, fix the
+   loud hole). No hot-path A/B unless the fix changes generic eval.
+4. **brief-227 — truthfulness + small forms** (safety/convenience, S/M):
+   reject the unread `ResolveContextAliases` + `DumpSave`
+   `CompressionLevel` options (the 217 dead-option class); preserve
+   symbols in the `DumpSave` result list; align `ByteCount`'s
+   canonical-text contract (or fix the doc to match the structural
+   proxy — decide which is the intended contract); `EchoFunction[f]`
+   apply-not-label (WL parity); `Contexts` filter form; `TestCreate`
+   option discovery. Separable; no A/B, no mma-hol gate unless
+   persistence round-trip changes.
+5. **Capability-KIND + FileNames decisions** — the three user-decision
+   candidates above; dispatched only after the user rules.
+
+Standing design inputs harvested (recorded, not designed): the
+whole-unit capability-label review table (the dun host line's first
+concrete input); the package-surface appendix (feeds the parked SPF
+scoping half — `ResolveContextAliases` is unimplemented, `Private\``
+is a naming convention only, unbalanced successful context changes
+persist across the request boundary).
 
 ## Unit 10 (kernel C) — pre-audit findings, 2026-07-13
 
