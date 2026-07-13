@@ -779,6 +779,8 @@ fn predicate_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> 
         1 if is_system_symbol_name(head, "AnyTrue") => Some("AnyTrue"),
         1 if is_system_symbol_name(head, "NoneTrue") => Some("NoneTrue"),
         1 if is_system_symbol_name(head, "MatchQ") => Some("MatchQ"),
+        1 if is_system_symbol_name(head, "MemberQ") => Some("MemberQ"),
+        1 if is_system_symbol_name(head, "FreeQ") => Some("FreeQ"),
         _ => None,
     }
 }
@@ -830,6 +832,8 @@ fn rewrite_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> {
     match arity {
         1 if is_system_symbol_name(head, "Cases") => Some("Cases"),
         1 if is_system_symbol_name(head, "DeleteCases") => Some("DeleteCases"),
+        1 if is_system_symbol_name(head, "Position") => Some("Position"),
+        1 if is_system_symbol_name(head, "Count") => Some("Count"),
         1 if is_system_symbol_name(head, "Replace") => Some("Replace"),
         1 if is_system_symbol_name(head, "ReplaceAll") => Some("ReplaceAll"),
         1 if is_system_symbol_name(head, "ReplaceRepeated") => Some("ReplaceRepeated"),

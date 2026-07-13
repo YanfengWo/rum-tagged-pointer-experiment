@@ -2,6 +2,9 @@ use super::*;
 
 impl Session {
     pub(in crate::runtime) fn eval_count(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("Count", args));
+        }
         if !(2..=4).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Count", args, 2, 4));
         }
@@ -21,6 +24,9 @@ impl Session {
     }
 
     pub(in crate::runtime) fn eval_member_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("MemberQ", args));
+        }
         if !(2..=4).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("MemberQ", args, 2, 4));
         }
@@ -40,6 +46,9 @@ impl Session {
     }
 
     pub(in crate::runtime) fn eval_free_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if args.len() == 1 {
+            return Ok(self.invalid_call("FreeQ", args));
+        }
         if !(2..=4).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("FreeQ", args, 2, 4));
         }

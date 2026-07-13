@@ -11,6 +11,184 @@ fn assert_has_message(outcome: &EvalOutcome, symbol: &str, tag: &str) {
     );
 }
 
+fn assert_has_message_text(outcome: &EvalOutcome, symbol: &str, tag: &str, text: &str) {
+    assert!(
+        outcome.messages.iter().any(|message| {
+            message.symbol == symbol && message.tag == tag && message.text == text
+        }),
+        "expected {symbol}::{tag}: {text}, got {:?}",
+        outcome.messages
+    );
+}
+
+#[test]
+fn position_operator_form_preserves_data_and_error_forms() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let wrapper = session.eval_text("Position[_Integer]").unwrap();
+    assert_eq!(wrapper.value.to_string(), "Position[Blank[Integer]]");
+    assert!(wrapper.messages.is_empty());
+
+    let applied = session.eval_text("Position[_Integer][{1, a, 2}]").unwrap();
+    let ordinary = session.eval_text("Position[{1, a, 2}, _Integer]").unwrap();
+    assert_eq!(applied.value, ordinary.value);
+    assert!(applied.messages.is_empty());
+    assert!(ordinary.messages.is_empty());
+
+    let data = session
+        .eval_text("Position[f[a, f[a]], a, Infinity, 1, Heads -> False]")
+        .unwrap();
+    assert_eq!(data.value.to_string(), "List[List[1]]");
+    assert!(data.messages.is_empty());
+
+    let zero = session.eval_text("Position[]").unwrap();
+    assert_eq!(zero.value.to_string(), "Position[]");
+    assert_has_message_text(
+        &zero,
+        "Position",
+        "argtu",
+        "expected between 2 and 5 argument(s), got 0",
+    );
+
+    let invalid_application = session.eval_text("Position[_Integer][a, b]").unwrap();
+    assert_eq!(
+        invalid_application.value.to_string(),
+        "Position[Blank[Integer]][a, b]"
+    );
+    assert_has_message_text(
+        &invalid_application,
+        "Position",
+        "argx",
+        "Position[Blank[Integer]] called with 2 arguments; 1 argument is expected.",
+    );
+}
+
+#[test]
+fn count_operator_form_preserves_data_and_error_forms() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let wrapper = session.eval_text("Count[_Integer]").unwrap();
+    assert_eq!(wrapper.value.to_string(), "Count[Blank[Integer]]");
+    assert!(wrapper.messages.is_empty());
+
+    let applied = session.eval_text("Count[_Integer][{1, a, 2}]").unwrap();
+    let ordinary = session.eval_text("Count[{1, a, 2}, _Integer]").unwrap();
+    assert_eq!(applied.value, ordinary.value);
+    assert!(applied.messages.is_empty());
+    assert!(ordinary.messages.is_empty());
+
+    let data = session
+        .eval_text("Count[f[a, f[a]], a, Infinity, Heads -> False]")
+        .unwrap();
+    assert_eq!(data.value.to_string(), "2");
+    assert!(data.messages.is_empty());
+
+    let zero = session.eval_text("Count[]").unwrap();
+    assert_eq!(zero.value.to_string(), "Count[]");
+    assert_has_message_text(
+        &zero,
+        "Count",
+        "argtu",
+        "expected between 2 and 4 argument(s), got 0",
+    );
+
+    let invalid_application = session.eval_text("Count[_Integer][a, b]").unwrap();
+    assert_eq!(
+        invalid_application.value.to_string(),
+        "Count[Blank[Integer]][a, b]"
+    );
+    assert_has_message_text(
+        &invalid_application,
+        "Count",
+        "argx",
+        "Count[Blank[Integer]] called with 2 arguments; 1 argument is expected.",
+    );
+}
+
+#[test]
+fn memberq_operator_form_preserves_data_and_error_forms() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let wrapper = session.eval_text("MemberQ[_Integer]").unwrap();
+    assert_eq!(wrapper.value.to_string(), "MemberQ[Blank[Integer]]");
+    assert!(wrapper.messages.is_empty());
+
+    let applied = session.eval_text("MemberQ[_Integer][{a, 1}]").unwrap();
+    let ordinary = session.eval_text("MemberQ[{a, 1}, _Integer]").unwrap();
+    assert_eq!(applied.value, ordinary.value);
+    assert!(applied.messages.is_empty());
+    assert!(ordinary.messages.is_empty());
+
+    let data = session
+        .eval_text("MemberQ[f[g[a]], a, Infinity, Heads -> False]")
+        .unwrap();
+    assert_eq!(data.value.to_string(), "True");
+    assert!(data.messages.is_empty());
+
+    let zero = session.eval_text("MemberQ[]").unwrap();
+    assert_eq!(zero.value.to_string(), "MemberQ[]");
+    assert_has_message_text(
+        &zero,
+        "MemberQ",
+        "argtu",
+        "expected between 2 and 4 argument(s), got 0",
+    );
+
+    let invalid_application = session.eval_text("MemberQ[_Integer][a, b]").unwrap();
+    assert_eq!(
+        invalid_application.value.to_string(),
+        "MemberQ[Blank[Integer]][a, b]"
+    );
+    assert_has_message_text(
+        &invalid_application,
+        "MemberQ",
+        "argx",
+        "MemberQ[Blank[Integer]] called with 2 arguments; 1 argument is expected.",
+    );
+}
+
+#[test]
+fn freeq_operator_form_preserves_data_and_error_forms() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let wrapper = session.eval_text("FreeQ[_Integer]").unwrap();
+    assert_eq!(wrapper.value.to_string(), "FreeQ[Blank[Integer]]");
+    assert!(wrapper.messages.is_empty());
+
+    let applied = session.eval_text("FreeQ[_Integer][{a, b}]").unwrap();
+    let ordinary = session.eval_text("FreeQ[{a, b}, _Integer]").unwrap();
+    assert_eq!(applied.value, ordinary.value);
+    assert!(applied.messages.is_empty());
+    assert!(ordinary.messages.is_empty());
+
+    let data = session
+        .eval_text("FreeQ[f[g[a]], a, {1}, Heads -> False]")
+        .unwrap();
+    assert_eq!(data.value.to_string(), "True");
+    assert!(data.messages.is_empty());
+
+    let zero = session.eval_text("FreeQ[]").unwrap();
+    assert_eq!(zero.value.to_string(), "FreeQ[]");
+    assert_has_message_text(
+        &zero,
+        "FreeQ",
+        "argtu",
+        "expected between 2 and 4 argument(s), got 0",
+    );
+
+    let invalid_application = session.eval_text("FreeQ[_Integer][a, b]").unwrap();
+    assert_eq!(
+        invalid_application.value.to_string(),
+        "FreeQ[Blank[Integer]][a, b]"
+    );
+    assert_has_message_text(
+        &invalid_application,
+        "FreeQ",
+        "argx",
+        "FreeQ[Blank[Integer]] called with 2 arguments; 1 argument is expected.",
+    );
+}
+
 #[test]
 fn level_reports_invalid_levelspec_messages() {
     let mut session = session_with_test_rewrite_builtins();

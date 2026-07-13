@@ -763,6 +763,7 @@ Counts subexpressions matching a pattern on levels specified by a standard level
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: supports the Wolfram Language-documented operator form Count[patt][expr], equivalent to Count[expr, patt].
 
 ### Counts
 
@@ -1419,6 +1420,7 @@ Tests whether no subexpression matches a pattern on levels specified by a standa
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: supports the Wolfram Language-documented operator form FreeQ[patt][expr], equivalent to FreeQ[expr, patt].
 
 ### FromBase64
 
@@ -2176,6 +2178,7 @@ Tests whether any subexpression matches a pattern on levels specified by a stand
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: supports the Wolfram Language-documented operator form MemberQ[patt][expr], equivalent to MemberQ[expr, patt].
 
 ### MemoryConstrained
 
@@ -2714,6 +2717,7 @@ Finds positions of subexpressions matching a pattern on levels specified by a st
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: supports the Wolfram Language-documented operator form Position[patt][expr], equivalent to Position[expr, patt].
 
 ### PositionIndex
 

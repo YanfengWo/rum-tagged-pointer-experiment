@@ -12,6 +12,22 @@ pub const LIMITS: &[(&str, &str)] = &[
         "the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z.",
     ),
     (
+        "Count",
+        "supports the Wolfram Language-documented operator form Count[patt][expr], equivalent to Count[expr, patt].",
+    ),
+    (
+        "FreeQ",
+        "supports the Wolfram Language-documented operator form FreeQ[patt][expr], equivalent to FreeQ[expr, patt].",
+    ),
+    (
+        "MemberQ",
+        "supports the Wolfram Language-documented operator form MemberQ[patt][expr], equivalent to MemberQ[expr, patt].",
+    ),
+    (
+        "Position",
+        "supports the Wolfram Language-documented operator form Position[patt][expr], equivalent to Position[expr, patt].",
+    ),
+    (
         "DateDifference",
         "supports only fixed-duration units Seconds, Minutes, Hours, Days, and Weeks; calendar Months and Years are outside the folk date/time subset.",
     ),
