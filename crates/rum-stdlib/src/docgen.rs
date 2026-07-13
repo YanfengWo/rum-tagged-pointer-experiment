@@ -134,7 +134,7 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     (
         "ReplaceAll",
-        "traverses held positions. A whole-expression Sequence replacement inserted below a held parent remains nested during reconstruction; subsequent result evaluation can splice it only where evaluation reaches that nested call.",
+        "traverses held positions. RuleDelayed right-hand sides are binding-substituted and inserted unevaluated. During parent reconstruction, a changed argument whose whole replacement is Sequence splices unless the parent has SequenceHold or HoldAllComplete; an unchanged literal Sequence stays nested, and a top-level replacement has no parent to splice into.",
     ),
     (
         "ReplaceAt",

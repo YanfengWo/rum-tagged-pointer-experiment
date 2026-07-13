@@ -7,12 +7,12 @@ fn literal_sequence_splicing_is_deferred_until_replacement_result_evaluation() {
     assert_eq!(
         session
             .eval_text(
-                "SetAttributes[hc, HoldAllComplete]; {a /. (a :> hc[Sequence[1, 2]]), a /. (a :> f[Sequence[1, 2]]), hc[Sequence[1, 2]]}",
+                "SetAttributes[hc, HoldAllComplete]; {a /. (a :> hc[Sequence[1, 2]]), a /. (a :> f[Sequence[1, 2]]), hc[Sequence[1, 2]], Hold[g[a]] /. (a :> hc[Sequence[1, 2]])}",
             )
             .unwrap()
             .value
             .to_string(),
-        "List[hc[Sequence[1, 2]], f[1, 2], hc[Sequence[1, 2]]]"
+        "List[hc[Sequence[1, 2]], f[1, 2], hc[Sequence[1, 2]], Hold[g[hc[Sequence[1, 2]]]]]"
     );
 }
 
@@ -52,19 +52,84 @@ fn literal_sequence_wrapping_a_sequence_binding_keeps_its_literal_head() {
 }
 
 #[test]
-fn whole_expression_sequence_replacement_under_hold_records_current_boundary() {
+fn replacement_produced_sequence_splices_into_held_parent_rebuild() {
     let mut session = session_with_test_control_builtins();
 
-    // Known WL divergence: ReplaceAll's held-parent reconstruction currently
-    // keeps a whole-expression Sequence replacement nested. Fixing that is a
-    // separate ReplaceAll reconstruction change, outside this contract.
+    // The former held-parent divergence is closed: reconstruction gives a
+    // replacement-produced Sequence its parent-argument runtime shape.
     assert_eq!(
         session
-            .eval_text("Hold[g[a]] /. (a -> Sequence[1, 2])")
+            .eval_text(
+                "{Hold[g[a]] /. (a -> Sequence[1, 2]), Hold[a] /. (a -> Sequence[1, 2]), Hold[g[a, x, a]] /. (a -> Sequence[1, 2]), Hold[g[a]] /. (a :> Sequence[1, 2]), Hold[g[Sequence[1, 2]]] /. (Sequence[1, 2] -> Sequence[1, 2])}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[g[1, 2]], Hold[1, 2], Hold[g[1, 2, x, 1, 2]], Hold[g[1, 2]], Hold[g[1, 2]]]"
+    );
+}
+
+#[test]
+fn unchanged_literal_sequence_does_not_splice_during_rebuild() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Hold[g[Sequence[1, 2]]] /. (x -> y)")
             .unwrap()
             .value
             .to_string(),
         "Hold[g[Sequence[1, 2]]]"
+    );
+}
+
+#[test]
+fn replacement_sequence_splice_respects_parent_attributes() {
+    let mut session = session_with_test_control_builtins();
+
+    // Pinned rum contract, not a claimed WL result: replacement reconstruction
+    // respects the immediate parent's SequenceHold/HoldAllComplete boundary.
+    assert_eq!(
+        session
+            .eval_text(
+                "SetAttributes[sh, SequenceHold]; SetAttributes[hc, HoldAllComplete]; {sh[a] /. (a -> Sequence[1, 2]), hc[a] /. (a -> Sequence[1, 2])}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[sh[Sequence[1, 2]], hc[Sequence[1, 2]]]"
+    );
+}
+
+#[test]
+fn top_level_sequence_replacement_has_no_parent_to_splice_into() {
+    let mut session = session_with_test_control_builtins();
+
+    // Pinned rum contract, not a claimed WL result: a root replacement has no
+    // parent argument list, so the Sequence value itself is returned.
+    assert_eq!(
+        session
+            .eval_text("a /. (a -> Sequence[1, 2])")
+            .unwrap()
+            .value
+            .to_string(),
+        "Sequence[1, 2]"
+    );
+}
+
+#[test]
+fn other_rewrite_traversals_share_replacement_sequence_splicing() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "SetAttributes[sh, SequenceHold]; {Hold[g[a]] //. (a -> Sequence[1, 2]), Replace[Hold[g[a]], a -> Sequence[1, 2], {2}], Replace[Hold[g[Sequence[1, 2]]], x -> y, {0, Infinity}], Replace[sh[a], a -> Sequence[1, 2], {1}]}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Hold[g[1, 2]], Hold[g[1, 2]], Hold[g[Sequence[1, 2]]], sh[Sequence[1, 2]]]"
     );
 }
 

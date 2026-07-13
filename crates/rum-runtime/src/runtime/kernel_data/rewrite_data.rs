@@ -30,6 +30,7 @@ struct DeleteCasesOutcome {
 pub(in crate::runtime) struct ReplaceOutcome {
     expr: Expr,
     depth: usize,
+    changed: bool,
 }
 
 impl ContinuationValue for DeleteCasesOutcome {
@@ -131,7 +132,11 @@ impl ContinuationValue for ReplaceOutcome {
     fn into_continuation_expr(self) -> Expr {
         Expr::call(
             system_expr("InternalContinuationReplaceOutcome"),
-            vec![self.expr, Expr::integer(BigInt::from(self.depth))],
+            vec![
+                self.expr,
+                Expr::integer(BigInt::from(self.depth)),
+                system_expr(if self.changed { "True" } else { "False" }),
+            ],
         )
     }
 
@@ -139,9 +144,10 @@ impl ContinuationValue for ReplaceOutcome {
         match expr {
             Expr::Call { head, args }
                 if is_system_symbol_name(&head, "InternalContinuationReplaceOutcome")
-                    && args.len() == 2 =>
+                    && args.len() == 3 =>
             {
                 let mut args = Expr::unwrap_shared_args(args);
+                let changed_expr = args.pop().expect("replace outcome payload stores changed");
                 let depth_expr = args.pop().expect("replace outcome payload stores depth");
                 let expr = args.pop().expect("replace outcome payload stores expr");
 
@@ -149,6 +155,7 @@ impl ContinuationValue for ReplaceOutcome {
                     expr,
                     depth: expr_as_non_negative_usize(&depth_expr)
                         .expect("replace outcome depth should be non-negative"),
+                    changed: is_system_symbol_name(&changed_expr, "True"),
                 }
             }
             other => panic!("unexpected continuation payload for ReplaceOutcome: {other:?}"),

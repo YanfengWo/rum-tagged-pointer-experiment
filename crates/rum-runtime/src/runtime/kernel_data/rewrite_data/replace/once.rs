@@ -177,6 +177,7 @@ impl Session {
                     Ok(ReplaceOutcome {
                         depth,
                         expr: replaced,
+                        changed: true,
                     })
                 } else {
                     session.replace_children_owned(expr, rules, levels, level + 1, include_heads)
@@ -196,7 +197,11 @@ impl Session {
         include_heads: bool,
     ) -> Result<ReplaceOutcome, EvalError> {
         match expr {
-            Expr::Atom(_) => Ok(ReplaceOutcome { expr, depth: 1 }),
+            Expr::Atom(_) => Ok(ReplaceOutcome {
+                expr,
+                depth: 1,
+                changed: false,
+            }),
             Expr::Call { head, args } if is_system_symbol_name(&head, "Association") => {
                 let head = head.into_owned();
                 let args = args.into_vec();
@@ -213,6 +218,7 @@ impl Session {
                             include_heads,
                             Vec::new(),
                             outcome.depth,
+                            outcome.changed,
                             0,
                         )
                     })
@@ -226,6 +232,7 @@ impl Session {
                         include_heads,
                         Vec::new(),
                         1,
+                        false,
                         0,
                     )
                 }
@@ -246,6 +253,7 @@ impl Session {
                             include_heads,
                             Vec::new(),
                             outcome.depth,
+                            outcome.changed,
                         )
                     })
                 } else {
@@ -258,6 +266,7 @@ impl Session {
                         include_heads,
                         Vec::new(),
                         1,
+                        false,
                     )
                 }
             }
@@ -274,11 +283,13 @@ impl Session {
         include_heads: bool,
         rebuilt_args: Vec<Expr>,
         max_child_depth: usize,
+        changed: bool,
     ) -> Result<ReplaceOutcome, EvalError> {
         let Some((child, rest)) = args.split_first() else {
             return Ok(ReplaceOutcome {
                 expr: Expr::call(head, rebuilt_args),
                 depth: max_child_depth.saturating_add(1),
+                changed,
             });
         };
 
@@ -292,7 +303,24 @@ impl Session {
         let rest = rest.to_vec();
         self.drive_internal_value(child_result, move |session, outcome| {
             let mut rebuilt_args = rebuilt_args;
-            rebuilt_args.push(outcome.expr);
+            let child_changed = outcome.changed;
+            let appended_depth = if child_changed {
+                let appended_start = rebuilt_args.len();
+                let spliced =
+                    session.append_changed_rewrite_argument(&head, &mut rebuilt_args, outcome.expr);
+                if spliced {
+                    rebuilt_args[appended_start..]
+                        .iter()
+                        .map(|expr| replace_expr_depth_for_heads(expr, include_heads))
+                        .max()
+                        .unwrap_or(0)
+                } else {
+                    outcome.depth
+                }
+            } else {
+                rebuilt_args.push(outcome.expr);
+                outcome.depth
+            };
             session.replace_call_children_owned(
                 head,
                 rest,
@@ -301,7 +329,8 @@ impl Session {
                 child_level,
                 include_heads,
                 rebuilt_args,
-                max_child_depth.max(outcome.depth),
+                max_child_depth.max(appended_depth),
+                changed || child_changed,
             )
         })
     }
@@ -316,12 +345,14 @@ impl Session {
         include_heads: bool,
         rebuilt_entries: Vec<Expr>,
         max_child_depth: usize,
+        changed: bool,
         index: usize,
     ) -> Result<ReplaceOutcome, EvalError> {
         let Some(entry) = args.get(index).cloned() else {
             return Ok(ReplaceOutcome {
                 expr: Expr::call(head, rebuilt_entries),
                 depth: max_child_depth.saturating_add(1),
+                changed,
             });
         };
 
@@ -346,6 +377,7 @@ impl Session {
                         include_heads,
                         rebuilt_entries,
                         max_child_depth.max(outcome.depth),
+                        changed || outcome.changed,
                         index + 1,
                     )
                 })
@@ -365,11 +397,20 @@ impl Session {
                         include_heads,
                         rebuilt_entries,
                         max_child_depth.max(outcome.depth),
+                        changed || outcome.changed,
                         index + 1,
                     )
                 })
             }
         }
+    }
+}
+
+fn replace_expr_depth_for_heads(expr: &Expr, include_heads: bool) -> usize {
+    if include_heads {
+        replace_expr_depth_with_heads(expr)
+    } else {
+        replace_expr_depth(expr)
     }
 }
 
