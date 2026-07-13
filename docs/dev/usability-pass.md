@@ -135,6 +135,26 @@ batch immediately after the Module fix = **brief-221**. Dispatch order:
 
 ### Unit-9 fixes landed
 
+- **batch 2 — brief-216 rev2 (606b96f):** rule firing in held replacement.
+  (a) `ReplacePart`/`ReplaceAt` insert the binding-substituted delayed RHS
+  UNEVALUATED (pure deletions — delayed rules join the shared plan path);
+  held positions keep the raw CompoundExpression, side effects don't fire
+  (E7 panel: `c` = 0 across all three consumers), unheld positions and
+  immediate rules unchanged. (b) RHS materialization splices `Sequence`
+  ONLY for a directly bound pattern symbol; literal `Sequence` calls stay
+  one argument (`a /. (a :> hc[Sequence[1,2]])` → nested; ordinary heads
+  splice at evaluation). `replace_all.rs` untouched. **rev1 stop-lossed on
+  MY error**: a WL-derived "must not change" pin never baseline-verified
+  (`Hold[g[a]] /. a -> Sequence[1,2]` — WL splices, rum never did).
+  STANDING LESSON: baseline-verify every preservation pin; WL-correct ≠
+  rum-current. **USER RULING #3 (2026-07-13): fix that divergence = 
+  brief-222** (substitution is the only way to splice args into held code
+  + rewrite output should have its runtime shape; rum's eval-only-splice
+  was an unruled implementation artifact). Gate: workspace 1438/0; 12-
+  position probe panel; A/B run by the director after the user idled the
+  machine (Codex correctly REFUSED to benchmark under a VM's load and
+  parked the binaries) — `replaceall-simple` -2.98%, controls +7.6/-3.9%
+  noise floor, no regression.
 - **decision fix 2 — brief-221 (c204050):** staged `With[{…}, {…}, body]`
   (USER-RULED). Arity ≥3 = nested-With equivalent via a structural
   desugar in a new `eval_staged_with`; 2-arg path byte-identical (the
