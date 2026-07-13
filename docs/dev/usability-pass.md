@@ -58,7 +58,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
 | 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 ✓ | 215-222 ✓ CLOSED |
-| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | | |
+| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | brief-223 | |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
 after brief-201 split off `ReseedRandom`).
@@ -132,6 +132,34 @@ arm reuses the Ok arm's retained/reclaim computation with
 **brief-220**. (2) staged `With[{…},{…},body]` → **build it**, as its own
 batch immediately after the Module fix = **brief-221**. Dispatch order:
 215 → 220 → 221 → 216 → 217 → 218 → 219.
+
+## Unit 10 (kernel C) — pre-audit findings, 2026-07-13
+
+Claude probed before writing brief-223 (the FINAL unit; the brief
+verifies rather than re-derives):
+
+- **Attributes/protection**: 57/57 in the reference; only the three
+  brief-210 writable session vars (`$ContextPath`/`$Packages`/`$Path`)
+  unprotected — protection is settled; the battleground is CAPABILITY
+  LABELS.
+- **Capability map**: Clock 8 (incl. the flagged `TestReport`),
+  Diagnostic 4 (the profiling + memory readers), FileRead 3
+  (`FindFile`/`Get`/`Needs`), FileWrite 2 (`Save`/`DumpSave`), Pure 40.
+- **THE flagged finding**: `Input`/`InputString`/`Dialog` are
+  `Capability::Pure` yet raise a host-interaction request
+  (`printf '' | rum-cli --eval 'Input[]'` → `! input required: ?` +
+  `error: input required: ?` with **process exit code 0**). Two rows
+  ordered: the Exit-class label question (sandboxed plugins demanding
+  host interaction — DECISION candidate, Exit precedent) and the CLI
+  exit-code contract mismatch (documented "1 on evaluation failure").
+- **Probed green**: Begin/End context switching, Names/NameQ/SymbolName,
+  pure path math (no FS), Echo/Print shapes, markers inert, ByteCount,
+  `TestCreate` → Association (rum-native shape), Stack[] empty at top.
+- **Design-input duties wired into the brief**: the capability-label
+  review table (whole unit, feeds the dun host line), the
+  package-surface appendix (feeds the parked Structured Package Format
+  scoping half), the mma-hol-gate flag for any loader-path fix batch,
+  and the `FileNames` absence candidate row (the unit-9 gate discovery).
 
 **UNIT 9 CLOSED (2026-07-13).** 214 audit (47/47) + eight fix batches
 215-222 (three of them USER-RULED: 220 Module error-path reclamation, 221
