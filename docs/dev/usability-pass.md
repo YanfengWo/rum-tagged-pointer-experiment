@@ -135,6 +135,31 @@ batch immediately after the Module fix = **brief-221**. Dispatch order:
 
 ### Unit-9 fixes landed
 
+- **decision fix 1 — brief-220 rev2 (3dd9d3f):** Module error-path gensym
+  reclamation (USER-RULED: eager = WL semantics). `finish_module_scope`
+  runs the shared `module_gensyms_to_reclaim` on BOTH arms — Ok passes
+  `[result]` (byte-identical work), Err passes
+  `gensym_gc_extra_roots_for_outcome(&outcome)`; escaped guard unchanged.
+  Unreferenced locals now reclaimed immediately on Throw/Abort/Return/
+  EvalError; payload escapes (`Throw[Hold[x]]`) survive; nested modules
+  mirror the Ok arm's conservatism (inner reclaimed, outer deferred — the
+  rev1 nested contract demanded MORE eagerness on Err than Ok has, Codex
+  stop-lossed correctly, and the director verified on HEAD that Ok defers
+  the outer local too before revising). Gate: workspace 1426/0 reproduced;
+  probes reproduced; independent A/B (all six scoping watch labels
+  negative, module-local -6.8%, with-local -7.8%; controls ±8..19% =
+  noise floor); **mma-hol Strict FULL suite on rum 3126/0** (~127 min,
+  RSS <1GB). **GATE TRAP FOUND: `FileNames` is not an installed rum
+  builtin**, so the acceptance suite's post-bootstrap discovery
+  (`Complement[FileNames[…], …]`) silently no-ops — a first "green" run
+  had executed only kernel_tests (71 assertions) + the load chain while
+  printing `failed: 0`/exit 0. Fixed by patching the SCRATCH copy's
+  run_all.wls with an explicit 38-file list (procedure memory:
+  `mma-hol-strict-gate-procedure`). `FileNames` absence = a unit-10
+  paths-family data point (absent builtin silently no-ops a read-only
+  discovery idiom). PARKED from rev1: activation-bookkeeping precision
+  (descendant gensym writes mark ancestor activations escaped on both
+  arms; fixing would benefit both — own design pass, not this line).
 - **batch 1 — brief-215 (02ce0a8):** evaluator hold correctness.
   (a) `Unevaluated` restored on the true no-consumer path — sparse
   `(position, wrapper)` provenance recorded ONLY when a wrapper is
