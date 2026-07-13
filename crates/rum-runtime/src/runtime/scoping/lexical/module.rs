@@ -214,47 +214,16 @@ impl Session {
             activation.escaped || self.current_side_table_stamp() != activation.side_table_stamp;
 
         let mut reclaim = Vec::new();
-        if let Ok(result) = &outcome {
-            if !escaped {
-                let mut retained: BTreeSet<Symbol> = activation
-                    .gensyms
-                    .iter()
-                    .filter(|gensym| expr_contains_symbol(result, gensym))
-                    .cloned()
-                    .collect();
-
-                loop {
-                    let retained_snapshot: Vec<Symbol> = retained.iter().cloned().collect();
-                    let mut grew = false;
-
-                    for retained_gensym in retained_snapshot {
-                        let Some(definition) = self.definitions.get(&retained_gensym) else {
-                            continue;
-                        };
-
-                        for gensym in &activation.gensyms {
-                            if retained.contains(gensym) {
-                                continue;
-                            }
-
-                            if definition_references_symbol(definition, gensym) {
-                                retained.insert(gensym.clone());
-                                grew = true;
-                            }
-                        }
-                    }
-
-                    if !grew {
-                        break;
-                    }
+        if !escaped {
+            match &outcome {
+                Ok(result) => {
+                    reclaim =
+                        self.module_gensyms_to_reclaim(&activation, std::slice::from_ref(result));
                 }
-
-                reclaim = activation
-                    .gensyms
-                    .iter()
-                    .filter(|gensym| !retained.contains(*gensym))
-                    .cloned()
-                    .collect();
+                Err(_) => {
+                    let roots = gensym_gc_extra_roots_for_outcome(&outcome);
+                    reclaim = self.module_gensyms_to_reclaim(&activation, &roots);
+                }
             }
         }
 
@@ -281,5 +250,51 @@ impl Session {
         }
 
         outcome
+    }
+
+    fn module_gensyms_to_reclaim(
+        &self,
+        activation: &ModuleActivation,
+        roots: &[Expr],
+    ) -> Vec<Symbol> {
+        let mut retained: BTreeSet<Symbol> = activation
+            .gensyms
+            .iter()
+            .filter(|gensym| roots.iter().any(|root| expr_contains_symbol(root, gensym)))
+            .cloned()
+            .collect();
+
+        loop {
+            let retained_snapshot: Vec<Symbol> = retained.iter().cloned().collect();
+            let mut grew = false;
+
+            for retained_gensym in retained_snapshot {
+                let Some(definition) = self.definitions.get(&retained_gensym) else {
+                    continue;
+                };
+
+                for gensym in &activation.gensyms {
+                    if retained.contains(gensym) {
+                        continue;
+                    }
+
+                    if definition_references_symbol(definition, gensym) {
+                        retained.insert(gensym.clone());
+                        grew = true;
+                    }
+                }
+            }
+
+            if !grew {
+                break;
+            }
+        }
+
+        activation
+            .gensyms
+            .iter()
+            .filter(|gensym| !retained.contains(*gensym))
+            .cloned()
+            .collect()
     }
 }

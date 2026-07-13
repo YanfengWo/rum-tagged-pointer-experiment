@@ -167,6 +167,96 @@ fn outcome_extra_roots_are_empty_for_non_value_errors_and_candidate_is_reclaimed
 }
 
 #[test]
+fn module_unreferenced_error_paths_reclaim_gensyms_immediately() {
+    let mut throw_session = session_with_test_control_builtins();
+    assert_eq!(
+        eval_string(
+            &mut throw_session,
+            "Catch[Module[{gcThrow220 = 1}, Throw[fail]]]"
+        ),
+        "fail"
+    );
+    assert_module_gensym_reclaimed(&throw_session, "gcThrow220$1");
+
+    let mut abort_session = session_with_test_control_builtins();
+    assert_eq!(
+        eval_string(
+            &mut abort_session,
+            "CheckAbort[Module[{gcAbort220 = 1}, Abort[]], caught]"
+        ),
+        "caught"
+    );
+    assert_module_gensym_reclaimed(&abort_session, "gcAbort220$1");
+
+    let mut return_session = session_with_test_control_builtins();
+    assert_eq!(
+        eval_string(
+            &mut return_session,
+            "Function[Module[{gcReturn220 = 1}, Return[fail]]][]"
+        ),
+        "fail"
+    );
+    assert_module_gensym_reclaimed(&return_session, "gcReturn220$1");
+}
+
+#[test]
+fn module_throw_payload_root_retains_its_gensym_definition() {
+    let mut session = session_with_test_first();
+
+    assert_eq!(
+        eval_string(
+            &mut session,
+            "First[Catch[Module[{gcPayload220 = 1}, Throw[Hold[gcPayload220]]]]]"
+        ),
+        "1"
+    );
+
+    let candidate = Symbol::from_name("gcPayload220$1");
+    assert!(session.definitions.contains_key(&candidate));
+    assert!(session.gc_candidate_gensyms.contains(&candidate));
+}
+
+#[test]
+fn nested_module_error_reclamation_mirrors_success_conservatism() {
+    let mut success_session = session_with_test_control_builtins();
+    assert_eq!(
+        eval_string(
+            &mut success_session,
+            "Module[{gcOuterOk220 = 1}, Module[{gcInnerOk220 = 2}, 42]]"
+        ),
+        "42"
+    );
+    assert_module_gensym_deferred(&success_session, "gcOuterOk220$1");
+    assert_module_gensym_reclaimed(&success_session, "gcInnerOk220$2");
+
+    let mut error_session = session_with_test_control_builtins();
+    assert_eq!(
+        eval_string(
+            &mut error_session,
+            "Catch[Module[{gcOuterErr220 = 1}, Module[{gcInnerErr220 = 2}, Throw[fail]]]]"
+        ),
+        "fail"
+    );
+    assert_module_gensym_deferred(&error_session, "gcOuterErr220$1");
+    assert_module_gensym_reclaimed(&error_session, "gcInnerErr220$2");
+}
+
+#[test]
+fn module_error_path_definition_escape_stays_deferred() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        eval_string(
+            &mut session,
+            "Catch[Module[{gcGuard220 = 1}, gcGuardFn220[y_] := gcGuard220 + y; Throw[fail]]]"
+        ),
+        "fail"
+    );
+
+    assert_module_gensym_deferred(&session, "gcGuard220$1");
+}
+
+#[test]
 fn global_root_keeps_escaped_candidate_until_root_is_cleared() {
     let mut session = session_with_test_first();
 
@@ -513,4 +603,16 @@ fn assert_candidate_definition_count(session: &Session, candidates: &[Symbol], c
             .count(),
         count
     );
+}
+
+fn assert_module_gensym_reclaimed(session: &Session, name: &str) {
+    let gensym = Symbol::from_name(name);
+    assert!(!session.definitions.contains_key(&gensym));
+    assert!(!session.gc_candidate_gensyms.contains(&gensym));
+}
+
+fn assert_module_gensym_deferred(session: &Session, name: &str) {
+    let gensym = Symbol::from_name(name);
+    assert!(session.definitions.contains_key(&gensym));
+    assert!(session.gc_candidate_gensyms.contains(&gensym));
 }
