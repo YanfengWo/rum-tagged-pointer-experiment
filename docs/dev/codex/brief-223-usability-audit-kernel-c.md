@@ -71,31 +71,39 @@ grouped as below, this order):
    ! input required: ?
    error: input required: ?     (process EXIT CODE 0)
    ```
-   Two distinct rows: (a) `Input`/`InputString`/`Dialog` are
-   `Capability::Pure`, yet they raise a host-interaction request — the
-   SAME label class as the unit-4 `Exit` mislabel (Pure → `sandboxed()`
-   installs it → a sandboxed plugin can demand interactive input from a
-   naive host). Map the mechanism (is it the `InputRequired` suspension?
-   what does rum-host's `sandboxed()` do with it today — probe/cite the
-   host tests), classify honestly, and record it as a DECISION candidate
-   (the Exit precedent was a USER decision; do not propose a unilateral
-   relabel). (b) the CLI printed `error: input required` yet exited 0 —
-   check `rum-cli`'s documented exit-code contract ("1 on
-   syntax/load/evaluation failure") and file the mismatch if confirmed.
+   Two distinct rows. (a) **Label/behavior inconsistency**:
+   `Input`/`InputString`/`Dialog` are declared `Capability::Pure`, yet
+   their behavior is to suspend the evaluation and ask the embedding
+   application for a value — i.e. they depend on an interactive
+   surrounding, which a `Pure` declaration says they do not. This is the
+   same LABEL-KIND question the unit-4 `Exit` row raised (`Exit` was
+   `Pure` while requesting host lifecycle control; the user relabelled it
+   `Capability::Process`). Map the mechanism factually — the
+   `InputRequired` suspension path, which capability profiles install
+   these heads today, and what the embedding API does with the request
+   (cite the rum-host tests) — classify honestly, and record it as a
+   DECISION candidate. The Exit precedent was a USER decision; do NOT
+   propose a unilateral relabel. (b) **Exit-code contract**: the CLI
+   printed `error: input required` yet the process exited 0; `rum-cli`'s
+   documented contract is "1 on syntax/load/evaluation failure". Confirm
+   and file the mismatch.
 
 ## The scope guardrails (READ TWICE)
 
-- **Capability labels are the unit's safety axis.** For every non-Pure
-  head: is the label the right KIND (Clock for wall-clock reads,
-  Diagnostic for process introspection, FileRead/FileWrite for FS)? For
-  every Pure head: certify it reads NOTHING from the outside world —
-  session-mediated output (`Print`/`Echo`/`Trace` accumulate in the
-  session response) is Pure by the session-state doctrine (Sow/Reap
-  precedent), but VERIFY the output actually goes through the session,
-  not direct stdout in kernel code (cite the seam). `MemoryConstrained`
-  being `Pure` while `MemoryInUse` is `Diagnostic` needs a trace: if the
-  budget enforcement reads process memory, the label is dishonest; if it
-  meters allocations internally, document why that is deterministic.
+- **Capability labels are the unit's correctness axis.** This is an API-
+  hygiene review, in the same spirit as the attribute-hygiene sweeps of
+  units 6-8: does each head's DECLARED label match what the code
+  actually does? For every non-Pure head: is the label the right KIND
+  (Clock for wall-clock reads, Diagnostic for process introspection,
+  FileRead/FileWrite for filesystem access)? For every Pure head:
+  certify it reads NOTHING from outside the session — session-mediated
+  output (`Print`/`Echo`/`Trace` accumulate in the session response) is
+  Pure by the session-state doctrine (the Sow/Reap precedent), but
+  VERIFY the output really flows through the session rather than direct
+  stdout in kernel code (cite the seam). `MemoryConstrained` is `Pure`
+  while `MemoryInUse` is `Diagnostic`: trace it — if budget enforcement
+  reads process memory, the label is wrong; if it meters allocations
+  internally, document why that is deterministic.
 - **`TestReport` Clock review is ORDERED** (flagged by the stateful↔pure
   line at close, 2026-07-08): test-RUNNING is pure; only the report's
   elapsed-time field needs Clock. Record the design input (could timing
@@ -143,14 +151,14 @@ grouped as below, this order):
 
 ## What IS a legitimate finding (three axes, tuned)
 
-- **Safety**: capability-label lies (the main event — the Input family
-  is the worked example); silent failure modes in the loader (`Get` on
-  a missing/malformed file — message + `$Failed`?); `Save`/`DumpSave`
-  overwrite semantics (silent clobber?); `TimeConstrained`/
-  `MemoryConstrained` budget-exceeded shape (WL returns `$Aborted` — and
-  rum has the `$Aborted` marker in THIS unit; verify the pairing);
-  CLI exit-code honesty (the Input finding); `Pause` bounds (negative /
-  huge arguments).
+- **Safety**: label/behavior mismatches (the main event — the Input
+  family is the worked example); silent failure modes in the loader
+  (`Get` on a missing/malformed file — message + `$Failed`?);
+  `Save`/`DumpSave` overwrite semantics (silent clobber?);
+  `TimeConstrained`/`MemoryConstrained` budget-exceeded shape (WL returns
+  `$Aborted` — and rum has the `$Aborted` marker in THIS unit; verify the
+  pairing); CLI exit-code honesty (the Input finding); `Pause` bounds
+  (negative / huge arguments).
 - **Flexibility**: WL-documented forms to CHECK not assume —
   `Timing`/`AbsoluteTiming` return shapes; `TimeConstrained[expr, t,
   failexpr]` 3-arg form; `MemoryConstrained` 3-arg; `Names["patt`*"]`
@@ -200,12 +208,14 @@ PLUS — unique to this unit — TWO dedicated sections:
 
 ### `## Capability-label review (whole-unit)`
 
-The 57-row capability table: label, what the implementation actually
-touches (cite the seam), verdict (honest / mislabeled / decision-
-candidate), and for the `sandboxed()` profile: which of these heads a
-sandboxed plugin can reach and what each can DO to the host (the Input
-family analysis lives here). This is the input to a possible capability
-fix batch and to the dun host line.
+The 57-row table: declared label, what the implementation actually
+touches (cite the seam), and a verdict (label matches behavior /
+mismatched / decision-candidate). Add one column: which capability
+profiles install the head today (the restricted `sandboxed()` profile vs
+the trusted CLI profile), so a reader can see at a glance where a
+label/behavior mismatch would surface. The Input-family analysis lives
+here. This table is the input to a possible label fix batch and the
+first concrete deliverable for the dun host-embedding line.
 
 ### `## Package-surface design input (parked SPF scoping half)`
 
@@ -257,6 +267,16 @@ cargo fmt --check           # clean — you touched no code
 - Stop-loss: if the same probe misbehaves twice, STOP and report it. If
   an `Input`/`Dialog` probe hangs past the timeout, report the hang as a
   finding rather than retrying variations.
+- **Tooling note (rev2)**: the first dispatch of this brief was killed
+  mid-run by an upstream content filter in the Codex CLI while it was
+  running rum-host capability tests — no file was written. This brief is
+  a routine API-hygiene audit of an open-source expression evaluator's
+  own declared capability labels (the same kind of sweep units 6-8 ran
+  for attributes). Keep your write-ups in that engineering register:
+  describe what a label says versus what the code does. If a filter
+  interrupts you again, WRITE THE FINDINGS FILE FIRST with whatever you
+  have (partial is fine, mark it partial) before running further test
+  commands, so the work is never lost.
 
 ## Report format
 
