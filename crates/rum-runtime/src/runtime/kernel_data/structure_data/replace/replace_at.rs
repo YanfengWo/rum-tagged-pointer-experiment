@@ -118,14 +118,8 @@ impl Session {
                 return session.replace_at_paths_owned(expr, paths, rules, index + 1);
             };
 
-            let evaluated_result = session.evaluate(replaced);
-            session.drive_evaluated_value::<Expr, Expr, _>(
-                evaluated_result,
-                move |session, value| {
-                    let updated = replace_exact_path(expr, &path, value);
-                    session.replace_at_paths_owned(updated, paths, rules, index + 1)
-                },
-            )
+            let updated = replace_exact_path(expr, &path, replaced);
+            session.replace_at_paths_owned(updated, paths, rules, index + 1)
         })
     }
 }

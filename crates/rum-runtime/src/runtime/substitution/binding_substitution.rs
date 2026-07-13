@@ -15,7 +15,6 @@ static RULE_RHS_REBUILT_FRESH_HEAD_ARGS_COUNT: AtomicU64 = AtomicU64::new(0);
 static RULE_RHS_PRESERVED_EXISTING_ARG_COUNT: AtomicU64 = AtomicU64::new(0);
 static RULE_RHS_PRESERVED_EXISTING_CALL_ARG_COUNT: AtomicU64 = AtomicU64::new(0);
 static RULE_RHS_SPLICE_FROM_BINDING_COUNT: AtomicU64 = AtomicU64::new(0);
-static RULE_RHS_SPLICE_FROM_EXISTING_RHS_COUNT: AtomicU64 = AtomicU64::new(0);
 static RULE_RHS_ALPHA_RENAME_ID: AtomicU64 = AtomicU64::new(0);
 
 const RULE_RHS_ALPHA_ID_MARKER: u64 = 1_u64 << 63;
@@ -89,14 +88,14 @@ pub(in crate::runtime) fn substitute_rule_bindings(expr: &Expr, bindings: &Symbo
 pub(in crate::runtime) fn substitute_rule_bindings_for_rhs(
     expr: &Expr,
     bindings: &SymbolExprMap,
-    may_splice_without_bindings: bool,
+    _may_splice_without_bindings: bool,
 ) -> Expr {
     let start = rule_rhs_timing_start();
     record_substitution_sharing_counter(
         &RULE_RHS_SUBSTITUTION_REQUEST_COUNT,
         "rule_rhs_substitution_requests",
     );
-    let result = if bindings.is_empty() && !may_splice_without_bindings {
+    let result = if bindings.is_empty() {
         record_substitution_sharing_counter(
             &RULE_RHS_FAST_CLONE_EMPTY_BINDINGS_COUNT,
             "rule_rhs_fast_clone_empty_bindings",
@@ -301,7 +300,15 @@ where
                 record_rule_rhs_preserved_args(&args[..index]);
                 args[..index].to_vec()
             });
-            if let Some(sequence_items) = sequence_items(&substituted_arg) {
+            // Structural splicing belongs only to a Sequence value inserted by
+            // a directly bound pattern symbol. A literal Sequence call in the
+            // RHS remains one argument, even when substitution rebuilt it.
+            let bound_sequence_items = if matches!(arg, Expr::Atom(Atom::Symbol(_))) {
+                sequence_items(&substituted_arg)
+            } else {
+                None
+            };
+            if let Some(sequence_items) = bound_sequence_items {
                 record_substitution_sharing_counter(
                     &RULE_RHS_SPLICE_FROM_BINDING_COUNT,
                     "rule_rhs_splices_from_binding",
@@ -310,17 +317,6 @@ where
             } else {
                 output_args.push(substituted_arg);
             }
-        } else if let Some(sequence_items) = sequence_items(arg) {
-            record_substitution_sharing_counter(
-                &RULE_RHS_SPLICE_FROM_EXISTING_RHS_COUNT,
-                "rule_rhs_splices_from_existing_rhs",
-            );
-            substituted_args
-                .get_or_insert_with(|| {
-                    record_rule_rhs_preserved_args(&args[..index]);
-                    args[..index].to_vec()
-                })
-                .extend(sequence_items.iter().cloned());
         } else if let Some(substituted_args) = &mut substituted_args {
             record_rule_rhs_preserved_arg(arg);
             substituted_args.push(arg.clone());

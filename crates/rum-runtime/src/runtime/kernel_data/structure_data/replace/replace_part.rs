@@ -50,8 +50,6 @@ impl Session {
         self.drive_internal_value(targets_result, move |session, targets| {
             if targets.is_empty() {
                 session.apply_replace_part_rules_owned(expr, rest)
-            } else if rule.delayed {
-                session.apply_delayed_replace_targets_owned(expr, targets, rest)
             } else {
                 let plan = build_replace_plan_from_targets(targets);
                 let updated = session.apply_replace_plan_owned(expr, plan)?;
@@ -193,25 +191,6 @@ impl Session {
                 collected,
                 index + 1,
             )
-        })
-    }
-
-    fn apply_delayed_replace_targets_owned(
-        &mut self,
-        expr: Expr,
-        targets: Vec<ReplacePartTarget>,
-        remaining_rules: Vec<ReplacePartRule>,
-    ) -> Result<Expr, EvalError> {
-        let Some((first_target, rest_targets)) = targets.split_first() else {
-            return self.apply_replace_part_rules_owned(expr, remaining_rules);
-        };
-
-        let rhs_result = self.evaluate(first_target.rhs.clone());
-        let first_path = first_target.path.clone();
-        let rest_targets = rest_targets.to_vec();
-        self.drive_evaluated_value::<Expr, Expr, _>(rhs_result, move |session, rhs| {
-            let updated = replace_exact_path(expr, &first_path, rhs);
-            session.apply_delayed_replace_targets_owned(updated, rest_targets, remaining_rules)
         })
     }
 

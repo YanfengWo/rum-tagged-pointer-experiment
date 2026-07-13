@@ -133,12 +133,28 @@ pub const LIMITS: &[(&str, &str)] = &[
         "uses the deterministic session PRNG and is reproducible under the same seed; use an entropy reseed first when global uniqueness matters.",
     ),
     (
+        "ReplaceAll",
+        "traverses held positions. A whole-expression Sequence replacement inserted below a held parent remains nested during reconstruction; subsequent result evaluation can splice it only where evaluation reaches that nested call.",
+    ),
+    (
+        "ReplaceAt",
+        "RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position.",
+    ),
+    (
+        "ReplacePart",
+        "RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position.",
+    ),
+    (
         "ReseedRandom",
         "reseeds the session PRNG from host entropy; requires Capability::Random and is denied under sandboxed().",
     ),
     (
         "SeedRandom",
         "uses xoshiro256** with splitmix64 seed expansion; exact integer seeds fold magnitude bytes through splitmix64, with a sign tag for negative seeds.",
+    ),
+    (
+        "Sequence",
+        "during rule right-hand-side substitution, literal Sequence calls are preserved for subsequent evaluation, while a Sequence value bound directly to a pattern variable splices structurally at its argument site.",
     ),
     (
         "Sha1",

@@ -130,6 +130,7 @@ mod options_and_protection;
 mod package_tools;
 mod pattern_matching_orderless_optional;
 mod registered_builtin_resolution;
+mod rule_rhs_materialization;
 mod scoping_gensym_gc;
 mod scoping_unique;
 mod session_config;

@@ -3030,6 +3030,7 @@ Applies rules everywhere in an expression.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: traverses held positions. A whole-expression Sequence replacement inserted below a held parent remains nested during reconstruction; subsequent result evaluation can splice it only where evaluation reaches that nested call.
 
 ### ReplaceAt
 
@@ -3037,6 +3038,7 @@ Applies rules at exact structural positions, with the current operator-form and 
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position.
 
 ### ReplaceList
 
@@ -3051,6 +3053,7 @@ Replaces structural parts via immediate or delayed rules over exact, Span, and p
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position.
 
 ### ReplaceRepeated
 
@@ -3250,6 +3253,7 @@ Splices a sequence of arguments into a call.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: during rule right-hand-side substitution, literal Sequence calls are preserved for subsequent evaluation, while a Sequence value bound directly to a pattern variable splices structurally at its argument site.
 
 ### SequenceAlignment
 
