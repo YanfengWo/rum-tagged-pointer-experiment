@@ -135,6 +135,26 @@ batch immediately after the Module fix = **brief-221**. Dispatch order:
 
 ### Unit-9 fixes landed
 
+- **batch 3 — brief-217 rev2 (027dc74):** fail-closed contracts. (a)
+  `Repeated`/`RepeatedNull` count shapes unified across expression and
+  string matchers (numeric `n` was silently inert on strings); malformed
+  bounds → `::range` + inert via a typed compile error reported by the
+  session-aware caller (compile stays pure; Verbatim-guarded walk). (b)
+  `ReplacePart` Span implemented (reference already promised it; reuses
+  Part span selectors); malformed span → `ReplacePart::span` + inert;
+  valid-but-out-of-range = pinned lenient-ignore (mirrors exact form).
+  (c) `Names` `SpellingCorrection` non-False → `Names::optval` + inert.
+  (d) `Once` unsupported expiration values → `Once::pers` + inert
+  WITHOUT evaluating the held expr; stays `Pure`. Valid inputs
+  byte-identical everywhere. rev1 stop-lossed on brief defects: the MAY
+  seams were session-less pure code (diagnostics need the resolution
+  caller) and the "mirror the existing failure shape" instruction
+  pointed at silences — REV2 LESSON (with 216's): before instructing
+  "mirror X", baseline-verify X exists. Gate: workspace 1448/0; probes;
+  same-path binary hashes matched BOTH ways (repo-path build note
+  works); independent A/B — watch labels ≤ +1.3% inside ±3.6..5.9%
+  floor, and Codex's loop-empty +48% anomaly did NOT reproduce (+0.46%
+  here) = its startup-floor-noise classification confirmed.
 - **ruling fix 3 — brief-222 (8333a44):** replacement-produced `Sequence`
   splices into the parent rebuild (USER-RULED; the boundary 216 pinned).
   `ReplaceAllTraversalOutcome`/`ReplaceOutcome` thread a `changed` flag
