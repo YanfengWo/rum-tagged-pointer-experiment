@@ -3,7 +3,7 @@ use super::*;
 pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary_with_hold(
         "With",
-        "Lexically substitutes local constants into a body.",
+        "Lexically substitutes local constants into a body, with each additional declaration list forming a nested stage.",
         HoldAttribute::HoldAll,
         builtin_with,
     ).protected(),

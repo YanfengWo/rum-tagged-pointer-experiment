@@ -51,6 +51,73 @@ fn with_evaluates_bindings_and_substitutes_lexically() {
 }
 
 #[test]
+fn with_supports_staged_declaration_lists() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        ("With[{x = 1}, {y = x + 1}, x + y]", "3"),
+        (
+            "With[{x = 1}, {y = x}, HoldComplete[x, y]]",
+            "HoldComplete[1, 1]",
+        ),
+        (
+            "With[{a = 1}, {b = a + 1}, {c = b + 1}, {a, b, c}]",
+            "List[1, 2, 3]",
+        ),
+        ("With[{x = 1}, {y = x}, Hold[x + y]]", "Hold[Plus[1, 1]]"),
+        ("With[{x = 1}, {x = x + 1}, x]", "2"),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome.messages.is_empty(),
+            "{source}: {:?}",
+            outcome.messages
+        );
+    }
+}
+
+#[test]
+fn staged_with_fails_closed_on_a_malformed_middle_declaration_list() {
+    let mut session = core_session();
+
+    let two_argument = session.eval_text("With[{y}, x + y]").unwrap();
+    let staged = session.eval_text("With[{x = 1}, {y}, x + y]").unwrap();
+
+    assert_eq!(
+        staged.value.to_string(),
+        "With[List[Set[x, 1]], List[y], Plus[x, y]]"
+    );
+
+    let two_argument_message = two_argument
+        .messages
+        .iter()
+        .find(|message| message.symbol == "With" && message.tag == "argform")
+        .expect("the two-argument form should report With::argform");
+    let staged_message = staged
+        .messages
+        .iter()
+        .find(|message| message.symbol == "With" && message.tag == "argform")
+        .expect("the staged form should report With::argform");
+    assert_eq!(staged_message.text, two_argument_message.text);
+}
+
+#[test]
+fn with_zero_and_one_argument_forms_keep_exact_arity_diagnostics() {
+    let mut session = core_session();
+
+    for (source, expected, count) in [("With[]", "With[]", 0), ("With[body]", "With[body]", 1)] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected);
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == "With"
+                && message.tag == "argx"
+                && message.text == format!("expected exactly 2 argument(s), got {count}")
+        }));
+    }
+}
+
+#[test]
 fn with_supports_rule_style_bindings_and_nested_shadowing() {
     let mut session = core_session();
 

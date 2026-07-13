@@ -4303,7 +4303,7 @@ Evaluates to the ASCII whitespace character-class string.
 
 ### With
 
-Lexically substitutes local constants into a body.
+Lexically substitutes local constants into a body, with each additional declaration list forming a nested stage.
 
 - Attributes: `HoldAll`, `Protected`
 - Capability: `Pure`

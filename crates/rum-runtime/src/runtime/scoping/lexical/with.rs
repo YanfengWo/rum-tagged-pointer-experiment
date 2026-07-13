@@ -3,6 +3,9 @@ use super::*;
 impl Session {
     pub(in crate::runtime) fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         if args.len() != 2 {
+            if args.len() >= 3 {
+                return self.eval_staged_with(args);
+            }
             return Ok(self.invalid_call_with_exact_arg_count("With", args, 2));
         }
 
@@ -14,6 +17,23 @@ impl Session {
         };
 
         self.resume_with_bindings(config.items, args[1].clone(), SymbolExprMap::default(), 0)
+    }
+
+    fn eval_staged_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        for declarations in &args[..args.len() - 1] {
+            if let Err(error) =
+                self.compile_with_call_from_raw_args(std::slice::from_ref(declarations))
+            {
+                return Ok(self.invalid_call_with_arg_form("With", args, error.message()));
+            }
+        }
+
+        let mut nested = args[args.len() - 1].clone();
+        for declarations in args[..args.len() - 1].iter().rev() {
+            nested = Expr::call(system_expr("With"), vec![declarations.clone(), nested]);
+        }
+
+        self.evaluate(nested)
     }
 
     fn resume_with_bindings(
