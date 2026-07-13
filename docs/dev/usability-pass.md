@@ -135,6 +135,22 @@ batch immediately after the Module fix = **brief-221**. Dispatch order:
 
 ### Unit-9 fixes landed
 
+- **decision fix 2 — brief-221 (c204050):** staged `With[{…}, {…}, body]`
+  (USER-RULED). Arity ≥3 = nested-With equivalent via a structural
+  desugar in a new `eval_staged_with`; 2-arg path byte-identical (the
+  staged branch sits inside the `len != 2` error case). Pre-validation is
+  structural-only — `compile_with_call_from_raw_args` parses symbol/raw-
+  rhs pairs without evaluating, so initializer side effects fire exactly
+  once (gate-probed: `c0 = 1`) and a malformed later list fails closed
+  with the SAME `argform` text as the 2-arg form (test asserts message
+  equality) BEFORE any substitution. Same-list sequential contract +
+  `With[]`/`With[body]` argx pinned unchanged; shadowing across stages =
+  nested rebinding (`With[{x=1},{x=x+1},x]` → 2, scope-aware
+  substitution). Gate: workspace 1429/0 reproduced; probes + an extra
+  side-effect single-fire probe; candidate = tree build; independent A/B
+  `with-local` +0.76% inside ±5.7% noise. mma-hol suite WAIVED (no gensym
+  machinery touched; 2-arg path structurally unchanged) — stated per the
+  honesty rule.
 - **decision fix 1 — brief-220 rev2 (3dd9d3f):** Module error-path gensym
   reclamation (USER-RULED: eager = WL semantics). `finish_module_scope`
   runs the shared `module_gensyms_to_reclaim` on BOTH arms — Ok passes
