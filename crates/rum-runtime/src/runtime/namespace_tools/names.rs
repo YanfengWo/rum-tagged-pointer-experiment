@@ -69,6 +69,23 @@ impl Session {
             Ok(invocation) => invocation,
             Err(error) => return Ok(self.invalid_call_with_arg_form("Names", args, error)),
         };
+        let spelling_correction = self.runtime_option_expr_for_symbol(
+            invocation.explicit_options.as_ref(),
+            &Symbol::system("Names"),
+            "SpellingCorrection",
+        )?;
+        if let Some(value) = spelling_correction {
+            if !is_system_symbol_name(&value, "False") {
+                self.push_message(
+                    "Names",
+                    "optval",
+                    format!(
+                        "Unsupported value {value} for option SpellingCorrection in Names; only False is currently supported."
+                    ),
+                );
+                return Ok(Expr::call(system_expr("Names"), args.to_vec()));
+            }
+        }
         let ignore_case = self.names_ignore_case(invocation.explicit_options.as_ref())?;
 
         Ok(string_list_expr(self.names_matching_patterns(

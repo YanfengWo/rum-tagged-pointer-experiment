@@ -8,6 +8,17 @@ impl Session {
         if args.len() != 2 {
             return Ok(self.invalid_call_with_exact_arg_count("MatchQ", args, 2));
         }
+        if let Some(error) = first_invalid_repeated_bounds(&args[1]) {
+            self.push_message(
+                error.symbol,
+                "range",
+                format!(
+                    "{} is not a valid repetition bound specification; expected n, {{n}}, or {{min, max}} with 0 <= min <= max, where max may be Infinity.",
+                    error.spec
+                ),
+            );
+            return Ok(Expr::call(system_expr("MatchQ"), args.to_vec()));
+        }
 
         let value_result = self.evaluate(args[0].clone());
         let value = self.suspend_with_frame(value_result, {

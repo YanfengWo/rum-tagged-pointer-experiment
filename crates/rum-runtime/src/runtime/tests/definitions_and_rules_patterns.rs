@@ -224,6 +224,72 @@ fn matchq_honors_optional_and_repeated_patterns() {
             .to_string(),
         "False"
     );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1, 1], f[Repeated[1, 2]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1, 1], f[RepeatedNull[1, 2]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[1], f[Repeated[1, {0, 2}]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[f[], f[RepeatedNull[1, {0}]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("MatchQ[Repeated[1, -1], Verbatim[Repeated[1, -1]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
+fn matchq_rejects_malformed_repetition_bounds_with_head_specific_messages() {
+    let mut session = session_with_test_control_builtins();
+
+    for (input, symbol, expected) in [
+        (
+            "MatchQ[f[1], f[Repeated[1, -1]]]",
+            "Repeated",
+            "MatchQ[f[1], f[Repeated[1, -1]]]",
+        ),
+        (
+            "MatchQ[f[1], f[RepeatedNull[1, {2, 1}]]]",
+            "RepeatedNull",
+            "MatchQ[f[1], f[RepeatedNull[1, List[2, 1]]]]",
+        ),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{input}");
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "range"
+                && message.text.contains("0 <= min <= max")
+        }));
+    }
 }
 
 #[test]

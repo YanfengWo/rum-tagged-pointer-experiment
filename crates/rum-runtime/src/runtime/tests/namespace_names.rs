@@ -172,6 +172,53 @@ fn names_accepts_current_options_subset() {
 }
 
 #[test]
+fn names_rejects_unsupported_spelling_correction_values() {
+    let mut session = Session::new();
+
+    session.eval_text("spellingCorrectionTarget = 1").unwrap();
+    for input in [
+        "Names[\"Global`spelingCorrectionTarget\"]",
+        "Names[\"Global`spelingCorrectionTarget\", SpellingCorrection -> False]",
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), "List[]", "{input}");
+        assert!(outcome.messages.is_empty(), "{input}");
+    }
+
+    let unsupported = session
+        .eval_text("Names[\"Global`spelingCorrectionTarget\", SpellingCorrection -> True]")
+        .unwrap();
+    assert_eq!(
+        unsupported.value.to_string(),
+        "Names[\"Global`spelingCorrectionTarget\", Rule[SpellingCorrection, True]]"
+    );
+    assert!(unsupported.messages.iter().any(|message| {
+        message.symbol == "Names"
+            && message.tag == "optval"
+            && message.text.contains("SpellingCorrection")
+            && message.text.contains("True")
+    }));
+
+    session.eval_text("Unprotect[Names]").unwrap();
+    session
+        .eval_text("SetOptions[Names, SpellingCorrection -> True]")
+        .unwrap();
+    let configured = session
+        .eval_text("Names[\"Global`spelingCorrectionTarget\"]")
+        .unwrap();
+    assert_eq!(
+        configured.value.to_string(),
+        "Names[\"Global`spelingCorrectionTarget\"]"
+    );
+    assert!(
+        configured
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Names" && message.tag == "optval")
+    );
+}
+
+#[test]
 fn symbol_name_and_name_q_core_anchors() {
     let mut session = Session::new();
 

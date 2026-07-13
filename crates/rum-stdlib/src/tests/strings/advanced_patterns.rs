@@ -101,6 +101,14 @@ fn bounded_repetition_and_except_extend_string_patterns() {
         "List[\"aa\", \"aa\"]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"aaaa\", Repeated[\"a\", 2]]"),
+        "List[\"aa\", \"aa\"]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"aa\", RepeatedNull[\"a\", 2]]"),
+        "List[\"aa\"]"
+    );
+    assert_eq!(
         eval_to_string(
             &mut session,
             "StringCases[\"aaaa\", Repeated[\"a\", {2, 3}]]"
@@ -143,6 +151,48 @@ fn bounded_repetition_and_except_extend_string_patterns() {
         ),
         "List[\"aaa\"]"
     );
+    assert_eq!(
+        eval_to_string(&mut session, "StringCases[\"\", Repeated[\"a\", {0}]]"),
+        "List[\"\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringCases[\"a\", RepeatedNull[\"a\", {0, 2}]]"
+        ),
+        "List[\"a\", \"\"]"
+    );
+}
+
+#[test]
+fn string_pattern_consumers_reject_malformed_repetition_bounds() {
+    let mut session = core_session();
+
+    for (input, symbol, expected) in [
+        (
+            "StringCases[\"a\", Repeated[\"a\", -1]]",
+            "Repeated",
+            "StringCases[\"a\", Repeated[\"a\", -1]]",
+        ),
+        (
+            "StringMatchQ[\"a\", RepeatedNull[\"a\", {2, 1}]]",
+            "RepeatedNull",
+            "StringMatchQ[\"a\", RepeatedNull[\"a\", List[2, 1]]]",
+        ),
+        (
+            "StringReplace[\"a\", Repeated[\"a\", x] -> \"b\"]",
+            "Repeated",
+            "StringReplace[\"a\", Rule[Repeated[\"a\", x], \"b\"]]",
+        ),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{input}");
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == symbol
+                && message.tag == "range"
+                && message.text.contains("0 <= min <= max")
+        }));
+    }
 }
 
 #[test]

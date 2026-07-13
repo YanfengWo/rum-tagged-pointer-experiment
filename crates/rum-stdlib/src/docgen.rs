@@ -56,6 +56,14 @@ pub const LIMITS: &[(&str, &str)] = &[
         "intended only for interoperability and checksums; it is not collision-resistant.",
     ),
     (
+        "Names",
+        "SpellingCorrection is currently supported only at its False default; any other effective value emits Names::optval and leaves the call inert.",
+    ),
+    (
+        "Once",
+        "uses deterministic session-local caching and performs no clock reads. ExpirationDate accepts only None; PersistenceTime accepts None (cache) or integer 0 (no cache). Other effective values emit Once::pers and leave the held call inert.",
+    ),
+    (
         "Crc32",
         "computes the IEEE CRC-32 checksum for integrity and interoperability, not security; it is not collision-resistant.",
     ),
@@ -133,6 +141,14 @@ pub const LIMITS: &[(&str, &str)] = &[
         "uses the deterministic session PRNG and is reproducible under the same seed; use an entropy reseed first when global uniqueness matters.",
     ),
     (
+        "Repeated",
+        "bounded forms accept n, {n}, and {min, max}, where counts are non-negative and max may be Infinity. Zero bounds are valid and can produce zero-width matches; malformed bounds emit Repeated::range and leave the consuming call inert.",
+    ),
+    (
+        "RepeatedNull",
+        "bounded forms accept n, {n}, and {min, max}, where counts are non-negative and max may be Infinity. Zero bounds are valid and can produce zero-width matches; malformed bounds emit RepeatedNull::range and leave the consuming call inert.",
+    ),
+    (
         "ReplaceAll",
         "traverses held positions. RuleDelayed right-hand sides are binding-substituted and inserted unevaluated. During parent reconstruction, a changed argument whose whole replacement is Sequence splices unless the parent has SequenceHold or HoldAllComplete; an unchanged literal Sequence stays nested, and a top-level replacement has no parent to splice into.",
     ),
@@ -142,7 +158,7 @@ pub const LIMITS: &[(&str, &str)] = &[
     ),
     (
         "ReplacePart",
-        "RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position.",
+        "RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position. Span positions reuse Part's span selection semantics; structurally valid missing exact or Span positions are ignored, while malformed Span shapes fail closed.",
     ),
     (
         "ReseedRandom",

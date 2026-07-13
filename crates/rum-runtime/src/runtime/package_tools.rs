@@ -107,7 +107,19 @@ impl Session {
         };
 
         self.report_unknown_package_tool_options("Once", &options);
-        let should_cache = self.once_should_cache(options.as_ref());
+        let should_cache = match self.once_should_cache(options.as_ref()) {
+            Ok(should_cache) => should_cache,
+            Err((option, value)) => {
+                self.push_message(
+                    "Once",
+                    "pers",
+                    format!(
+                        "Unsupported value {value} for option {option} in Once; supported values are ExpirationDate -> None and PersistenceTime -> None or 0."
+                    ),
+                );
+                return Ok(Expr::call(system_expr("Once"), args.to_vec()));
+            }
+        };
         if !should_cache {
             return self.evaluate(expr);
         }
@@ -596,15 +608,26 @@ impl Session {
         }
     }
 
-    fn once_should_cache(&self, explicit: Option<&SymbolOptions>) -> bool {
-        let Some(explicit) = explicit else {
-            return true;
-        };
+    fn once_should_cache(
+        &self,
+        explicit: Option<&SymbolOptions>,
+    ) -> Result<bool, (&'static str, Expr)> {
+        let once = Symbol::system("Once");
 
-        !matches!(
-            explicit.get_by_name("PersistenceTime"),
-            Some(Expr::Atom(Atom::Integer(value))) if value.as_i64() == Some(0)
-        )
+        if let Some((value, _)) =
+            self.raw_option_value_for_symbol(explicit, &once, "ExpirationDate")
+        {
+            if !is_system_symbol_name(&value, "None") {
+                return Err(("ExpirationDate", value));
+            }
+        }
+
+        match self.raw_option_value_for_symbol(explicit, &once, "PersistenceTime") {
+            None => Ok(true),
+            Some((value, _)) if is_system_symbol_name(&value, "None") => Ok(true),
+            Some((Expr::Atom(Atom::Integer(value)), _)) if value.as_i64() == Some(0) => Ok(false),
+            Some((value, _)) => Err(("PersistenceTime", value)),
+        }
     }
 
     fn dump_save_include_attributes(&self, explicit: Option<&SymbolOptions>) -> bool {

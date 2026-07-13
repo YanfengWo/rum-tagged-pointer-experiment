@@ -7,12 +7,7 @@ mod search;
 pub(crate) use parts::{
     eval_string_drop, eval_string_part, eval_string_take, eval_string_take_drop,
 };
-pub(crate) use search::{
-    eval_string_apply, eval_string_cases, eval_string_contains_q, eval_string_count,
-    eval_string_delete, eval_string_ends_q, eval_string_free_q, eval_string_match_q,
-    eval_string_position, eval_string_replace, eval_string_split, eval_string_starts_q,
-    eval_string_trim,
-};
+pub(crate) use search::eval_string_apply;
 
 use self::regex::*;
 
@@ -146,6 +141,94 @@ enum ExactStringCaseSpec {
     Patterns(Vec<StringPattern>),
     Rules(Vec<ExactStringCaseRule>),
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct StringRepeatedBoundsError {
+    symbol: &'static str,
+    spec: Expr,
+}
+
+fn first_invalid_string_repeated_bounds(expr: &Expr) -> Option<StringRepeatedBoundsError> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if (is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        && args.len() == 2
+    {
+        return first_invalid_string_repeated_bounds(&args[0]);
+    }
+
+    for symbol in ["Repeated", "RepeatedNull"] {
+        if !is_system_symbol_name(head, symbol) {
+            continue;
+        }
+
+        return match args.as_slice() {
+            [inner] => first_invalid_string_repeated_bounds(inner),
+            [inner, spec] => {
+                if parse_string_repetition_bounds(spec).is_none() {
+                    Some(StringRepeatedBoundsError {
+                        symbol,
+                        spec: spec.clone(),
+                    })
+                } else {
+                    first_invalid_string_repeated_bounds(inner)
+                }
+            }
+            _ => None,
+        };
+    }
+
+    first_invalid_string_repeated_bounds(head)
+        .or_else(|| args.iter().find_map(first_invalid_string_repeated_bounds))
+}
+
+fn eval_string_pattern_with_bounds_guard(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+    evaluator: fn(&mut Session, &Expr, &[Expr]) -> Result<Expr, EvalError>,
+) -> Result<Expr, EvalError> {
+    if let Some(error) = args.get(1).and_then(first_invalid_string_repeated_bounds) {
+        session.push_message(
+            error.symbol,
+            "range",
+            format!(
+                "{} is not a valid repetition bound specification; expected n, {{n}}, or {{min, max}} with 0 <= min <= max, where max may be Infinity.",
+                error.spec
+            ),
+        );
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    evaluator(session, head, args)
+}
+
+macro_rules! guarded_string_pattern_evaluator {
+    ($name:ident, $implementation:path) => {
+        pub(crate) fn $name(
+            session: &mut Session,
+            head: &Expr,
+            args: &[Expr],
+        ) -> Result<Expr, EvalError> {
+            eval_string_pattern_with_bounds_guard(session, head, args, $implementation)
+        }
+    };
+}
+
+guarded_string_pattern_evaluator!(eval_string_cases, search::eval_string_cases);
+guarded_string_pattern_evaluator!(eval_string_contains_q, search::eval_string_contains_q);
+guarded_string_pattern_evaluator!(eval_string_count, search::eval_string_count);
+guarded_string_pattern_evaluator!(eval_string_delete, search::eval_string_delete);
+guarded_string_pattern_evaluator!(eval_string_ends_q, search::eval_string_ends_q);
+guarded_string_pattern_evaluator!(eval_string_free_q, search::eval_string_free_q);
+guarded_string_pattern_evaluator!(eval_string_match_q, search::eval_string_match_q);
+guarded_string_pattern_evaluator!(eval_string_position, search::eval_string_position);
+guarded_string_pattern_evaluator!(eval_string_replace, search::eval_string_replace);
+guarded_string_pattern_evaluator!(eval_string_split, search::eval_string_split);
+guarded_string_pattern_evaluator!(eval_string_starts_q, search::eval_string_starts_q);
+guarded_string_pattern_evaluator!(eval_string_trim, search::eval_string_trim);
 
 fn parse_string_boundary_spec(expr: &Expr) -> Option<StringBoundarySpec> {
     Some(StringBoundarySpec::Patterns(parse_string_patterns(expr)?))
@@ -709,6 +792,10 @@ fn next_string_match_index(
 }
 
 fn parse_string_repetition_bounds(expr: &Expr) -> Option<(usize, Option<usize>)> {
+    if let Some(count) = expr_as_non_negative_usize(expr) {
+        return Some((count, Some(count)));
+    }
+
     let items = call_items_with_head(expr, &system_expr("List"))?;
 
     match items {

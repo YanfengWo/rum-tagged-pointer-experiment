@@ -3,30 +3,35 @@ use super::*;
 pub(super) fn parse_replace_part_rules(
     expr: &Expr,
     heads: ReplacePartHeadsMode,
-) -> Option<Vec<ReplacePartRule>> {
-    if let Some(rule) = parse_replace_part_rule_with_heads(expr, heads) {
-        return Some(vec![rule]);
+) -> Result<Option<Vec<ReplacePartRule>>, Expr> {
+    if let Some(rule) = parse_replace_part_rule_with_heads(expr, heads)? {
+        return Ok(Some(vec![rule]));
     }
 
     let Expr::Call { head, args } = expr else {
-        return None;
+        return Ok(None);
     };
 
     if !is_system_symbol_name(head, heads::structure::LIST) {
-        return None;
+        return Ok(None);
     }
 
-    args.iter()
-        .map(|item| parse_replace_part_rule_with_heads(item, heads))
-        .collect()
+    let mut rules = Vec::with_capacity(args.len());
+    for item in args {
+        let Some(rule) = parse_replace_part_rule_with_heads(item, heads)? else {
+            return Ok(None);
+        };
+        rules.push(rule);
+    }
+    Ok(Some(rules))
 }
 
 fn parse_replace_part_rule_with_heads(
     expr: &Expr,
     heads: ReplacePartHeadsMode,
-) -> Option<ReplacePartRule> {
+) -> Result<Option<ReplacePartRule>, Expr> {
     let Expr::Call { head, args } = expr else {
-        return None;
+        return Ok(None);
     };
 
     let delayed = if is_system_symbol_name(head, heads::rules::RULE) && args.len() == 2 {
@@ -34,79 +39,103 @@ fn parse_replace_part_rule_with_heads(
     } else if is_system_symbol_name(head, heads::rules::RULE_DELAYED) && args.len() == 2 {
         true
     } else {
-        return None;
+        return Ok(None);
     };
 
-    Some(ReplacePartRule {
+    Ok(Some(ReplacePartRule {
         position_specs: parse_replace_part_position_specs(&args[0])?,
         rhs: args[1].clone(),
         delayed,
         heads,
-    })
+    }))
 }
 
-fn parse_replace_part_position_specs(expr: &Expr) -> Option<Vec<ReplacePartPositionSpec>> {
+fn parse_replace_part_position_specs(expr: &Expr) -> Result<Vec<ReplacePartPositionSpec>, Expr> {
     if is_empty_plain_list_expr(expr) {
-        return Some(Vec::new());
+        return Ok(Vec::new());
     }
 
-    if let Some(position_spec) = parse_replace_part_exact_position_spec(expr) {
-        return Some(vec![ReplacePartPositionSpec::Exact(position_spec)]);
+    if let Some(position_spec) = parse_replace_part_exact_position_spec(expr)? {
+        return Ok(vec![ReplacePartPositionSpec::Exact(position_spec)]);
     }
 
     let Expr::Call { head, args } = expr else {
-        return Some(vec![ReplacePartPositionSpec::Pattern(expr.clone())]);
+        return Ok(vec![ReplacePartPositionSpec::Pattern(expr.clone())]);
     };
 
     if !is_system_symbol_name(head, heads::structure::LIST) {
-        return Some(vec![ReplacePartPositionSpec::Pattern(expr.clone())]);
+        return Ok(vec![ReplacePartPositionSpec::Pattern(expr.clone())]);
     }
 
     if !args.iter().any(is_plain_list_expr) {
-        return Some(vec![ReplacePartPositionSpec::Pattern(expr.clone())]);
+        return Ok(vec![ReplacePartPositionSpec::Pattern(expr.clone())]);
     }
 
-    Some(
-        args.iter()
-            .map(|item| {
-                parse_replace_part_exact_position_spec(item)
-                    .map(ReplacePartPositionSpec::Exact)
-                    .unwrap_or_else(|| ReplacePartPositionSpec::Pattern(item.clone()))
-            })
-            .collect(),
-    )
+    let mut position_specs = Vec::with_capacity(args.len());
+    for item in args {
+        position_specs.push(
+            parse_replace_part_exact_position_spec(item)?
+                .map(ReplacePartPositionSpec::Exact)
+                .unwrap_or_else(|| ReplacePartPositionSpec::Pattern(item.clone())),
+        );
+    }
+    Ok(position_specs)
 }
 
-fn parse_replace_part_exact_position_spec(expr: &Expr) -> Option<Vec<PartSelector>> {
-    if let Some(selector) = parse_replace_part_exact_selector(expr) {
-        return Some(vec![selector]);
+fn parse_replace_part_exact_position_spec(expr: &Expr) -> Result<Option<Vec<PartSelector>>, Expr> {
+    if let Some(selector) = parse_replace_part_exact_selector(expr)? {
+        return Ok(Some(vec![selector]));
     }
 
     let Expr::Call { head, args } = expr else {
-        return None;
+        return Ok(None);
     };
 
     if !is_system_symbol_name(head, heads::structure::LIST) {
-        return None;
+        return Ok(None);
     }
 
     if args.is_empty() {
-        return Some(Vec::new());
+        return Ok(Some(Vec::new()));
     }
 
     if args.iter().all(is_plain_list_expr) {
-        return None;
+        return Ok(None);
     }
 
-    args.iter().map(parse_replace_part_exact_selector).collect()
+    let mut selectors = Vec::with_capacity(args.len());
+    let mut all_exact = true;
+    for item in args {
+        match parse_replace_part_exact_selector(item)? {
+            Some(selector) => selectors.push(selector),
+            None => all_exact = false,
+        }
+    }
+    Ok(all_exact.then_some(selectors))
 }
 
-fn parse_replace_part_exact_selector(expr: &Expr) -> Option<PartSelector> {
+fn parse_replace_part_exact_selector(expr: &Expr) -> Result<Option<PartSelector>, Expr> {
     if let Some(index) = expr_as_signed_isize(expr) {
-        return Some(PartSelector::Single(AtomicPartSpec::Index(index)));
+        return Ok(Some(PartSelector::Single(AtomicPartSpec::Index(index))));
     }
 
-    parse_replace_part_key_selector(expr).map(PartSelector::Key)
+    if matches!(
+        expr,
+        Expr::Call { head, .. } if is_system_symbol_name(head, heads::structure::SPAN)
+    ) {
+        let selector = parse_part_selectors(std::slice::from_ref(expr))
+            .and_then(|mut selectors| selectors.pop())
+            .ok_or_else(|| expr.clone())?;
+        if matches!(
+            &selector,
+            PartSelector::Single(AtomicPartSpec::Span(span)) if span.step == 0
+        ) {
+            return Err(expr.clone());
+        }
+        return Ok(Some(selector));
+    }
+
+    Ok(parse_replace_part_key_selector(expr).map(PartSelector::Key))
 }
 
 fn parse_replace_part_key_selector(expr: &Expr) -> Option<Expr> {

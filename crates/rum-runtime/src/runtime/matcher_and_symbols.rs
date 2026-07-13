@@ -359,6 +359,66 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct RepeatedBoundsError {
+    pub(super) symbol: &'static str,
+    pub(super) spec: Expr,
+}
+
+pub(super) fn first_invalid_repeated_bounds(expr: &Expr) -> Option<RepeatedBoundsError> {
+    let expr = strip_hold_pattern(expr);
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    if is_system_symbol_name(head, "Verbatim") && args.len() == 1 {
+        return None;
+    }
+
+    if is_system_symbol_name(head, "Blank")
+        || is_system_symbol_name(head, "BlankSequence")
+        || is_system_symbol_name(head, "BlankNullSequence")
+    {
+        return None;
+    }
+
+    for symbol in ["Repeated", "RepeatedNull"] {
+        if !is_system_symbol_name(head, symbol) {
+            continue;
+        }
+
+        return match args.as_slice() {
+            [inner] => first_invalid_repeated_bounds(inner),
+            [inner, spec] => {
+                if parse_repeated_bounds(spec).is_none() {
+                    Some(RepeatedBoundsError {
+                        symbol,
+                        spec: spec.clone(),
+                    })
+                } else {
+                    first_invalid_repeated_bounds(inner)
+                }
+            }
+            _ => None,
+        };
+    }
+
+    if (is_system_symbol_name(head, "Pattern")
+        || is_system_symbol_name(head, "Condition")
+        || is_system_symbol_name(head, "PatternTest")
+        || is_system_symbol_name(head, "Optional"))
+        && !args.is_empty()
+    {
+        let pattern_index = usize::from(is_system_symbol_name(head, "Pattern"));
+        return args
+            .get(pattern_index)
+            .and_then(first_invalid_repeated_bounds);
+    }
+
+    first_invalid_repeated_bounds(head)
+        .or_else(|| args.iter().find_map(first_invalid_repeated_bounds))
+}
+
 fn compile_repeated_pattern(
     args: &[Expr],
     default_min_len: usize,

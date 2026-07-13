@@ -339,6 +339,60 @@ fn once_accepts_option_rules_in_second_position_and_respects_zero_persistence_su
         "3"
     );
     assert_eq!(session.eval_text("count").unwrap().value.to_string(), "3");
+
+    assert_eq!(
+        session
+            .eval_text("Once[count = count + 1, \"expiration-none\", ExpirationDate -> None]")
+            .unwrap()
+            .value
+            .to_string(),
+        "4"
+    );
+    assert_eq!(
+        session
+            .eval_text("Once[count = count + 1, \"expiration-none\", ExpirationDate -> None]")
+            .unwrap()
+            .value
+            .to_string(),
+        "4"
+    );
+    assert_eq!(session.eval_text("count").unwrap().value.to_string(), "4");
+}
+
+#[test]
+fn once_rejects_unimplemented_expiration_policies_without_evaluating_body() {
+    let mut session = Session::new();
+
+    session.eval_text("count = 0").unwrap();
+    for input in [
+        "Once[count = count + 1, \"bad-persistence\", PersistenceTime -> 1]",
+        "Once[count = count + 1, \"bad-expiration\", ExpirationDate -> 1]",
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert!(outcome.value.to_string().starts_with("Once["), "{input}");
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == "Once"
+                && message.tag == "pers"
+                && message.text.contains("Unsupported value")
+        }));
+        assert_eq!(session.eval_text("count").unwrap().value.to_string(), "0");
+    }
+
+    session.eval_text("Unprotect[Once]").unwrap();
+    session
+        .eval_text("SetOptions[Once, PersistenceTime -> 1]")
+        .unwrap();
+    let configured = session
+        .eval_text("Once[count = count + 1, \"bad-configured-default\"]")
+        .unwrap();
+    assert!(configured.value.to_string().starts_with("Once["));
+    assert!(
+        configured
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Once" && message.tag == "pers")
+    );
+    assert_eq!(session.eval_text("count").unwrap().value.to_string(), "0");
 }
 
 #[test]

@@ -55,7 +55,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[a, b, c, d]"
+        "f[a, y, c, y]"
     );
     assert_eq!(
         session
@@ -71,7 +71,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[a, b]"
+        "f[x, x]"
     );
 
     session.eval_text("delayedAll = {All, 2} :> n").unwrap();
@@ -89,7 +89,7 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .unwrap()
             .value
             .to_string(),
-        "f[a, b, c, d]"
+        "f[a, y, c, y]"
     );
     assert_eq!(
         session
@@ -155,6 +155,75 @@ fn replacepart_supports_immediate_delayed_and_head_replacements() {
             .to_string(),
         "x"
     );
+}
+
+#[test]
+fn replacepart_spans_reuse_part_selection_and_fail_closed_on_malformed_shapes() {
+    let mut session = Session::new();
+
+    for (input, expected) in [
+        (
+            "ReplacePart[{a, b, c, d}, (2 ;; 4 ;; 2) -> x]",
+            "List[a, x, c, x]",
+        ),
+        (
+            "ReplacePart[{a, b, c, d}, (2 ;; 3) -> x]",
+            "List[a, x, x, d]",
+        ),
+        ("ReplacePart[{a, b, c, d}, (;;) -> x]", "List[x, x, x, x]"),
+        ("ReplacePart[{a, b, c, d}, (2 ;;) -> x]", "List[a, x, x, x]"),
+        (
+            "ReplacePart[{a, b, c, d}, (-3 ;; -1 ;; 2) -> x]",
+            "List[a, x, c, x]",
+        ),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{input}");
+        assert!(outcome.messages.is_empty(), "{input}");
+    }
+
+    for input in [
+        "ReplacePart[{a, b, c, d}, (1 ;; 4 ;; 0) -> x]",
+        "ReplacePart[{a, b, c, d}, (a ;; 3) -> x]",
+        "ReplacePart[{a, b, c, d}, Span[1, 2, 3, 4] -> x]",
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "ReplacePart" && message.tag == "span"),
+            "{input}"
+        );
+        assert!(
+            outcome.value.to_string().starts_with("ReplacePart["),
+            "{input}"
+        );
+    }
+}
+
+#[test]
+fn replacepart_span_preserves_lenient_missing_positions_and_raw_delayed_rhs() {
+    let mut session = Session::new();
+
+    for input in [
+        "ReplacePart[{a, b, c, d}, 9 -> x]",
+        "ReplacePart[{a, b, c, d}, (9 ;; 10) -> x]",
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), "List[a, b, c, d]", "{input}");
+        assert!(outcome.messages.is_empty(), "{input}");
+    }
+
+    session.eval_text("n = 0").unwrap();
+    let outcome = session
+        .eval_text("ReplacePart[Hold[a, b, c, d], (2 ;; 4 ;; 2) :> (n = n + 1; x)]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "Hold[a, CompoundExpression[Set[n, Plus[n, 1]], x], c, CompoundExpression[Set[n, Plus[n, 1]], x]]"
+    );
+    assert_eq!(session.eval_text("n").unwrap().value.to_string(), "0");
 }
 
 #[test]

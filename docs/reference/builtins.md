@@ -2337,6 +2337,7 @@ Lists symbol names matching a current first-pass name pattern subset.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: SpellingCorrection is currently supported only at its False default; any other effective value emits Names::optval and leaves the call inert.
 
 ### Nand
 
@@ -2519,6 +2520,7 @@ Evaluates an expression at most once per session-local cache key in the current 
 
 - Attributes: `HoldAll`, `Protected`
 - Capability: `Pure`
+- Limits: uses deterministic session-local caching and performs no clock reads. ExpirationDate accepts only None; PersistenceTime accepts None (cache) or integer 0 (no cache). Other effective values emit Once::pers and leave the held call inert.
 
 ### Operate
 
@@ -3002,6 +3004,7 @@ Represents the current string-pattern repetition head for one or more matches.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: bounded forms accept n, {n}, and {min, max}, where counts are non-negative and max may be Infinity. Zero bounds are valid and can produce zero-width matches; malformed bounds emit Repeated::range and leave the consuming call inert.
 
 ### RepeatedNull
 
@@ -3009,6 +3012,7 @@ Represents the current string-pattern repetition head for zero or more matches.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: bounded forms accept n, {n}, and {min, max}, where counts are non-negative and max may be Infinity. Zero bounds are valid and can produce zero-width matches; malformed bounds emit RepeatedNull::range and leave the consuming call inert.
 
 ### RepeatedTiming
 
@@ -3053,7 +3057,7 @@ Replaces structural parts via immediate or delayed rules over exact, Span, and p
 
 - Attributes: `Protected`
 - Capability: `Pure`
-- Limits: RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position.
+- Limits: RuleDelayed right-hand sides are binding-substituted and inserted unevaluated; only subsequent evaluation of the fully rebuilt result evaluates an inserted right-hand side in an unheld position. Span positions reuse Part's span selection semantics; structurally valid missing exact or Span positions are ignored, while malformed Span shapes fail closed.
 
 ### ReplaceRepeated
 

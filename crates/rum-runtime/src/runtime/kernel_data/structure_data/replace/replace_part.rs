@@ -29,8 +29,19 @@ impl Session {
             ReplacePartHeadsMode::Automatic
         };
 
-        let Some(rules) = parse_replace_part_rules(&args[1], heads) else {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+        let rules = match parse_replace_part_rules(&args[1], heads) {
+            Ok(Some(rules)) => rules,
+            Ok(None) => return Ok(Expr::call(head.clone(), args.to_vec())),
+            Err(span) => {
+                self.push_message(
+                    "ReplacePart",
+                    "span",
+                    format!(
+                        "{span} is not a valid Span specification for ReplacePart; expected a valid Part Span with integer, All, or UpTo endpoints and a nonzero integer step."
+                    ),
+                );
+                return Ok(Expr::call(head.clone(), args.to_vec()));
+            }
         };
 
         self.apply_replace_part_rules_owned(args[0].clone(), rules)
