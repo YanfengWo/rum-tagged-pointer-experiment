@@ -57,7 +57,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 6 | codecs (json/csv/ini/toml/xml/yaml/schema) + bytes + datetime | 34 | brief-194 ✓ | 195-199 ✓ CLOSED |
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
-| 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 ✓ | |
+| 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 ✓ | 215-222 ✓ CLOSED |
 | 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | | |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
@@ -133,8 +133,67 @@ arm reuses the Ok arm's retained/reclaim computation with
 batch immediately after the Module fix = **brief-221**. Dispatch order:
 215 → 220 → 221 → 216 → 217 → 218 → 219.
 
+**UNIT 9 CLOSED (2026-07-13).** 214 audit (47/47) + eight fix batches
+215-222 (three of them USER-RULED: 220 Module error-path reclamation, 221
+staged With, 222 replacement-Sequence splice). Workspace 1418 → 1458;
+cumulative units 1-9 = **548 builtins swept**. The unit's arc, one line
+each:
+
+- **215** — evaluator hold correctness: `Unevaluated` restored on the
+  no-consumer path (killed the false-match hazard), `HoldAll` splices
+  `Sequence` per WL, `ReleaseHold` +`HoldForm`/one-layer.
+- **216** — delayed-RHS insertion made consumer-independent
+  (`ReplacePart`/`ReplaceAt` insert raw); literal `Sequence` in a rule
+  RHS preserved for evaluation.
+- **217** — fail-closed contracts: repetition bounds unified+diagnosed,
+  `ReplacePart` Span delivered, `Names::optval`/`Once::pers` kill two
+  silent dead options.
+- **218** — `Position`/`Count`/`MemberQ`/`FreeQ` operator forms.
+- **219** — terminal `HoldForm` transparency + form-summary honesty.
+- **220** (RULED) — Module error-path gensym reclamation = WL semantics;
+  mma-hol Strict FULL suite 3126/0 on rum at the gate.
+- **221** (RULED) — staged `With[{…},{…},body]`.
+- **222** (RULED) — replacement-produced `Sequence` splices into held
+  rebuilds (`Hold[g[a]] /. a -> Sequence[1,2]` → `Hold[g[1,2]]`).
+
+Standing yields beyond the fixes: the hold-design input appendix (feeds
+the parked `SubValuesHoldAll`/`ReplaceAllUnheld` design); the
+[[mma-hol-strict-gate-procedure]] memory (FileNames discovery trap);
+repo-path A/B binary builds (checksums now reproducible both ways, used
+by 217/218); THREE brief-craft lessons from correct Codex stop-losses
+(don't demand more eagerness on Err than Ok has; baseline-verify every
+preservation pin; verify a mirror-target exists before instructing
+"mirror X").
+
+Recorded boundaries / parked (stated, not dropped): `ReleaseHold`
+deep-position behavior (WL strips at depth, rum top-only);
+`Unevaluated[Sequence[…]]` and `sh`/`hc`-parent splice corners
+(pinned-not-WL); `ReplacePart[…, pos -> Sequence[…]]` already splices
+(recorded); activation-bookkeeping precision (descendant gensym writes
+mark ancestors escaped — would improve both arms, own design pass);
+`FileNames` absent (unit-10 paths-family data point); dead
+`PrepareArguments` arm in `eval_dispatch` (hygiene); split-plan debts
+noted at gates: `eval_call_prepare.rs` 26.6k, `functional_data.rs`
+28.6k, `text_rendering.rs` 21k.
+
+Next: **unit 10** (kernel C: system state/contexts/packages/paths/
+diagnostics/tests — the 57-name complement pinned in brief-214; the
+LAST unit), THEN the dun host-embedding line (user sequencing ruling
+2026-07-08). Unit-10 audit design inputs already queued: the Structured
+Package Format scoping half (TODO.md WL15 item d), `TestReport`'s Clock
+capability review (stateful↔pure line), `FileNames`, the string-keyed
+option-discovery wart (deferred to the host line but the audit should
+row it).
+
 ### Unit-9 fixes landed
 
+- **batch 5 — brief-219 (21fa76a):** presentation truthfulness.
+  Terminal `HoldForm` transparency at the shared CLI+REPL seam
+  (`render_eval_value`; canonical style kept, HoldForm-free output
+  byte-identical, Jupyter's separate host path reported unchanged);
+  `HoldForm`/`InputForm`/`StandardForm` summaries name their real
+  consumers. A/B waived (renderer/docs-only; no eval-path file in the
+  diff). Workspace 1458/0.
 - **batch 4 — brief-218 (cd463b7):** pattern-query operator forms.
   `Position[patt]`/`Count[patt]`/`MemberQ[patt]`/`FreeQ[patt]` join the
   callable-wrapper family tables (`functional_data.rs`, mirroring the
