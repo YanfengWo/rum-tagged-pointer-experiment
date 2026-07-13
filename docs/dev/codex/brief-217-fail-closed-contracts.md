@@ -65,11 +65,11 @@ and the call syntax accepts `-> True`, but nothing reads it
 `options/defaults.rs:76-80`): `True` is a silent no-op.
 
 Required: until spelling correction exists, `SpellingCorrection -> True`
-fails CLOSED — a message plus whatever failure shape `Names` already
-uses for a bad option value today (PROBE that first and mirror it
-exactly; do not invent a new shape). Default `False` stays
-byte-identical and silent. Keep the option registered (discovery is
-fine; the lie was the silent acceptance of `True`).
+fails CLOSED with the specified shape below (rev2: baseline probing
+showed there is NO existing bad-known-option-value shape to mirror —
+only malformed option SYNTAX uses `Names::argform`). Default `False`
+stays byte-identical and silent. Keep the option registered (discovery
+is fine; the lie was the silent acceptance of `True`).
 
 ## (d) `Once` expiration options: fail closed on the unimplemented
 
@@ -84,6 +84,36 @@ needing wall time stay unimplemented); accept the implemented values
 (`None`, integer `PersistenceTime -> 0`) byte-identically; any OTHER
 value → message + fail closed (no silent cache-forever). Say in the
 report which values remain accepted.
+
+## Diagnostic shapes (rev2 — SPECIFIED; baseline has nothing to mirror)
+
+The first run stop-lossed correctly: the MAY seams could not emit
+messages (pattern compile is session-less pure code) and the "mirror the
+existing shape" instructions pointed at silences. The shapes are now
+prescribed — uniform rule: **message + INERT call return** (rum's
+established argform convention), one new tag per symbol, emitted from a
+session-aware caller:
+
+- (a) malformed repetition bounds → `Repeated::range` /
+  `RepeatedNull::range`, text naming the offending spec and the accepted
+  shapes (`n`, `{n}`, `{min, max}` with `0 <= min <= max`, `Infinity`).
+  Emit from the session-aware pattern-resolution caller
+  (`rewrite_data/cases/match_q.rs` or the actual central entry — NAME
+  the one you use); the string side emits from its existing
+  message-capable consumers. The consuming call returns inert.
+- (b) malformed span SHAPE (non-integer/zero-step/invalid form) →
+  `ReplacePart::span` + inert. A structurally VALID span whose range
+  falls outside the expression keeps ReplacePart's existing exact-
+  position contract for nonexistent positions (baseline-probe it —
+  today silent-ignore — and PIN that as the documented lenient contract,
+  consistent for exact and span alike; do not invent an out-of-range
+  error the exact form doesn't have).
+- (c) `SpellingCorrection -> True` → `Names::optval` ("unsupported value
+  for option …") + inert.
+- (d) unsupported `Once` persistence/expiration values →
+  `Once::pers` + inert (the held expression is NOT evaluated — running
+  it uncached would silently change the side-effect count the caller
+  asked Once to bound).
 
 ## Method
 
@@ -117,11 +147,19 @@ git status --short            # only MAY-listed files
 
 MAY modify:
 - (a) `crates/rum-runtime/src/runtime/matcher_and_symbols.rs`;
-  `crates/rum-stdlib/src/strings/patterns.rs`
+  `crates/rum-stdlib/src/strings/patterns.rs`; **rev2:**
+  `crates/rum-runtime/src/runtime/kernel_data/rewrite_data/cases/match_q.rs`
+  (or the actual session-aware pattern-resolution entry — name it and
+  keep the touch to diagnostic emission; pattern compile itself may
+  return a typed error the caller reports)
 - (b) `crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/parsing.rs`
   (+ `replace/plan.rs` if selection planning needs it; reuse
   `structure_data/selectors/parse.rs` — read-only unless a helper needs
-  `pub(crate)` visibility, name it if so)
+  `pub(crate)` visibility, name it if so); **rev2:**
+  `crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/replace_part.rs`
+  (diagnostic emission + span-selection integration only — the
+  brief-216 delayed-RHS insertion contract there is settled, do not
+  disturb it)
 - (c) `crates/rum-runtime/src/runtime/namespace_tools/names.rs`
 - (d) `crates/rum-runtime/src/runtime/package_tools.rs`
 - Options table if a default's VALUE must change: `crates/rum-runtime/src/runtime/options/defaults.rs` (registration text only, no new options)
