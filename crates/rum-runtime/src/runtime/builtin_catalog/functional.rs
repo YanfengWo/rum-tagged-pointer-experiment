@@ -10,7 +10,7 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
     .protected(),
     BuiltinSpec::with_attributes(
         "HoldForm",
-        "Holds an expression while rendering transparently in output-like forms.",
+        "Holds an expression while rendering transparently in terminal results and output-like forms.",
         AttributeSet::from_hold(HoldAttribute::HoldAll).with(Attribute::Protected),
     ),
 ];

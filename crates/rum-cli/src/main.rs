@@ -11,7 +11,7 @@ use rum_repl::Repl;
 use rum_runtime::{Session, SessionEvalResponse, SessionRequestError, SessionRequestFailure};
 use rum_stdlib::install_core;
 use rum_syntax::{format_parsed_source, parse_format_cli_args};
-use rum_terminal::{render_request_failure, render_runtime_message};
+use rum_terminal::{render_eval_value, render_request_failure, render_runtime_message};
 
 // The allocation-counter shim (Layer B B0 measurement) is compiled in ONLY under
 // the `alloc-count` feature. The default build uses bare mimalloc with no wrapper
@@ -308,7 +308,7 @@ fn print_outcome(outcome: &SessionEvalResponse) -> io::Result<()> {
         eprintln!("{}", render_runtime_message(message));
     }
 
-    write_stdout_line(&outcome.value.to_string())
+    write_stdout_line(&render_eval_value(outcome))
 }
 
 fn print_failure_side_effects(failure: &SessionRequestFailure) {

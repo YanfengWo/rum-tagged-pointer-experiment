@@ -1634,7 +1634,7 @@ Prevents evaluation of the first argument.
 
 ### HoldForm
 
-Holds an expression while rendering transparently in output-like forms.
+Holds an expression while rendering transparently in terminal results and output-like forms.
 
 - Attributes: `HoldAll`, `Protected`
 - Capability: `Pure`
@@ -1725,7 +1725,7 @@ Requests one line of host-provided text, parses it as rum source, and evaluates 
 
 ### InputForm
 
-Represents the current formatting symbol accepted by the current ToExpression subset.
+Represents the current formatting symbol accepted by the current ToExpression and ToString subsets.
 
 - Attributes: `Protected`
 - Capability: `Pure`
@@ -3407,7 +3407,7 @@ Returns the current evaluation stack in the first-pass held-expression subset.
 
 ### StandardForm
 
-Represents the current formatting symbol accepted by the current ToExpression subset.
+Represents the current formatting symbol accepted by the current ToExpression and ToString subsets.
 
 - Attributes: `Protected`
 - Capability: `Pure`

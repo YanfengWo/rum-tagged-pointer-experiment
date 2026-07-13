@@ -5,6 +5,7 @@ pub enum ToStringFormat {
     FullForm,
     InputForm,
     OutputLike,
+    CanonicalHoldFormTransparent,
 }
 
 const PREC_LOWEST: u8 = 0;
@@ -22,6 +23,11 @@ pub fn render_input_like_expr(expr: &Expr) -> String {
 
 /// Renders an expression using the requested current kernel text format.
 pub fn render_to_string_expr(expr: &Expr, format: ToStringFormat) -> String {
+    if format == ToStringFormat::CanonicalHoldFormTransparent {
+        return transparent_hold_form_expr(expr)
+            .map_or_else(|| expr.to_string(), |expr| expr.to_string());
+    }
+
     render_to_string_expr_with_precedence(expr, format, PREC_LOWEST)
 }
 
@@ -95,11 +101,10 @@ fn render_to_string_expr_with_precedence(
                 return wrap_rendered(rendered, PREC_RULE, parent_precedence);
             }
 
-            if format == ToStringFormat::OutputLike
-                && is_system_symbol_name(head, "HoldForm")
-                && args.len() == 1
-            {
-                return render_to_string_expr_with_precedence(&args[0], format, parent_precedence);
+            if format == ToStringFormat::OutputLike {
+                if let Some(arg) = transparent_hold_form_arg(expr) {
+                    return render_to_string_expr_with_precedence(arg, format, parent_precedence);
+                }
             }
 
             if (is_system_symbol_name(head, "HoldCompleteForm")
@@ -399,6 +404,49 @@ fn render_to_string_expr_with_precedence(
             )
         }
     }
+}
+
+fn transparent_hold_form_expr(expr: &Expr) -> Option<Expr> {
+    if let Some(arg) = transparent_hold_form_arg(expr) {
+        return Some(transparent_hold_form_expr(arg).unwrap_or_else(|| arg.clone()));
+    }
+
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    let transformed_head = transparent_hold_form_expr(head);
+    let mut transformed_args = transformed_head
+        .as_ref()
+        .map(|_| Vec::with_capacity(args.len()));
+
+    for (index, arg) in args.iter().enumerate() {
+        let transformed_arg = transparent_hold_form_expr(arg);
+        if let Some(output) = &mut transformed_args {
+            output.push(transformed_arg.unwrap_or_else(|| arg.clone()));
+        } else if let Some(transformed_arg) = transformed_arg {
+            let mut output = Vec::with_capacity(args.len());
+            output.extend(args.iter().take(index).cloned());
+            output.push(transformed_arg);
+            transformed_args = Some(output);
+        }
+    }
+
+    if transformed_head.is_none() && transformed_args.is_none() {
+        return None;
+    }
+
+    Some(Expr::call(
+        transformed_head.unwrap_or_else(|| head.as_ref().clone()),
+        transformed_args.unwrap_or_else(|| args.to_vec()),
+    ))
+}
+
+fn transparent_hold_form_arg(expr: &Expr) -> Option<&Expr> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+
+    (is_system_symbol_name(head, "HoldForm") && args.len() == 1).then(|| &args[0])
 }
 
 fn wrap_rendered(rendered: String, own_precedence: u8, parent_precedence: u8) -> String {

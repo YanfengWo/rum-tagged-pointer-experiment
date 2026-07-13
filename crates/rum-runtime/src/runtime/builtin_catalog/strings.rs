@@ -116,7 +116,7 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ).protected(),
     BuiltinSpec::new(
         "InputForm",
-        "Represents the current formatting symbol accepted by the current ToExpression subset.",
+        "Represents the current formatting symbol accepted by the current ToExpression and ToString subsets.",
     ).protected(),
     BuiltinSpec::new(
         "OutputForm",
@@ -124,7 +124,7 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
     ).protected(),
     BuiltinSpec::new(
         "StandardForm",
-        "Represents the current formatting symbol accepted by the current ToExpression subset.",
+        "Represents the current formatting symbol accepted by the current ToExpression and ToString subsets.",
     ).protected(),
     BuiltinSpec::new(
         "TraditionalForm",

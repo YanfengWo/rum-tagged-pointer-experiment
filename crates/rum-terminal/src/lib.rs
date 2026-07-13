@@ -3,6 +3,7 @@ use std::fmt::Write;
 use rum_runtime::{
     DefinitionCatalogEntry, DefinitionKind, MessageCatalogEntry, RuntimeMessage,
     SessionEvalResponse, SessionInspectResponse, SessionRequestError, SessionRequestFailure,
+    kernel_api::{ToStringFormat, render_to_string_expr},
 };
 
 pub fn render_runtime_message(message: &RuntimeMessage) -> String {
@@ -43,8 +44,15 @@ pub fn render_eval_response(response: &SessionEvalResponse) -> String {
         output.push('\n');
     }
 
-    write!(&mut output, "{}", response.value).unwrap();
+    output.push_str(&render_eval_value(response));
     output
+}
+
+pub fn render_eval_value(response: &SessionEvalResponse) -> String {
+    render_to_string_expr(
+        &response.value,
+        ToStringFormat::CanonicalHoldFormTransparent,
+    )
 }
 
 pub fn render_inspect_response(response: &SessionInspectResponse) -> String {
@@ -236,6 +244,55 @@ mod tests {
     use rum_syntax::StructuredSourceDiagnostic;
 
     use super::*;
+
+    fn eval_response(value: Expr) -> SessionEvalResponse {
+        SessionEvalResponse {
+            value,
+            messages: Vec::new(),
+            prints: Vec::new(),
+            trace: Vec::new(),
+        }
+    }
+
+    fn call(name: &str, args: Vec<Expr>) -> Expr {
+        Expr::call(Expr::system_symbol(name), args)
+    }
+
+    #[test]
+    fn eval_value_renders_hold_form_transparently_in_canonical_style() {
+        let plus = call(
+            "Plus",
+            vec![
+                Expr::integer(BigInt::from(1_i32)),
+                Expr::integer(BigInt::from(1_i32)),
+            ],
+        );
+        let held = call("HoldForm", vec![plus.clone()]);
+
+        assert_eq!(
+            render_eval_value(&eval_response(held.clone())),
+            "Plus[1, 1]"
+        );
+        assert_eq!(
+            render_eval_value(&eval_response(call("List", vec![held]))),
+            "List[Plus[1, 1]]"
+        );
+    }
+
+    #[test]
+    fn eval_value_without_hold_form_keeps_canonical_bytes() {
+        let value = call(
+            "List",
+            vec![
+                Expr::integer(BigInt::from(2_i32)),
+                Expr::call(Expr::symbol("f"), vec![Expr::symbol("a")]),
+            ],
+        );
+        let response = eval_response(value.clone());
+
+        assert_eq!(render_eval_value(&response), value.to_string());
+        assert_eq!(render_eval_value(&response), "List[2, f[a]]");
+    }
 
     #[test]
     fn request_failure_renders_messages_before_syntax_diagnostic() {

@@ -152,6 +152,21 @@ fn repl_renders_runtime_messages_before_results() {
 }
 
 #[test]
+fn repl_renders_hold_form_transparently_in_canonical_style() {
+    let input = Cursor::new("HoldForm[1 + 1]\n{HoldForm[1 + 1]}\n:quit\n");
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = Session::new();
+
+    repl.run(&mut session).unwrap();
+
+    let rendered = String::from_utf8(output).unwrap();
+    assert!(rendered.contains("rum> Plus[1, 1]"));
+    assert!(rendered.contains("rum> List[Plus[1, 1]]"));
+    assert!(!rendered.contains("HoldForm["));
+}
+
+#[test]
 fn repl_reads_multiline_input_until_a_form_is_complete() {
     let input = Cursor::new("Identity[\n123\n]\n:quit\n");
     let mut output = Vec::new();

@@ -189,6 +189,43 @@ fn eval_flag_renders_prints_before_final_value() {
 }
 
 #[test]
+fn eval_flag_renders_hold_form_transparently_in_canonical_style() {
+    let direct = run_cli(&["--eval", "HoldForm[1 + 1]"]);
+    let nested = run_cli(&["--eval", "{HoldForm[1 + 1]}"]);
+
+    assert!(direct.status.success());
+    assert_eq!(stdout(&direct), "Plus[1, 1]\n");
+    assert!(stderr(&direct).is_empty());
+    assert!(nested.status.success());
+    assert_eq!(stdout(&nested), "List[Plus[1, 1]]\n");
+    assert!(stderr(&nested).is_empty());
+}
+
+#[test]
+fn eval_flag_keeps_non_hold_form_canonical_output_unchanged() {
+    let output = run_cli(&["--eval", "{Hold[1 + 1], \"rum\"}"]);
+
+    assert!(output.status.success());
+    assert_eq!(stdout(&output), "List[Hold[Plus[1, 1]], \"rum\"]\n");
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn eval_flag_keeps_to_string_form_arms_unchanged() {
+    let output = run_cli(&[
+        "--eval",
+        "{ToString[HoldForm[1 + 1], OutputForm], ToString[HoldForm[1 + 1], StandardForm], ToString[HoldForm[1 + 1], InputForm], ToString[HoldForm[1 + 1], TraditionalForm]}",
+    ]);
+
+    assert!(output.status.success());
+    assert_eq!(
+        stdout(&output),
+        "List[\"1 + 1\", \"1 + 1\", \"HoldForm[1 + 1]\", \"1 + 1\"]\n"
+    );
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
 fn eval_flag_binds_piped_stdin_as_script_input() {
     let output = run_cli_with_stdin(&["--eval", "StringLines[$ScriptInput]"], "a\nb\n");
 
