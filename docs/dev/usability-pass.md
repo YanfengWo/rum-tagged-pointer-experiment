@@ -135,6 +135,17 @@ batch immediately after the Module fix = **brief-221**. Dispatch order:
 
 ### Unit-9 fixes landed
 
+- **batch 4 — brief-218 (cd463b7):** pattern-query operator forms.
+  `Position[patt]`/`Count[patt]`/`MemberQ[patt]`/`FreeQ[patt]` join the
+  callable-wrapper family tables (`functional_data.rs`, mirroring the
+  179/182 siblings; `Extract[pos]` was the in-tree precedent); 1-arg
+  gates in `runtime/tree_walkers/` yield to the wrapper arm; 0-arg
+  `argtu` + all data forms byte-identical. Gate: workspace 1452/0;
+  probes; hashes matched both ways; independent A/B watch ≤ +1.8% in
+  ±3.5..3.9% floor — Codex's honestly-reported `table-count-null` +7µs
+  outlier did NOT reproduce (-1.84%) = noise, closed. Brief errata:
+  tree_walkers path was stale (lives under `runtime/`, not
+  `kernel_data/rewrite_data/`).
 - **batch 3 — brief-217 rev2 (027dc74):** fail-closed contracts. (a)
   `Repeated`/`RepeatedNull` count shapes unified across expression and
   string matchers (numeric `n` was silently inert on strings); malformed
