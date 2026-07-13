@@ -16,6 +16,10 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
     assert_eq!(paused.value.to_string(), "Null");
     assert!(paused.prints.is_empty());
 
+    let paused = session.eval_text("Pause[1/1000]").unwrap();
+    assert_eq!(paused.value.to_string(), "Null");
+    assert!(paused.prints.is_empty());
+
     let invalid_pause = session.eval_text("Pause[-1]").unwrap();
     assert_eq!(invalid_pause.value.to_string(), "Pause[-1]");
     assert!(
@@ -238,4 +242,25 @@ fn input_print_and_pause_cover_current_first_pass_io_subset() {
             && message.tag == "nonopt"
             && message.text.contains("List[Rule[FieldMasked, False], 1]")
     }));
+}
+
+#[test]
+fn pause_rejects_unrepresentable_integer_and_rational_durations() {
+    let mut session = Session::new();
+
+    for source in ["Pause[10^100]", "Pause[10^100/3]"] {
+        let invalid_pause = session.eval_text(source).unwrap();
+        let Expr::Call { head, args } = &invalid_pause.value else {
+            panic!("{source} should remain inert, got {}", invalid_pause.value);
+        };
+        assert_eq!(head.to_string(), "Pause");
+        assert_eq!(args.len(), 1);
+        assert!(
+            invalid_pause
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Pause" && message.tag == "numnm"),
+            "{source} should emit Pause::numnm"
+        );
+    }
 }

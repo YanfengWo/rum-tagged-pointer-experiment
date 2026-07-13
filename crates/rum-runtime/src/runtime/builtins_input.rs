@@ -427,9 +427,5 @@ fn expr_as_nonnegative_duration(expr: &Expr) -> Option<Duration> {
         _ => return None,
     };
 
-    if !seconds.is_finite() || seconds < 0.0 {
-        return None;
-    }
-
-    Some(Duration::from_secs_f64(seconds))
+    Duration::try_from_secs_f64(seconds).ok()
 }
