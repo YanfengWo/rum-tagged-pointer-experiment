@@ -71,10 +71,23 @@ Required behavior:
   So `a /. (a :> hc[Sequence[1, 2]])` → `hc[Sequence[1, 2]]` and
   `a /. (a :> f[Sequence[1, 2]])` → `f[1, 2]` (via evaluation).
 - **Pattern-variable Sequence bindings keep splicing structurally** —
-  WL substitutes sequence bindings into the surrounding call regardless
-  of hold attributes: `f[1, 2] /. f[x__] :> hc[x]` → `hc[1, 2]`, and
-  inside held wrappers `Hold[g[a]] /. a -> Sequence[1, 2]` →
-  `Hold[g[1, 2]]`. Pin both in tests; they must NOT change.
+  the pin is the genuine binding case (rev2; baseline-verified):
+  `f[1, 2] /. f[x__] :> hc[x]` → `hc[1, 2]`, and inside held wrappers
+  `Hold[g[f[1, 2]]] /. f[x__] :> h[x]` → `Hold[g[h[1, 2]]]`. Both must
+  NOT change.
+- **REV2 — recorded boundary, do NOT fix**: a WHOLE-expression
+  replacement producing a Sequence does not splice into the held
+  parent's rebuild: `Hold[g[a]] /. a -> Sequence[1, 2]` →
+  `Hold[g[Sequence[1, 2]]]` on the clean baseline (rev1 wrongly pinned
+  the WL value `Hold[g[1, 2]]` — a WL-derived pin that was never
+  baseline-verified; the first run stop-lossed on it correctly). WL
+  splices there, so this is a KNOWN divergence — but fixing it requires
+  the `replace_all.rs` reconstruction this brief fences off. Pin rum's
+  CURRENT behavior in a test with a comment naming it a known WL
+  divergence, list it in the report as a recorded boundary for later
+  triage, and leave it unchanged. (Unheld parents are unaffected:
+  evaluation splices `g[Sequence[1, 2]]` → `g[1, 2]` post-215, so the
+  divergence is visible only under hold.)
 - Where the two interact and the WL surface is not confidently
   documented (e.g. `f[1, 2] /. f[x__] :> hc[Sequence[x]]`), pick the
   tightest self-consistent rule (binding-splice first, literal head
