@@ -236,9 +236,30 @@ mma-hol Strict gate flag):
    into the host-embedding line's opening decision set.
 
 **UNIT 10 mechanical batches COMPLETE (224-227 landed).** The three
-decision candidates (Input-family capability KIND, TestReport Clock,
-FileNames addition) remain open — deferred to the host-embedding line's
-opening, where the new dun requirements give them downstream grounding.
+decision candidates were RULED 2026-07-14:
+
+- **#1 Input/InputString/Dialog capability KIND → brief-228 (328557a),
+  LANDED.** New `Capability::Interactive`; sandboxed() denies (can't block
+  a request); unrestricted byte-identical. Capability-gating not removal
+  (serves both restricted sandbox and rich trusted embedding).
+- **#2 TestReport Clock → RESOLVED, NO CHANGE (user ruling).** The
+  stateful↔pure line flagged TestReport as a "mild pure candidate" (test-
+  running is pure; only elapsed time needs Clock). REVIEW CONCLUSION: a
+  test report is INTRINSICALLY multi-dimensional — correctness + timing +
+  memory are ALL part of what it reports, so `Timing` is not an impure
+  contaminant bolted onto a pure core; `Capability::Clock` is the HONEST
+  label, not a mislabel. Splitting timing out (a "Pure core + timing
+  option") would make TestReport 名不副实 and either reintroduce the
+  runtime-capability-check-under-Pure anti-pattern or need an awkward
+  delegation. TestReport already IS `Clock` and already IS denied in
+  sandboxed() (Clock ∉ the Pure-only allowlist) — and denying it there
+  costs nothing: sandbox plugins are runtime helpers (highlight/filter),
+  TestReport is a dev/authoring tool; the use cases are disjoint. The
+  stateful↔pure review of TestReport is CLOSED with no code change.
+- **#3 FileNames addition → brief-230 (in flight).** FileRead-gated folk
+  glob through a new FileIo `list_dir` provider method; sandboxed()
+  denies (no provider); trusted allows. Provider-seam expansion is
+  doctrine-consistent (enumeration is a FileRead sub-capability).
 Cumulative units 1-10 = **605 builtins swept** (all 57 kernel-C rows
 audited; 501 + 47 unit-9 + 57 unit-10). Unit 10 formally CLOSES when the
 three decisions are ruled.
