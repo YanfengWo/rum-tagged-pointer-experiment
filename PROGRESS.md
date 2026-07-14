@@ -849,3 +849,33 @@ SessionEvalResponse → HostEvalSuccess.termination
 values/messages byte-identical; user-constructed literals stay
 termination=None (provenance). Gate: fmt clean, workspace 1478/0,
 scope exact (12 files), no A/B (finalize runs once per top-level form).
+
+## 2026-07-15 — host line b2: request-level memory ceiling (brief-232)
+
+ResourceLimits.eval_memory_limit (default None) armed per top-level
+request at the wall-clock-deadline seam; uncaught breach → in-band
+TerminatedEvaluation["MemoryLimit"] + General::memlim + b1's
+termination=Some(MemoryLimit). A top-level-only reason helper keeps the
+shared reason map untouched, so EvaluationData/TestReport memory
+renderings stay byte-identical; MemoryConstrained frames min-combine and
+still catch in-band. Active-mode enforcement strided (full proxy walk
+every 64 armed checks; projected-byte prechecks unstrided).
+
+Two process notes. (1) The FIRST dispatch of 232 was a wasted round and
+MY fault: adding a public field to ResourceLimits forces the five
+exhaustive literals in runtime/tests/session_config.rs, which was missing
+from the MAY list — Codex correctly stopped at the scope stop-loss with a
+clean tree. Lesson recorded: grep the mechanical ripple (new public field
+→ every exhaustive literal; new enum variant → every exhaustive match)
+BEFORE writing a MAY list. (2) The gate's microbench hung twice at the
+run-bounded timeout — instrument failure, not a code defect: rum-cli
+binds non-TTY stdin as $ScriptInput, so a benchmark invocation without
+`< /dev/null` blocks forever. Confirmed both directions (no stdin →
+timeout; /dev/null → 0.33 s). Same family as the "feed probes stdin"
+lesson from the stdlib line.
+
+Gate: fmt clean, workspace 1481/0, scope exact (12 files). Armed workload
+base 3.825 s → cand 0.667 s (−82.6%, interleaved best-of-3) keeps the
+stride. Default-path A/B against a CALIBRATED noise floor (base-vs-base,
+same binary: median 2.0%, p90 7.4%, max 10.4%): candidate median −3.4%,
+worst label +6.0%, ZERO labels above the floor → no regression.

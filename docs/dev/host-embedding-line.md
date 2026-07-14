@@ -66,12 +66,23 @@ easiest conformance). dun never gets touched (read-only clone).
    values byte-identical; user-constructed `TerminatedEvaluation[...]`
    literals stay `None` (provenance tested). Gate: workspace 1478/0.
    Closes gate 5.
-2. **b2 — request-level memory ceiling.** `set_eval_memory_limit` analog
-   of `set_eval_timeout` + `HostConfig`/eval-call surface in `rum-host`;
-   uncaught exceed → `HostFailureCode::MemoryConstraintExceeded`.
-   Enforcement-cost design per the constraints above (default path stays
-   an `Option` check; active path amortized and A/B'd). Closes ask 4 —
-   dun's stated single most valuable hardening item.
+2. **b2 — request-level memory ceiling. DONE (brief-232, ee8b788,
+   2026-07-15).** `ResourceLimits.eval_memory_limit: Option<usize>`
+   (default `None`) arms `current_memory_limit` per top-level request at
+   the same seam as the wall-clock deadline; an uncaught breach returns
+   in-band `TerminatedEvaluation["MemoryLimit"]` + `General::memlim` +
+   `termination == Some(MemoryLimit)` (b1's field). A top-level-only
+   reason helper keeps the shared map untouched, so the
+   `EvaluationData`/`TestReport` memory renderings are unchanged;
+   `MemoryConstrained` frames min-combine and still catch in-band.
+   Active-mode cost: full proxy walks strided every 64 armed checks
+   (projected-byte prechecks unstrided). Gate-reproduced: armed workload
+   3.825 s → 0.667 s (−82.6%, interleaved best-of-3); default path
+   instruction-identical, microbench A/B against a calibrated noise
+   floor (base-vs-base median 2.0%, max 10.4%) shows candidate median
+   −3.4% and ZERO labels above the floor. Ceiling is modeled proxy
+   bytes, not RSS — documented on the knob. Closes ask 4 (dun's stated
+   single most valuable hardening item).
 3. **b3 — stdout/stderr hygiene hard line.** Mechanical hygiene test
    banning stdout writes (and inventorying stderr writes as env-gated
    diagnostics only) in the three kernel crates' non-test code; a short
