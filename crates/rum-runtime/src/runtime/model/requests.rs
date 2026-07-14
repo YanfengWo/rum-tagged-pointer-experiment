@@ -58,6 +58,7 @@ impl fmt::Display for SessionRequestError {
 pub enum EvalTerminationReason {
     Cancelled,
     TimeConstraint,
+    MemoryLimit,
     RecursionLimit,
     StackLimit,
     PatternMatchRecursionLimit,
@@ -73,6 +74,7 @@ impl EvalTerminationReason {
         match self {
             Self::Cancelled => "Cancelled",
             Self::TimeConstraint => "TimeConstraint",
+            Self::MemoryLimit => "MemoryLimit",
             Self::RecursionLimit => "RecursionLimit",
             Self::StackLimit => "StackLimit",
             Self::PatternMatchRecursionLimit => "PatternMatchRecursionLimit",

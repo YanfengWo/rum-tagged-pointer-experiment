@@ -41,6 +41,8 @@ pub enum HostTerminationReason {
     Cancelled,
     /// Evaluation exceeded its wall-clock time constraint.
     TimeConstraint,
+    /// Evaluation exceeded its modeled memory proxy-byte ceiling.
+    MemoryLimit,
     /// Evaluation exceeded its recursion limit.
     RecursionLimit,
     /// Evaluation exceeded its native stack limit.
@@ -283,6 +285,7 @@ impl From<EvalTerminationReason> for HostTerminationReason {
         match reason {
             EvalTerminationReason::Cancelled => Self::Cancelled,
             EvalTerminationReason::TimeConstraint => Self::TimeConstraint,
+            EvalTerminationReason::MemoryLimit => Self::MemoryLimit,
             EvalTerminationReason::RecursionLimit => Self::RecursionLimit,
             EvalTerminationReason::StackLimit => Self::StackLimit,
             EvalTerminationReason::PatternMatchRecursionLimit => Self::PatternMatchRecursionLimit,

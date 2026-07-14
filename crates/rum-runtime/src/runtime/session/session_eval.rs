@@ -25,10 +25,12 @@ impl Session {
         handled_error_checkpoint: usize,
     ) -> Result<(Expr, Option<EvalTerminationReason>), EvalError> {
         match self.finalize_top_level_control_flow(outcome) {
-            Err(error) => match Self::terminated_evaluation_reason_for_error(&error) {
+            Err(error) => match Self::terminated_evaluation_reason_for_top_level_error(&error) {
                 Some(reason) => {
-                    let value = Self::terminated_evaluation_expr_for_error(&error)
-                        .expect("termination value should exist for termination reason");
+                    let value = Expr::call(
+                        system_expr("TerminatedEvaluation"),
+                        vec![Expr::string(reason.tag())],
+                    );
                     self.emit_non_loader_eval_message(handled_error_checkpoint, &error);
                     Ok((value, Some(reason)))
                 }

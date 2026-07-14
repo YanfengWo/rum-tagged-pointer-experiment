@@ -1033,6 +1033,7 @@ fn host_session_reset_recovers_poisoned_session() {
 fn host_session_reset_restores_original_config_not_mutated_state() {
     let mut limits = HostResourceLimits::default();
     limits.recursion_limit = 77;
+    limits.eval_memory_limit = Some(1_000_000);
     let original_config = HostConfig::default()
         .with_resource_limits(limits)
         .with_current_context("Original")
@@ -1040,6 +1041,10 @@ fn host_session_reset_restores_original_config_not_mutated_state() {
     let mut session = HostSession::builder().with_config(original_config).build();
 
     assert_eq!(session.configuration().current_context, "Original`");
+    assert_eq!(
+        session.configuration().resource_limits.eval_memory_limit,
+        Some(1_000_000)
+    );
     assert_eq!(
         session.configuration().context_path,
         vec!["System`".to_string(), "Original`".to_string()]
@@ -1064,6 +1069,10 @@ fn host_session_reset_restores_original_config_not_mutated_state() {
         vec!["System`".to_string(), "Original`".to_string()]
     );
     assert_eq!(reset_config.resource_limits.recursion_limit, 77);
+    assert_eq!(
+        reset_config.resource_limits.eval_memory_limit,
+        Some(1_000_000)
+    );
 
     let reset_context = successful_eval(session.eval("$Context"));
     assert_eq!(reset_context.value.text, "\"Original`\"");
@@ -1142,6 +1151,33 @@ fn host_eval_recursion_limit_reports_structured_termination_reason() {
         success.termination,
         Some(HostTerminationReason::RecursionLimit)
     );
+}
+
+#[test]
+fn host_eval_memory_ceiling_reports_structured_termination_and_session_recovers() {
+    let mut limits = HostResourceLimits::default();
+    limits.eval_memory_limit = Some(100_000);
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_resource_limits(limits))
+        .build();
+
+    let success = successful_eval(session.eval("Table[k, {k, 10000}]"));
+
+    assert_eq!(success.value.text, "TerminatedEvaluation[\"MemoryLimit\"]");
+    assert_eq!(
+        success.termination,
+        Some(HostTerminationReason::MemoryLimit)
+    );
+    assert!(
+        success
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "memlim")
+    );
+
+    let recovered = successful_eval(session.eval("1 + 1"));
+    assert_eq!(recovered.value.text, "2");
+    assert_eq!(recovered.termination, None);
 }
 
 #[test]

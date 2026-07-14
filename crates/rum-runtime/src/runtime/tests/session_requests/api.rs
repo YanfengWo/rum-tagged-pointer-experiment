@@ -141,6 +141,54 @@ fn eval_request_returns_transport_friendly_cycle_termination_data() {
 }
 
 #[test]
+fn eval_request_memory_ceiling_returns_classified_termination_and_session_recovers() {
+    let mut session = session_with_test_control_builtins();
+    let mut limits = session.resource_limits();
+    limits.eval_memory_limit = Some(100_000);
+    session.set_resource_limits(limits);
+
+    let response = session
+        .eval_request("Table[k, {k, 10000}]")
+        .expect("memory ceiling should surface a termination value");
+
+    assert_eq!(
+        response.value.to_string(),
+        "TerminatedEvaluation[\"MemoryLimit\"]"
+    );
+    assert_eq!(
+        response.termination,
+        Some(EvalTerminationReason::MemoryLimit)
+    );
+    assert!(
+        response
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "memlim")
+    );
+
+    let recovered = session
+        .eval_request("1 + 1")
+        .expect("the next request should re-arm and complete normally");
+    assert_eq!(recovered.value.to_string(), "2");
+    assert_eq!(recovered.termination, None);
+}
+
+#[test]
+fn eval_request_nested_memory_constraint_catches_before_higher_request_ceiling() {
+    let mut session = session_with_test_control_builtins();
+    let mut limits = session.resource_limits();
+    limits.eval_memory_limit = Some(1_000_000);
+    session.set_resource_limits(limits);
+
+    let response = session
+        .eval_request("List[MemoryConstrained[Table[k, {k, 10000}], 100000], 1 + 1]")
+        .expect("the nested memory frame should catch its own breach");
+
+    assert_eq!(response.value.to_string(), "List[$Aborted, 2]");
+    assert_eq!(response.termination, None);
+}
+
+#[test]
 fn inspect_request_aggregates_symbol_definitions_and_messages() {
     let mut session = Session::new();
     session.eval_text("f[x_Integer] := x").unwrap();

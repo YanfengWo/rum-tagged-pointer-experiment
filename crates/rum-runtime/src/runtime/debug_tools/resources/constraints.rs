@@ -1,6 +1,12 @@
 use super::memory::expr_memory_proxy_bytes;
 use super::*;
 
+/// Full proxy walks occur every 64 armed per-expression checks. Projected-byte
+/// prechecks remain unstrided for single large allocations; between sampled
+/// walks, overshoot is bounded by the existing per-step element, integer, and
+/// iteration budgets.
+const ACTIVE_MEMORY_LIMIT_CHECK_STRIDE: u32 = 64;
+
 impl Session {
     pub(in crate::runtime) fn eval_time_constrained(
         &mut self,
@@ -130,11 +136,18 @@ impl Session {
         self.enforce_active_time_limit()?;
 
         if let Some(limit) = self.current_memory_limit {
-            let projected = self
-                .current_memory_proxy_bytes()
-                .saturating_add(expr_memory_proxy_bytes(expr));
-            if projected > limit {
-                return Err(EvalError::MemoryConstraintExceeded { limit });
+            let stride_counter = self.memory_limit_check_counter.get();
+            if stride_counter == 0 {
+                self.memory_limit_check_counter
+                    .set(ACTIVE_MEMORY_LIMIT_CHECK_STRIDE - 1);
+                let projected = self
+                    .current_memory_proxy_bytes()
+                    .saturating_add(expr_memory_proxy_bytes(expr));
+                if projected > limit {
+                    return Err(EvalError::MemoryConstraintExceeded { limit });
+                }
+            } else {
+                self.memory_limit_check_counter.set(stride_counter - 1);
             }
         }
 

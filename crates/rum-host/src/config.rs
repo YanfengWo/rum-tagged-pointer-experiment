@@ -68,6 +68,12 @@ pub struct HostResourceLimits {
     pub replace_repeated_limit: usize,
     /// Maximum number of evaluation passes for one request.
     pub evaluation_pass_limit: usize,
+    /// Optional per-request ceiling for modeled memory proxy bytes, not process RSS.
+    ///
+    /// Nested `MemoryConstrained` frames min-combine with this ceiling. A breach
+    /// inside such a frame is handled in-band by that frame (`$Aborted` or its
+    /// fallback), and the request ceiling remains armed outside the frame.
+    pub eval_memory_limit: Option<usize>,
     /// Maximum number of generated elements a request may produce.
     pub generated_element_limit: usize,
     /// Maximum integer work budget for exact integer operations.
@@ -89,6 +95,7 @@ impl From<ResourceLimits> for HostResourceLimits {
             native_stack_limit: limits.native_stack_limit,
             replace_repeated_limit: limits.replace_repeated_limit,
             evaluation_pass_limit: limits.evaluation_pass_limit,
+            eval_memory_limit: limits.eval_memory_limit,
             generated_element_limit: limits.generated_element_limit,
             integer_work_limit: limits.integer_work_limit,
             iteration_work_limit: limits.iteration_work_limit,
@@ -103,6 +110,7 @@ impl From<HostResourceLimits> for ResourceLimits {
             native_stack_limit: limits.native_stack_limit,
             replace_repeated_limit: limits.replace_repeated_limit,
             evaluation_pass_limit: limits.evaluation_pass_limit,
+            eval_memory_limit: limits.eval_memory_limit,
             generated_element_limit: limits.generated_element_limit,
             integer_work_limit: limits.integer_work_limit,
             iteration_work_limit: limits.iteration_work_limit,

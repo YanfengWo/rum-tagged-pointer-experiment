@@ -6,6 +6,12 @@ pub struct ResourceLimits {
     pub native_stack_limit: usize,
     pub replace_repeated_limit: usize,
     pub evaluation_pass_limit: usize,
+    /// Optional per-request ceiling for modeled memory proxy bytes, not process RSS.
+    ///
+    /// Nested `MemoryConstrained` frames min-combine with this ceiling. A breach
+    /// inside such a frame is handled in-band by that frame (`$Aborted` or its
+    /// fallback), and the request ceiling remains armed outside the frame.
+    pub eval_memory_limit: Option<usize>,
     pub generated_element_limit: usize,
     pub integer_work_limit: usize,
     pub iteration_work_limit: usize,
@@ -18,6 +24,7 @@ impl Default for ResourceLimits {
             native_stack_limit: DEFAULT_NATIVE_STACK_LIMIT,
             replace_repeated_limit: DEFAULT_REPLACE_REPEATED_LIMIT,
             evaluation_pass_limit: DEFAULT_EVALUATION_PASS_LIMIT,
+            eval_memory_limit: None,
             generated_element_limit: DEFAULT_GENERATED_ELEMENT_LIMIT,
             integer_work_limit: DEFAULT_INTEGER_WORK_LIMIT,
             iteration_work_limit: DEFAULT_ITERATION_WORK_LIMIT,

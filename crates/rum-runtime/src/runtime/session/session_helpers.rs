@@ -31,6 +31,8 @@ impl Session {
         self.interrupt_flag.store(false, Ordering::Relaxed);
         self.interrupt_poll_counter = 0;
         self.eval_deadline = self.eval_timeout.map(|timeout| Instant::now() + timeout);
+        self.current_memory_limit = self.resource_limits.eval_memory_limit;
+        self.memory_limit_check_counter.set(0);
         self.interrupt_armed =
             self.eval_deadline.is_some() || std::sync::Arc::strong_count(&self.interrupt_flag) > 1;
     }
@@ -238,6 +240,15 @@ impl Session {
             }
             _ => None,
         }
+    }
+
+    pub(in crate::runtime) fn terminated_evaluation_reason_for_top_level_error(
+        error: &EvalError,
+    ) -> Option<EvalTerminationReason> {
+        Self::terminated_evaluation_reason_for_error(error).or_else(|| match error {
+            EvalError::MemoryConstraintExceeded { .. } => Some(EvalTerminationReason::MemoryLimit),
+            _ => None,
+        })
     }
 
     pub(in crate::runtime) fn terminated_evaluation_expr_for_error(
