@@ -239,6 +239,28 @@ It also clears a poisoned session and invalidates old cancel handles.
 
 Obtain a new `cancel_handle()` after reset.
 
+## Per-Request Isolation
+
+`reset()` rebuilds the session from its configuration. It drops all user
+definitions, attributes, options, messages, non-configured contexts, loaded
+packages, gensym-counter advancement, and PRNG advancement. Configured resource
+limits, capability policy, contexts, file I/O and entropy providers, and core
+and downstream builtin installers remain in effect.
+
+A host serving independent requests should reset between requests. Pass
+explicit state as request data rather than relying on implicit session state to
+carry over. When explicit carry-over is wanted, use snapshot and restore
+instead.
+
+A text snapshot captures user definitions, but not the gensym counter or PRNG
+state. Reset-between-requests therefore provides the stronger determinism
+guarantee.
+
+The lifecycle is crash-only: a host process may be terminated at any instant.
+The kernel keeps no temporary files, as enforced by the `std::fs` hygiene test,
+and depends on no destructors for correctness. A killed host leaves no residue,
+and a relaunched host starts clean.
+
 ## Snapshot And Restore
 
 `snapshot_to_bytes()` serializes user definitions and attributes for defined
