@@ -8,6 +8,8 @@ pub enum Capability {
     Diagnostic,
     /// Reserved for future downstream process-control integrations.
     Process,
+    /// May request interactive input from the host or suspend for host input.
+    Interactive,
 }
 
 impl Capability {
@@ -20,6 +22,7 @@ impl Capability {
             Self::Random => 1 << 4,
             Self::Diagnostic => 1 << 5,
             Self::Process => 1 << 6,
+            Self::Interactive => 1 << 7,
         }
     }
 }
@@ -128,6 +131,8 @@ mod tests {
         assert!(policy.allows(Capability::Random));
         assert!(policy.allows(Capability::Diagnostic));
         assert!(policy.allows(Capability::Process));
+        assert!(policy.allows(Capability::Interactive));
+        assert_eq!(Capability::Interactive.bit(), 1 << 7);
     }
 
     #[test]
@@ -142,6 +147,7 @@ mod tests {
         assert!(!policy.allows(Capability::Random));
         assert!(!policy.allows(Capability::Diagnostic));
         assert!(!policy.allows(Capability::Process));
+        assert!(!policy.allows(Capability::Interactive));
     }
 
     #[test]
@@ -161,6 +167,7 @@ mod tests {
         assert!(policy.allows(Capability::Random));
         assert!(!policy.allows(Capability::Diagnostic));
         assert!(!policy.allows(Capability::Process));
+        assert!(!policy.allows(Capability::Interactive));
         assert_eq!(
             CapabilityPolicyBuilder::default().build(),
             CapabilityPolicy::allow([])
@@ -179,10 +186,11 @@ mod tests {
         assert!(!policy.allows(Capability::Clock));
         assert!(!policy.allows(Capability::Random));
         assert!(!policy.allows(Capability::Process));
+        assert!(!policy.allows(Capability::Interactive));
     }
 
     #[test]
-    fn catalog_capabilities_classify_filesystem_builtins() {
+    fn catalog_capabilities_classify_io_builtins() {
         fn capability(name: &str) -> Capability {
             core_builtin_specs()
                 .iter()
@@ -200,6 +208,9 @@ mod tests {
         assert_eq!(capability("DirectoryName"), Capability::Pure);
         assert_eq!(capability("ParentDirectory"), Capability::Pure);
         assert_eq!(capability("FileNameTake"), Capability::Pure);
+        assert_eq!(capability("Dialog"), Capability::Interactive);
+        assert_eq!(capability("InputString"), Capability::Interactive);
+        assert_eq!(capability("Input"), Capability::Interactive);
     }
 
     #[test]

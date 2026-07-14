@@ -401,5 +401,6 @@ fn render_capability(capability: Capability) -> &'static str {
         Capability::Random => "Random",
         Capability::Diagnostic => "Diagnostic",
         Capability::Process => "Process",
+        Capability::Interactive => "Interactive",
     }
 }

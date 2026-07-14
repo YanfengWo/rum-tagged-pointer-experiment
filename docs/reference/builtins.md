@@ -950,10 +950,10 @@ Returns the structural depth of an expression, optionally including heads.
 
 ### Dialog
 
-Runs the current first-pass dialog subset with Return-sensitive evaluation and host-input suspension.
+Runs the current first-pass dialog subset with Return-sensitive evaluation and host-input suspension; requires Capability::Interactive.
 
 - Attributes: `HoldAll`, `Protected`
-- Capability: `Pure`
+- Capability: `Interactive`
 
 ### Diff
 
@@ -1718,10 +1718,10 @@ Combines matching tensor dimensions in the current first-pass subset.
 
 ### Input
 
-Requests one line of host-provided text, parses it as rum source, and evaluates the resulting expression in the current first-pass subset.
+Requests one line of host-provided text, parses it as rum source, and evaluates the resulting expression in the current first-pass subset; requires Capability::Interactive.
 
 - Attributes: `Protected`
-- Capability: `Pure`
+- Capability: `Interactive`
 
 ### InputForm
 
@@ -1732,10 +1732,10 @@ Represents the current formatting symbol accepted by the current ToExpression an
 
 ### InputString
 
-Requests one line of host-provided text and returns it as a string.
+Requests one line of host-provided text and returns it as a string; requires Capability::Interactive.
 
 - Attributes: `Protected`
-- Capability: `Pure`
+- Capability: `Interactive`
 
 ### Insert
 

@@ -218,6 +218,17 @@ fn sandboxed_host_config_blocks_filesystem_builtins_at_dispatch() {
 }
 
 #[test]
+fn sandboxed_host_config_blocks_interactive_builtins_at_dispatch() {
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+
+    assert_sandbox_denied(&mut session, "Input[]");
+    assert_sandbox_denied(&mut session, "InputString[]");
+    assert_sandbox_denied(&mut session, "Dialog[1]");
+}
+
+#[test]
 fn sandboxed_host_config_with_file_provider_blocks_internal_loader_calls() {
     let dir = TempDirGuard::new("sandbox-blocks-internal-loads");
     dir.write(

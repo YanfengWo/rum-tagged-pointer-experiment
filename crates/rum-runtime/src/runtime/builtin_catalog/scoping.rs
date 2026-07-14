@@ -96,20 +96,26 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
     ).protected(),
     BuiltinSpec::ordinary_with_hold(
         "Dialog",
-        "Runs the current first-pass dialog subset with Return-sensitive evaluation and host-input suspension.",
+        "Runs the current first-pass dialog subset with Return-sensitive evaluation and host-input suspension; requires Capability::Interactive.",
         HoldAttribute::HoldAll,
         builtin_dialog,
-    ).protected(),
+    )
+    .protected()
+    .with_capability(Capability::Interactive),
     BuiltinSpec::ordinary(
         "InputString",
-        "Requests one line of host-provided text and returns it as a string.",
+        "Requests one line of host-provided text and returns it as a string; requires Capability::Interactive.",
         builtin_input_string,
-    ).protected(),
+    )
+    .protected()
+    .with_capability(Capability::Interactive),
     BuiltinSpec::ordinary(
         "Input",
-        "Requests one line of host-provided text, parses it as rum source, and evaluates the resulting expression in the current first-pass subset.",
+        "Requests one line of host-provided text, parses it as rum source, and evaluates the resulting expression in the current first-pass subset; requires Capability::Interactive.",
         builtin_input,
-    ).protected(),
+    )
+    .protected()
+    .with_capability(Capability::Interactive),
     BuiltinSpec::ordinary(
         "Print",
         "Emits a line of plain print output through the runtime print stream.",
