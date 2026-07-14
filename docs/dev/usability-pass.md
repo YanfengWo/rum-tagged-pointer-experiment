@@ -217,8 +217,31 @@ mma-hol Strict gate flag):
    `EchoLabel`); `Contexts[patt]` filter form (reuse the Names matcher);
    `TestCreate` option discovery. All builtin-local: no A/B (no
    call-planning), no mma-hol gate (no DumpSave file-format change).
+4. **brief-227 — truthfulness + small forms** (safety/convenience, S/M)
+   — **LANDED (212baad):** dead-option guards (`Names`
+   ResolveContextAliases + `DumpSave` CompressionLevel → `optval`,
+   defaults byte-identical); `DumpSave` returns qualified symbol NAME
+   strings not values (file byte-identical); `ByteCount` doc aligned to
+   its WL-correct structural behavior; `EchoFunction[f][x]` applies `f`;
+   `Contexts[patt]` filter; `TestCreate` option discovery. Workspace
+   1467/0; no A/B, no mma-hol gate.
 5. **Capability-KIND + FileNames decisions** — the three user-decision
-   candidates above; dispatched only after the user rules.
+   candidates above; dispatched only after the user rules. **NOW HAVE
+   DOWNSTREAM CONTEXT** (dun protocol-first requirements, 2026-07-13,
+   `docs/dev/dun-protocol-host-requirements.md`): the pure-sandbox trust
+   gate makes decision #1 (Input/InputString/Dialog must not block a
+   request) a HARD requirement, not just a label question; the
+   memory-ceiling ask connects to the MemoryConstrained/MemoryInUse
+   review; FileNames-as-FileRead needs the pure-sandbox lens. These fold
+   into the host-embedding line's opening decision set.
+
+**UNIT 10 mechanical batches COMPLETE (224-227 landed).** The three
+decision candidates (Input-family capability KIND, TestReport Clock,
+FileNames addition) remain open — deferred to the host-embedding line's
+opening, where the new dun requirements give them downstream grounding.
+Cumulative units 1-10 = **605 builtins swept** (all 57 kernel-C rows
+audited; 501 + 47 unit-9 + 57 unit-10). Unit 10 formally CLOSES when the
+three decisions are ruled.
 
 Standing design inputs harvested (recorded, not designed): the
 whole-unit capability-label review table (the dun host line's first
