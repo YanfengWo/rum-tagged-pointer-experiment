@@ -1,5 +1,13 @@
 # Brief 232 — request-level memory ceiling with a classified outcome
 
+REVISION 1 (2026-07-15): the first dispatch correctly stopped at the
+scope stop-loss — adding a public field to `ResourceLimits` forces the
+five exhaustive `ResourceLimits { … }` literals in
+`crates/rum-runtime/src/runtime/tests/session_config.rs` to be updated,
+and that file was missing from the MAY list. It is now listed (the only
+such file in the tree; `HostResourceLimits` has no exhaustive literals).
+No other change to the brief.
+
 Implementation brief — host-embedding line, item b2 (see
 `docs/dev/host-embedding-line.md`, concern (b) protocol ask 4). Today the
 kernel's memory accounting activates only inside
@@ -157,6 +165,12 @@ MAY modify:
   (stride inside the `Some` arm)
 - `crates/rum-host/src/config.rs`, `crates/rum-host/src/model/outcome.rs`
   (mirror field / mirror variant)
+- `crates/rum-runtime/src/runtime/tests/session_config.rs` — MECHANICAL
+  ONLY: the five exhaustive `ResourceLimits { … }` literals must gain
+  the new field (Rust requires it for a same-crate exhaustive literal).
+  Set it to `None` except where a test deliberately round-trips a value;
+  extend the config round-trip assertion to cover the new field. Do not
+  otherwise restructure this file.
 - Tests: the runtime session-request test module(s) you extend,
   `crates/rum-host/src/tests.rs`
 
