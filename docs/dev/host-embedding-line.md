@@ -83,10 +83,20 @@ easiest conformance). dun never gets touched (read-only clone).
    −3.4% and ZERO labels above the floor. Ceiling is modeled proxy
    bytes, not RSS — documented on the knob. Closes ask 4 (dun's stated
    single most valuable hardening item).
-3. **b3 — stdout/stderr hygiene hard line.** Mechanical hygiene test
-   banning stdout writes (and inventorying stderr writes as env-gated
-   diagnostics only) in the three kernel crates' non-test code; a short
-   embedder-facing contract note in the embedding guide. Pins ask 1.
+3. **b3 — stdout ownership hard line. DONE (brief-233, b245590,
+   2026-07-15).** Mechanical hygiene test bans stdout writes
+   (`println!`/`print!`/`io::stdout`/`stdout()`) in the three kernel
+   crates' library code, excluding `/tests/` and `/bin/` (codegen tools
+   own their stdout). The scan is identifier-boundary aware — the naive
+   `contains("println!")` would flag all 72 legitimate `eprintln!`
+   profiling lines, since `"eprintln!"` CONTAINS `"println!"`.
+   Instrument self-calibrated at the gate (injected violation → FAIL
+   naming the file; removed → green), independently reproduced by the
+   director in a different file. Also locked b2's free property: a print
+   flood under a request ceiling terminates with
+   `TerminatedEvaluation["MemoryLimit"]` (prints are counted by the
+   memory proxy). Contract documented in `docs/guide/embedding.md` +
+   `set_print_sink` rustdoc. Gate: workspace 1483/0. Pins ask 1.
 4. **b4 — crash-only + per-request isolation contract.** State and test
    the crash-only property; decide + document + test the per-request
    isolation pattern (reset-per-request vs snapshot), including a

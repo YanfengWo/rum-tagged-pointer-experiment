@@ -879,3 +879,31 @@ base 3.825 s → cand 0.667 s (−82.6%, interleaved best-of-3) keeps the
 stride. Default-path A/B against a CALIBRATED noise floor (base-vs-base,
 same binary: median 2.0%, p90 7.4%, max 10.4%): candidate median −3.4%,
 worst label +6.0%, ZERO labels above the floor → no regression.
+
+## 2026-07-15 — host line b3: stdout ownership hard line (brief-233)
+
+The kernel already wrote zero bytes to stdout; this brief turned that
+from discipline into a mechanical hygiene test (same family as the
+std::fs ban): println!/print!/io::stdout/stdout() forbidden in
+rum-core/rum-runtime/rum-stdlib library code, excluding /tests/ and
+/bin/ (codegen tools own their stdout). Print stays buffered per request
+into `prints`; rum-cli's stdout sink is the host's explicit, legitimate
+choice (it owns its stdout), and rum-host exposes no sink at all — so an
+embedded session's Print can never reach the host process's stdout,
+which is exactly what a framed-protocol host needs.
+
+Instrument trap worth remembering: "eprintln!" CONTAINS the substring
+"println!", so a naive contains() check flags all 72 legitimate
+env-gated profiling lines (12 files). The scan is identifier-boundary
+aware. The hygiene test was self-calibrated at the gate — an injected
+println! makes it FAIL and name the file; the director reproduced this
+independently in a different file (rum-stdlib/src/lib.rs) before
+crediting it. A hygiene test that cannot fail is worthless.
+
+Free property from b2, now tested: `prints` is counted by the memory
+proxy, so Do[Print["x"], {100000}] under a small request ceiling
+terminates with TerminatedEvaluation["MemoryLimit"] + General::memlim
+instead of growing unbounded.
+
+Gate: fmt clean, workspace 1483/0, scope exact (4 files). No A/B — tests
+and docs only, no evaluation-path code.
