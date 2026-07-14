@@ -425,6 +425,13 @@ state, so an unbalanced successful `Begin` persists; the parked SPF/host design
 must decide whether that is desired programmability or a boundary that needs a
 diagnostic.
 
+Design-input note (brief-226): keep successful unbalanced `Begin` state from
+`Get` unchanged, because WL likewise leaves loaded files responsible for
+balancing their own `Begin`/`End` frames. The separate request-boundary
+isolation need belongs to the dun host-embedding line, where per-request
+`call_isolated`/`eval_isolated` rollback is already tracked
+(`../dun-embedding-plugin-requirements.md:85-89`), not to loader semantics.
+
 ## Triage sketch
 
 1. **Capability enforcement and kind decisions (highest safety value).** Add a

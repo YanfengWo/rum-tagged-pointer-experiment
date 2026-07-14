@@ -306,6 +306,26 @@ impl Session {
         }))
     }
 
+    fn rollback_failed_begin_package_dependency(
+        &mut self,
+        previous_context_stack_len: usize,
+        previous_loaded_packages_len: usize,
+    ) {
+        let frame = self
+            .context_stack
+            .pop()
+            .expect("failed BeginPackage dependency should have an active frame");
+        debug_assert_eq!(frame.kind, ContextFrameKind::BeginPackage);
+        debug_assert_eq!(self.context_stack.len(), previous_context_stack_len);
+        self.current_context = frame.previous_context;
+        self.context_path = frame.previous_context_path;
+
+        if self.loaded_packages.len() > previous_loaded_packages_len {
+            self.loaded_packages.truncate(previous_loaded_packages_len);
+            self.bump_evaluation_epoch();
+        }
+    }
+
     pub(super) fn eval_begin_package(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let config = match self.compile_begin_package_call_from_resolved_args(args) {
             Ok(config) => config,
@@ -334,24 +354,11 @@ impl Session {
 
         for context in &config.dependencies {
             let dependency_result = self.eval_needs(&[Expr::string(context.clone())])?;
-            if !self.capability_policy.is_unrestricted()
-                && !self.capability_policy.allows(Capability::FileRead)
-            {
-                debug_assert!(is_system_symbol_name(&dependency_result, "$Failed"));
-                let frame = self
-                    .context_stack
-                    .pop()
-                    .expect("BeginPackage dependency denial should have an active frame");
-                debug_assert_eq!(frame.kind, ContextFrameKind::BeginPackage);
-                debug_assert_eq!(self.context_stack.len(), previous_context_stack_len);
-                self.current_context = frame.previous_context;
-                self.context_path = frame.previous_context_path;
-
-                if self.loaded_packages.len() > previous_loaded_packages_len {
-                    self.loaded_packages.truncate(previous_loaded_packages_len);
-                    self.bump_evaluation_epoch();
-                }
-
+            if is_system_symbol_name(&dependency_result, "$Failed") {
+                self.rollback_failed_begin_package_dependency(
+                    previous_context_stack_len,
+                    previous_loaded_packages_len,
+                );
                 return Ok(dependency_result);
             }
         }

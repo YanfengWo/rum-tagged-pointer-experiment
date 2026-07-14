@@ -363,6 +363,142 @@ fn begin_package_dependencies_stay_on_private_context_path_when_already_loaded()
 }
 
 #[test]
+fn begin_package_loads_present_dependency_and_enters_package() {
+    let dir = TempDirGuard::new("begin-package-dependency");
+    dir.write(
+        "GoodDep.rum",
+        "BeginPackage[\"GoodDep`\"]\ngoodVal = 77\nEndPackage[]",
+    );
+    let mut session = session_with_test_control_builtins();
+    session.set_package_search_paths([dir.path().to_path_buf()]);
+
+    let outcome = session
+        .eval_text("BeginPackage[\"MainPkg`\", {\"GoodDep`\"}]")
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "\"MainPkg`\"");
+    assert!(outcome.messages.is_empty(), "{:?}", outcome.messages);
+    assert_eq!(
+        session.eval_text("$Context").unwrap().value.to_string(),
+        "\"MainPkg`\""
+    );
+    assert_eq!(
+        session.eval_text("$ContextPath").unwrap().value.to_string(),
+        "List[\"MainPkg`\", \"GoodDep`\", \"System`\"]"
+    );
+    assert_eq!(
+        session.eval_text("$Packages").unwrap().value.to_string(),
+        "List[\"MainPkg`\", \"GoodDep`\"]"
+    );
+
+    session.eval_text("mainVal = GoodDep`goodVal + 1").unwrap();
+    assert_eq!(
+        session
+            .eval_text("MainPkg`mainVal")
+            .unwrap()
+            .value
+            .to_string(),
+        "78"
+    );
+    assert_eq!(
+        session.eval_text("EndPackage[]").unwrap().value.to_string(),
+        "Null"
+    );
+}
+
+#[test]
+fn begin_package_missing_dependency_fails_closed_and_restores_state() {
+    let mut session = session_with_test_control_builtins();
+    session.set_current_context("Outer`");
+    session
+        .eval_text("$ContextPath = {\"Existing`\", \"System`\", \"Global`\"}")
+        .unwrap();
+    session
+        .eval_text("$Packages = {\"AlreadyLoaded`\"}")
+        .unwrap();
+    let previous_context = session.current_context.clone();
+    let previous_context_path = session.context_path.clone();
+    let previous_loaded_packages = session.loaded_packages.clone();
+    let previous_context_stack_len = session.context_stack.len();
+    let previous_contexts = session.eval_text("Contexts[]").unwrap().value.to_string();
+
+    let outcome = session
+        .eval_text("BeginPackage[\"FailMain`\", {\"NoSuchDep`\"}]")
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "$Failed");
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Get" && message.tag == "notfound"),
+        "{:?}",
+        outcome.messages
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Needs" && message.tag == "load"),
+        "{:?}",
+        outcome.messages
+    );
+    assert_eq!(session.current_context, previous_context);
+    assert_eq!(session.context_path, previous_context_path);
+    assert_eq!(session.loaded_packages, previous_loaded_packages);
+    assert_eq!(session.context_stack.len(), previous_context_stack_len);
+
+    let contexts = session.eval_text("Contexts[]").unwrap().value.to_string();
+    assert_eq!(contexts, previous_contexts);
+    assert!(!contexts.contains("FailMain`"), "{contexts}");
+}
+
+#[test]
+fn begin_package_second_dependency_failure_restores_state_and_package_list() {
+    let dir = TempDirGuard::new("begin-package-second-dependency");
+    dir.write(
+        "GoodDep.rum",
+        "BeginPackage[\"GoodDep`\"]\ngoodVal = 77\nEndPackage[]",
+    );
+    let mut session = session_with_test_control_builtins();
+    session.set_package_search_paths([dir.path().to_path_buf()]);
+    session.set_current_context("Outer`");
+    session
+        .eval_text("$ContextPath = {\"Existing`\", \"System`\", \"Global`\"}")
+        .unwrap();
+    session
+        .eval_text("$Packages = {\"AlreadyLoaded`\"}")
+        .unwrap();
+    let previous_context = session.current_context.clone();
+    let previous_context_path = session.context_path.clone();
+    let previous_loaded_packages = session.loaded_packages.clone();
+    let previous_context_stack_len = session.context_stack.len();
+
+    let outcome = session
+        .eval_text("BeginPackage[\"PartialMain`\", {\"GoodDep`\", \"NoSuchDep`\"}]")
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "$Failed");
+    assert!(
+        outcome.messages.iter().any(|message| {
+            message.symbol == "Needs"
+                && message.tag == "load"
+                && message.text.contains("NoSuchDep`")
+        }),
+        "{:?}",
+        outcome.messages
+    );
+    assert_eq!(session.current_context, previous_context);
+    assert_eq!(session.context_path, previous_context_path);
+    assert_eq!(session.loaded_packages, previous_loaded_packages);
+    assert_eq!(session.context_stack.len(), previous_context_stack_len);
+
+    let contexts = session.eval_text("Contexts[]").unwrap().value.to_string();
+    assert!(contexts.contains("GoodDep`"), "{contexts}");
+    assert!(!contexts.contains("PartialMain`"), "{contexts}");
+}
+
+#[test]
 fn begin_package_expands_relative_context_specs_against_the_current_context() {
     let mut session = session_with_test_control_builtins();
     session.set_current_context("Outer`");
