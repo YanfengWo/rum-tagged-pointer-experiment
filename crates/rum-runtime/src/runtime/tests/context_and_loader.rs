@@ -182,11 +182,23 @@ fn contexts_lists_known_session_contexts() {
     session.eval_text("End[]").unwrap();
     session.eval_text("EndPackage[]").unwrap();
 
-    let contexts = session.eval_text("Contexts[]").unwrap().value.to_string();
-    assert!(contexts.contains("\"System`\""));
-    assert!(contexts.contains("\"Global`\""));
-    assert!(contexts.contains("\"Demo`\""));
-    assert!(contexts.contains("\"Demo`Private`\""));
+    let contexts = session.eval_text("Contexts[]").unwrap();
+    assert_eq!(
+        contexts.value.to_string(),
+        "List[\"Demo`\", \"Demo`Private`\", \"Global`\", \"System`\"]"
+    );
+    assert!(contexts.messages.is_empty());
+
+    let filtered = session.eval_text("Contexts[\"Demo`*\"]").unwrap();
+    assert_eq!(
+        filtered.value.to_string(),
+        "List[\"Demo`\", \"Demo`Private`\"]"
+    );
+    assert!(filtered.messages.is_empty());
+
+    let no_match = session.eval_text("Contexts[\"Missing`*\"]").unwrap();
+    assert_eq!(no_match.value.to_string(), "List[]");
+    assert!(no_match.messages.is_empty());
 }
 
 #[test]

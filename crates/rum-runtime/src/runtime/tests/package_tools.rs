@@ -126,7 +126,7 @@ fn dump_save_overwrites_file_and_returns_saved_symbols() {
     let outcome = session
         .eval_text(&format!("DumpSave[File[\"{}\"], f]", rum_path(&file)))
         .unwrap();
-    assert_eq!(outcome.value.to_string(), "List[f]");
+    assert_eq!(outcome.value.to_string(), "List[\"Global`f\"]");
 
     let saved = fs::read_to_string(&file).unwrap();
     assert!(!saved.contains("junk"));
@@ -137,6 +137,73 @@ fn dump_save_overwrites_file_and_returns_saved_symbols() {
         .eval_text(&format!("Get[File[\"{}\"]]", rum_path(&file)))
         .unwrap();
     assert_eq!(restored.eval_text("f[1]").unwrap().value.to_string(), "3");
+}
+
+#[test]
+fn dump_save_returns_qualified_symbol_names_without_reevaluating_values() {
+    let dir = TempDirGuard::new("dumpsave-symbol-identity");
+    let file = dir.path().join("identity.mx");
+    let mut session = Session::new();
+
+    session.eval_text("aVal = 5").unwrap();
+    let outcome = session
+        .eval_text(&format!("DumpSave[File[\"{}\"], aVal]", rum_path(&file)))
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[\"Global`aVal\"]");
+    assert!(outcome.messages.is_empty());
+    assert_eq!(fs::read(&file).unwrap(), b"Set[aVal, 5]\n");
+}
+
+#[test]
+fn dump_save_rejects_unsupported_compression_levels_and_preserves_default_bytes() {
+    let dir = TempDirGuard::new("dumpsave-compression-level");
+    let implicit_file = dir.path().join("implicit.mx");
+    let default_file = dir.path().join("default.mx");
+    let mut session = Session::new();
+
+    session.eval_text("compressionValue = 7").unwrap();
+    let implicit = session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], compressionValue]",
+            rum_path(&implicit_file)
+        ))
+        .unwrap();
+    let explicit_default = session
+        .eval_text(&format!(
+            "DumpSave[File[\"{}\"], compressionValue, {{CompressionLevel -> 1}}]",
+            rum_path(&default_file)
+        ))
+        .unwrap();
+    assert!(implicit.messages.is_empty());
+    assert!(explicit_default.messages.is_empty());
+    assert_eq!(
+        fs::read(&implicit_file).unwrap(),
+        fs::read(&default_file).unwrap()
+    );
+
+    for level in [0, 9] {
+        let file = dir.write(&format!("unsupported-{level}.mx"), "sentinel");
+        let input = format!(
+            "DumpSave[File[\"{}\"], compressionValue, {{CompressionLevel -> {level}}}]",
+            rum_path(&file)
+        );
+        let unsupported = session.eval_text(&input).unwrap();
+        assert_eq!(
+            unsupported.value.to_string(),
+            format!(
+                "DumpSave[File[\"{}\"], compressionValue, List[Rule[CompressionLevel, {level}]]]",
+                rum_path(&file)
+            )
+        );
+        assert!(unsupported.messages.iter().any(|message| {
+            message.symbol == "DumpSave"
+                && message.tag == "optval"
+                && message.text.contains("CompressionLevel")
+                && message.text.contains(&level.to_string())
+        }));
+        assert_eq!(fs::read_to_string(file).unwrap(), "sentinel");
+    }
 }
 
 #[test]
@@ -215,7 +282,7 @@ fn save_and_dumpsave_accept_names_pattern_objects() {
             rum_path(&dump_file)
         ))
         .unwrap();
-    assert_eq!(dumped.value.to_string(), "List[Pkg`Beta]");
+    assert_eq!(dumped.value.to_string(), "List[\"Pkg`Beta\"]");
     let dumped = fs::read_to_string(&dump_file).unwrap();
     assert!(dumped.contains("SetDelayed[Pkg`Beta"));
     assert!(!dumped.contains("Pkg`Alpha"));

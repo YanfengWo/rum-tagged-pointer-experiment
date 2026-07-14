@@ -56,6 +56,14 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
             system_rule_option("DialogSymbols", Expr::call(system_expr("List"), Vec::new())),
         ],
         "Input" | "InputString" => vec![system_rule_option("FieldMasked", system_expr("False"))],
+        "TestCreate" => vec![
+            system_rule_option("TestID", system_expr("None")),
+            system_rule_option(
+                "ExpectedMessages",
+                Expr::call(system_expr("List"), Vec::new()),
+            ),
+            system_rule_option("SameTest", system_expr("SameQ")),
+        ],
         "TestReport" => vec![
             system_rule_option("SameTest", system_expr("SameQ")),
             system_rule_option("TimeConstraint", system_expr("Infinity")),

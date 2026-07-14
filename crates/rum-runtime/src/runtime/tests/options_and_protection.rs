@@ -636,6 +636,38 @@ fn codec_and_schema_options_are_discoverable() {
 }
 
 #[test]
+fn test_create_options_are_discoverable_and_match_consumed_defaults() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Options[TestCreate]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[TestID, None], Rule[ExpectedMessages, List[]], Rule[SameTest, SameQ]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("TestCreate[1 + 1, 2]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[\"Input\", Hold[Plus[1, 1]]], Rule[\"ExpectedOutput\", Hold[2]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "TestCreate[1 + 1, 2, {TestID -> \"sum\", ExpectedMessages -> {FindFile::notfound}, SameTest -> Greater}]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[\"Input\", Hold[Plus[1, 1]]], Rule[\"ExpectedOutput\", Hold[2]], Rule[\"TestID\", \"sum\"], Rule[\"ExpectedMessages\", Hold[List[FindFile::notfound]]], Rule[\"SameTest\", Greater]]"
+    );
+}
+
+#[test]
 fn argumentsoptions_and_checkarguments_cover_current_first_pass_subset() {
     let mut session = session_with_test_control_builtins();
 

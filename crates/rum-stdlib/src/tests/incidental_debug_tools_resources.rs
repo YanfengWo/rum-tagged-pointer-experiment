@@ -13,6 +13,15 @@ fn core_session() -> Session {
 fn byte_count_and_memory_in_use_use_the_current_structural_proxy_subset() {
     let mut session = core_session();
 
+    assert_eq!(
+        session
+            .eval_text("List[ByteCount[1], ByteCount[123456789], ByteCount[\"abc\"]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[32, 32, 35]"
+    );
+
     let string_small = session.eval_text("ByteCount[\"abc\"]").unwrap().value;
     let string_large = session.eval_text("ByteCount[\"abcdefgh\"]").unwrap().value;
     let atom = session.eval_text("ByteCount[1]").unwrap().value;

@@ -465,7 +465,7 @@ Converts a ByteArray to a string when its payload is valid UTF-8, failing closed
 
 ### ByteCount
 
-Returns the current canonical-text byte count for an expression in the first-pass resource subset.
+Returns a deterministic structural memory-size proxy for an expression.
 
 - Attributes: `Protected`
 - Capability: `Pure`

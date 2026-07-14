@@ -86,6 +86,23 @@ impl Session {
                 return Ok(Expr::call(system_expr("Names"), args.to_vec()));
             }
         }
+        let resolve_context_aliases = self.runtime_option_expr_for_symbol(
+            invocation.explicit_options.as_ref(),
+            &Symbol::system("Names"),
+            "ResolveContextAliases",
+        )?;
+        if let Some(value) = resolve_context_aliases {
+            if !is_system_symbol_name(&value, "True") {
+                self.push_message(
+                    "Names",
+                    "optval",
+                    format!(
+                        "Unsupported value {value} for option ResolveContextAliases in Names; only True is currently supported."
+                    ),
+                );
+                return Ok(Expr::call(system_expr("Names"), args.to_vec()));
+            }
+        }
         let ignore_case = self.names_ignore_case(invocation.explicit_options.as_ref())?;
 
         Ok(string_list_expr(self.names_matching_patterns(
@@ -279,6 +296,18 @@ impl Session {
             .map(String::as_str)
             .chain(std::iter::once(self.current_context.as_str()))
             .collect()
+    }
+
+    pub(in crate::runtime) fn wildcard_name_pattern_matches(
+        &self,
+        pattern: &str,
+        candidate: &str,
+        ignore_case: bool,
+    ) -> bool {
+        let haystack = candidate.chars().collect::<Vec<_>>();
+        wildcard_match_ends(pattern, &haystack, 0, ignore_case)
+            .into_iter()
+            .any(|end| end == haystack.len())
     }
 
     fn exact_symbol_name_exists(&self, raw: &str) -> bool {

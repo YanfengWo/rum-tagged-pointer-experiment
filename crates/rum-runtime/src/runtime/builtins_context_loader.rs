@@ -89,9 +89,25 @@ impl Session {
     }
 
     pub(super) fn eval_contexts(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !args.is_empty() {
-            return Ok(self.invalid_call_with_exact_arg_count("Contexts", args, 0));
-        }
+        let pattern = match args {
+            [] => None,
+            [Expr::Atom(Atom::String(pattern))] => Some(pattern.as_str()),
+            [_] => {
+                return Ok(self.invalid_call_with_arg_form(
+                    "Contexts",
+                    args,
+                    "expected a string context-name pattern",
+                ));
+            }
+            _ => {
+                return Ok(self.invalid_call_with_message(
+                    "Contexts",
+                    args,
+                    "argx",
+                    format!("expected 0 or 1 argument(s), got {}", args.len()),
+                ));
+            }
+        };
 
         let mut contexts = BTreeSet::new();
         contexts.insert(SYSTEM_CONTEXT.to_string());
@@ -128,7 +144,15 @@ impl Session {
 
         Ok(Expr::call(
             system_expr("List"),
-            contexts.into_iter().map(Expr::string).collect(),
+            contexts
+                .into_iter()
+                .filter(|context| {
+                    pattern.is_none_or(|pattern| {
+                        self.wildcard_name_pattern_matches(pattern, context, false)
+                    })
+                })
+                .map(Expr::string)
+                .collect(),
         ))
     }
 

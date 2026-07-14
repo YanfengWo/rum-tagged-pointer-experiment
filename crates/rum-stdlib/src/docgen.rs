@@ -6,6 +6,11 @@ use crate::install_core;
 
 pub const REGEN_COMMAND: &str = "cargo run -p rum-stdlib --bin generate-builtin-reference";
 
+const SUMMARY_OVERRIDES: &[(&str, &str)] = &[(
+    "ByteCount",
+    "Returns a deterministic structural memory-size proxy for an expression.",
+)];
+
 pub const LIMITS: &[(&str, &str)] = &[
     (
         "AbsoluteTime",
@@ -330,7 +335,11 @@ fn push_header(markdown: &mut String, entry_count: usize) {
 
 fn push_entry(markdown: &mut String, spec: &BuiltinSpec) -> Result<(), String> {
     markdown.push_str(&format!("### {}\n\n", spec.name));
-    markdown.push_str(spec.summary);
+    let summary = SUMMARY_OVERRIDES
+        .iter()
+        .find_map(|(name, summary)| (*name == spec.name).then_some(*summary))
+        .unwrap_or(spec.summary);
+    markdown.push_str(summary);
     markdown.push_str("\n\n");
     markdown.push_str(&format!(
         "- Attributes: {}\n",

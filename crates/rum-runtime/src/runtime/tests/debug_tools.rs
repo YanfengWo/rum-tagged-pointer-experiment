@@ -152,7 +152,7 @@ fn trace_print_uses_the_same_nested_structure_for_deeper_trace_branches() {
 
 #[test]
 fn echo_family_prints_and_returns_values_in_the_current_first_pass_subset() {
-    let mut session = Session::new();
+    let mut session = session_with_test_control_builtins();
 
     let echoed = session.eval_text("Echo[1 + 1]").unwrap();
     assert_eq!(echoed.value.to_string(), "2");
@@ -166,9 +166,24 @@ fn echo_family_prints_and_returns_values_in_the_current_first_pass_subset() {
     assert_eq!(via_function.value.to_string(), "2");
     assert_eq!(via_function.prints, vec!["2"]);
 
+    let via_applied_function = session
+        .eval_text("EchoFunction[Function[Plus[Slot[1], 1]]][1 + 1]")
+        .unwrap();
+    assert_eq!(via_applied_function.value.to_string(), "2");
+    assert_eq!(via_applied_function.prints, vec!["3"]);
+
+    let via_symbolic_function = session.eval_text("EchoFunction[f][1 + 2]").unwrap();
+    assert_eq!(via_symbolic_function.value.to_string(), "3");
+    assert_eq!(via_symbolic_function.prints, vec!["f[3]"]);
+
     let via_label = session.eval_text("EchoLabel[\"sum\"][1 + 1]").unwrap();
     assert_eq!(via_label.value.to_string(), "2");
     assert_eq!(via_label.prints, vec!["sum: 2"]);
+
+    let via_symbolic_label = session.eval_text("EchoLabel[f][1 + 2]").unwrap();
+    assert_eq!(via_symbolic_label.value.to_string(), "3");
+    assert_eq!(via_symbolic_label.prints, vec!["f: 3"]);
+    assert_ne!(via_symbolic_function.prints, via_symbolic_label.prints);
 }
 
 #[test]

@@ -202,6 +202,29 @@ impl Session {
             );
             return Ok(self.invalid_call(operator, args));
         }
+        if overwrite {
+            let compression_level = self.runtime_option_expr_for_symbol(
+                explicit_options.as_ref(),
+                &Symbol::system("DumpSave"),
+                "CompressionLevel",
+            )?;
+            if let Some(value) = compression_level {
+                let supported = matches!(
+                    &value,
+                    Expr::Atom(Atom::Integer(level)) if level.as_i64() == Some(1)
+                );
+                if !supported {
+                    self.push_message(
+                        "DumpSave",
+                        "optval",
+                        format!(
+                            "Unsupported value {value} for option CompressionLevel in DumpSave; only 1 is currently supported."
+                        ),
+                    );
+                    return Ok(Expr::call(system_expr("DumpSave"), args.to_vec()));
+                }
+            }
+        }
 
         let path = self.resolve_output_path(&path_spec);
         if !self.has_file_io() {
@@ -237,7 +260,7 @@ impl Session {
                 system_expr("List"),
                 symbols
                     .into_iter()
-                    .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+                    .map(|symbol| Expr::string(symbol.fully_qualified_name()))
                     .collect(),
             ))
         } else {

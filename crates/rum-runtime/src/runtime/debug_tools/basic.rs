@@ -56,7 +56,19 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let body = match args {
             [] => Expr::call(system_expr("Echo"), vec![debug_slot_expr()]),
-            [label] => Expr::call(system_expr("Echo"), vec![debug_slot_expr(), label.clone()]),
+            [function] => {
+                let slot = debug_slot_expr();
+                Expr::call(
+                    system_expr("CompoundExpression"),
+                    vec![
+                        Expr::call(
+                            system_expr("Echo"),
+                            vec![Expr::call(function.clone(), vec![slot.clone()])],
+                        ),
+                        slot,
+                    ],
+                )
+            }
             _ => return Ok(Expr::call(head.clone(), args.to_vec())),
         };
 

@@ -219,6 +219,52 @@ fn names_rejects_unsupported_spelling_correction_values() {
 }
 
 #[test]
+fn names_rejects_unsupported_resolve_context_alias_values() {
+    let mut session = Session::new();
+
+    session.eval_text("Audit`aliasTarget = 1").unwrap();
+    for input in [
+        "Names[\"Audit`*\"]",
+        "Names[\"Audit`*\", ResolveContextAliases -> True]",
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(
+            outcome.value.to_string(),
+            "List[\"Audit`aliasTarget\"]",
+            "{input}"
+        );
+        assert!(outcome.messages.is_empty(), "{input}");
+    }
+
+    let unsupported = session
+        .eval_text("Names[\"Audit`*\", ResolveContextAliases -> False]")
+        .unwrap();
+    assert_eq!(
+        unsupported.value.to_string(),
+        "Names[\"Audit`*\", Rule[ResolveContextAliases, False]]"
+    );
+    assert!(unsupported.messages.iter().any(|message| {
+        message.symbol == "Names"
+            && message.tag == "optval"
+            && message.text.contains("ResolveContextAliases")
+            && message.text.contains("False")
+    }));
+
+    session.eval_text("Unprotect[Names]").unwrap();
+    session
+        .eval_text("SetOptions[Names, ResolveContextAliases -> False]")
+        .unwrap();
+    let configured = session.eval_text("Names[\"Audit`*\"]").unwrap();
+    assert_eq!(configured.value.to_string(), "Names[\"Audit`*\"]");
+    assert!(
+        configured
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Names" && message.tag == "optval")
+    );
+}
+
+#[test]
 fn symbol_name_and_name_q_core_anchors() {
     let mut session = Session::new();
 
