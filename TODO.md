@@ -38,11 +38,15 @@ WL-conformant defaults; improvements land as new options or rum-native
 siblings). Method: audit briefs produce all-rows findings tables per
 unit; gaps triage into small fix briefs (the 158/159 shape).
 
-**NEXT LINE: host-embedding (see the CLAUDE.md "HOST-EMBEDDING LINE"
-section + `dun-plugin-requirements-line` memory).** Two parallel
-concerns: (a) the general embeddable-language API judged on general
-merits; (b) dun's `pure-sandbox` + protocol conformance. Opening
-diagnostic brief not yet drafted (framing pending user agreement).
+**CURRENT LINE: host-embedding — diagnosis landed 2026-07-14
+([docs/dev/host-embedding-line.md](./docs/dev/host-embedding-line.md)).**
+Two parallel concerns: (a) the general embeddable-language API judged on
+general merits; (b) dun's `pure-sandbox` + protocol conformance.
+Sequencing (user 2026-07-14): (b) first — proposed brief queue b1
+(termination discriminator) → b2 (request-level memory ceiling) → b3
+(stdout hygiene hard line) → b4 (crash-only + per-request isolation
+contract) → b5 (protocol host prototype, syntax-highlight role); (a)
+opens only after (b), scenario-design first.
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in

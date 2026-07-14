@@ -207,8 +207,20 @@ rather than duplicating them.
   intrinsically multi-dimensional (correctness + timing + memory), so `Clock`
   is the honest label, not a mislabel to purify. Detail:
   `usability-pass-line.md` + tracker.
-- **HOST-EMBEDDING LINE — NEXT (usability pass done; opening not yet
-  drafted).** The downstream `dun` editor is the first real pull, but the
+- **HOST-EMBEDDING LINE — OPEN (diagnosis landed 2026-07-14,
+  `docs/dev/host-embedding-line.md`).** Sequencing ruled by the user
+  2026-07-14: concern (b) dun pure-sandbox + protocol conformance FIRST
+  (explicit requirements, clear boundary; proposed brief queue b1-b5 in the
+  diagnosis doc), concern (a) general embedding API only AFTER (b) completes,
+  and (a) MUST open with scenario design + boundary drawing — no feature
+  bricklaying on instinct. Diagnosis headline: gates 1-3 done (sandboxed
+  profile, Interactive capability, panic isolation), stdout/crash-only/
+  cold-start (~4.8 ms full cycle) already satisfied but unpinned; the two
+  real seams = structured termination discriminator (graceful cancel/timeout
+  is in-band `TerminatedEvaluation[...]` Success) + request-level memory
+  ceiling (mechanism exists via `MemoryConstrained`/`current_memory_limit`,
+  missing the `set_eval_timeout`-analog knob; active-path walk needs
+  amortization). The downstream `dun` editor is the first real pull, but the
   framing was RESET twice, both recorded in `dun-plugin-requirements-line.md`:
   1. **dun went protocol-first (2026-07-13, third doc
      `docs/dev/dun-protocol-host-requirements.md`).** dun shipped a
