@@ -97,10 +97,21 @@ easiest conformance). dun never gets touched (read-only clone).
    `TerminatedEvaluation["MemoryLimit"]` (prints are counted by the
    memory proxy). Contract documented in `docs/guide/embedding.md` +
    `set_print_sink` rustdoc. Gate: workspace 1483/0. Pins ask 1.
-4. **b4 — crash-only + per-request isolation contract.** State and test
-   the crash-only property; decide + document + test the per-request
-   isolation pattern (reset-per-request vs snapshot), including a
-   no-state-leak test. Closes gate 4, pins ask 2.
+4. **b4 — crash-only + per-request isolation contract. DONE
+   (brief-234, a3e5a76, 2026-07-15).** Three lifecycle contract tests
+   pin what `reset()`=`build_inner_session` already guarantees but was
+   thinly tested: reset rebuilds ALL runtime accumulation dimensions
+   (own/down values, attributes, options, messages, contexts, gensym
+   counter, PRNG stream) vs a fresh reference; reset-between-requests
+   isolates implicit state (no definition leak, seeded entropy replays
+   identically); an abandoned poisoned session does not contaminate a
+   fresh one. `embedding.md` gains a Per-Request Isolation section
+   (reset-between is the pattern, explicit state as request data,
+   snapshot/restore omits gensym/PRNG so reset gives stronger
+   determinism, crash-only = no temp files per the `std::fs` hygiene
+   test + no destructor dependence). OS-level spawn/SIGKILL integration
+   test deferred to b5 (real host process). Gate: workspace 1486/0.
+   Closes gate 4, pins ask 2.
 5. **b5 — `rum` protocol host prototype (syntax-highlight role).** New
    non-default bin crate speaking Dun Plugin Protocol v0, sandboxed
    session, per-request isolation, shim-owned stdout, prints forwarded as

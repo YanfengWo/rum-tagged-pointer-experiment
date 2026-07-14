@@ -907,3 +907,34 @@ instead of growing unbounded.
 
 Gate: fmt clean, workspace 1483/0, scope exact (4 files). No A/B — tests
 and docs only, no evaluation-path code.
+
+## 2026-07-15 — host line b4: isolation + crash-only contract (brief-234)
+
+reset()=build_inner_session already rebuilds the whole Session from
+config (dropping every runtime dimension, keeping config-carried state),
+so per-request isolation and crash-only were held by construction but
+under-tested — existing coverage touched a single ownvalue. Three
+lifecycle contract tests now pin: (1) reset clears own/down values,
+attributes, options, messages, contexts, the gensym counter, and PRNG
+advancement, compared against a fresh reference session (not hardcoded);
+(2) reset-between-requests — no definition leak, and the seeded
+RandomInteger stream replays identically (isolation reaches the entropy
+stream, which is what lets a host pass explicit state as data); (3) an
+abandoned poisoned session leaves a freshly built one unaffected (no
+process-global mutable state). embedding.md documents the pattern and
+the crash-only guarantee. Probe facts confirmed at write time (not
+guessed): empty Options render List[]; bare SetOptions needs Options[h]
+pre-declared (SetOptions::optnf); Module in Custom` renders Custom`t$1,
+rewound to t$1 after reset.
+
+Honest scope call: the OS-level spawn+SIGKILL+no-temp-files integration
+test is deferred to the b5 prototype, where a real host process exists —
+SIGKILL-safety is already structural (no temp files, enforced by the
+b3 std::fs hygiene test), so a heavyweight flaky spawn test here would
+add little. Gate: fmt clean, workspace 1486/0, scope exact (2 files),
+no A/B (tests + docs only).
+
+b-line status: b1-b4 DONE (termination discriminator, request memory
+ceiling, stdout hard line, isolation/crash-only contract). Remaining:
+b5 — the rum protocol host prototype (syntax-highlight role) validated
+against dun's hosts/check-host.py.
