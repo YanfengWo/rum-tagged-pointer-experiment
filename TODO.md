@@ -26,15 +26,23 @@ always-on; small pure-Rust dep → default-on Cargo feature; heavy/C-lib dep
   deps; never in `rum-stdlib`). Heavy encryption beyond hashing = non-
   default feature or downstream.
 
-## Usability Pass — ACTIVE (opened 2026-07-07)
+## Usability Pass — COMPLETE (2026-07-07 → 2026-07-14, briefs 161-230)
 
-The mainline. Canonical plan, axes, rules, and the sweep-unit tracker:
-[docs/dev/usability-pass.md](./docs/dev/usability-pass.md). User
-directives at open: HIGH coverage (all 605 installed builtins, the
+Was the mainline; all 10 sweep units are closed — **605 builtins swept**
+(reference 613 after the FileNames restore). Canonical per-unit ledgers,
+axes, rules, and close-outs: [docs/dev/usability-pass.md](./docs/dev/usability-pass.md);
+memory `usability-pass-line.md`. User directives at open (still in force
+for any future builtin work): HIGH coverage (all installed builtins, the
 WL-inherited surface included) and compatible enhancement (WL names keep
 WL-conformant defaults; improvements land as new options or rum-native
 siblings). Method: audit briefs produce all-rows findings tables per
 unit; gaps triage into small fix briefs (the 158/159 shape).
+
+**NEXT LINE: host-embedding (see the CLAUDE.md "HOST-EMBEDDING LINE"
+section + `dun-plugin-requirements-line` memory).** Two parallel
+concerns: (a) the general embeddable-language API judged on general
+merits; (b) dun's `pure-sandbox` + protocol conformance. Opening
+diagnostic brief not yet drafted (framing pending user agreement).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in
@@ -242,9 +250,17 @@ unit; gaps triage into small fix briefs (the 158/159 shape).
   Units 1-8 = **501 builtins swept**. Protection surface 129/612 → 608/612;
   one real bug found and fixed at the gate (`ApplyTo` protection bypass);
   three enforcement holes closed; value tables made round-trippable.
-  **Next: unit 9** (kernel B: scoping/eval control/patterns/forms), then unit
-  10 (104 kernel names remain across the two), THEN the dun host-embedding
-  line.
+- [x] **UNIT 9 CLOSED (2026-07-13):** 214 audit (47/47) + fixes 215-222
+  (three user rulings: Module error-path reclamation w/ mma-hol gate,
+  staged `With`, replacement-Sequence splice). Evaluator hold correctness
+  (`Unevaluated` restore, `HoldAll` Sequence splice, `ReleaseHold`
+  one-layer). Units 1-9 = **548 swept**.
+- [x] **UNIT 10 CLOSED (2026-07-14):** 223 audit (57/57) + fixes 224-230.
+  Real loader `FileRead` bypass fixed at the seam; real `Pause[10^100]`
+  panic fixed; three capability rulings (Input → `Capability::Interactive`;
+  TestReport → Clock kept; FileNames → `FileRead` glob restored). **USABILITY
+  PASS COMPLETE — 605 builtins swept, all 10 units closed.** Next: the
+  host-embedding line (header above).
 - [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
   for wire signing (found by brief-163's sweep; out of its scope) —
   small brief: switch to the workspace `sha2`/RustCrypto path.

@@ -153,43 +153,44 @@ rather than duplicating them.
   landed the three mechanical kernel hard lines: zero unsafe, zero std::fs
   (non-test), Pure = deterministic. The stdlib-expansion line (briefs
   135-156) is COMPLETE.
-- **USABILITY PASS — ACTIVE MAINLINE (opened 2026-07-07).** The "works
-  well" layer over every installed builtin (three axes:
+- **USABILITY PASS — COMPLETE (2026-07-07 → 2026-07-14, briefs 161-230).**
+  The "works well" layer over every installed builtin (three axes:
   flexibility/convenience/safety), audit-then-fix per sweep unit. Tracker
-  `docs/dev/usability-pass.md`; memory `usability-pass-line.md`. **Units 1-8
-  CLOSED — 501 builtins swept** (units 1-7 = 446 stdlib, briefs 161-207;
-  unit 8 = 55 kernel A, briefs 208-213).
-  **Unit 8 (kernel A — definitions/values/attributes/protection) was the
-  richest unit so far**; its arc is worth remembering:
-  - The audit found the `Protected` **enforcement surface was 129/612** —
-    `Plus[a_,b_] := 42` succeeded and `1+2` then returned `42`.
-  - **A REAL protection-bypass bug** surfaced at the gate (209): `ApplyTo[x, f]`
-    where `f` protects `x` mid-update landed the write on a visibly `Protected`
-    symbol, because `store_held_update` skipped the recheck and `ApplyTo` is the
-    one compound assignment whose update runs user code in that window.
-  - Sweep (210): **129/612 → 608/612** (only `$AssertFunction`/`$ContextPath`/
-    `$Packages`/`$Path` stay open). Three enforcement holes closed (211).
-    Value tables made round-trippable (212). Name patterns + `Information`
-    hold/usage (213).
-  - **Kernel list derived exactly**: reference 612 − stdlib catalog 453 = 159
-    kernel names; unit 8 took 55, **104 remain for units 9-10**.
-  - Standing boundary: **`Protected` is a mistake-guard + WL conformance, NOT a
-    sandbox boundary** (a program may always `Unprotect[Plus]`). Real plugin
-    isolation = per-request rollback = the dun host line. Do not conflate.
-  - DEFERRED from unit 8: the **builtin message-tag registry** (`Messages[Set]`
-    is empty even after `Set::argx`; ~108 ad-hoc `push_message` sites, no static
-    catalog). Its own project; pairs with docgen. `Information`'s new `Messages`
-    field lights up for free once it exists.
-  **NEXT: unit 9** (kernel B — scoping/eval control/patterns/forms), then unit
-  10 (the 104 kernel names split across the two), THEN the dun host-embedding
-  API line (user sequencing ruling 2026-07-08).
-  Standing user directives: high coverage incl. the WL-inherited surface;
-  compat enhancement only (default behavior stays WL-conformant, new powers via
-  options / rum-native siblings). Standing design rulings: arithmetic
-  singularities stay INERT (no special-value arithmetic — user);
-  Orderless/Flat/OneIdentity on folk numeric reducers + Equivalent + the Implies
-  short-circuit all REJECTED; ConformSchema/SchemaErrors operator forms DEFERRED
-  (HoldRest hold-semantics).
+  `docs/dev/usability-pass.md` (per-unit ledgers + close-outs); memory
+  `usability-pass-line.md`. **All 10 units closed — 605 builtins swept**
+  (units 1-7 = 446 stdlib, briefs 161-207; unit 8 = 55 kernel A, 208-213;
+  unit 9 = 47 kernel B, 214-222; unit 10 = 57 kernel C, 223-230), reference
+  613 after the FileNames restore. The kernel units carried the highest-value
+  finds:
+  - **Unit 8 (kernel A)**: `Protected` enforcement surface lifted 129/612 →
+    608/612; a REAL `ApplyTo` protection-bypass bug caught at the gate
+    (`store_held_update` skipped the recheck). Standing boundary: **`Protected`
+    is a mistake-guard + WL conformance, NOT a sandbox boundary** — real
+    isolation = per-request rollback = the dun host line; do not conflate.
+  - **Unit 9 (kernel B)**: evaluator hold correctness across three user
+    rulings — `Unevaluated` no-consumer restore, `HoldAll` Sequence splice,
+    Module error-path gensym reclamation (WL semantics; mma-hol Strict gate),
+    staged `With`, replacement-produced Sequence splices into held rebuilds.
+  - **Unit 10 (kernel C)**: a REAL loader capability bypass caught at the gate
+    (`BeginPackage`/`DeclarePackage` → `eval_needs` skipped the `FileRead`
+    dispatch check; fixed by gating at the `eval_get`/`eval_needs` seam) and a
+    REAL `Pause[10^100]` host-process panic (Duration overflow). Three
+    capability-decision candidates ruled: `Input`/`InputString`/`Dialog` →
+    new `Capability::Interactive` (sandbox denies, trusted allows); `TestReport`
+    → `Clock` KEPT (a test report is intrinsically multi-dimensional — timing
+    is its job, not an impure contaminant; **not every impure label is a
+    mislabel to purify**); `FileNames` → restored as a `FileRead`-gated folk
+    glob through a new `list_dir` provider method.
+  - DEFERRED (stated, not dropped): the **builtin message-tag registry**
+    (`Messages[Set]` empty even after `Set::argx`; ~108 ad-hoc `push_message`
+    sites, no static catalog). Its own project; pairs with docgen.
+  Standing user directives (still in force for any future builtin work): high
+  coverage incl. the WL-inherited surface; compat enhancement only (default
+  behavior stays WL-conformant, new powers via options / rum-native siblings).
+  Standing design rulings: arithmetic singularities stay INERT (no
+  special-value arithmetic — user); Orderless/Flat/OneIdentity on folk numeric
+  reducers + Equivalent + the Implies short-circuit all REJECTED;
+  ConformSchema/SchemaErrors operator forms DEFERRED (HoldRest hold-semantics).
 - **STATEFUL↔PURE SEPARATION LINE — COMPLETE (2026-07-08, briefs 200-202).**
   User rulings, spun out of unit-6 datetime. Killed the pure/impure
   DUAL-FORM anti-pattern (one symbol mixing a pure + a stateful form).
@@ -201,22 +202,45 @@ rather than duplicating them.
   rule: stateful reads are single-purpose symbols gated by a SPEC-level
   capability — never crammed into a pure symbol, never gated by a runtime
   check (stdlib now has ZERO runtime capability checks).** Whole-surface
-  audit done; lone mild kernel candidate `TestReport` flagged for units
-  8-10. Detail: `usability-pass-line.md` + tracker.
-- **DUN HOST-EMBEDDING LINE — QUEUED (after usability 8-10; user ruling
-  2026-07-08).** The downstream `dun` editor filed two plugin requirement
-  docs (`docs/dev/dun-*-requirements.md`) — the first real downstream pull,
-  squarely on the post-deferral direction (embedded scripting + sandbox
-  safety). Grounded gap analysis (rum-host is ~70% there): the genuine
-  new work is a rum-host line — richer `HostTyped` (Association/Rule/Bool
-  currently collapse to `Other`), a typed `call(name, args)` entrypoint,
-  structured termination classification (cancel/timeout return `Success` +
-  `TerminatedEvaluation[...]` text today), a named non-interactive plugin
-  profile, per-request isolation. Builtin-ergonomics asks (capture spans,
-  span-units, offset-preserving record parsers) fold into a later
-  editor-support batch; result-schema conventions stay dun-owned (don't
-  make rum an editor framework). Line opens with a diagnostic/inventory
-  brief. Memory: `dun-plugin-requirements-line.md`.
+  audit done; the lone mild kernel candidate `TestReport` was reviewed and
+  CLOSED with NO CHANGE (unit 10, user ruling 2026-07-14): a test report is
+  intrinsically multi-dimensional (correctness + timing + memory), so `Clock`
+  is the honest label, not a mislabel to purify. Detail:
+  `usability-pass-line.md` + tracker.
+- **HOST-EMBEDDING LINE — NEXT (usability pass done; opening not yet
+  drafted).** The downstream `dun` editor is the first real pull, but the
+  framing was RESET twice, both recorded in `dun-plugin-requirements-line.md`:
+  1. **dun went protocol-first (2026-07-13, third doc
+     `docs/dev/dun-protocol-host-requirements.md`).** dun shipped a
+     protocol-first plugin system: plugins run in EXTERNAL host processes
+     speaking a framed-stdio JSON protocol; the editor links no runtime. As
+     dun-facing surface, the in-process embedding asks (`session.call`,
+     `HostTyped` as dun's result surface) are DEAD — they demote to internal
+     needs of a small `rum-host` shim (protocol on one side, kernel on the
+     other). What SURVIVES and is now load-bearing for dun's `pure-sandbox`
+     trust class (rum's exclusive slot — Python/Lua hosts can't clear it):
+     pure-only + non-interactive + per-request isolation + crash-only +
+     resource-outcome classification, PLUS new protocol-born asks (stdout
+     fully owned by the embedder so plugin `Print` can't corrupt framing;
+     kernel-side memory ceiling with a classified outcome — dun has no RSS
+     watchdog; cold-start latency; JSON boundary).
+  2. **User strategic reframe (2026-07-14): do NOT narrow the line to dun's
+     protocol shim.** dun began as a showcase of rum's EMBEDDABILITY; its
+     pivot (rum kernel too big for a lightweight editor) means dun now shows
+     off only the sandbox, not the kernel's session-management / in-kernel-
+     communication strengths. Those strengths are still wanted by FUTURE
+     tighter-embedding applications, so evaluate the general embedding API
+     (rich `HostTyped`, typed `call`, session management) on **general
+     embeddable-language merits, not dun's current needs**. → the line has
+     **two parallel concerns**: (a) the general embeddable-language API,
+     judged on general value; (b) dun's `pure-sandbox` + protocol conformance.
+     Overlapping but not conflated.
+  Line opens with a diagnostic/inventory brief (framing not yet agreed with
+  the user) mapping BOTH concerns to the current kernel/rum-host surface, and
+  a `syntax-highlight` `rum-host` prototype against dun's `hosts/check-host.py`
+  (dun's protocol doc + checker + three reference hosts are a ready dev kit).
+  Hard line: don't make rum an editor framework (the protocol boundary made
+  the separation physical). Memory: `dun-plugin-requirements-line.md`.
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-
