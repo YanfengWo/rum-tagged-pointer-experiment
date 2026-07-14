@@ -98,6 +98,11 @@ pub(super) const NAMESPACE_BUILTINS: &[BuiltinSpec] = &[
         builtin_find_file,
     ).protected().with_capability(Capability::FileRead),
     BuiltinSpec::ordinary(
+        "FileNames",
+        "Lists sorted file paths whose names match a folk wildcard pattern.",
+        builtin_file_names,
+    ).protected().with_capability(Capability::FileRead),
+    BuiltinSpec::ordinary(
         "Get",
         "Reads a file or package and evaluates the expressions it contains.",
         builtin_get,

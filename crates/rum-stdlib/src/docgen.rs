@@ -69,6 +69,10 @@ pub const LIMITS: &[(&str, &str)] = &[
         "dotfiles such as .bashrc have no extension; only the final slash-separated path component is inspected.",
     ),
     (
+        "FileNames",
+        "supports ASCII path strings in this folk subset and uses only provider-mediated directory enumeration; recursive walks do not detect symlink loops beyond the requested depth and the fixed 100000-entry traversal cap.",
+    ),
+    (
         "FileNameSplit",
         "treats / as the documented separator, emits an absolute leading / as its own component, and skips repeated or trailing separators.",
     ),

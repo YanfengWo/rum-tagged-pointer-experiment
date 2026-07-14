@@ -33,6 +33,13 @@ impl FileIo for StdFileIo {
         fs::read_to_string(path).map_err(file_io_error)
     }
 
+    fn list_dir(&self, path: &Path) -> Result<Vec<PathBuf>, FileIoError> {
+        fs::read_dir(path)
+            .map_err(file_io_error)?
+            .map(|entry| entry.map(|entry| entry.path()).map_err(file_io_error))
+            .collect()
+    }
+
     fn probe(&self, path: &Path) -> FileProbe {
         match fs::metadata(path) {
             Ok(metadata) if metadata.is_file() => FileProbe::file(normalize_path(path)),
@@ -114,6 +121,29 @@ mod tests {
         assert!(!missing_probe.exists);
         assert!(!missing_probe.is_file);
         assert!(missing_probe.resolved_path.is_none());
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn std_file_io_lists_only_immediate_directory_entries() {
+        let root = unique_temp_path("list-dir");
+        let nested = root.join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(root.join("a.wl"), "1").unwrap();
+        fs::write(nested.join("deep.wl"), "2").unwrap();
+
+        let mut entries = StdFileIo.list_dir(&root).unwrap();
+        entries.sort();
+
+        assert_eq!(entries, vec![root.join("a.wl"), nested]);
+        assert!(
+            !StdFileIo
+                .list_dir(&root.join("missing"))
+                .expect_err("missing directory enumeration should fail")
+                .message()
+                .is_empty()
+        );
 
         fs::remove_dir_all(root).unwrap();
     }

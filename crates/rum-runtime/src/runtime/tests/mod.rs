@@ -54,6 +54,17 @@ impl FileIo for TestFileIo {
         fs::read_to_string(path).map_err(|error| FileIoError::new(error.to_string()))
     }
 
+    fn list_dir(&self, path: &Path) -> Result<Vec<PathBuf>, FileIoError> {
+        fs::read_dir(path)
+            .map_err(|error| FileIoError::new(error.to_string()))?
+            .map(|entry| {
+                entry
+                    .map(|entry| entry.path())
+                    .map_err(|error| FileIoError::new(error.to_string()))
+            })
+            .collect()
+    }
+
     fn probe(&self, path: &Path) -> FileProbe {
         match fs::metadata(path) {
             Ok(metadata) if metadata.is_file() => FileProbe::file(normalize_test_path(path)),
@@ -116,6 +127,7 @@ mod definitions_and_rules_patterns;
 mod definitions_and_rules_rewrite_inspect;
 mod definitions_and_rules_tags;
 mod definitions_value_table_assignment;
+mod file_names;
 mod holding_and_control_io;
 mod holding_and_control_part2;
 mod hygiene;

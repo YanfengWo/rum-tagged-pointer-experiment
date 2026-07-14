@@ -209,12 +209,40 @@ fn sandboxed_host_config_blocks_filesystem_builtins_at_dispatch() {
     );
     assert_sandbox_denied(
         &mut session,
+        &format!("FileNames[\"*\", {{{}}}]", wl_string(&rum_path(dir.path()))),
+    );
+    assert_sandbox_denied(
+        &mut session,
         &format!("x = 1; Save[{}, x]", wl_string(&rum_path(&save_path))),
     );
     assert_sandbox_denied(
         &mut session,
         &format!("x = 1; DumpSave[{}, x]", wl_string(&rum_path(&dump_path))),
     );
+}
+
+#[test]
+fn trusted_host_file_names_uses_the_std_file_io_provider() {
+    let dir = TempDirGuard::new("trusted-file-names");
+    let b = dir.write("b.wl", "b");
+    let a = dir.write("a.wl", "a");
+    dir.write("c.txt", "c");
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval(format!(
+        "FileNames[\"*.wl\", {{{}}}]",
+        wl_string(&rum_path(dir.path()))
+    )));
+
+    assert_eq!(
+        success.value.text,
+        format!(
+            "List[{}, {}]",
+            wl_string(&rum_path(&a)),
+            wl_string(&rum_path(&b))
+        )
+    );
+    assert!(success.messages.is_empty(), "{:?}", success.messages);
 }
 
 #[test]
@@ -492,6 +520,13 @@ fn permissive_policy_without_file_provider_returns_noio_failed() {
         "no_provider_get value={} messages={:?}",
         success.value.text, success.messages
     );
+
+    let file_names = successful_eval(session.eval("FileNames[]"));
+    assert_eq!(file_names.value.text, "$Failed");
+    assert_eq!(file_names.messages.len(), 1);
+    assert_eq!(file_names.messages[0].symbol, "General");
+    assert_eq!(file_names.messages[0].tag, "noio");
+    assert_eq!(file_names.messages[0].text, "no file provider installed");
 }
 
 #[test]

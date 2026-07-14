@@ -1,6 +1,17 @@
 use super::*;
 
 mod file_names;
+mod file_names_glob;
+
+use self::file_names_glob::{collect_file_name_matches, parse_file_names_args};
+
+pub(in crate::runtime) fn builtin_file_names(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    session.eval_file_names(args)
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct NeedsLoadConfig {
@@ -153,6 +164,35 @@ impl Session {
                 })
                 .map(Expr::string)
                 .collect(),
+        ))
+    }
+
+    pub(super) fn eval_file_names(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        if let Err(denied) = self.ensure_capability_allowed("FileNames", Capability::FileRead) {
+            return Ok(denied);
+        }
+
+        if !self.has_file_io() {
+            self.emit_no_file_io_message();
+            return Ok(system_expr("$Failed"));
+        }
+
+        if args.len() > 3 {
+            return Ok(self.invalid_call_with_arg_range("FileNames", args, 0, 3));
+        }
+        let Some(config) = parse_file_names_args(args) else {
+            return Ok(Expr::call(system_expr("FileNames"), args.to_vec()));
+        };
+
+        let file_io = self
+            .file_io()
+            .expect("FileNames checked that a file provider is installed");
+        let matches =
+            collect_file_name_matches(self, file_io, &config.pattern, config.dirs, config.depth);
+
+        Ok(Expr::call(
+            system_expr("List"),
+            matches.into_iter().map(Expr::string).collect(),
         ))
     }
 

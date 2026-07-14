@@ -202,6 +202,7 @@ mod tests {
         assert_eq!(capability("Get"), Capability::FileRead);
         assert_eq!(capability("Needs"), Capability::FileRead);
         assert_eq!(capability("FindFile"), Capability::FileRead);
+        assert_eq!(capability("FileNames"), Capability::FileRead);
         assert_eq!(capability("Save"), Capability::FileWrite);
         assert_eq!(capability("DumpSave"), Capability::FileWrite);
         assert_eq!(capability("FileNameJoin"), Capability::Pure);

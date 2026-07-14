@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 612
+Builtin count: 613
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1329,6 +1329,14 @@ Takes file name components from a path string.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+
+### FileNames
+
+Lists sorted file paths whose names match a folk wildcard pattern.
+
+- Attributes: `Protected`
+- Capability: `FileRead`
+- Limits: supports ASCII path strings in this folk subset and uses only provider-mediated directory enumeration; recursive walks do not detect symlink loops beyond the requested depth and the fixed 100000-entry traversal cap.
 
 ### FindFile
 

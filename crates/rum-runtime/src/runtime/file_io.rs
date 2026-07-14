@@ -69,6 +69,17 @@ pub enum FileWriteMode {
 
 pub trait FileIo: Send + Sync {
     fn read_to_string(&self, path: &Path) -> Result<String, FileIoError>;
+
+    /// Lists the immediate entries of one directory.
+    ///
+    /// Providers that do not support directory enumeration retain their
+    /// existing behavior and report an error when the operation is requested.
+    fn list_dir(&self, _path: &Path) -> Result<Vec<PathBuf>, FileIoError> {
+        Err(FileIoError::new(
+            "directory enumeration is not supported by this file provider",
+        ))
+    }
+
     fn probe(&self, path: &Path) -> FileProbe;
     fn write_string(
         &self,
