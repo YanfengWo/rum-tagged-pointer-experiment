@@ -178,24 +178,32 @@ run_all.wls wants the read-only glob; a long-tail provider-mediated
 Fix batches (dispatch order — safety first; loader batches carry the
 mma-hol Strict gate flag):
 
-1. **brief-224 — Pause bounds hardening** (safety, S): checked
-   float→Duration conversion, huge-finite and negative pinned, no panic.
-   No A/B, no mma-hol gate — focused runtime/CLI tests. The cheapest real
-   safety win; goes first.
+1. **brief-224 — Pause bounds hardening** (safety, S) — **LANDED
+   (7fad39c):** `Duration::try_from_secs_f64(…).ok()` replaced the
+   panicking `from_secs_f64`; `Pause[10^100]` exits 0 (was 101) via the
+   existing `Pause::numnm`; valid durations byte-identical. Workspace
+   1459/0.
 2. **brief-225 — loader capability enforcement** (safety, L; A/B +
-   mma-hol gate): route `BeginPackage` dependency loads and
-   `DeclarePackage` stub autoload through a `FileRead`-checked internal
-   seam (the `eval_needs` bypass). Touches symbol evaluation (stub
-   autoload) → A/B; touches `Needs`/loader → mma-hol Strict gate at my
-   gate. Honest-boundary note carried into the brief: this is real
-   enforcement (matters under `sandboxed().with_file_io`), not sandbox
-   theater.
-3. **brief-226 — loader integrity** (safety, M; mma-hol gate): missing
-   `BeginPackage` dependency should fail closed + restore the just-opened
-   frame (today: enters the package, puts the missing context on
-   `$ContextPath`); decide the unbalanced-`Begin`-in-`Get` context-leak
-   contract (host-isolation input — record for the dun line, fix the
-   loud hole). No hot-path A/B unless the fix changes generic eval.
+   mma-hol gate) — **LANDED (a5cdecd):** `ensure_capability_allowed(
+   FileRead)` at the `eval_get`/`eval_needs` seam covers all three paths
+   (dispatch, BeginPackage dependency, stub autoload); BeginPackage rolls
+   back the frame + context + packages on a denied dependency; dispatcher
+   check kept (defense in depth). Honest boundary: enforces the FileRead
+   label under `sandboxed().with_file_io` (bare sandbox has no provider).
+   Gate: workspace 1460/0; new rum-host denial+rollback tests;
+   unrestricted path reproduced; **mma-hol Strict 3126/0**; idle A/B
+   (concurrent run discarded — controls +30%) `symbol-ownvalue-read`
+   -1.06%, watch ≤ +3%, controls ±9% noise (guard sits behind the
+   `declared_stubs` gate).
+3. **brief-226 — loader integrity** (safety, M; mma-hol gate): generalize
+   the 225 dependency-failure rollback from the capability-denied case to
+   ANY `$Failed` dependency, so a missing `BeginPackage` dependency fails
+   closed + restores state instead of half-entering the package (today:
+   enters `FailMain\``, puts the missing context on `$ContextPath`,
+   records it in `$Packages`). The unbalanced-`Begin`-in-`Get` context
+   leak is DEFERRED — WL doesn't restore around `Get` either, so it's
+   host-line per-request-isolation input, recorded not fixed. No hot-path
+   A/B (failure-branch only); mma-hol gate (BeginPackage change).
 4. **brief-227 — truthfulness + small forms** (safety/convenience, S/M):
    reject the unread `ResolveContextAliases` + `DumpSave`
    `CompressionLevel` options (the 217 dead-option class); preserve
