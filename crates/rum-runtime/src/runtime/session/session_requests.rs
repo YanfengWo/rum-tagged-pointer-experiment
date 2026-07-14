@@ -125,8 +125,8 @@ impl Session {
             self.finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint);
         self.current_message_list_checkpoint = previous_message_list_checkpoint;
         self.current_message_list_dirty = previous_message_list_dirty;
-        let value = match finalized {
-            Ok(value) => value,
+        let (value, termination) = match finalized {
+            Ok(finalized) => finalized,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());
                 return Err(self.finish_request_failure(
@@ -152,6 +152,7 @@ impl Session {
 
         Ok(SessionEvalResponse {
             value,
+            termination,
             messages,
             prints,
             trace,
@@ -188,8 +189,8 @@ impl Session {
             self.finalize_top_level_eval_value(outcome, checkpoint.handled_error_checkpoint);
         self.current_message_list_checkpoint = previous_message_list_checkpoint;
         self.current_message_list_dirty = previous_message_list_dirty;
-        let value = match finalized {
-            Ok(value) => value,
+        let (value, termination) = match finalized {
+            Ok(finalized) => finalized,
             Err(EvalError::InputRequired { .. }) => {
                 self.pending_eval_request = Some(checkpoint.into());
                 return Err(self.finish_request_failure(
@@ -217,6 +218,7 @@ impl Session {
 
         Ok(SessionEvalResponse {
             value,
+            termination,
             messages,
             prints,
             trace,
@@ -232,6 +234,7 @@ impl Session {
         match self.eval_script(source) {
             Ok(outcome) => Ok(SessionEvalResponse {
                 value: outcome.value,
+                termination: outcome.termination,
                 messages: outcome.messages,
                 prints: outcome.prints,
                 trace: self.trace_events[checkpoint.trace_checkpoint..].to_vec(),
@@ -250,6 +253,7 @@ impl Session {
         match self.eval_file(path) {
             Ok(outcome) => Ok(SessionEvalResponse {
                 value: outcome.value,
+                termination: outcome.termination,
                 messages: outcome.messages,
                 prints: outcome.prints,
                 trace: self.trace_events[checkpoint.trace_checkpoint..].to_vec(),

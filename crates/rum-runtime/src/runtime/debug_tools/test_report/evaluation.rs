@@ -189,7 +189,7 @@ impl Session {
             Err(error) if Self::terminated_evaluation_expr_for_error(&error).is_some() => Ok((
                 Self::terminated_evaluation_expr_for_error(&error)
                     .expect("termination value should exist after guard"),
-                Self::terminated_evaluation_reason_for_error(&error),
+                Self::terminated_evaluation_reason_for_error(&error).map(|reason| reason.tag()),
             )),
             Err(EvalError::Abort | EvalError::ProtectedAbort) => {
                 Ok((system_expr("$Aborted"), Some("Abort")))

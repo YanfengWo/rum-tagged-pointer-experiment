@@ -8,7 +8,7 @@ pub use inspection::{
 pub use outcome::{
     HostEvalOutcome, HostEvalSuccess, HostFailure, HostFailureCode, HostInputKind,
     HostInputRequest, HostInputSuspension, HostMessage, HostStructuredOutput,
-    HostStructuredOutputKind, HostTraceEvent, HostTyped, HostValue,
+    HostStructuredOutputKind, HostTerminationReason, HostTraceEvent, HostTyped, HostValue,
 };
 pub use requests::{
     HostCompletenessStatus, HostCompletionRequest, HostCompletionResponse, HostEvalRequest,

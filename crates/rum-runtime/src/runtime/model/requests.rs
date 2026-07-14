@@ -53,9 +53,41 @@ impl fmt::Display for SessionRequestError {
     }
 }
 
+/// Structured reason for a runtime-synthesized terminated evaluation value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EvalTerminationReason {
+    Cancelled,
+    TimeConstraint,
+    RecursionLimit,
+    StackLimit,
+    PatternMatchRecursionLimit,
+    IterationLimit,
+    GeneratedElementLimit,
+    IntegerWorkLimit,
+    IterationWorkLimit,
+}
+
+impl EvalTerminationReason {
+    /// Return the language-visible termination tag.
+    pub fn tag(self) -> &'static str {
+        match self {
+            Self::Cancelled => "Cancelled",
+            Self::TimeConstraint => "TimeConstraint",
+            Self::RecursionLimit => "RecursionLimit",
+            Self::StackLimit => "StackLimit",
+            Self::PatternMatchRecursionLimit => "PatternMatchRecursionLimit",
+            Self::IterationLimit => "IterationLimit",
+            Self::GeneratedElementLimit => "GeneratedElementLimit",
+            Self::IntegerWorkLimit => "IntegerWorkLimit",
+            Self::IterationWorkLimit => "IterationWorkLimit",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EvalOutcome {
     pub value: Expr,
+    pub termination: Option<EvalTerminationReason>,
     pub messages: Vec<RuntimeMessage>,
     pub prints: Vec<String>,
 }
@@ -93,6 +125,7 @@ pub struct SessionLowerResponse {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionEvalResponse {
     pub value: Expr,
+    pub termination: Option<EvalTerminationReason>,
     pub messages: Vec<RuntimeMessage>,
     pub prints: Vec<String>,
     pub trace: Vec<TraceEvent>,

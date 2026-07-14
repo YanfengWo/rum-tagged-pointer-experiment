@@ -23,16 +23,18 @@ impl Session {
         &mut self,
         outcome: Result<Expr, EvalError>,
         handled_error_checkpoint: usize,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<(Expr, Option<EvalTerminationReason>), EvalError> {
         match self.finalize_top_level_control_flow(outcome) {
-            Err(error) => match Self::terminated_evaluation_expr_for_error(&error) {
-                Some(value) => {
+            Err(error) => match Self::terminated_evaluation_reason_for_error(&error) {
+                Some(reason) => {
+                    let value = Self::terminated_evaluation_expr_for_error(&error)
+                        .expect("termination value should exist for termination reason");
                     self.emit_non_loader_eval_message(handled_error_checkpoint, &error);
-                    Ok(value)
+                    Ok((value, Some(reason)))
                 }
                 None => Err(error),
             },
-            other => other,
+            Ok(value) => Ok((value, None)),
         }
     }
 
@@ -40,18 +42,21 @@ impl Session {
         &mut self,
         outcome: Result<Expr, EvalError>,
         handled_error_checkpoint: usize,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<(Expr, Option<EvalTerminationReason>), EvalError> {
         match self.finalize_top_level_control_flow(outcome) {
             Err(error @ EvalError::EvaluationCycleDetected { .. }) => {
-                match Self::terminated_evaluation_expr_for_error(&error) {
-                    Some(value) => {
+                match Self::terminated_evaluation_reason_for_error(&error) {
+                    Some(reason) => {
+                        let value = Self::terminated_evaluation_expr_for_error(&error)
+                            .expect("termination value should exist for termination reason");
                         self.emit_non_loader_eval_message(handled_error_checkpoint, &error);
-                        Ok(value)
+                        Ok((value, Some(reason)))
                     }
                     None => Err(error),
                 }
             }
-            other => other,
+            Ok(value) => Ok((value, None)),
+            Err(error) => Err(error),
         }
     }
 
@@ -200,7 +205,7 @@ impl Session {
         self.current_message_list_dirty = previous_message_list_dirty;
 
         match result {
-            Ok(value) => {
+            Ok((value, termination)) => {
                 let messages = self.messages.split_off(message_checkpoint);
                 let prints = self.prints.split_off(print_checkpoint);
                 self.last_message_list = messages.clone();
@@ -208,6 +213,7 @@ impl Session {
                     .truncate(handled_error_checkpoint);
                 Ok(EvalOutcome {
                     value,
+                    termination,
                     messages,
                     prints,
                 })
@@ -246,6 +252,7 @@ impl Session {
         let print_checkpoint = self.prints.len();
         let forms = split_script_into_forms(source)?;
         let mut value = system_expr("Null");
+        let mut termination = None;
         let mut messages = Vec::new();
         let mut prints = Vec::new();
 
@@ -253,6 +260,7 @@ impl Session {
             match self.eval_text_with_terminated_handling(&form, terminated_handling) {
                 Ok(outcome) => {
                     value = outcome.value;
+                    termination = outcome.termination;
                     messages.extend(outcome.messages);
                     prints.extend(outcome.prints);
                 }
@@ -275,6 +283,7 @@ impl Session {
         self.last_message_list = messages.clone();
         Ok(EvalOutcome {
             value,
+            termination,
             messages,
             prints,
         })

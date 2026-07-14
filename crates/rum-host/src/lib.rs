@@ -57,7 +57,8 @@ pub use model::{
     HostFailureCode, HostInputKind, HostInputRequest, HostInputSuspension, HostInspectRequest,
     HostInspectResponse, HostIsCompleteRequest, HostIsCompleteResponse, HostMessage,
     HostMessageTemplate, HostParseRequest, HostParseResponse, HostStructuredOutput,
-    HostStructuredOutputKind, HostSymbolInfo, HostTraceEvent, HostTyped, HostValue,
+    HostStructuredOutputKind, HostSymbolInfo, HostTerminationReason, HostTraceEvent, HostTyped,
+    HostValue,
 };
 /// Capability label used by host capability policies.
 pub use rum_runtime::Capability;

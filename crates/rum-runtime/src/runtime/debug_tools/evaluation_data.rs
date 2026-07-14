@@ -89,7 +89,8 @@ impl Session {
                 false,
                 Expr::string(
                     Self::terminated_evaluation_reason_for_error(&error)
-                        .expect("termination reason should exist after guard"),
+                        .expect("termination reason should exist after guard")
+                        .tag(),
                 ),
             ),
             Err(EvalError::Abort | EvalError::ProtectedAbort) => {

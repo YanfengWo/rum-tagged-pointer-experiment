@@ -28,9 +28,10 @@ pub use messages::{
 pub(super) use messages::{MessageDefinition, MessageNameKey, MessageSelector};
 pub(super) use requests::PendingEvalRequest;
 pub use requests::{
-    EvalOutcome, SessionCompletenessStatus, SessionCompletionResponse, SessionDefinitionSummary,
-    SessionEvalResponse, SessionInspectResponse, SessionIsCompleteResponse, SessionLowerResponse,
-    SessionParseResponse, SessionRequestError, SessionRequestFailure,
+    EvalOutcome, EvalTerminationReason, SessionCompletenessStatus, SessionCompletionResponse,
+    SessionDefinitionSummary, SessionEvalResponse, SessionInspectResponse,
+    SessionIsCompleteResponse, SessionLowerResponse, SessionParseResponse, SessionRequestError,
+    SessionRequestFailure,
 };
 pub use session::Session;
 pub(super) use session::{EvaluationStackEntry, ModuleActivation};

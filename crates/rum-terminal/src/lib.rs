@@ -248,6 +248,7 @@ mod tests {
     fn eval_response(value: Expr) -> SessionEvalResponse {
         SessionEvalResponse {
             value,
+            termination: None,
             messages: Vec::new(),
             prints: Vec::new(),
             trace: Vec::new(),

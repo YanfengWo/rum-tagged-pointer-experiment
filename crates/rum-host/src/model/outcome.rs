@@ -1,7 +1,7 @@
 use rum_core::{Atom, Expr};
 use rum_runtime::{
-    RuntimeInputKind, RuntimeInputRequest, RuntimeMessage, SessionEvalResponse,
-    SessionRequestError, SessionRequestFailure, TraceEvent,
+    EvalTerminationReason, RuntimeInputKind, RuntimeInputRequest, RuntimeMessage,
+    SessionEvalResponse, SessionRequestError, SessionRequestFailure, TraceEvent,
 };
 
 const MAX_TYPED_DEPTH: usize = 64;
@@ -22,6 +22,8 @@ pub enum HostEvalOutcome {
 pub struct HostEvalSuccess {
     /// Rendered and typed final value.
     pub value: HostValue,
+    /// Runtime termination reason when the final value was synthesized after early termination.
+    pub termination: Option<HostTerminationReason>,
     /// Messages emitted before success.
     pub messages: Vec<HostMessage>,
     /// Text printed before success.
@@ -30,6 +32,29 @@ pub struct HostEvalSuccess {
     pub trace: Vec<HostTraceEvent>,
     /// Flattened adapter-friendly output stream.
     pub outputs: Vec<HostStructuredOutput>,
+}
+
+/// Structured reason for a runtime-synthesized terminated evaluation value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HostTerminationReason {
+    /// Evaluation was cancelled through a host cancel handle.
+    Cancelled,
+    /// Evaluation exceeded its wall-clock time constraint.
+    TimeConstraint,
+    /// Evaluation exceeded its recursion limit.
+    RecursionLimit,
+    /// Evaluation exceeded its native stack limit.
+    StackLimit,
+    /// Pattern matching exceeded its recursion limit.
+    PatternMatchRecursionLimit,
+    /// Evaluation exceeded an iteration or fixed-point limit.
+    IterationLimit,
+    /// Evaluation generated more elements than allowed.
+    GeneratedElementLimit,
+    /// Evaluation exceeded its exact-integer work budget.
+    IntegerWorkLimit,
+    /// Evaluation exceeded its iteration work budget.
+    IterationWorkLimit,
 }
 
 /// Suspended evaluation waiting for host input.
@@ -253,6 +278,22 @@ impl From<RuntimeInputRequest> for HostInputRequest {
     }
 }
 
+impl From<EvalTerminationReason> for HostTerminationReason {
+    fn from(reason: EvalTerminationReason) -> Self {
+        match reason {
+            EvalTerminationReason::Cancelled => Self::Cancelled,
+            EvalTerminationReason::TimeConstraint => Self::TimeConstraint,
+            EvalTerminationReason::RecursionLimit => Self::RecursionLimit,
+            EvalTerminationReason::StackLimit => Self::StackLimit,
+            EvalTerminationReason::PatternMatchRecursionLimit => Self::PatternMatchRecursionLimit,
+            EvalTerminationReason::IterationLimit => Self::IterationLimit,
+            EvalTerminationReason::GeneratedElementLimit => Self::GeneratedElementLimit,
+            EvalTerminationReason::IntegerWorkLimit => Self::IntegerWorkLimit,
+            EvalTerminationReason::IterationWorkLimit => Self::IterationWorkLimit,
+        }
+    }
+}
+
 impl From<TraceEvent> for HostTraceEvent {
     fn from(event: TraceEvent) -> Self {
         match event {
@@ -285,6 +326,7 @@ pub(crate) fn eval_success_from_runtime(response: SessionEvalResponse) -> HostEv
     let text = response.value.to_string();
     let typed = host_typed_from_expr(&response.value);
     let value = HostValue { text, typed };
+    let termination = response.termination.map(Into::into);
     let messages = host_messages(response.messages);
     let prints = response.prints;
     let trace = host_trace(response.trace);
@@ -292,6 +334,7 @@ pub(crate) fn eval_success_from_runtime(response: SessionEvalResponse) -> HostEv
 
     HostEvalSuccess {
         value,
+        termination,
         messages,
         prints,
         trace,

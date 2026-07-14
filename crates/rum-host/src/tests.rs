@@ -1105,6 +1105,46 @@ fn host_session_snapshot_bytes_roundtrip_and_restore_replaces_user_state() {
 }
 
 #[test]
+fn host_eval_ordinary_value_has_no_termination_reason() {
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval("1 + 1"));
+
+    assert_eq!(success.value.text, "2");
+    assert_eq!(success.termination, None);
+}
+
+#[test]
+fn host_eval_literal_terminated_evaluation_has_no_termination_reason() {
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval("TerminatedEvaluation[\"Cancelled\"]"));
+
+    assert_eq!(success.value.text, "TerminatedEvaluation[\"Cancelled\"]");
+    assert_eq!(success.termination, None);
+}
+
+#[test]
+fn host_eval_recursion_limit_reports_structured_termination_reason() {
+    let mut limits = HostResourceLimits::default();
+    limits.recursion_limit = 32;
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_resource_limits(limits))
+        .build();
+
+    let success = successful_eval(session.eval("f[x_] := f[x + 1]; f[0]"));
+
+    assert_eq!(
+        success.value.text,
+        "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert_eq!(
+        success.termination,
+        Some(HostTerminationReason::RecursionLimit)
+    );
+}
+
+#[test]
 fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
     let mut session = host_session_with_large_iteration_budget();
     let cancel = session.cancel_handle();
@@ -1150,6 +1190,7 @@ fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
     match outcome {
         HostEvalOutcome::Success(success) => {
             assert_eq!(success.value.text, "TerminatedEvaluation[\"Cancelled\"]");
+            assert_eq!(success.termination, Some(HostTerminationReason::Cancelled));
             assert!(
                 success
                     .messages
@@ -1185,6 +1226,10 @@ fn host_eval_with_timeout_interrupts_running_eval() {
                 success.value.text,
                 "TerminatedEvaluation[\"TimeConstraint\"]"
             );
+            assert_eq!(
+                success.termination,
+                Some(HostTerminationReason::TimeConstraint)
+            );
             assert!(
                 success
                     .messages
@@ -1211,7 +1256,10 @@ fn host_eval_with_unused_handle_and_generous_timeout_still_succeeds() {
     );
 
     match outcome {
-        HostEvalOutcome::Success(success) => assert_eq!(success.value.text, "3"),
+        HostEvalOutcome::Success(success) => {
+            assert_eq!(success.value.text, "3");
+            assert_eq!(success.termination, None);
+        }
         other => panic!("expected normal success, got {other:?}"),
     }
 }

@@ -210,22 +210,32 @@ impl Session {
 
     pub(in crate::runtime) fn terminated_evaluation_reason_for_error(
         error: &EvalError,
-    ) -> Option<&'static str> {
+    ) -> Option<EvalTerminationReason> {
         // Each limit gets a SPECIFIC tag so a user can tell which budget to raise
         // (a generic "ResourceLimit" did not say which of the three work limits
         // fired). The tag mirrors the message text (e.g. "iteration work limit").
         match error {
-            EvalError::RecursionLimitExceeded { .. } => Some("RecursionLimit"),
-            EvalError::StackLimitExceeded { .. } => Some("StackLimit"),
-            EvalError::MatchRecursionLimitExceeded { .. } => Some("PatternMatchRecursionLimit"),
-            EvalError::Cancelled => Some("Cancelled"),
-            EvalError::TimeConstraintExceeded => Some("TimeConstraint"),
+            EvalError::RecursionLimitExceeded { .. } => Some(EvalTerminationReason::RecursionLimit),
+            EvalError::StackLimitExceeded { .. } => Some(EvalTerminationReason::StackLimit),
+            EvalError::MatchRecursionLimitExceeded { .. } => {
+                Some(EvalTerminationReason::PatternMatchRecursionLimit)
+            }
+            EvalError::Cancelled => Some(EvalTerminationReason::Cancelled),
+            EvalError::TimeConstraintExceeded => Some(EvalTerminationReason::TimeConstraint),
             EvalError::EvaluationCycleDetected { .. }
             | EvalError::IterationLimitExceeded { .. }
-            | EvalError::EvaluationPassLimitExceeded { .. } => Some("IterationLimit"),
-            EvalError::GeneratedElementLimitExceeded { .. } => Some("GeneratedElementLimit"),
-            EvalError::IntegerWorkLimitExceeded { .. } => Some("IntegerWorkLimit"),
-            EvalError::IterationWorkLimitExceeded { .. } => Some("IterationWorkLimit"),
+            | EvalError::EvaluationPassLimitExceeded { .. } => {
+                Some(EvalTerminationReason::IterationLimit)
+            }
+            EvalError::GeneratedElementLimitExceeded { .. } => {
+                Some(EvalTerminationReason::GeneratedElementLimit)
+            }
+            EvalError::IntegerWorkLimitExceeded { .. } => {
+                Some(EvalTerminationReason::IntegerWorkLimit)
+            }
+            EvalError::IterationWorkLimitExceeded { .. } => {
+                Some(EvalTerminationReason::IterationWorkLimit)
+            }
             _ => None,
         }
     }
@@ -236,7 +246,7 @@ impl Session {
         Self::terminated_evaluation_reason_for_error(error).map(|reason| {
             Expr::call(
                 system_expr("TerminatedEvaluation"),
-                vec![Expr::string(reason)],
+                vec![Expr::string(reason.tag())],
             )
         })
     }
