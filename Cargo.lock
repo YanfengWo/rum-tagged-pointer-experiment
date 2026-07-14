@@ -623,6 +623,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rum-dun-host"
+version = "0.1.0"
+
+[[package]]
 name = "rum-host"
 version = "0.1.0"
 dependencies = [

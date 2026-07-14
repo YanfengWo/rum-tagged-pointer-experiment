@@ -1,0 +1,10 @@
+[package]
+name = "rum-dun-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Dun Plugin Protocol host codec for rum."
+
+[lib]
+path = "src/lib.rs"
