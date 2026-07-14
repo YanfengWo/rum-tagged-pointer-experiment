@@ -1,7 +1,34 @@
 # Usability Pass — tracker
 
-Status: ACTIVE (opened 2026-07-07). Mainline after the breadth lines
-(stdlib expansion, codec family, hardening coverage, A+B groups) closed.
+Status: **COMPLETE (2026-07-14).** All 10 sweep units closed; the entire
+installed builtin surface (612 reference heads = 446 stdlib + 159 kernel,
+plus the FileNames restoration = 613) has been audited on the three axes
+and fixed. Opened 2026-07-07, mainline after the breadth lines (stdlib
+expansion, codec family, hardening coverage, A+B groups) closed. Next
+line: the dun host-embedding line (user sequencing ruling 2026-07-08;
+reframed 2026-07-14 to a general-embeddable-language standpoint — see
+`docs/dev/dun-protocol-host-requirements.md` and the
+`dun-plugin-requirements-line` memory).
+
+### Pass-complete tally
+
+Units 1-10 = **605 builtins swept** (446 stdlib units 1-7 + 55 kernel-A +
+47 kernel-B + 57 kernel-C), plus FileNames restored (unit-10 fix 230) →
+reference 613. Kernel units delivered the highest-value finds: unit 8
+lifted the `Protected` enforcement surface 129/612 → 608/612 and caught a
+real `ApplyTo` protection bypass at the gate; unit 9 fixed evaluator hold
+correctness (Unevaluated restore, HoldAll Sequence splice, replacement-
+Sequence splice) across three user rulings; unit 10 caught a real loader
+capability bypass (`BeginPackage`/`DeclarePackage` → `eval_needs` skipped
+the FileRead check) and a real `Pause[10^100]` host-process panic, and
+resolved the three capability-decision candidates (Input → new
+`Capability::Interactive`; TestReport → Clock kept, honest; FileNames →
+FileRead-gated). Standing durable yields across the pass: the hold-design
+appendix, the mma-hol Strict gate procedure, the repo-path A/B build
+convention, the Codex content-filter engineering-hygiene register, and
+the brief-craft stop-loss lessons (Err ≤ Ok eagerness; baseline-verify
+every preservation pin; verify a mirror-target exists; not every impure
+label is a mislabel to purify).
 
 The "works" layer is in; this pass raises the "works well" layer. The
 `RandomPassword` arc (briefs 157-159) is the worked example: "works"
@@ -58,7 +85,7 @@ first (157), then flexibility (158), convenience + safety (159).
 | 7 | character_classes + random (light re-check; 157-159 fresh) | 16 | brief-203 ✓ | 204-207 ✓ CLOSED |
 | 8 | kernel A: definitions/values/attributes/protection | 55 | brief-208 ✓ | 209-213 ✓ CLOSED |
 | 9 | kernel B: scoping/eval control/patterns/forms | 47 | brief-214 ✓ | 215-222 ✓ CLOSED |
-| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | brief-223 ✓ | |
+| 10 | kernel C: system state/contexts/packages/paths/diagnostics/tests | 57 | brief-223 ✓ | 224-230 ✓ CLOSED |
 
 Counts for units 1-7 are exact (catalog arrays, 446 total — unit 7 = 16
 after brief-201 split off `ReseedRandom`).
