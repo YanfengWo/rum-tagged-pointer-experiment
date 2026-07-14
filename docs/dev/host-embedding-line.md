@@ -58,12 +58,14 @@ easiest conformance). dun never gets touched (read-only clone).
 
 ## Proposed concern-(b) brief queue (pending user sign-off)
 
-1. **b1 — structured termination discriminator.** `HostEvalSuccess` (and
-   the runtime response beneath it) gains a structured termination field
-   (e.g. `Option<HostTermination>` carrying Cancelled/TimeConstraint), so
-   embedders stop string-matching `TerminatedEvaluation[...]`. In-band
-   value semantics unchanged (partial results are deliberate). Closes
-   gate 5.
+1. **b1 — structured termination discriminator. DONE (brief-231,
+   74afadf, 2026-07-14).** `EvalTerminationReason` (9 reasons; `.tag()`
+   preserves the legacy strings) threaded from the finalize seam through
+   `EvalOutcome`/`SessionEvalResponse` to
+   `HostEvalSuccess.termination: Option<HostTerminationReason>`. In-band
+   values byte-identical; user-constructed `TerminatedEvaluation[...]`
+   literals stay `None` (provenance tested). Gate: workspace 1478/0.
+   Closes gate 5.
 2. **b2 — request-level memory ceiling.** `set_eval_memory_limit` analog
    of `set_eval_timeout` + `HostConfig`/eval-call surface in `rum-host`;
    uncaught exceed → `HostFailureCode::MemoryConstraintExceeded`.

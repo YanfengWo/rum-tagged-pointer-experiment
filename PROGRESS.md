@@ -831,3 +831,21 @@ them as system ownvalues excluded from DumpSave/snapshot). Password policy
 usage reads Require -> {UppercaseLetters, DigitCharacters}; constants are
 Protected so reassignment fails (Set::wrsym). Reference 605; workspace
 1339/0. Briefs 153-159 archived.
+
+## 2026-07-14 — HOST-EMBEDDING LINE OPENED: diagnosis + b1 (brief-231)
+
+Line opened per the user's sequencing ruling (diagnosis → concern (b)
+dun pure-sandbox/protocol → concern (a) general embedding API,
+scenario-first). Diagnosis landed in docs/dev/host-embedding-line.md
+(0ff7d15): pure-sandbox gates 1-3 already done (sandboxed profile,
+Capability::Interactive, panic isolation); stdout-zero-writes,
+crash-only, and cold start (~4.8 ms full process cycle, 50-run amortized
+×3) satisfied but unpinned; the two real seams = structured termination
+discriminator + request-level memory ceiling. brief-231 (74afadf) closed
+the first seam: EvalTerminationReason (9 reasons, .tag() preserves the
+exact legacy strings) threaded finalize → EvalOutcome /
+SessionEvalResponse → HostEvalSuccess.termination
+(HostTerminationReason mirror). In-band TerminatedEvaluation[...]
+values/messages byte-identical; user-constructed literals stay
+termination=None (provenance). Gate: fmt clean, workspace 1478/0,
+scope exact (12 files), no A/B (finalize runs once per top-level form).
