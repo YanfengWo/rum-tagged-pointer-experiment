@@ -205,14 +205,18 @@ mma-hol Strict gate flag):
    host-line per-request-isolation input, recorded not fixed. No hot-path
    A/B (failure-branch only); mma-hol gate (BeginPackage change).
 4. **brief-227 — truthfulness + small forms** (safety/convenience, S/M):
-   reject the unread `ResolveContextAliases` + `DumpSave`
-   `CompressionLevel` options (the 217 dead-option class); preserve
-   symbols in the `DumpSave` result list; align `ByteCount`'s
-   canonical-text contract (or fix the doc to match the structural
-   proxy — decide which is the intended contract); `EchoFunction[f]`
-   apply-not-label (WL parity); `Contexts` filter form; `TestCreate`
-   option discovery. Separable; no A/B, no mma-hol gate unless
-   persistence round-trip changes.
+   guard the unread `ResolveContextAliases` (`Names`) + `CompressionLevel`
+   (`DumpSave`) options non-default values (217 dead-option pattern —
+   gate-confirmed CompressionLevel 0/9 give byte-identical files);
+   `DumpSave` result list returns symbol IDENTITIES not re-evaluated
+   values (it is `{HoldRest}` already — no attribute change, just fix the
+   result construction; the FILE stays byte-identical); align the
+   `ByteCount` DOC to its structural-memory-proxy behavior (which is
+   WL-correct — the doc's "canonical-text bytes" is the lie, NOT the
+   behavior); `EchoFunction[f][x]` applies `f` (today duplicates
+   `EchoLabel`); `Contexts[patt]` filter form (reuse the Names matcher);
+   `TestCreate` option discovery. All builtin-local: no A/B (no
+   call-planning), no mma-hol gate (no DumpSave file-format change).
 5. **Capability-KIND + FileNames decisions** — the three user-decision
    candidates above; dispatched only after the user rules.
 
