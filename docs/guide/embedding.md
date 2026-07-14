@@ -155,6 +155,15 @@ Messages are exposed as `HostMessage` values with:
 
 Print output is exposed as strings.
 
+The kernel never writes to stdout or stderr on behalf of evaluated code.
+`Print` output is buffered per request and returned through `prints` and
+`outputs`, so the embedder owns its process's stdout completely and can reserve
+it for a framed protocol. A host may explicitly redirect print output with the
+kernel's `Session::set_print_sink`; `rum-cli` does this to stream to its own
+stdout, while a protocol host should leave the sink unset. Buffered print volume
+is bounded by the request memory ceiling configured through
+`HostResourceLimits::eval_memory_limit`.
+
 Structured outputs are a flattened adapter-friendly stream with kinds:
 
 - result

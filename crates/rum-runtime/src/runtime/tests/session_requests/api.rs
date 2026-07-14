@@ -174,6 +174,33 @@ fn eval_request_memory_ceiling_returns_classified_termination_and_session_recove
 }
 
 #[test]
+fn eval_request_print_flood_trips_memory_ceiling_with_classified_termination() {
+    let mut session = session_with_test_control_builtins();
+    let mut limits = session.resource_limits();
+    limits.eval_memory_limit = Some(100_000);
+    session.set_resource_limits(limits);
+
+    let response = session
+        .eval_request("Do[Print[\"x\"], {100000}]")
+        .expect("print flood should surface a memory-limit termination value");
+
+    assert_eq!(
+        response.value.to_string(),
+        "TerminatedEvaluation[\"MemoryLimit\"]"
+    );
+    assert_eq!(
+        response.termination,
+        Some(EvalTerminationReason::MemoryLimit)
+    );
+    assert!(
+        response
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "memlim")
+    );
+}
+
+#[test]
 fn eval_request_nested_memory_constraint_catches_before_higher_request_ceiling() {
     let mut session = session_with_test_control_builtins();
     let mut limits = session.resource_limits();

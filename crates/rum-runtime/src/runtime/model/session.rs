@@ -100,6 +100,12 @@ pub struct Session {
 }
 
 impl Session {
+    /// Installs a host-selected destination for `Print` output.
+    ///
+    /// Installing a sink is the host's explicit choice about where print output
+    /// goes. Without a sink, output is buffered into the request response. A host
+    /// that owns stdout as a protocol channel must not install a sink that writes
+    /// there.
     pub fn set_print_sink(&mut self, sink: Box<dyn FnMut(&str) + Send>) {
         self.print_sink = Some(sink);
     }
