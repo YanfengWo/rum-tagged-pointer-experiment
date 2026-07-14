@@ -218,6 +218,60 @@ fn sandboxed_host_config_blocks_filesystem_builtins_at_dispatch() {
 }
 
 #[test]
+fn sandboxed_host_config_with_file_provider_blocks_internal_loader_calls() {
+    let dir = TempDirGuard::new("sandbox-blocks-internal-loads");
+    dir.write(
+        "DepPkg.rum",
+        "BeginPackage[\"DepPkg`\"]\ndependencyValue = 33\nEndPackage[]",
+    );
+    dir.write(
+        "StubPkg.rum",
+        "BeginPackage[\"StubPkg`\"]\nautoloadValue = 44\nEndPackage[]",
+    );
+
+    let mut session = HostSession::builder()
+        .with_config(
+            HostConfig::sandboxed()
+                .with_file_io(StdFileIo::provider())
+                .with_package_search_paths([dir.path().to_path_buf()]),
+        )
+        .build();
+
+    let begin_package = successful_eval(session.eval("BeginPackage[\"MainPkg`\", {\"DepPkg`\"}]"));
+    assert_eq!(begin_package.value.text, "$Failed");
+    assert!(begin_package.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "sandbox"
+            && message.text == "Needs is not permitted in this sandbox."
+    }));
+    let context = successful_eval(session.eval("$Context")).value.text;
+    let context_path = successful_eval(session.eval("$ContextPath")).value.text;
+    let packages = successful_eval(session.eval("$Packages")).value.text;
+    eprintln!(
+        "restricted+provider BeginPackage value={} messages={:?} context={} context_path={} packages={}",
+        begin_package.value.text, begin_package.messages, context, context_path, packages
+    );
+    assert_eq!(context, "\"Global`\"");
+    assert_eq!(context_path, "List[\"System`\", \"Global`\"]");
+    assert_eq!(packages, "List[]");
+
+    successful_eval(session.eval("DeclarePackage[\"StubPkg`\", {\"autoloadValue\"}]"));
+    let declared_stub = successful_eval(session.eval("StubPkg`autoloadValue"));
+    assert_eq!(declared_stub.value.text, "$Failed");
+    assert!(declared_stub.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "sandbox"
+            && message.text == "Needs is not permitted in this sandbox."
+    }));
+    let packages = successful_eval(session.eval("$Packages")).value.text;
+    eprintln!(
+        "restricted+provider declared-stub value={} messages={:?} packages={}",
+        declared_stub.value.text, declared_stub.messages, packages
+    );
+    assert_eq!(packages, "List[]");
+}
+
+#[test]
 fn sandboxed_host_config_blocks_runtime_constructed_filesystem_calls() {
     let mut session = HostSession::builder()
         .with_config(HostConfig::sandboxed())

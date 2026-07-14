@@ -53,7 +53,13 @@ impl Session {
                 .iter()
                 .any(|loaded| loaded == symbol.context())
         {
-            let _ = self.eval_needs(&[Expr::string(symbol.context().to_string())])?;
+            let load_result = self.eval_needs(&[Expr::string(symbol.context().to_string())])?;
+            if !self.capability_policy.is_unrestricted()
+                && !self.capability_policy.allows(Capability::FileRead)
+            {
+                debug_assert!(is_system_symbol_name(&load_result, "$Failed"));
+                return Ok(load_result);
+            }
         }
 
         if let Some(value) = self
