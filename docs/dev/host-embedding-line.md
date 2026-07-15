@@ -5,6 +5,22 @@ Inputs: `dun-protocol-host-requirements.md` (the authoritative dun-facing
 ask list), the two earlier dun requirement docs, the `rum-host` and kernel
 session sources, and fresh measurements (this file cites the evidence).
 
+**CONCERN (b) CLOSED 2026-07-15 at b4 — b5 CANCELLED (user boundary ruling).**
+b1–b4 landed the generic sandbox-hardening seams (all verified boundary-clean:
+zero dun/editor/protocol naming in the kernel — see the b1–b4 entries). b5
+(build the `rum-dun-host` protocol host + validate against dun's
+`check-host.py`) was cut on the user's ruling that **building a dun plugin is
+downstream work, not rum's job**: rum is a language project, dun is an editor
+project; rum's obligation is to harden the sandbox *to downstream-usable
+strength* (done at b4) — hosting a reference plugin for one editor's protocol
+crosses the standing "don't make rum an editor framework" line and would rank
+below the general fs/os/net capability surface anyway. b5 part 1 (brief-235,
+the hand-rolled codec crate `rum-dun-host`) was already committed; it was
+reverted (revert of `6062c03` + `ed01e33`) when the line closed. Concern (a)
+(general embeddable-language API) remains DEFERRED and must still open with a
+scenario-design pass. See `dun-plugin-requirements-line` memory for the full
+ruling chain.
+
 ## Framing (user rulings, 2026-07-14)
 
 The line has **two parallel concerns, overlapping but not conflated**:
@@ -112,17 +128,16 @@ easiest conformance). dun never gets touched (read-only clone).
    test + no destructor dependence). OS-level spawn/SIGKILL integration
    test deferred to b5 (real host process). Gate: workspace 1486/0.
    Closes gate 4, pins ask 2.
-5. **b5 — `rum` protocol host prototype (syntax-highlight role).** New
-   non-default bin crate speaking Dun Plugin Protocol v0, sandboxed
-   session, per-request isolation, shim-owned stdout, prints forwarded as
-   bounded diagnostics, outcome→protocol-error mapping; validated against
-   `check-host.py`; reports its own cold-start number (folds ask 3
-   pinning). Location/naming decided in the brief (proposal:
-   `crates/rum-dun-host`, not in `default-members`).
+5. **b5 — `rum` protocol host prototype (syntax-highlight role).
+   CANCELLED 2026-07-15 (user boundary ruling; see the status header).**
+   Building a dun-protocol reference host belongs downstream, not in rum.
+   Part 1 (brief-235, the codec crate) had already landed and was reverted
+   on closure. Cold-start (ask 3) stays MET-but-unpinned; a downstream host
+   (or a later general-embedding example) can pin it if ever needed.
 
-b1→b2→b3→b4 are kernel/host seams in rising size; b5 consumes them all.
-b1/b2 are genuinely kernel-touching; b3/b4 are mostly tests + docs; b5 is
-the deliverable dun can point its checker at.
+b1→b2→b3→b4 are kernel/host seams in rising size — all generic sandbox
+hardening, boundary-clean. b5 would have been the dun-specific deliverable;
+it was cut because that is downstream work. Concern (b) is DONE at b4.
 
 ## Concern (a) inventory — DEFERRED until (b) completes
 
