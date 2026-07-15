@@ -207,13 +207,30 @@ rather than duplicating them.
   intrinsically multi-dimensional (correctness + timing + memory), so `Clock`
   is the honest label, not a mislabel to purify. Detail:
   `usability-pass-line.md` + tracker.
-- **HOST-EMBEDDING LINE — OPEN (diagnosis landed 2026-07-14,
+- **HOST-EMBEDDING LINE — concern (b) CLOSED at b4 (2026-07-15); concern (a)
+  is the next line, DEFERRED to a fresh session (diagnosis
   `docs/dev/host-embedding-line.md`).** Sequencing ruled by the user
   2026-07-14: concern (b) dun pure-sandbox + protocol conformance FIRST
-  (explicit requirements, clear boundary; proposed brief queue b1-b5 in the
-  diagnosis doc), concern (a) general embedding API only AFTER (b) completes,
-  and (a) MUST open with scenario design + boundary drawing — no feature
-  bricklaying on instinct. Diagnosis headline: gates 1-3 done (sandboxed
+  (explicit requirements, clear boundary), concern (a) general embedding API
+  only AFTER (b) completes, and (a) MUST open with scenario design + boundary
+  drawing — no feature bricklaying on instinct.
+  **b1–b4 DONE and reviewed boundary-clean** (b1 structured termination
+  discriminator, b2 request-level memory ceiling, b3 stdout-ownership hygiene
+  hard line, b4 crash-only + per-request isolation contract — all generic
+  sandbox-hardening primitives, zero dun/editor/protocol naming in the
+  kernel). **b5 (dun protocol host prototype) CANCELLED (user boundary ruling
+  2026-07-15): building a dun plugin is downstream work, not rum's job — rum
+  is a language project, dun an editor project; rum's obligation was to harden
+  the sandbox to downstream-usable strength, achieved at b4, and hosting one
+  editor's reference plugin crosses the "don't make rum an editor framework"
+  line. Part 1 (brief-235, the `rum-dun-host` codec crate) had landed and was
+  reverted (`6062c03`+`ed01e33`, revert commit `93a93d2`).** **fs/os/net
+  downstream capabilities are DEFERRED until after publication (user
+  2026-07-15) — explicitly NOT the next target.** NEXT: concern (a), opened in
+  a new session, starting with a scenario-design pass (candidate gaps recorded
+  in the diagnosis doc: `HostTyped` richness, typed `call`, named embedding
+  profiles, per-request rollback API; in-tree consumers rum-repl/jupyter/
+  terminal/cli are real scenario material). Diagnosis headline: gates 1-3 done (sandboxed
   profile, Interactive capability, panic isolation), stdout/crash-only/
   cold-start (~4.8 ms full cycle) already satisfied but unpinned; the two
   real seams = structured termination discriminator (graceful cancel/timeout
@@ -247,12 +264,12 @@ rather than duplicating them.
      **two parallel concerns**: (a) the general embeddable-language API,
      judged on general value; (b) dun's `pure-sandbox` + protocol conformance.
      Overlapping but not conflated.
-  Line opens with a diagnostic/inventory brief (framing not yet agreed with
-  the user) mapping BOTH concerns to the current kernel/rum-host surface, and
-  a `syntax-highlight` `rum-host` prototype against dun's `hosts/check-host.py`
-  (dun's protocol doc + checker + three reference hosts are a ready dev kit).
-  Hard line: don't make rum an editor framework (the protocol boundary made
-  the separation physical). Memory: `dun-plugin-requirements-line.md`.
+  How it actually ran: the diagnosis landed (2026-07-14), then concern (b)
+  executed as briefs b1–b4 (231–234) and CLOSED at b4 with b5 cut (above).
+  The `syntax-highlight` `rum-host` prototype that the diagnosis proposed was
+  the cancelled b5 — that idea is retired (downstream work). Hard line held:
+  don't make rum an editor framework (the protocol boundary made the
+  separation physical). Memory: `dun-plugin-requirements-line.md`.
 - Earlier arcs (correctness mainline, memory line, host-hardening Tier-1/2,
   pattern-matching line, crate rebalance route 2a, file slimming) are all
   CLOSED; their plans/audits are in the archive and in git history. Cross-

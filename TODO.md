@@ -38,15 +38,29 @@ WL-conformant defaults; improvements land as new options or rum-native
 siblings). Method: audit briefs produce all-rows findings tables per
 unit; gaps triage into small fix briefs (the 158/159 shape).
 
-**CURRENT LINE: host-embedding — diagnosis landed 2026-07-14
+**HOST-EMBEDDING LINE — concern (b) CLOSED at b4 (2026-07-15); concern (a)
+is the NEXT line, deferred to a fresh session
 ([docs/dev/host-embedding-line.md](./docs/dev/host-embedding-line.md)).**
 Two parallel concerns: (a) the general embeddable-language API judged on
 general merits; (b) dun's `pure-sandbox` + protocol conformance.
-Sequencing (user 2026-07-14): (b) first — proposed brief queue b1
-(termination discriminator) → b2 (request-level memory ceiling) → b3
-(stdout hygiene hard line) → b4 (crash-only + per-request isolation
-contract) → b5 (protocol host prototype, syntax-highlight role); (a)
-opens only after (b), scenario-design first.
+Sequencing (user 2026-07-14): (b) first, (a) only after (b), scenario-design
+first.
+
+- [x] b1 (brief-231, 74afadf): structured termination discriminator.
+- [x] b2 (brief-232, ee8b788): request-level memory ceiling.
+- [x] b3 (brief-233, b245590): stdout-ownership hygiene hard line.
+- [x] b4 (brief-234, a3e5a76): crash-only + per-request isolation contract.
+- [CANCELLED] b5 (protocol host prototype): user boundary ruling
+  2026-07-15 — building a dun plugin is downstream work, not rum's job;
+  the sandbox is hardened to downstream-usable strength at b4. Part 1
+  (brief-235 codec crate) was reverted (revert `93a93d2`). b1–b4 reviewed
+  boundary-clean (generic sandbox primitives, zero dun/editor naming).
+
+**fs/os/net downstream capabilities: DEFERRED until after publication
+(user 2026-07-15) — not the next target.** NEXT: concern (a), a new
+session, opening with a scenario-design pass (candidate gaps in the
+diagnosis doc; in-tree consumers rum-repl/jupyter/terminal/cli are
+scenario material).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in

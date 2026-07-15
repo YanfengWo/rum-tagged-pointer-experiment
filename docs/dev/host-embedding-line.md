@@ -16,9 +16,14 @@ strength* (done at b4) — hosting a reference plugin for one editor's protocol
 crosses the standing "don't make rum an editor framework" line and would rank
 below the general fs/os/net capability surface anyway. b5 part 1 (brief-235,
 the hand-rolled codec crate `rum-dun-host`) was already committed; it was
-reverted (revert of `6062c03` + `ed01e33`) when the line closed. Concern (a)
-(general embeddable-language API) remains DEFERRED and must still open with a
-scenario-design pass. See `dun-plugin-requirements-line` memory for the full
+reverted (revert of `6062c03` + `ed01e33`) when the line closed. **fs/os/net
+downstream capabilities are themselves DEFERRED until after publication (user
+2026-07-15) — not the next target.** NEXT: concern (a) (general
+embeddable-language API), opened in a fresh session, and it must still open
+with a scenario-design pass (candidate gaps: `HostTyped` richness, typed
+`call`, named embedding profiles, per-request rollback API — see the concern
+(a) inventory below; in-tree consumers rum-repl/jupyter/terminal/cli are
+scenario material). See `dun-plugin-requirements-line` memory for the full
 ruling chain.
 
 ## Framing (user rulings, 2026-07-14)
