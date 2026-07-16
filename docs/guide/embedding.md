@@ -156,12 +156,11 @@ Messages are exposed as `HostMessage` values with:
 Print output is exposed as strings.
 
 The kernel never writes to stdout or stderr on behalf of evaluated code.
-`Print` output is buffered per request and returned through `prints` and
-`outputs`, so the embedder owns its process's stdout completely and can reserve
-it for a framed protocol. A host may explicitly redirect print output with the
-kernel's `Session::set_print_sink`; `rum-cli` does this to stream to its own
-stdout, while a protocol host should leave the sink unset. Buffered print volume
-is bounded by the request memory ceiling configured through
+By default, `Print` output is buffered per request and returned through `prints`
+and `outputs`, so the embedder owns its process's stdout completely and can
+reserve it for a framed protocol. `HostSession::set_print_sink` switches to
+exclusive streaming when a host needs output during evaluation. Buffered print
+volume is bounded by the request memory ceiling configured through
 `HostResourceLimits::eval_memory_limit`.
 
 Structured outputs are a flattened adapter-friendly stream with kinds:
@@ -215,8 +214,8 @@ The suspension contains:
 
 Resume with `HostSession::resume_with_input(input)`.
 
-The session keeps the continuation. The host should not replay the original
-source to answer input.
+For single-source `eval`, the session keeps the continuation. The host should
+not replay the original source to answer input.
 
 `pending_input_request()` lets a host inspect whether the session is currently
 waiting for input.
@@ -241,6 +240,41 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
 ```
 
+## Streaming prints and batch input
+
+`HostSession::set_print_sink` sends each `Print` line to the host-selected sink
+as it is produced on the evaluating thread. Routing is exclusive: while the
+sink is installed, the `prints` field on both successful and failed outcomes is
+empty. `clear_print_sink()` restores per-request buffering. A sink must not
+panic, because its panic is caught at the host boundary and poisons the session.
+The sink does not survive `reset()`; reinstall it after reset.
+
+For batch input, queue raw host strings in consumption order before evaluating
+the script:
+
+```rust
+let host_argument = String::from("value supplied by the host");
+session.queue_input_response(host_argument);
+let outcome = session.eval_script("scriptArgument = InputString[]\nuse[scriptArgument]");
+```
+
+This queue-then-eval pattern is the intended alternative to interpolating host
+data into a source string and inventing an escaping scheme. Use `InputString`
+when the supplied value must remain literal text; `Input` parses its response as
+rum source. `reset()` clears any queued responses.
+
+Pre-queue every response a batch script needs. If `eval_script` reaches `Input`
+or `InputString` with an empty queue, it returns `InputRequired`. The current
+script-shaped request is not resumable through `resume_with_input`: that call
+returns `Failure` with `HostFailureCode::Other`, and forms after the suspended
+form are not evaluated. Single-source `eval` retains the resumable flow
+described above.
+
+`eval_script` and `eval_file` are the script-shaped entrypoints. Both evaluate
+forms in order and report the final form's value while aggregating messages and
+buffered prints. `eval_file` reads through the configured file I/O provider; a
+sandboxed session has no provider and therefore fails the file request.
+
 ## Reset
 
 `HostSession::reset()` rebuilds the session from its original configuration.
@@ -248,9 +282,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; fin
 It drops user definitions, attributes, contexts, loaded packages, messages, and
 gensyms.
 
-It also clears a poisoned session and invalidates old cancel handles.
+It also clears queued input responses and an installed print sink, clears a
+poisoned session, and invalidates old cancel handles.
 
-Obtain a new `cancel_handle()` after reset.
+Obtain a new `cancel_handle()` and reinstall any print sink after reset.
 
 ## Per-Request Isolation
 

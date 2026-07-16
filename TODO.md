@@ -73,10 +73,20 @@ gate); queue signed off as a1 → a2 → a3 → a4 → a5.
   adopts the b1 termination field (string-match killed; a literal
   `TerminatedEvaluation["Cancelled"]` result value no longer
   misclassifies as cancelled). Workspace 1488/0.
-- [ ] a2: trusted-host contract surface (streaming print sink,
-  script/file eval, queued input) + dogfood port (rum-cli first,
-  microbench A/B hard gate; rum-repl per-command split; rum-terminal
-  contract-type render twins).
+- [x] a2a (brief-237): trusted-host contract surface —
+  `HostSession::set_print_sink`/`clear_print_sink` (exclusive streaming,
+  not tee; does not survive reset), `eval_script`, `eval_file`
+  (FileIo-provider path; provider-less = `Other` failure),
+  `queue_input_response` (the intended batch-input channel). Zero
+  kernel changes. Status-quo pinned: script suspension surfaces as
+  `InputRequired` but is NOT resumable (`resume_with_input` fails
+  `Other`; remaining forms not evaluated) — documented, future seam if
+  a consumer needs it. Workspace 1494/0.
+- [ ] a2b: dogfood port of `rum-cli` onto `rum-host` (microbench A/B
+  hard gate — the CLI is the perf instrument; EPIPE→cancel sink
+  pattern; exit-status via a1's field).
+- [ ] a2c: dogfood port of `rum-repl` (per-command contract-vs-raw
+  split = user ruling; rum-terminal contract-type render twins).
 - [ ] a3: typed value bridge, out — widen `HostTyped`
   (Bool/Association/Rule) + a real consumer (jupyter MIME candidate;
   wire-visible change = user ruling at brief time).

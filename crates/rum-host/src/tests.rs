@@ -2,7 +2,7 @@ use super::*;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -180,6 +180,93 @@ fn host_eval_reports_value_messages_prints_and_structured_outputs() {
             );
         }
         other => panic!("expected success, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_print_sink_streams_exclusively_and_clear_restores_buffering() {
+    let mut session = HostSession::new();
+    let streamed = Arc::new(Mutex::new(Vec::new()));
+    let sink_streamed = Arc::clone(&streamed);
+
+    session.set_print_sink(move |line| {
+        sink_streamed.lock().unwrap().push(line.to_string());
+    });
+
+    let streamed_outcome = successful_eval(session.eval("Print[1]; Print[2]; 3"));
+    assert_eq!(
+        streamed.lock().unwrap().as_slice(),
+        ["1".to_string(), "2".to_string()]
+    );
+    assert!(streamed_outcome.prints.is_empty());
+
+    session.clear_print_sink();
+
+    let buffered_outcome = successful_eval(session.eval("Print[4]; 5"));
+    assert_eq!(buffered_outcome.prints, vec!["4"]);
+    assert_eq!(
+        streamed.lock().unwrap().as_slice(),
+        ["1".to_string(), "2".to_string()]
+    );
+}
+
+#[test]
+fn host_reset_removes_print_sink_and_restores_buffering() {
+    let mut session = HostSession::new();
+    let streamed = Arc::new(Mutex::new(Vec::new()));
+    let sink_streamed = Arc::clone(&streamed);
+
+    session.set_print_sink(move |line| {
+        sink_streamed.lock().unwrap().push(line.to_string());
+    });
+    session.reset();
+
+    let outcome = successful_eval(session.eval("Print[7]; 8"));
+    assert!(streamed.lock().unwrap().is_empty());
+    assert_eq!(outcome.prints, vec!["7"]);
+}
+
+#[test]
+fn host_eval_script_uses_last_form_and_classifies_syntax_failures() {
+    let mut session = HostSession::new();
+
+    let success = successful_eval(
+        session.eval_script("scriptValue = 40\nPrint[scriptValue]\nscriptValue + 2"),
+    );
+    assert_eq!(success.value.text, "42");
+    assert_eq!(success.prints, vec!["40"]);
+    assert_eq!(
+        successful_eval(session.eval("scriptValue")).value.text,
+        "40"
+    );
+
+    match session.eval_script("validForm = 1\nf[1,]") {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Syntax);
+        }
+        other => panic!("expected script syntax failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_eval_file_uses_provider_and_missing_provider_is_other() {
+    let dir = TempDirGuard::new("eval-file");
+    let path = dir.write("batch.rum", "fileValue = 40\nfileValue + 2");
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval_file(&path));
+    assert_eq!(success.value.text, "42");
+    assert_eq!(successful_eval(session.eval("fileValue")).value.text, "40");
+
+    let mut sandboxed = HostSession::builder()
+        .with_config(HostConfig::sandboxed())
+        .build();
+    match sandboxed.eval_file(&path) {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Other);
+            assert_eq!(failure.message, "no file provider installed");
+        }
+        other => panic!("expected provider-less file failure, got {other:?}"),
     }
 }
 
@@ -762,6 +849,55 @@ fn host_suspend_resume_flow_wraps_input_requests() {
         HostEvalOutcome::Success(success) => assert_eq!(success.value.text, "\"rum!\""),
         other => panic!("expected resumed success, got {other:?}"),
     }
+}
+
+#[test]
+fn host_queued_input_completes_without_suspension() {
+    let mut session = HostSession::new();
+
+    session.queue_input_response("hello");
+
+    let success = successful_eval(session.eval("InputString[]"));
+    assert_eq!(success.value.text, "\"hello\"");
+    assert_eq!(success.value.typed, HostTyped::Str("hello".to_string()));
+}
+
+#[test]
+fn host_eval_script_suspends_but_resume_fails_without_running_remaining_forms() {
+    let mut session = HostSession::new();
+
+    let suspended =
+        session.eval_script("scriptBefore = 1\nInputString[\"value: \"]\nscriptAfter = 3");
+    match suspended {
+        HostEvalOutcome::InputRequired(suspension) => {
+            assert_eq!(suspension.request.kind, HostInputKind::InputString);
+            assert_eq!(suspension.request.prompt, "value: ");
+        }
+        other => panic!("expected script input suspension, got {other:?}"),
+    }
+
+    match session.resume_with_input("hello") {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Other);
+            assert_eq!(
+                failure.message,
+                "no suspended evaluation is waiting for host input"
+            );
+        }
+        other => panic!("expected non-resumable script failure, got {other:?}"),
+    }
+
+    let definitions = session.definitions();
+    assert!(
+        definitions
+            .iter()
+            .any(|definition| definition.name == "Global`scriptBefore")
+    );
+    assert!(
+        definitions
+            .iter()
+            .all(|definition| definition.name != "Global`scriptAfter")
+    );
 }
 
 #[test]

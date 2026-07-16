@@ -1,6 +1,7 @@
 use rum_runtime::{CapabilityPolicy, Session};
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::path::Path;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -162,11 +163,12 @@ impl HostSession {
     ///
     /// This re-applies core builtins and downstream builtin installers from the
     /// stored configuration, then drops all user state, including definitions,
-    /// attributes, contexts, loaded packages, messages, and gensyms. It also
-    /// invalidates any previously returned [`HostCancelHandle`], because the
-    /// rebuilt session has a fresh interrupt flag; obtain a new handle after
-    /// reset. If the session was poisoned by a caught panic, reset clears the
-    /// poisoned flag.
+    /// attributes, contexts, loaded packages, messages, gensyms, queued input
+    /// responses, and any installed print sink. Reinstall the print sink after
+    /// reset. Reset also invalidates any previously returned
+    /// [`HostCancelHandle`], because the rebuilt session has a fresh interrupt
+    /// flag; obtain a new handle after reset. If the session was poisoned by a
+    /// caught panic, reset clears the poisoned flag.
     pub fn reset(&mut self) {
         self.session = Self::build_inner_session(&self.config);
         self.poisoned = false;
@@ -237,6 +239,26 @@ impl HostSession {
         }
     }
 
+    /// Installs an exclusive streaming destination for `Print` output.
+    ///
+    /// While a sink is installed, every `Print` line is delivered to it as the
+    /// line is produced during evaluation. Printed lines are not also buffered,
+    /// so [`crate::HostEvalSuccess::prints`] and [`HostFailure::prints`] are
+    /// empty while the sink is active.
+    ///
+    /// The sink runs on the evaluating thread and must not panic. A sink panic
+    /// is caught like any other panic at the host boundary and poisons the
+    /// session. The sink does not survive [`Self::reset`]; reinstall it after a
+    /// reset.
+    pub fn set_print_sink(&mut self, sink: impl FnMut(&str) + Send + 'static) {
+        self.session.set_print_sink(Box::new(sink));
+    }
+
+    /// Removes the streaming `Print` sink and restores per-request buffering.
+    pub fn clear_print_sink(&mut self) {
+        self.session.clear_print_sink();
+    }
+
     /// Parses source and returns a host-facing syntax rendering.
     ///
     /// A poisoned session returns [`HostFailureCode::Poisoned`].
@@ -276,6 +298,52 @@ impl HostSession {
         let request = request.into();
         self.guard(
             |session| session.eval_request_unprotected(request),
+            panic_eval_outcome,
+        )
+    }
+
+    /// Evaluates a multi-form script and returns a structured host outcome.
+    ///
+    /// Forms are evaluated in source order. On success, the response value and
+    /// `termination` describe the final form, while messages and buffered prints
+    /// aggregate across all forms.
+    ///
+    /// Queue batch input with [`Self::queue_input_response`] before calling this
+    /// method. If a form reaches `Input` or `InputString` with an empty queue,
+    /// the outcome is [`HostEvalOutcome::InputRequired`]. Script suspension is
+    /// not currently resumable through [`Self::resume_with_input`]: that call
+    /// returns a [`HostFailureCode::Other`] failure, and the remaining script
+    /// forms are not evaluated.
+    pub fn eval_script(&mut self, source: &str) -> HostEvalOutcome {
+        if self.poisoned {
+            return poisoned_eval_outcome();
+        }
+
+        self.guard(
+            |session| match session.session.eval_script_request(source) {
+                Ok(response) => HostEvalOutcome::Success(eval_success_from_runtime(response)),
+                Err(failure) => eval_failure_from_runtime(failure),
+            },
+            panic_eval_outcome,
+        )
+    }
+
+    /// Evaluates a multi-form script read through the configured file provider.
+    ///
+    /// File contents are read through the session's configured file I/O
+    /// provider, then evaluated with the same semantics as [`Self::eval_script`].
+    /// A session without a provider, including one built from
+    /// [`HostConfig::sandboxed`], returns a [`HostFailureCode::Other`] failure.
+    pub fn eval_file(&mut self, path: impl AsRef<Path>) -> HostEvalOutcome {
+        if self.poisoned {
+            return poisoned_eval_outcome();
+        }
+
+        self.guard(
+            |session| match session.session.eval_file_request(path) {
+                Ok(response) => HostEvalOutcome::Success(eval_success_from_runtime(response)),
+                Err(failure) => eval_failure_from_runtime(failure),
+            },
             panic_eval_outcome,
         )
     }
@@ -333,6 +401,16 @@ impl HostSession {
             },
             panic_eval_outcome,
         )
+    }
+
+    /// Queues one response for a later `Input` or `InputString` call.
+    ///
+    /// This is the intended way to pre-supply input for batch and script
+    /// evaluation. Queue responses in consumption order before calling
+    /// [`Self::eval_script`] or [`Self::eval_file`]. [`Self::reset`] clears all
+    /// queued responses.
+    pub fn queue_input_response(&mut self, input: impl Into<String>) {
+        self.session.queue_input_response(input);
     }
 
     /// Resumes a pending `Input` or `InputString` continuation.

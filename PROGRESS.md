@@ -979,3 +979,23 @@ by a new adapter test. Gate: scope exact (7 files, all MAY-listed),
 fmt clean, workspace 1488/0 reproduced, key claims reproduced by name
 (Exit[7] -> Some(7), reset truth table, literal-value success). No A/B:
 failure-path metadata + adapter classification only, no eval hot path.
+
+## 2026-07-16 — brief-237: trusted-host contract surface (embedding line a2a)
+
+Four additive HostSession methods lifting existing Session capabilities
+to the embedding contract (zero kernel changes; every method = guarded
+forward + existing outcome mapping): set_print_sink/clear_print_sink
+(EXCLUSIVE streaming — prints buffer stays empty while a sink is
+installed; sink does not survive reset, documented alongside the
+cancel-handle invalidation), eval_script (multi-form, last-form value +
+termination, aggregated messages/prints), eval_file (reads through the
+FileIo provider; provider-less/sandboxed fails as Other), and
+queue_input_response (the intended batch-input channel, replacing
+rum-cli's input-suspension smuggling). Status quo pinned, not changed:
+script suspension surfaces as InputRequired but is NOT resumable —
+resume_with_input fails with Other and remaining forms are not
+evaluated (a documented seam for a future consumer-driven brief).
+Gate: scope exact (3 files), fmt clean, workspace 1494/0 reproduced
+(+6 contract tests, each rerun by name). No A/B: additive host facade
+only, no kernel code touched. Next: a2b (rum-cli dogfood port,
+microbench A/B hard gate).
