@@ -938,3 +938,26 @@ b-line status: b1-b4 DONE (termination discriminator, request memory
 ceiling, stdout hard line, isolation/crash-only contract). Remaining:
 b5 — the rum protocol host prototype (syntax-highlight role) validated
 against dun's hosts/check-host.py.
+
+## 2026-07-16 — Embedding line (a) OPENED: scenario design + consumer survey
+
+Concern (a) of the host-embedding line opened per the sequencing ruling
+(scenario design first, no bricklaying on instinct). Landed
+docs/dev/embedding-api-line.md as the line's canonical doc: three
+user-supplied abstract scenario families (Python/AI-infra adapter,
+Rust/wasm tooling, tauri typst IDE — dun's ancestor) + a survey of the
+four in-tree consumers with findings F1-F8 (rum-cli smuggles host data
+through the input-suspension machinery; HostTyped has zero consumers;
+the b1 termination discriminator is unadopted — rum-jupyter still
+string-matches TerminatedEvaluation["Cancelled"]; HostFailureCode::Exit
+drops the exit status; streaming prints and script/file eval exist only
+below the contract). USER RULINGS: dogfood = stance A (in-tree trusted
+hosts port onto rum-host; rum-cli first with a microbench A/B hard
+gate); brief queue signed off as a1 contract-honesty → a2 trusted-host
+surface + dogfood port → a3 typed bridge out → a4 typed bridge in →
+a5 named profiles. Also recorded (Q&A): fs/os/net future attach
+architecture needs no new invention (register_builtin/installer +
+capability gate + provider seams), with three design prerequisites —
+the Capability u8 bitmask is FULL (a Network variant forces a widening),
+blocking syscalls do not observe cancel, stateful handles vs
+snapshot/reset.

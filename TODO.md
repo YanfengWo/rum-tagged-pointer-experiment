@@ -57,10 +57,15 @@ first.
   boundary-clean (generic sandbox primitives, zero dun/editor naming).
 
 **fs/os/net downstream capabilities: DEFERRED until after publication
-(user 2026-07-15) — not the next target.** NEXT: concern (a), a new
-session, opening with a scenario-design pass (candidate gaps in the
-diagnosis doc; in-tree consumers rum-repl/jupyter/terminal/cli are
-scenario material).
+(user 2026-07-15) — not the next target.** NEXT: concern (a) — the
+scenario-design pass LANDED 2026-07-16
+([docs/dev/embedding-api-line.md](./docs/dev/embedding-api-line.md)):
+three user-supplied downstream scenario families (Python/AI-infra, Rust/
+wasm tooling, tauri typst IDE = dun's ancestor) + in-tree consumer survey
+(findings F1-F8: typed-input smuggling in rum-cli, `HostTyped` zero
+consumers, b1 discriminator unadopted, `Exit` status dropped at the
+contract, streaming/script eval below the contract only) + ranked
+requirements + proposed brief queue a1-a5 (pending user sign-off).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in

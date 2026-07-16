@@ -24,7 +24,11 @@ with a scenario-design pass (candidate gaps: `HostTyped` richness, typed
 `call`, named embedding profiles, per-request rollback API — see the concern
 (a) inventory below; in-tree consumers rum-repl/jupyter/terminal/cli are
 scenario material). See `dun-plugin-requirements-line` memory for the full
-ruling chain.
+ruling chain. **UPDATE 2026-07-16: the concern-(a) scenario-design pass has
+landed — see `embedding-api-line.md` (three user-supplied downstream
+scenario families + in-tree consumer survey + ranked requirements + proposed
+brief queue). That document supersedes the inventory below as the (a) line's
+canonical doc.**
 
 ## Framing (user rulings, 2026-07-14)
 
