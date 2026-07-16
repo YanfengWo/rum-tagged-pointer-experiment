@@ -45,12 +45,16 @@ change). The port survey exposed two real contract gaps; fix them first
    `render_to_string_expr(&response.value,
    ToStringFormat::CanonicalHoldFormTransparent)` (both are exported
    via `rum_runtime::kernel_api`). Update the `HostValue.text` rustdoc:
-   display-rendered, top-level `HoldForm`-transparent, matching what an
-   interactive front end shows; `HostTyped` keeps the structural view.
-   The ONLY output this may change anywhere is a top-level-`HoldForm`
-   success value (e.g. jupyter's text/plain for `HoldForm[1+1]` becomes
-   `1 + 1` — the WL display semantics; that direction is the fix). If
-   any existing test expectation changes for any OTHER reason, STOP.
+   canonical-rendered with one top-level `HoldForm` peeled, matching
+   what the CLI front end shows; `HostTyped` keeps the structural view.
+   REVISION (2026-07-16, after the first dispatch's correct stop-loss):
+   the renderer peels `HoldForm` and then uses the CANONICAL
+   `Expr::to_string()` style — for `HoldForm[1+1]` that is
+   `Plus[1, 1]`, NOT infix `1 + 1`. The ONLY output this may change
+   anywhere is a top-level-`HoldForm` success value (e.g. jupyter's
+   text/plain for `HoldForm[1+1]` goes `HoldForm[Plus[1, 1]]` →
+   `Plus[1, 1]`; that direction is the fix). If any existing test
+   expectation changes for any OTHER reason, STOP.
 2. **`HostFailure.syntax_rendered: Option<String>`** — documented new
    field: `Some(diagnostic.rendered)` iff the failure maps from
    `SessionRequestError::Syntax` (populate at the
@@ -60,7 +64,9 @@ change). The port survey exposed two real contract gaps; fix them first
    (5), `rum-jupyter/src/adapter/render.rs` (2), `worker.rs` (4), plus
    any test literals (list each).
 3. Tests (`rum-host/src/tests.rs`): a top-level `HoldForm[1+1]` eval has
-   `value.text == "1 + 1"`; a syntax failure carries
+   `value.text == "Plus[1, 1]"` (canonical style, `HoldForm` peeled —
+   matching the frozen CLI expectation at
+   `rum-cli/tests/cli.rs:191-202`); a syntax failure carries
    `syntax_rendered == Some(...)` matching the runtime diagnostic's
    `rendered`, and a non-syntax failure carries `None`.
 
@@ -121,11 +127,17 @@ not something to patch around.
 scripts/core-language-microbench.sh   # baseline = pre-port HEAD, candidate = ported tree
 ```
 
-- Run the suite in its rum-vs-rum A/B form twice (two independent
-  rounds). Persist raw `timings.tsv` per run and paste the per-label
-  `rum_seconds` rows for every label in the report, flagging any label
-  whose candidate-vs-baseline delta exceeds the spread between the two
-  baseline runs (the noise floor).
+- BASELINES ALREADY EXIST (first dispatch ran them before its
+  stop-loss): `/tmp/rum-brief-238-a2b/baseline-round-1/timings.tsv`,
+  `/tmp/rum-brief-238-a2b/baseline-round-2/timings.tsv`, preserved
+  baseline binary `/tmp/rum-brief-238-a2b/baseline-rum-cli`
+  (SHA-256 `e0296c99904257ee493a7bf14898294dd6aadf2e61cd86a4cc7811588e514c88`).
+  Verify the checksum and reuse them if intact; re-run baselines only
+  if missing or the checksum mismatches.
+- Run TWO candidate rounds. Persist raw `timings.tsv` per run and
+  paste the per-label `rum_seconds` rows for every label in the
+  report, flagging any label whose candidate-vs-baseline delta exceeds
+  the spread between the two baseline runs (the noise floor).
 - Expectation: the port adds one guard/outcome-mapping layer per
   PROCESS (start-up), not per evaluation step — labels should move
   within noise. If any label regresses beyond the baseline-vs-baseline
