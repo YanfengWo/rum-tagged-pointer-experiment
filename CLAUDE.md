@@ -135,6 +135,23 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
+- **ACTIVE: CLEANUP + MESSAGE-REGISTRY LINE (user ruling 2026-07-17;
+  queue in TODO.md §ACTIVE PLAN).** In order: (1) builtin message-tag
+  registry + docgen pairing (opens with the brief-243 inventory audit);
+  (2) `vm_rhs_template/` fate ruling (gate/delete/keep, evidence-based:
+  env-gated OFF today, 1553 lines, wired only via `runtime/mod.rs`;
+  A/B on a quiet machine); (3) rum-jupyter `signature.rs` hand-rolled
+  sha256 → workspace RustCrypto (+ ZeroMQ flake if it recurs);
+  (4) rum-cli feature forwarding; (5) then the wl15/wfr design pass
+  (structured exceptions, SubValuesHoldAll, ReplaceAllUnheld,
+  ConformSchema operator forms). **Same ruling: the parked pools are
+  CLOSED WON'T-DO** — stdlib parked candidates (ByteArray audit,
+  compression, unicode normalization, ipaddress folk, fuzzing, codec
+  follow-ons) and the embedding parked tail (background-eval helper,
+  per-request rollback API, lighter checkpoint). Standing Engineering
+  Debt stays a record of known limitations, not a queue. fs/os/net
+  stay deferred until after publication. Memory:
+  `message-registry-cleanup-line.md`.
 - **RELEASE TRANSFORMATION LINE — COMPLETE (2026-07-04 → 07-06).** `main`
   itself was transformed into release shape with full history kept (no
   remote; endpoint = clean tree + bundle cold backup; publication mechanics
@@ -227,10 +244,9 @@ rather than duplicating them.
   checkpoint. Cold backup `rum-2026-07-16-3d31e09.bundle`. Watch: a
   rum-jupyter native ZeroMQ ordering flake has surfaced twice
   (brief-165, brief-242; green in isolation both times) — brief it on a
-  third occurrence. **NEXT DIRECTION = user decision** (candidates: the
-  parked builtin message-tag registry + docgen pairing, vm_rhs_template
-  fate, or a new user direction; fs/os/net stay deferred until after
-  publication).
+  third occurrence. **NEXT DIRECTION decided 2026-07-17: the cleanup +
+  message-registry line (top of this section); the parked tail above is
+  closed WON'T-DO by the same ruling.**
   Original sequencing (user 2026-07-14): concern (b) dun pure-sandbox +
   protocol conformance FIRST (explicit requirements, clear boundary),
   concern (a) general embedding API only AFTER (b) completes, and (a) MUST

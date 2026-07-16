@@ -3,6 +3,39 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
+## ACTIVE PLAN — cleanup + message-registry line (user ruling 2026-07-17)
+
+Queue, in order; each item gates before the next starts:
+
+1. [ ] **Builtin message-tag registry (+ docgen pairing)** — the unit-8
+   deferred project, now active. ~114 `push_message` sites with no static
+   catalog; `Messages[Set]` empty even right after `Set::argx` fires.
+   Opens with an inventory audit (brief-243), then registry design +
+   wiring briefs. Brief-213's `Information` `Messages` field lights up
+   from the same source.
+2. [ ] **`vm_rhs_template/` fate ruling** — gate/delete/keep, decided on
+   measured evidence (`RUM_VM_RHS_TEMPLATE` on-vs-off microbench A/B on a
+   quiet machine; today it is env-gated OFF, 1553 lines, wired only via
+   `runtime/mod.rs`).
+3. [ ] **rum-jupyter `signature.rs` sha256 debt** — replace the hand-rolled
+   `sha256_compress` with the workspace `sha2`/RustCrypto path; fold in
+   the ZeroMQ ordering flake if it has recurred (two sightings so far:
+   brief-165, brief-242).
+4. [ ] **rum-cli feature forwarding** — make the CLI binary
+   feature-trimmable (forward `rum-stdlib` features such as `hash`).
+5. [ ] Then: a design pass over the wl15/wfr feature candidates —
+   structured exceptions (folk scope), `SubValuesHoldAll`-equivalent,
+   `ReplaceAllUnheld`, ConformSchema/SchemaErrors operator forms (the
+   last three share the usability pass's hold design appendix).
+
+**WON'T-DO ruling (user 2026-07-17): the parked pools are CLOSED, not
+parked.** Stdlib parked candidates (`ByteArray` depth audit, compression
+codecs, unicode normalization, ipaddress folk, fuzzing, codec follow-ons)
+and the embedding line's parked tail (background-eval helper, per-request
+rollback API, lighter checkpoint) are all WON'T-DO; re-open only on an
+explicit new user ruling. Standing Engineering Debt entries below remain
+as records of known limitations, not scheduled work.
+
 ## Feature-Gating Policy (ADOPTED 2026-07-07)
 
 External-dependency stdlib families must not be forced on users who do not
@@ -146,9 +179,10 @@ bidirectional and injection-safe; the contract carries exit status,
 syntax diagnostics, reset classification, streaming prints,
 script/file eval, queued input, lower_dump, message_catalog, and three
 named capability-pinned profiles. Canonical doc:
-docs/dev/embedding-api-line.md. Next direction = user decision
-(fs/os/net remain deferred until after publication per the 2026-07-15
-ruling; parked candidates live in the line doc's queue tail).
+docs/dev/embedding-api-line.md. Next direction DECIDED 2026-07-17: the
+ACTIVE PLAN at the top of this file (fs/os/net remain deferred until
+after publication per the 2026-07-15 ruling; the line doc's parked queue
+tail is closed WON'T-DO by the same 2026-07-17 ruling).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in
@@ -488,8 +522,9 @@ string-pattern surface. Batches, evidence-ranked:
   \'\'\' raw (TOML-mirror), formatter-verbatim, derivative syntax pinned.
 - [x] Schema/validation helpers DONE (48ceecf, brief-155): SchemaErrors +
   ConformSchema — patterns are the type language.
-- [ ] Candidates parked: `ByteArray` depth audit; compression codecs;
-  unicode normalization; ipaddress folk; fuzzing; codec follow-ons.
+- [x] CLOSED WON'T-DO (user ruling 2026-07-17; was "candidates parked"):
+  `ByteArray` depth audit; compression codecs; unicode normalization;
+  ipaddress folk; fuzzing; codec follow-ons.
 - [ ] WL15 survey outcomes (2026-07-07, docs/dev/wl15-core-survey.md):
   (a) `SubValuesHoldAll`-equivalent — worth doing, FROZEN until the
   perf moratorium lifts (argument-evaluation path); design with the

@@ -9,10 +9,11 @@ rum-runtime/rum-stdlib dependency at all); a3 typed bridge out
 (Bool/Association/Rule + jupyter application/json consumer); a4 typed
 bridge in (expr_from_typed + injection-safe HostSession::call; kernel
 seam eval_expr_request); a5 named profiles (hermetic/scripting;
-all-8-capability pins). Parked tail (background-eval helper,
-per-request rollback API, lighter checkpoint) remains parked pending
-scenario pull. fs/os/net stay deferred until after publication (user
-2026-07-15).
+all-8-capability pins). The parked tail (background-eval helper,
+per-request rollback API, lighter checkpoint) was CLOSED WON'T-DO by
+user ruling 2026-07-17 — no scenario pull materialized; re-open only on
+an explicit new ruling. fs/os/net stay deferred until after publication
+(user 2026-07-15).
 
 Original opening status: scenario-design pass landed 2026-07-16
 (Claude, own work — not a Codex brief). This opened concern (a) of the
@@ -257,6 +258,8 @@ profiles, then the parked tail.
    rollback API (row 8 — b4's pattern suffices until a consumer
    demonstrates the need), lighter checkpoint for S2's
    rule-base × many-inputs shape.
+   **Update 2026-07-17: all three CLOSED WON'T-DO by user ruling — no
+   scenario pull materialized; re-open only on an explicit new ruling.**
 
 Foreseeable user rulings downstream of this queue (flagged now, decided
 at brief time): a3's jupyter-MIME change is wire-visible (new MIME types
