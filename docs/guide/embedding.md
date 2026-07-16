@@ -373,11 +373,22 @@ The facade also exposes parser, completion, inspection, and completeness
 requests:
 
 - `parse`
+- `lower_dump`
 - `inspect`
 - `inspect_symbol`
+- `message_catalog`
 - `complete`
 - `is_complete`
 
 Those helpers are for adapters and editors.
+
+`lower_dump(source)` is a diagnostic-grade developer-tooling surface. It
+lowers against the session's current context state and returns a canonical core
+expression rendering, but that rendered format is not a stability promise.
+
+`message_catalog(query)` returns the global catalog for `None`, or narrows by a
+symbol or `symbol::tag` selector. An invalid selector returns `None`. Symbol
+inspection also retains its per-symbol message view in
+`HostInspectResponse.message_catalog`.
 
 They do not expose matcher IR, planner internals, or mutable evaluator state.

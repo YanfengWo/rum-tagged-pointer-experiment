@@ -1,8 +1,8 @@
-use rum_runtime::Session;
-use rum_syntax::{FormatterOptions, format_parsed_source, parse_format_command};
-use rum_terminal::{
-    render_inspect_response, render_message_catalog_entries, render_request_failure,
+use rum_host::{HostCompletionRequest, HostSession};
+use rum_syntax::{
+    FormatterOptions, format_parsed_source, parse_format_command, parse_with_diagnostics,
 };
+use rum_terminal::{render_host_failure, render_host_inspect, render_host_message_catalog};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum ReplCommand {
@@ -81,7 +81,7 @@ pub(super) fn parse_repl_command(line: &str) -> Result<Option<ReplCommand>, Stri
 }
 
 pub(super) fn execute_repl_command(
-    session: &mut Session,
+    session: &mut HostSession,
     history: &[String],
     command: ReplCommand,
 ) -> CommandExecution {
@@ -92,24 +92,24 @@ pub(super) fn execute_repl_command(
             CommandExecution::Output("! :parse expects an expression".to_string())
         }
         ReplCommand::Parse { expr: Some(expr) } => {
-            CommandExecution::Output(match session.parse_request(&expr) {
-                Ok(response) => response.parsed.debug_dump(),
-                Err(failure) => render_request_failure(&failure),
+            CommandExecution::Output(match parse_with_diagnostics(&expr) {
+                Ok(parsed) => parsed.debug_dump(),
+                Err(diagnostic) => diagnostic.render(),
             })
         }
         ReplCommand::Format { expr, options } => {
-            CommandExecution::Output(match session.parse_request(&expr) {
-                Ok(response) => format_parsed_source(&response.parsed, options),
-                Err(failure) => render_request_failure(&failure),
+            CommandExecution::Output(match parse_with_diagnostics(&expr) {
+                Ok(parsed) => format_parsed_source(&parsed, options),
+                Err(diagnostic) => diagnostic.render(),
             })
         }
         ReplCommand::Lower { expr: None } => {
             CommandExecution::Output("! :lower expects an expression".to_string())
         }
         ReplCommand::Lower { expr: Some(expr) } => {
-            CommandExecution::Output(match session.lower_request(&expr) {
-                Ok(response) => response.expr.to_string(),
-                Err(failure) => render_request_failure(&failure),
+            CommandExecution::Output(match session.lower_dump(&expr) {
+                Ok(rendered) => rendered,
+                Err(failure) => render_host_failure(&failure),
             })
         }
         ReplCommand::History { limit } => CommandExecution::Output(render_history(history, limit)),
@@ -119,11 +119,12 @@ pub(super) fn execute_repl_command(
         ReplCommand::Complete {
             prefix: Some(prefix),
         } => {
-            let completions = session.complete_symbol_prefix(&prefix);
-            let rendered = if completions.is_empty() {
+            let cursor_offset = prefix.len();
+            let completion = session.complete(HostCompletionRequest::new(&prefix, cursor_offset));
+            let rendered = if completion.matches.is_empty() {
                 "(no completions)".to_string()
             } else {
-                completions.join("\n")
+                completion.matches.join("\n")
             };
             CommandExecution::Output(rendered)
         }
@@ -131,15 +132,16 @@ pub(super) fn execute_repl_command(
             CommandExecution::Output("! :inspect expects a symbol name".to_string())
         }
         ReplCommand::Inspect { name: Some(name) } => {
-            let rendered = if let Some(response) = session.inspect_request(&name) {
-                render_inspect_response(&response)
+            let response = session.inspect_symbol(&name);
+            let rendered = if response.found {
+                render_host_inspect(&response)
             } else {
                 format!("! unknown symbol `{name}`")
             };
             CommandExecution::Output(rendered)
         }
         ReplCommand::Messages { query } => {
-            let rendered = match session.inspect_message_catalog(query.as_deref()) {
+            let rendered = match session.message_catalog(query.as_deref()) {
                 None => {
                     let name = query.as_deref().unwrap_or("<invalid>");
                     format!("! invalid message selector `{name}`")
@@ -148,7 +150,7 @@ pub(super) fn execute_repl_command(
                     Some(name) => format!("! no messages for `{name}`"),
                     None => "(no message definitions)".to_string(),
                 },
-                Some(entries) => render_message_catalog_entries(&entries),
+                Some(entries) => render_host_message_catalog(&entries),
             };
             CommandExecution::Output(rendered)
         }
@@ -227,7 +229,7 @@ mod tests {
     fn execute_history_renders_numbered_entries() {
         let history = vec!["1 + 2".to_string(), "f[\n1\n]".to_string()];
         let rendered = match execute_repl_command(
-            &mut Session::new(),
+            &mut HostSession::new(),
             &history,
             ReplCommand::History { limit: None },
         ) {

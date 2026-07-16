@@ -9,10 +9,6 @@ categories.workspace = true
 description = "Interactive shell layer for rum."
 
 [dependencies]
-rum-runtime = { path = "../rum-runtime" }
+rum-host = { path = "../rum-host" }
 rum-syntax = { path = "../rum-syntax" }
 rum-terminal = { path = "../rum-terminal" }
-
-[dev-dependencies]
-rum-host = { path = "../rum-host" }
-rum-stdlib = { path = "../rum-stdlib" }

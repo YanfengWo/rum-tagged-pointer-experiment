@@ -3,8 +3,10 @@ use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
-use rum_runtime::{Session, SessionRequestError, SessionRequestFailure};
-use rum_terminal::{render_eval_response, render_request_failure};
+use rum_host::{
+    HostCompletenessStatus, HostEvalOutcome, HostFailure, HostInputSuspension, HostSession,
+};
+use rum_terminal::{render_host_eval_response, render_host_failure, render_host_messages};
 
 mod commands;
 use self::commands::*;
@@ -51,7 +53,7 @@ where
         self
     }
 
-    pub fn run(&mut self, session: &mut Session) -> io::Result<()> {
+    pub fn run(&mut self, session: &mut HostSession) -> io::Result<()> {
         let mut buffer = String::new();
 
         loop {
@@ -73,14 +75,9 @@ where
                 let pending = buffer.trim();
 
                 if !pending.is_empty() {
-                    if let Err(failure) = session.parse_request(pending) {
-                        self.record_history(pending);
-                        write_request_failure(&mut self.output, &failure)?;
-                        return Ok(());
-                    }
-
-                    self.record_history(pending);
-                    self.evaluate_input(session, pending)?;
+                    let input = pending.to_string();
+                    self.record_history(&input);
+                    self.evaluate_input(session, &input)?;
                 }
 
                 return Ok(());
@@ -113,28 +110,27 @@ where
 
             let pending = buffer.trim();
 
-            match session.parse_request(pending) {
-                Ok(_) => {
+            match session.is_complete(pending).status {
+                HostCompletenessStatus::Complete | HostCompletenessStatus::Invalid => {
                     let input = pending.to_string();
                     buffer.clear();
                     self.record_history(&input);
                     self.evaluate_input(session, &input)?;
                 }
-                Err(failure) if request_failure_is_incomplete(&failure) => continue,
-                Err(failure) => {
-                    let input = pending.to_string();
-                    buffer.clear();
-                    self.record_history(&input);
-                    write_request_failure(&mut self.output, &failure)?;
-                }
+                HostCompletenessStatus::Incomplete => continue,
             }
         }
     }
 
-    fn evaluate_input(&mut self, session: &mut Session, input: &str) -> io::Result<()> {
-        match session.eval_request(input) {
-            Ok(response) => writeln!(self.output, "{}", render_eval_response(&response)),
-            Err(failure) => write_request_failure(&mut self.output, &failure),
+    fn evaluate_input(&mut self, session: &mut HostSession, input: &str) -> io::Result<()> {
+        match session.eval(input) {
+            HostEvalOutcome::Success(response) => {
+                writeln!(self.output, "{}", render_host_eval_response(&response))
+            }
+            HostEvalOutcome::Failure(failure) => write_host_failure(&mut self.output, &failure),
+            HostEvalOutcome::InputRequired(suspension) => {
+                writeln!(self.output, "{}", render_input_suspension(&suspension))
+            }
         }
     }
 
@@ -191,7 +187,7 @@ where
 
     fn try_handle_command(
         &mut self,
-        session: &mut Session,
+        session: &mut HostSession,
         line: &str,
     ) -> io::Result<Option<CommandExecution>> {
         let Some(command) = (match parse_repl_command(line) {
@@ -277,18 +273,21 @@ fn decode_history_line(line: &str) -> String {
     decoded
 }
 
-fn request_failure_is_incomplete(failure: &SessionRequestFailure) -> bool {
-    matches!(
-        &failure.error,
-        SessionRequestError::Syntax(diagnostic) if diagnostic.is_incomplete
-    )
+fn render_input_suspension(suspension: &HostInputSuspension) -> String {
+    let mut output = render_host_messages(&suspension.messages);
+    if !output.is_empty() {
+        output.push('\n');
+    }
+    output.push_str("! input required");
+    if !suspension.request.prompt.is_empty() {
+        output.push_str(": ");
+        output.push_str(&suspension.request.prompt);
+    }
+    output
 }
 
-fn write_request_failure<W: Write>(
-    output: &mut W,
-    failure: &SessionRequestFailure,
-) -> io::Result<()> {
-    writeln!(output, "{}", render_request_failure(failure))
+fn write_host_failure<W: Write>(output: &mut W, failure: &HostFailure) -> io::Result<()> {
+    writeln!(output, "{}", render_host_failure(failure))
 }
 
 #[cfg(test)]

@@ -1,70 +1,68 @@
 use std::fmt::Write;
 
-use rum_runtime::{
-    DefinitionCatalogEntry, DefinitionKind, MessageCatalogEntry, RuntimeMessage,
-    SessionEvalResponse, SessionInspectResponse, SessionRequestError, SessionRequestFailure,
-    kernel_api::{ToStringFormat, render_to_string_expr},
+use rum_host::{
+    HostDefinition, HostEvalSuccess, HostFailure, HostFailureCode, HostInspectResponse,
+    HostMessage, HostMessageTemplate,
 };
 
-pub fn render_runtime_message(message: &RuntimeMessage) -> String {
-    format!("! {message}")
+pub fn render_host_message(message: &HostMessage) -> String {
+    format!("! {}::{}: {}", message.symbol, message.tag, message.text)
 }
 
-pub fn render_runtime_messages(messages: &[RuntimeMessage]) -> String {
+pub fn render_host_messages(messages: &[HostMessage]) -> String {
     messages
         .iter()
-        .map(render_runtime_message)
+        .map(render_host_message)
         .collect::<Vec<_>>()
         .join("\n")
 }
 
-pub fn render_request_failure(failure: &SessionRequestFailure) -> String {
-    let mut output = String::new();
-
-    if !failure.messages.is_empty() {
-        output.push_str(&render_runtime_messages(&failure.messages));
+pub fn render_host_failure(failure: &HostFailure) -> String {
+    let mut output = render_host_messages(&failure.messages);
+    if !output.is_empty() {
         output.push('\n');
     }
 
-    match &failure.error {
-        SessionRequestError::Syntax(diagnostic) => output.push_str(&diagnostic.rendered),
-        error => {
-            write!(&mut output, "! {error}").unwrap();
-        }
+    if failure.code == HostFailureCode::Syntax {
+        output.push_str(
+            failure
+                .syntax_rendered
+                .as_deref()
+                .expect("syntax host failures carry a rendered diagnostic"),
+        );
+    } else {
+        output.push_str("! ");
+        output.push_str(&failure.message);
     }
 
     output
 }
 
-pub fn render_eval_response(response: &SessionEvalResponse) -> String {
+pub fn render_host_eval_response(response: &HostEvalSuccess) -> String {
     let mut output = String::new();
 
     if !response.messages.is_empty() {
-        output.push_str(&render_runtime_messages(&response.messages));
+        output.push_str(&render_host_messages(&response.messages));
         output.push('\n');
     }
 
-    output.push_str(&render_eval_value(response));
+    output.push_str(&response.value.text);
     output
 }
 
-pub fn render_eval_value(response: &SessionEvalResponse) -> String {
-    render_to_string_expr(
-        &response.value,
-        ToStringFormat::CanonicalHoldFormTransparent,
-    )
-}
-
-pub fn render_inspect_response(response: &SessionInspectResponse) -> String {
+pub fn render_host_inspect(response: &HostInspectResponse) -> String {
     let mut output = String::new();
-    let info = &response.info;
+    let info = response
+        .info
+        .as_ref()
+        .expect("found host inspection responses carry symbol information");
     let mut flags = Vec::new();
 
     if info.is_builtin {
         flags.push("builtin");
     }
 
-    if info.attribute_count > 0 {
+    if !info.attributes.is_empty() {
         flags.push("attr");
     }
 
@@ -88,7 +86,7 @@ pub fn render_inspect_response(response: &SessionInspectResponse) -> String {
         flags.push("sub");
     }
 
-    if info.message_count > 0 {
+    if !info.message_tags.is_empty() {
         flags.push("msg");
     }
 
@@ -96,7 +94,7 @@ pub fn render_inspect_response(response: &SessionInspectResponse) -> String {
         &mut output,
         "{} :: {}{}",
         info.qualified_name,
-        info.summary.clone().unwrap_or_default(),
+        info.summary.as_deref().unwrap_or_default(),
         if flags.is_empty() {
             String::new()
         } else {
@@ -129,27 +127,22 @@ pub fn render_inspect_response(response: &SessionInspectResponse) -> String {
     let own_entries = response
         .definitions
         .iter()
-        .filter(|entry| {
-            matches!(
-                entry.kind,
-                DefinitionKind::OwnValue | DefinitionKind::DelayedOwnValue
-            )
-        })
+        .filter(|entry| matches!(entry.kind.as_str(), "OwnValue" | "DelayedOwnValue"))
         .collect::<Vec<_>>();
     let up_entries = response
         .definitions
         .iter()
-        .filter(|entry| entry.kind == DefinitionKind::UpValue)
+        .filter(|entry| entry.kind == "UpValue")
         .collect::<Vec<_>>();
     let down_entries = response
         .definitions
         .iter()
-        .filter(|entry| entry.kind == DefinitionKind::DownValue)
+        .filter(|entry| entry.kind == "DownValue")
         .collect::<Vec<_>>();
     let sub_entries = response
         .definitions
         .iter()
-        .filter(|entry| entry.kind == DefinitionKind::SubValue)
+        .filter(|entry| entry.kind == "SubValue")
         .collect::<Vec<_>>();
 
     if !own_entries.is_empty() {
@@ -210,7 +203,7 @@ pub fn render_inspect_response(response: &SessionInspectResponse) -> String {
     output.trim_end().to_string()
 }
 
-pub fn render_message_catalog_entries(entries: &[MessageCatalogEntry]) -> String {
+pub fn render_host_message_catalog(entries: &[HostMessageTemplate]) -> String {
     entries
         .iter()
         .map(|entry| {
@@ -225,7 +218,7 @@ pub fn render_message_catalog_entries(entries: &[MessageCatalogEntry]) -> String
         .join("\n")
 }
 
-fn format_definition_entry(entry: &DefinitionCatalogEntry) -> String {
+fn format_definition_entry(entry: &HostDefinition) -> String {
     format!(
         "{} {} {}",
         entry.lhs,
@@ -236,118 +229,127 @@ fn format_definition_entry(entry: &DefinitionCatalogEntry) -> String {
 
 #[cfg(test)]
 mod tests {
-    use rum_core::{BigInt, Expr};
-    use rum_runtime::{
-        RuntimeMessage, SessionInspectResponse, SessionRequestError, SessionRequestFailure,
-        SymbolInfo,
+    use rum_host::{
+        HostStructuredOutput, HostSymbolInfo, HostTerminationReason, HostTraceEvent, HostTyped,
+        HostValue,
     };
-    use rum_syntax::StructuredSourceDiagnostic;
 
     use super::*;
 
-    fn eval_response(value: Expr) -> SessionEvalResponse {
-        SessionEvalResponse {
-            value,
-            termination: None,
+    fn eval_response(text: &str) -> HostEvalSuccess {
+        HostEvalSuccess {
+            value: HostValue {
+                text: text.to_string(),
+                typed: HostTyped::Other {
+                    head: "Test".to_string(),
+                    text: text.to_string(),
+                },
+            },
+            termination: None::<HostTerminationReason>,
             messages: Vec::new(),
             prints: Vec::new(),
-            trace: Vec::new(),
+            trace: Vec::<HostTraceEvent>::new(),
+            outputs: Vec::<HostStructuredOutput>::new(),
         }
     }
 
-    fn call(name: &str, args: Vec<Expr>) -> Expr {
-        Expr::call(Expr::system_symbol(name), args)
-    }
-
     #[test]
-    fn eval_value_renders_hold_form_transparently_in_canonical_style() {
-        let plus = call(
-            "Plus",
-            vec![
-                Expr::integer(BigInt::from(1_i32)),
-                Expr::integer(BigInt::from(1_i32)),
-            ],
-        );
-        let held = call("HoldForm", vec![plus.clone()]);
-
+    fn host_eval_response_uses_hold_transparent_canonical_contract_text() {
         assert_eq!(
-            render_eval_value(&eval_response(held.clone())),
+            render_host_eval_response(&eval_response("Plus[1, 1]")),
             "Plus[1, 1]"
         );
         assert_eq!(
-            render_eval_value(&eval_response(call("List", vec![held]))),
+            render_host_eval_response(&eval_response("List[Plus[1, 1]]")),
             "List[Plus[1, 1]]"
         );
     }
 
     #[test]
-    fn eval_value_without_hold_form_keeps_canonical_bytes() {
-        let value = call(
-            "List",
-            vec![
-                Expr::integer(BigInt::from(2_i32)),
-                Expr::call(Expr::symbol("f"), vec![Expr::symbol("a")]),
-            ],
+    fn host_eval_response_keeps_canonical_contract_bytes() {
+        assert_eq!(
+            render_host_eval_response(&eval_response("List[2, f[a]]")),
+            "List[2, f[a]]"
         );
-        let response = eval_response(value.clone());
-
-        assert_eq!(render_eval_value(&response), value.to_string());
-        assert_eq!(render_eval_value(&response), "List[2, f[a]]");
     }
 
     #[test]
-    fn request_failure_renders_messages_before_syntax_diagnostic() {
-        let failure = SessionRequestFailure {
-            error: SessionRequestError::Syntax(StructuredSourceDiagnostic {
-                message: "expected ,".to_string(),
-                rendered: "error: expected ,\n --> 1:5".to_string(),
-                is_incomplete: false,
-                spans: Vec::new(),
-            }),
-            messages: vec![RuntimeMessage {
+    fn host_failure_renders_messages_before_syntax_diagnostic() {
+        let failure = HostFailure {
+            code: HostFailureCode::Syntax,
+            exit_status: None,
+            message: "expected ,".to_string(),
+            syntax_rendered: Some("error: expected ,\n --> 1:5".to_string()),
+            messages: vec![HostMessage {
                 symbol: "FindFile".to_string(),
                 tag: "notfound".to_string(),
                 text: "missing".to_string(),
             }],
             prints: Vec::new(),
             trace: Vec::new(),
+            outputs: Vec::new(),
         };
 
-        let rendered = render_request_failure(&failure);
+        let rendered = render_host_failure(&failure);
         assert!(rendered.starts_with("! FindFile::notfound: missing\nerror: expected ,"));
     }
 
     #[test]
-    fn inspect_response_renders_summary_and_definition_lines() {
-        let response = SessionInspectResponse {
-            info: SymbolInfo {
+    fn host_inspect_renders_summary_and_definition_lines() {
+        let response = HostInspectResponse {
+            target: Some("f".to_string()),
+            found: true,
+            info: Some(HostSymbolInfo {
                 qualified_name: "Global`f".to_string(),
                 context: "Global`".to_string(),
                 display_name: "f".to_string(),
                 summary: None,
                 is_builtin: false,
-                attribute_count: 0,
                 attributes: Vec::new(),
                 has_own_value: false,
                 has_delayed_value: false,
                 has_up_values: false,
                 has_down_values: true,
                 has_sub_values: false,
-                message_count: 1,
                 message_tags: vec!["usage".to_string()],
-            },
-            definitions: vec![DefinitionCatalogEntry {
-                kind: DefinitionKind::DownValue,
-                lhs: Expr::symbol("f"),
-                rhs: Expr::integer(BigInt::from(1_i32)),
+            }),
+            definitions: vec![HostDefinition {
+                kind: "DownValue".to_string(),
+                lhs: "f".to_string(),
+                rhs: "1".to_string(),
                 delayed: true,
             }],
             message_catalog: Vec::new(),
         };
 
-        let rendered = render_inspect_response(&response);
+        let rendered = render_host_inspect(&response);
         assert!(rendered.contains("Global`f ::"));
         assert!(rendered.contains("messages[1]: usage"));
         assert!(rendered.contains("down[1]: f := 1"));
+    }
+
+    #[test]
+    fn host_message_catalog_renders_immediate_and_delayed_templates() {
+        let entries = vec![
+            HostMessageTemplate {
+                message_name: "f::argx".to_string(),
+                qualified_symbol_name: "Global`f".to_string(),
+                tag: "argx".to_string(),
+                template: "\"bad arg\"".to_string(),
+                delayed: false,
+            },
+            HostMessageTemplate {
+                message_name: "f::usage".to_string(),
+                qualified_symbol_name: "Global`f".to_string(),
+                tag: "usage".to_string(),
+                template: "suffix".to_string(),
+                delayed: true,
+            },
+        ];
+
+        assert_eq!(
+            render_host_message_catalog(&entries),
+            "f::argx = \"bad arg\"\nf::usage := suffix"
+        );
     }
 }

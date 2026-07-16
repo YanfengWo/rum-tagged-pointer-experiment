@@ -13,9 +13,10 @@ use crate::cursor::{completion_prefix, symbol_at_cursor};
 use crate::model::{
     HostCompletionRequest, HostCompletionResponse, HostDefinitionSummary, HostEvalOutcome,
     HostEvalRequest, HostFailure, HostFailureCode, HostInputSuspension, HostInspectRequest,
-    HostInspectResponse, HostIsCompleteRequest, HostIsCompleteResponse, HostParseRequest,
-    HostParseResponse, completeness_status, eval_failure_from_runtime, eval_success_from_runtime,
-    host_failure_from_runtime, inspect_response_from_runtime, synthesized_host_failure,
+    HostInspectResponse, HostIsCompleteRequest, HostIsCompleteResponse, HostMessageTemplate,
+    HostParseRequest, HostParseResponse, completeness_status, eval_failure_from_runtime,
+    eval_success_from_runtime, host_failure_from_runtime, inspect_response_from_runtime,
+    synthesized_host_failure,
 };
 
 /// Builder for [`HostSession`].
@@ -286,6 +287,30 @@ impl HostSession {
         )
     }
 
+    /// Lowers source and returns its canonical core-expression rendering.
+    ///
+    /// This is a diagnostic-grade surface for developer tooling. The rendered
+    /// format is not a stability promise. Lowering resolves symbols against the
+    /// session's current context state.
+    ///
+    /// A poisoned session returns [`HostFailureCode::Poisoned`].
+    pub fn lower_dump(&mut self, source: &str) -> Result<String, HostFailure> {
+        if self.poisoned {
+            return Err(poisoned_failure());
+        }
+
+        self.guard(
+            |session| {
+                session
+                    .session
+                    .lower_request(source)
+                    .map(|response| response.expr.to_string())
+                    .map_err(host_failure_from_runtime)
+            },
+            |message| Err(panic_failure(message)),
+        )
+    }
+
     /// Evaluates source and returns a structured host outcome.
     ///
     /// Input suspension is reported as [`HostEvalOutcome::InputRequired`] and
@@ -372,6 +397,27 @@ impl HostSession {
             .into_iter()
             .map(Into::into)
             .collect()
+    }
+
+    /// Queries message templates globally or through a symbol/message selector.
+    ///
+    /// `None` queries the global catalog. A selector may identify a symbol or a
+    /// specific `symbol::tag`; an invalid selector returns `None`. The
+    /// per-symbol inspection view remains available through
+    /// [`HostInspectResponse::message_catalog`].
+    pub fn message_catalog(&self, query: Option<&str>) -> Option<Vec<HostMessageTemplate>> {
+        self.session.inspect_message_catalog(query).map(|entries| {
+            entries
+                .into_iter()
+                .map(|entry| HostMessageTemplate {
+                    message_name: entry.message_name,
+                    qualified_symbol_name: entry.qualified_symbol_name,
+                    tag: entry.tag,
+                    template: entry.template.to_string(),
+                    delayed: entry.delayed,
+                })
+                .collect()
+        })
     }
 
     /// Returns the names of contexts known to this session.

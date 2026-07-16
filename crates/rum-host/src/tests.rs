@@ -955,6 +955,61 @@ fn host_parse_inspect_complete_and_is_complete_cover_editor_flows() {
 }
 
 #[test]
+fn host_lower_dump_returns_canonical_text_and_rendered_syntax_failures() {
+    let mut session = HostSession::new();
+
+    let lowered = session
+        .lower_dump("x_Integer := f[x]")
+        .expect("valid source should lower");
+    assert!(!lowered.is_empty());
+    assert_eq!(lowered, "SetDelayed[Pattern[x, Blank[Integer]], f[x]]");
+
+    let failure = session
+        .lower_dump("f[1,]")
+        .expect_err("malformed source should fail lowering");
+    assert_eq!(failure.code, HostFailureCode::Syntax);
+    assert!(
+        failure
+            .syntax_rendered
+            .as_deref()
+            .is_some_and(|rendered| rendered.contains("error: expected expression"))
+    );
+}
+
+#[test]
+fn host_message_catalog_supports_global_symbol_and_invalid_queries() {
+    let mut session = HostSession::new();
+    successful_eval(session.eval("f::argx = \"bad arg\""));
+
+    let global = session
+        .message_catalog(None)
+        .expect("the global catalog query should be valid");
+    assert!(global.iter().any(|entry| {
+        entry.message_name == "f::argx"
+            && entry.qualified_symbol_name == "Global`f"
+            && entry.tag == "argx"
+            && entry.template == "\"bad arg\""
+            && !entry.delayed
+    }));
+
+    let symbol = session
+        .message_catalog(Some("f"))
+        .expect("a symbol catalog query should be valid");
+    assert_eq!(
+        symbol,
+        vec![HostMessageTemplate {
+            message_name: "f::argx".to_string(),
+            qualified_symbol_name: "Global`f".to_string(),
+            tag: "argx".to_string(),
+            template: "\"bad arg\"".to_string(),
+            delayed: false,
+        }]
+    );
+
+    assert_eq!(session.message_catalog(Some("f::")), None);
+}
+
+#[test]
 fn host_evaluates_multiline_string_literals_as_ordinary_strings() {
     let mut session = HostSession::new();
 

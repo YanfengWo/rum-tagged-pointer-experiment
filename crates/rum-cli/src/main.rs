@@ -8,12 +8,11 @@ use std::sync::{
 
 use rum_host::{
     HostConfig, HostEvalOutcome, HostEvalSuccess, HostFailure, HostFailureCode, HostInputRequest,
-    HostInputSuspension, HostMessage, HostSession, StdEntropySource, StdFileIo,
+    HostInputSuspension, HostSession, StdEntropySource, StdFileIo,
 };
 use rum_repl::Repl;
-use rum_runtime::Session;
-use rum_stdlib::install_core;
 use rum_syntax::{format_parsed_source, parse_format_cli_args, parse_with_diagnostics};
+use rum_terminal::{render_host_failure, render_host_message, render_host_messages};
 
 // The allocation-counter shim (Layer B B0 measurement) is compiled in ONLY under
 // the `alloc-count` feature. The default build uses bare mimalloc with no wrapper
@@ -54,7 +53,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
 
     match command {
         CommandMode::ReplOrFilter if stdin_is_tty => {
-            let mut session = build_repl_session();
+            let mut session = build_host_session();
             run_repl(&mut session)?;
         }
         CommandMode::Parse(input) => match parse_with_diagnostics(input) {
@@ -199,7 +198,6 @@ fn split_script_args(raw_args: Vec<String>) -> (Vec<String>, Option<Vec<String>>
     (args, Some(script_args))
 }
 
-// a2c will unify this dual construction once the REPL accepts HostSession.
 fn build_host_session() -> HostSession {
     HostSession::builder()
         .with_config(
@@ -210,15 +208,7 @@ fn build_host_session() -> HostSession {
         .build()
 }
 
-fn build_repl_session() -> Session {
-    let mut session = Session::new();
-    session.set_file_io(Some(StdFileIo::provider()));
-    session.set_entropy_source(Some(StdEntropySource::provider()));
-    install_core(&mut session);
-    session
-}
-
-fn run_repl(session: &mut Session) -> io::Result<()> {
+fn run_repl(session: &mut HostSession) -> io::Result<()> {
     let stdin = io::stdin();
     let stdout = io::stdout();
     let mut repl = Repl::new(stdin.lock(), stdout.lock()).with_default_history();
@@ -364,39 +354,6 @@ fn print_failure_side_effects(failure: &HostFailure) {
     for message in &failure.messages {
         eprintln!("{}", render_host_message(message));
     }
-}
-
-fn render_host_message(message: &HostMessage) -> String {
-    format!("! {}::{}: {}", message.symbol, message.tag, message.text)
-}
-
-fn render_host_messages(messages: &[HostMessage]) -> String {
-    messages
-        .iter()
-        .map(render_host_message)
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn render_host_failure(failure: &HostFailure) -> String {
-    let mut output = render_host_messages(&failure.messages);
-    if !output.is_empty() {
-        output.push('\n');
-    }
-
-    if failure.code == HostFailureCode::Syntax {
-        output.push_str(
-            failure
-                .syntax_rendered
-                .as_deref()
-                .expect("syntax host failures carry a rendered diagnostic"),
-        );
-    } else {
-        output.push_str("! ");
-        output.push_str(&failure.message);
-    }
-
-    output
 }
 
 fn render_input_suspension(suspension: &HostInputSuspension) -> String {

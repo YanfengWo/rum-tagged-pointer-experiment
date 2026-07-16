@@ -9,8 +9,4 @@ categories.workspace = true
 description = "Terminal rendering helpers for rum diagnostics, messages, and inspection."
 
 [dependencies]
-rum-runtime = { path = "../rum-runtime" }
-
-[dev-dependencies]
-rum-core = { path = "../rum-core" }
-rum-syntax = { path = "../rum-syntax" }
+rum-host = { path = "../rum-host" }

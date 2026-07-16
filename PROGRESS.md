@@ -1030,3 +1030,30 @@ cand 0.000865). Lesson pinned: A/B rounds must be interleaved (B C B C),
 never sequential blocks — a brief allowing baseline reuse invites
 time-drift artifacts. Gate: scope exact (7 files), fmt clean, workspace
 1495/0 reproduced, raw A/B data under /tmp/rum-238-gate/.
+
+## 2026-07-16 — brief-239: rum-repl dogfood port (embedding line a2c) — a2 arc CLOSED
+
+rum-repl rides the contract: main loop on is_complete (three-state:
+Complete/Invalid submit to eval — syntax failures render via
+syntax_rendered — Incomplete accumulates), commands routed per the user
+rulings (:lower → new HostSession::lower_dump, diagnostic-grade with an
+explicit no-stability-promise rustdoc; :messages → new
+HostSession::message_catalog reusing HostMessageTemplate — the
+MessageCatalogEntry fields map one-for-one, zero new types;
+:parse/:format straight to rum-syntax; :complete/:inspect on the
+existing contract). rum-terminal became the contract-type render-twin
+crate: render_host_message(s)/failure/eval_response/inspect/
+message_catalog, byte-identical (frozen REPL/CLI tests are the oracle);
+all 7 runtime-typed renderers deleted with grep-verified zero
+consumers. rum-cli's dual session construction unified away. Probed
+facts: attribute_count/message_count equal len() (no truncation, no
+field additions needed). Dependency payoff: rum-cli and rum-repl no
+longer depend on rum-runtime or rum-stdlib AT ALL; rum-terminal depends
+only on rum-host — the in-tree hosts are pure contract consumers, which
+was the point of the dogfood ruling. Cargo.lock updated for the shrunk
+dependency graph (Codex correctly left it out of its allowlisted tree;
+the director folded the ripple into the commit). Gate: scope exact (11
+files + lock), fmt clean, workspace 1498/0 reproduced, new tests rerun
+by name. No A/B: REPL is not the perf vehicle; --eval/script paths
+untouched. The a2 dogfood arc (a2a surface, a2b CLI, a2c REPL) is
+CLOSED. Next: a3 (typed value bridge, out).

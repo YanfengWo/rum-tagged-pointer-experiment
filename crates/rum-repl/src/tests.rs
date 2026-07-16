@@ -3,11 +3,16 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 
-use rum_host::StdFileIo;
-use rum_runtime::Session;
-use rum_stdlib::install_core;
+use rum_host::{HostEvalOutcome, HostSession};
 
 use super::Repl;
+
+fn eval_text(session: &mut HostSession, source: &str) {
+    match session.eval(source) {
+        HostEvalOutcome::Success(_) => {}
+        other => panic!("test setup evaluation failed: {other:?}"),
+    }
+}
 
 fn temp_history_path(prefix: &str) -> PathBuf {
     let unique = SystemTime::now()
@@ -22,7 +27,7 @@ fn repl_handles_help_and_quit() {
     let input = Cursor::new(":help\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -36,8 +41,8 @@ fn repl_inspect_command_does_not_fall_through_to_evaluation() {
     let input = Cursor::new(":inspect x\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    session.eval_text("x = 1").unwrap();
+    let mut session = HostSession::new();
+    eval_text(&mut session, "x = 1");
 
     repl.run(&mut session).unwrap();
 
@@ -51,7 +56,7 @@ fn repl_bare_inspect_command_shows_usage_instead_of_evaluating() {
     let input = Cursor::new(":inspect\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -65,8 +70,8 @@ fn repl_inspect_surfaces_message_definition_flags() {
     let input = Cursor::new(":inspect f\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    session.eval_text("f::argx = \"bad arg\"").unwrap();
+    let mut session = HostSession::new();
+    eval_text(&mut session, "f::argx = \"bad arg\"");
 
     repl.run(&mut session).unwrap();
 
@@ -80,8 +85,8 @@ fn repl_inspect_surfaces_attribute_flags() {
     let input = Cursor::new(":inspect f\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    session.eval_text("SetAttributes[f, HoldFirst]").unwrap();
+    let mut session = HostSession::new();
+    eval_text(&mut session, "SetAttributes[f, HoldFirst]");
 
     repl.run(&mut session).unwrap();
 
@@ -95,9 +100,9 @@ fn repl_inspect_shows_definition_summaries() {
     let input = Cursor::new(":inspect x\n:inspect f\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    session.eval_text("x = 1").unwrap();
-    session.eval_text("f[z_Integer] := z").unwrap();
+    let mut session = HostSession::new();
+    eval_text(&mut session, "x = 1");
+    eval_text(&mut session, "f[z_Integer] := z");
 
     repl.run(&mut session).unwrap();
 
@@ -112,9 +117,9 @@ fn repl_messages_lists_catalog_entries_for_a_symbol() {
     let input = Cursor::new(":messages f\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    session.eval_text("f::argx = \"bad arg\"").unwrap();
-    session.eval_text("f::usage := suffix").unwrap();
+    let mut session = HostSession::new();
+    eval_text(&mut session, "f::argx = \"bad arg\"");
+    eval_text(&mut session, "f::usage := suffix");
 
     repl.run(&mut session).unwrap();
 
@@ -128,7 +133,7 @@ fn repl_messages_reports_when_a_symbol_has_no_messages() {
     let input = Cursor::new(":messages f\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -141,8 +146,7 @@ fn repl_renders_runtime_messages_before_results() {
     let input = Cursor::new("FindFile[\"Missing`\"]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    session.set_file_io(Some(StdFileIo::provider()));
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -156,7 +160,7 @@ fn repl_renders_hold_form_transparently_in_canonical_style() {
     let input = Cursor::new("HoldForm[1 + 1]\n{HoldForm[1 + 1]}\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -171,8 +175,7 @@ fn repl_reads_multiline_input_until_a_form_is_complete() {
     let input = Cursor::new("Identity[\n123\n]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    install_core(&mut session);
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -185,7 +188,7 @@ fn repl_parse_command_prints_syntax_debug_output() {
     let input = Cursor::new(":parse f[(* note *) x_Integer]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -203,7 +206,7 @@ fn repl_parse_command_renders_source_diagnostic_for_bad_input() {
     let input = Cursor::new(":parse f[1,]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -218,7 +221,7 @@ fn repl_format_command_prints_canonical_surface_form() {
     let input = Cursor::new(":format (* header *) f [ x_Integer , y ]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -233,7 +236,7 @@ fn repl_format_command_respects_custom_line_width() {
         Cursor::new(":format --line-width 60 f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -247,7 +250,7 @@ fn repl_format_command_accepts_suffix_equals_line_width() {
         Cursor::new(":format f[aaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbb] --line-width=60\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -260,7 +263,7 @@ fn repl_format_command_rejects_invalid_line_width() {
     let input = Cursor::new(":format --line-width nope f[x]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -274,7 +277,7 @@ fn repl_renders_parser_diagnostics_for_regular_input_errors() {
     let input = Cursor::new("f[1,]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -288,7 +291,7 @@ fn repl_lower_command_prints_canonical_core_expression() {
     let input = Cursor::new(":lower x_Integer := f[x]\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -301,9 +304,8 @@ fn repl_complete_command_lists_builtin_and_user_candidates() {
     let input = Cursor::new(":complete Id\n:complete loc\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
-    install_core(&mut session);
-    session.eval_text("localName = 1").unwrap();
+    let mut session = HostSession::new();
+    eval_text(&mut session, "localName = 1");
 
     repl.run(&mut session).unwrap();
 
@@ -320,7 +322,7 @@ fn repl_history_persists_when_a_history_path_is_configured() {
         let input = Cursor::new("1 + 2\n:quit\n");
         let mut output = Vec::new();
         let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
-        let mut session = Session::new();
+        let mut session = HostSession::new();
 
         repl.run(&mut session).unwrap();
     }
@@ -328,7 +330,7 @@ fn repl_history_persists_when_a_history_path_is_configured() {
     let input = Cursor::new(":history\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -349,7 +351,7 @@ fn repl_history_persists_multiline_inputs_as_single_logical_entries() {
         let input = Cursor::new("Identity[\n123\n]\n:quit\n");
         let mut output = Vec::new();
         let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
-        let mut session = Session::new();
+        let mut session = HostSession::new();
 
         repl.run(&mut session).unwrap();
     }
@@ -361,7 +363,7 @@ fn repl_history_persists_multiline_inputs_as_single_logical_entries() {
     let input = Cursor::new(":history\n:quit\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output).with_history_path(&history_path);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 
@@ -377,7 +379,7 @@ fn repl_reports_incomplete_multiline_input_when_input_ends() {
     let input = Cursor::new("Identity[\n123\n");
     let mut output = Vec::new();
     let mut repl = Repl::new(input, &mut output);
-    let mut session = Session::new();
+    let mut session = HostSession::new();
 
     repl.run(&mut session).unwrap();
 

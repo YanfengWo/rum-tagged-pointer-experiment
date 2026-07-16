@@ -608,8 +608,6 @@ dependencies = [
  "mimalloc",
  "rum-host",
  "rum-repl",
- "rum-runtime",
- "rum-stdlib",
  "rum-syntax",
  "rum-terminal",
 ]
@@ -648,8 +646,6 @@ name = "rum-repl"
 version = "0.1.0"
 dependencies = [
  "rum-host",
- "rum-runtime",
- "rum-stdlib",
  "rum-syntax",
  "rum-terminal",
 ]
@@ -689,9 +685,7 @@ dependencies = [
 name = "rum-terminal"
 version = "0.1.0"
 dependencies = [
- "rum-core",
- "rum-runtime",
- "rum-syntax",
+ "rum-host",
 ]
 
 [[package]]

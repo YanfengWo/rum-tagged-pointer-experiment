@@ -95,9 +95,17 @@ gate); queue signed off as a1 → a2 → a3 → a4 → a5.
   4-pair interleaved re-test (5 suspect labels cleared, median Δ 0.00%,
   `with-local`'s apparent +14% shown to be label bistability: the same
   candidate binary observed at both levels). Workspace 1495/0.
-- [ ] a2c: dogfood port of `rum-repl` (per-command contract-vs-raw
-  split = user ruling; rum-terminal contract-type render twins;
-  unify the CLI's dual session construction).
+- [x] a2c (brief-239): `rum-repl` ported onto `HostSession`, output
+  bytes frozen (REPL + CLI expectations unchanged). User rulings
+  applied: `:lower` → contract `lower_dump` (diagnostic-grade, format
+  not a stability promise); `:messages` → contract `message_catalog`
+  (reuses `HostMessageTemplate`; per-symbol view stays on inspect).
+  `:parse`/`:format` go straight to rum-syntax. rum-terminal is now
+  the contract-type render-twin crate (7 dead runtime-typed renderers
+  deleted, grep-verified consumer-free). **rum-cli and rum-repl no
+  longer depend on rum-runtime/rum-stdlib at all — the in-tree hosts
+  are pure rum-host consumers; the a2 dogfood arc is CLOSED.**
+  Workspace 1498/0.
 - [ ] a3: typed value bridge, out — widen `HostTyped`
   (Bool/Association/Rule) + a real consumer (jupyter MIME candidate;
   wire-visible change = user ruling at brief time).
