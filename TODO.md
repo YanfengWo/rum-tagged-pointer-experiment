@@ -106,9 +106,15 @@ gate); queue signed off as a1 → a2 → a3 → a4 → a5.
   longer depend on rum-runtime/rum-stdlib at all — the in-tree hosts
   are pure rum-host consumers; the a2 dogfood arc is CLOSED.**
   Workspace 1498/0.
-- [ ] a3: typed value bridge, out — widen `HostTyped`
-  (Bool/Association/Rule) + a real consumer (jupyter MIME candidate;
-  wire-visible change = user ruling at brief time).
+- [x] a3 (brief-240): typed value bridge, out — `HostTyped` gains
+  `Bool` (True/False convenience mapping), ordered `Association`, and
+  immediate `Rule` variants; delayed entries (`:>`, `RuleDelayed`)
+  honestly stay `Other` (a data view must not present an unevaluated
+  rhs as a value); depth-cap discipline uniform. First real consumer:
+  jupyter execute results gain a conservative `application/json` MIME
+  (user-approved wire addition — only fully-representable trees:
+  Integer/Str/Bool/List/string-keyed deduplicated Association;
+  existing three MIME entries byte-unchanged). Workspace 1506/0.
 - [ ] a4: typed value bridge, in — value construction + typed
   `call(head, args)`; deep-tree depth guard at the builder.
 - [ ] a5: named profiles (hermetic/scripting/interactive presets;

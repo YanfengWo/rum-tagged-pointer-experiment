@@ -803,7 +803,8 @@ fn host_eval_exposes_typed_value_variants() {
                 denominator: "3".to_string(),
             },
         ),
-        ("True", "True", HostTyped::Symbol("True".to_string())),
+        ("True", "True", HostTyped::Bool(true)),
+        ("False", "False", HostTyped::Bool(false)),
         ("\"hi\"", "\"hi\"", HostTyped::Str("hi".to_string())),
         (
             "{1, 2, 3}",
@@ -837,6 +838,62 @@ fn host_eval_exposes_typed_value_variants() {
             other => panic!("expected success for {input}, got {other:?}"),
         }
     }
+}
+
+#[test]
+fn host_eval_exposes_ordered_typed_association_entries() {
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval(r#"<|"a" -> 1, "b" -> {True}|>"#));
+
+    assert_eq!(
+        success.value.typed,
+        HostTyped::Association(vec![
+            (HostTyped::Str("a".to_string()), HostTyped::Integer(1)),
+            (
+                HostTyped::Str("b".to_string()),
+                HostTyped::List(vec![HostTyped::Bool(true)]),
+            ),
+        ])
+    );
+}
+
+#[test]
+fn host_eval_keeps_delayed_association_out_of_typed_data_view() {
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval(r#"<|"a" :> 1|>"#));
+
+    assert_eq!(
+        success.value.typed,
+        HostTyped::Other {
+            head: "Association".to_string(),
+            text: "Association[RuleDelayed[\"a\", 1]]".to_string(),
+        }
+    );
+}
+
+#[test]
+fn host_eval_exposes_immediate_rule_and_rejects_delayed_rule_data_view() {
+    let mut session = HostSession::new();
+
+    let immediate = successful_eval(session.eval("a -> b"));
+    assert_eq!(
+        immediate.value.typed,
+        HostTyped::Rule {
+            lhs: Box::new(HostTyped::Symbol("a".to_string())),
+            rhs: Box::new(HostTyped::Symbol("b".to_string())),
+        }
+    );
+
+    let delayed = successful_eval(session.eval("a :> b"));
+    assert_eq!(
+        delayed.value.typed,
+        HostTyped::Other {
+            head: "RuleDelayed".to_string(),
+            text: "RuleDelayed[a, b]".to_string(),
+        }
+    );
 }
 
 #[test]

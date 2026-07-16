@@ -2,7 +2,10 @@ use rum_core::{Atom, Expr};
 use rum_runtime::{
     EvalTerminationReason, RuntimeInputKind, RuntimeInputRequest, RuntimeMessage,
     SessionEvalResponse, SessionRequestError, SessionRequestFailure, TraceEvent,
-    kernel_api::{ToStringFormat, render_to_string_expr},
+    kernel_api::{
+        ToStringFormat, association_entries_from_expr, association_entry_forms_from_expr,
+        render_to_string_expr,
+    },
 };
 
 const MAX_TYPED_DEPTH: usize = 64;
@@ -170,7 +173,8 @@ pub struct HostValue {
     pub typed: HostTyped,
 }
 
-/// Transport-friendly typed expression value.
+/// Transport-friendly typed expression value for exact scalars, booleans,
+/// lists, associations, and immediate rules.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HostTyped {
     /// Small exact integer that fits in `i64`.
@@ -184,12 +188,30 @@ pub enum HostTyped {
         /// Decimal denominator.
         denominator: String,
     },
-    /// Symbol name.
+    /// Boolean mapped from the system symbol `True` or `False`.
+    ///
+    /// These two system symbols surface as `Bool` rather than [`Self::Symbol`].
+    Bool(bool),
+    /// Symbol name other than the system symbols `True` and `False`.
     Symbol(String),
     /// String value.
     Str(String),
     /// List elements, up to the typed-depth cap.
     List(Vec<HostTyped>),
+    /// Ordered key/value pairs from an association, up to the typed-depth cap.
+    ///
+    /// An association containing a delayed entry has no typed data view and
+    /// surfaces as [`Self::Other`].
+    Association(Vec<(HostTyped, HostTyped)>),
+    /// Immediate rule sides, up to the typed-depth cap.
+    ///
+    /// `RuleDelayed` has no typed data view and surfaces as [`Self::Other`].
+    Rule {
+        /// Left-hand side of the immediate rule.
+        lhs: Box<HostTyped>,
+        /// Right-hand side of the immediate rule.
+        rhs: Box<HostTyped>,
+    },
     /// Expression that does not have a specialized typed representation.
     Other {
         /// Rendered head name.
@@ -451,12 +473,41 @@ fn host_typed_from_expr_at_depth(expr: &Expr, depth: usize) -> HostTyped {
                 return host_typed_other(head.as_ref(), expr);
             }
 
+            if association_entry_forms_from_expr(expr)
+                .is_some_and(|entries| entries.iter().any(|entry| entry.delayed))
+            {
+                return host_typed_other(head.as_ref(), expr);
+            }
+
+            if let Some(entries) = association_entries_from_expr(expr) {
+                return HostTyped::Association(
+                    entries
+                        .into_iter()
+                        .map(|(key, value)| {
+                            (
+                                host_typed_from_expr_at_depth(&key, depth + 1),
+                                host_typed_from_expr_at_depth(&value, depth + 1),
+                            )
+                        })
+                        .collect(),
+                );
+            }
+
             if is_list_head(head.as_ref()) {
                 return HostTyped::List(
                     args.iter()
                         .map(|arg| host_typed_from_expr_at_depth(arg, depth + 1))
                         .collect(),
                 );
+            }
+
+            if is_rule_head(head.as_ref()) {
+                if let [lhs, rhs] = args.as_slice() {
+                    return HostTyped::Rule {
+                        lhs: Box::new(host_typed_from_expr_at_depth(lhs, depth + 1)),
+                        rhs: Box::new(host_typed_from_expr_at_depth(rhs, depth + 1)),
+                    };
+                }
             }
 
             host_typed_other(head.as_ref(), expr)
@@ -475,12 +526,18 @@ fn host_typed_from_atom(atom: &Atom) -> HostTyped {
             denominator: value.denominator().to_string(),
         },
         Atom::String(value) => HostTyped::Str(value.clone()),
+        Atom::Symbol(symbol) if symbol.is_system_name("True") => HostTyped::Bool(true),
+        Atom::Symbol(symbol) if symbol.is_system_name("False") => HostTyped::Bool(false),
         Atom::Symbol(symbol) => HostTyped::Symbol(symbol.to_string()),
     }
 }
 
 fn is_list_head(expr: &Expr) -> bool {
     matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.is_system_name("List"))
+}
+
+fn is_rule_head(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Symbol(symbol)) if symbol.is_system_name("Rule"))
 }
 
 fn host_typed_other(head: &Expr, expr: &Expr) -> HostTyped {

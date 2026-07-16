@@ -1,7 +1,7 @@
 use super::*;
 use rum_host::{
     HostFailure, HostFailureCode, HostInputRequest, HostInputSuspension, HostMessage,
-    HostTraceEvent,
+    HostTraceEvent, HostTyped,
 };
 
 pub(super) fn input_request_from_outcome(
@@ -66,7 +66,7 @@ fn build_execute_outputs(
             }
             outputs.push(KernelOutput::ExecuteResult(KernelExecuteResult {
                 execution_count,
-                data: expr_mime_bundle(&response.value.text),
+                data: execute_result_mime_bundle(&response.value.text, &response.value.typed),
                 metadata: execute_result_metadata(execution_count),
             }));
             outputs
@@ -182,6 +182,74 @@ fn expr_mime_bundle(rendered_expr: &str) -> KernelMimeBundle {
     bundle
 }
 
+fn execute_result_mime_bundle(rendered_expr: &str, typed: &HostTyped) -> KernelMimeBundle {
+    let mut bundle = expr_mime_bundle(rendered_expr);
+    if let Some(json) = json_from_typed(typed) {
+        bundle.insert("application/json", json);
+    }
+    bundle
+}
+
+fn json_from_typed(value: &HostTyped) -> Option<String> {
+    match value {
+        HostTyped::Integer(value) => Some(value.to_string()),
+        HostTyped::Str(value) => Some(json_string_from_typed(value)),
+        HostTyped::Bool(value) => Some(value.to_string()),
+        HostTyped::List(items) => {
+            let items = items
+                .iter()
+                .map(json_from_typed)
+                .collect::<Option<Vec<_>>>()?;
+            Some(format!("[{}]", items.join(",")))
+        }
+        HostTyped::Association(entries) => {
+            let mut seen_keys = std::collections::HashSet::with_capacity(entries.len());
+            let mut fields = Vec::with_capacity(entries.len());
+            for (key, value) in entries {
+                let HostTyped::Str(key) = key else {
+                    return None;
+                };
+                if !seen_keys.insert(key.as_str()) {
+                    return None;
+                }
+                fields.push(format!(
+                    "{}:{}",
+                    json_string_from_typed(key),
+                    json_from_typed(value)?
+                ));
+            }
+            Some(format!("{{{}}}", fields.join(",")))
+        }
+        HostTyped::BigInteger(_)
+        | HostTyped::Rational { .. }
+        | HostTyped::Symbol(_)
+        | HostTyped::Rule { .. }
+        | HostTyped::Other { .. } => None,
+    }
+}
+
+fn json_string_from_typed(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len() + 2);
+    escaped.push('"');
+
+    for ch in value.chars() {
+        match ch {
+            '"' => escaped.push_str("\\\""),
+            '\\' => escaped.push_str("\\\\"),
+            '\u{0008}' => escaped.push_str("\\b"),
+            '\u{000c}' => escaped.push_str("\\f"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            ch if ch <= '\u{001f}' => escaped.push_str(&format!("\\u{:04x}", ch as u32)),
+            ch => escaped.push(ch),
+        }
+    }
+
+    escaped.push('"');
+    escaped
+}
+
 fn trace_mime_bundle(trace: &[HostTraceEvent]) -> KernelMimeBundle {
     let rendered = trace
         .iter()
@@ -228,6 +296,53 @@ fn trace_metadata() -> KernelMetadata {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn json_from_typed_maps_supported_tree_and_escapes_strings() {
+        let value = HostTyped::Association(vec![(
+            HostTyped::Str("quote\"\\\n".to_string()),
+            HostTyped::List(vec![
+                HostTyped::Integer(-2),
+                HostTyped::Bool(false),
+                HostTyped::Str("tab\t".to_string()),
+            ]),
+        )]);
+
+        assert_eq!(
+            json_from_typed(&value).as_deref(),
+            Some(r#"{"quote\"\\\n":[-2,false,"tab\t"]}"#)
+        );
+    }
+
+    #[test]
+    fn json_from_typed_rejects_ambiguous_or_partial_trees() {
+        let duplicate_keys = HostTyped::Association(vec![
+            (HostTyped::Str("a".to_string()), HostTyped::Integer(1)),
+            (HostTyped::Str("a".to_string()), HostTyped::Integer(2)),
+        ]);
+        assert_eq!(json_from_typed(&duplicate_keys), None);
+
+        let non_string_key = HostTyped::Association(vec![(
+            HostTyped::Integer(1),
+            HostTyped::Str("value".to_string()),
+        )]);
+        assert_eq!(json_from_typed(&non_string_key), None);
+
+        let nested_unsupported = HostTyped::List(vec![
+            HostTyped::Integer(1),
+            HostTyped::Rational {
+                numerator: "1".to_string(),
+                denominator: "2".to_string(),
+            },
+        ]);
+        assert_eq!(json_from_typed(&nested_unsupported), None);
+
+        let rule = HostTyped::Rule {
+            lhs: Box::new(HostTyped::Str("a".to_string())),
+            rhs: Box::new(HostTyped::Integer(1)),
+        };
+        assert_eq!(json_from_typed(&rule), None);
+    }
 
     #[test]
     fn error_output_covers_time_constraint_failures() {

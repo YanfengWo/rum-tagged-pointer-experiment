@@ -140,10 +140,18 @@ transport-friendly structural view of the evaluated expression.
 - small integers
 - big integers as decimal strings
 - rationals as numerator and denominator strings
-- symbols
+- booleans, with the system symbols `True` and `False` mapped to `Bool` rather
+  than `Symbol`
+- other symbols
 - strings
 - lists up to the typed depth cap
+- associations as ordered key/value pairs up to the typed depth cap
+- immediate rules with typed left- and right-hand sides up to the typed depth cap
 - other expressions as rendered text with a head name
+
+Associations containing any delayed entry and all `RuleDelayed` expressions
+remain `Other`: the typed data view never presents an unevaluated right-hand
+side as a value. Structured values at the typed depth cap also remain `Other`.
 
 There is no floating-point typed variant because the language boundary is exact
 rationals only.

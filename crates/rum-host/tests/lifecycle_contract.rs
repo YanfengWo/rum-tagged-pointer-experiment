@@ -59,6 +59,12 @@ fn typed_contains_other(value: &HostTyped) -> bool {
     match value {
         HostTyped::Other { .. } => true,
         HostTyped::List(items) => items.iter().any(typed_contains_other),
+        HostTyped::Association(entries) => entries
+            .iter()
+            .any(|(key, value)| typed_contains_other(key) || typed_contains_other(value)),
+        HostTyped::Rule { lhs, rhs } => {
+            typed_contains_other(lhs.as_ref()) || typed_contains_other(rhs.as_ref())
+        }
         _ => false,
     }
 }
@@ -277,6 +283,27 @@ fn structured_host_value_depth_cap_preserves_text_and_uses_other_for_deep_tail()
         typed_contains_other(&success.value.typed),
         "deep typed value should contain capped Other tail: {:?}",
         success.value.typed
+    );
+
+    let mut association_at_cap = r#"<|"a" -> 1|>"#.to_string();
+    for _ in 0..64 {
+        association_at_cap = format!("{{{association_at_cap}}}");
+    }
+
+    let success = successful_eval(session.eval(association_at_cap));
+    let mut typed_tail = &success.value.typed;
+    for depth in 0..64 {
+        match typed_tail {
+            HostTyped::List(items) if items.len() == 1 => typed_tail = &items[0],
+            other => panic!("expected singleton list at typed depth {depth}, got {other:?}"),
+        }
+    }
+    assert!(
+        matches!(
+            typed_tail,
+            HostTyped::Other { head, .. } if head == "Association"
+        ),
+        "association at the typed depth cap should remain Other: {typed_tail:?}"
     );
 }
 

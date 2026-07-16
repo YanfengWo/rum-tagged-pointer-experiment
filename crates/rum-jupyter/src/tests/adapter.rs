@@ -42,6 +42,91 @@ fn execute_request_maps_to_session_eval_and_tracks_execution_count() {
 }
 
 #[test]
+fn execute_json_representable_value_adds_json_without_changing_expr_mime() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let response = adapter.execute(KernelExecuteRequest::new(
+        r#"<|"a" -> 1, "b" -> {True, "x"}|>"#,
+    ));
+
+    assert_eq!(response.status, KernelReplyStatus::Ok);
+    assert_eq!(response.outputs.len(), 1);
+    match &response.outputs[0] {
+        KernelOutput::ExecuteResult(output) => {
+            assert_eq!(
+                output.data.get("application/json"),
+                Some(r#"{"a":1,"b":[true,"x"]}"#)
+            );
+            assert_eq!(
+                output.data.get("text/plain"),
+                Some(r#"Association[Rule["a", 1], Rule["b", List[True, "x"]]]"#)
+            );
+            assert_eq!(
+                output.data.get("text/markdown"),
+                Some("```rum\nAssociation[Rule[\"a\", 1], Rule[\"b\", List[True, \"x\"]]]\n```")
+            );
+            assert_eq!(
+                output.data.get("application/vnd.rum.expr"),
+                Some(r#"Association[Rule["a", 1], Rule["b", List[True, "x"]]]"#)
+            );
+            assert_eq!(output.data.items.len(), 4);
+        }
+        other => panic!("expected execute result output, got {other:?}"),
+    }
+}
+
+#[test]
+fn execute_non_representable_value_keeps_only_existing_expr_mime() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let response = adapter.execute(KernelExecuteRequest::new("x -> 1"));
+
+    assert_eq!(response.status, KernelReplyStatus::Ok);
+    assert_eq!(response.outputs.len(), 1);
+    match &response.outputs[0] {
+        KernelOutput::ExecuteResult(output) => {
+            assert_eq!(output.data.get("application/json"), None);
+            assert_eq!(output.data.get("text/plain"), Some("Rule[x, 1]"));
+            assert_eq!(
+                output.data.get("text/markdown"),
+                Some("```rum\nRule[x, 1]\n```")
+            );
+            assert_eq!(
+                output.data.get("application/vnd.rum.expr"),
+                Some("Rule[x, 1]")
+            );
+            assert_eq!(output.data.items.len(), 3);
+        }
+        other => panic!("expected execute result output, got {other:?}"),
+    }
+}
+
+#[test]
+fn execute_depth_capped_typed_value_omits_json_mime() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+    let mut source = "1".to_string();
+    for _ in 0..65 {
+        source = format!("{{{source}}}");
+    }
+
+    let response = adapter.execute(KernelExecuteRequest::new(source));
+
+    match &response.outputs[0] {
+        KernelOutput::ExecuteResult(output) => {
+            assert_eq!(output.data.get("application/json"), None);
+            assert!(output.data.get("text/plain").is_some());
+            assert!(output.data.get("text/markdown").is_some());
+            assert!(output.data.get("application/vnd.rum.expr").is_some());
+            assert_eq!(output.data.items.len(), 3);
+        }
+        other => panic!("expected execute result output, got {other:?}"),
+    }
+}
+
+#[test]
 fn execute_literal_cancelled_termination_value_remains_successful() {
     let session = Session::new();
     let mut adapter = KernelAdapter::new(session);

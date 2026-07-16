@@ -1057,3 +1057,28 @@ files + lock), fmt clean, workspace 1498/0 reproduced, new tests rerun
 by name. No A/B: REPL is not the perf vehicle; --eval/script paths
 untouched. The a2 dogfood arc (a2a surface, a2b CLI, a2c REPL) is
 CLOSED. Next: a3 (typed value bridge, out).
+
+## 2026-07-16 — brief-240: typed value bridge, out (embedding line a3)
+
+HostTyped widened with three documented variants: Bool (the system
+symbols True/False now surface as Bool rather than Symbol — deliberate
+convenience mapping, no in-tree consumer depended on the old shape),
+Association (ordered key/value pairs via the kernel_api association
+helpers — no hand-rolled shape detection), and Rule (immediate,
+two-argument). Honesty rule pinned by tests: an association containing
+a delayed entry and RuleDelayed both stay Other — a typed data view
+must not present an unevaluated right-hand side as a value. Depth-cap
+discipline uniform across all structured variants. First real consumer
+lands with it (killing the F2 zero-consumer status): jupyter execute
+results now carry a conservative application/json MIME entry iff the
+typed tree is fully representable (Integer/Str/Bool/List/string-keyed
+deduplicated Association; BigInteger/Rational/Symbol/Rule/Other or a
+depth-capped tail reject the whole tree), with the three existing MIME
+entries byte-unchanged (user-approved wire addition 2026-07-16). Gate:
+scope exact (6 files), fmt clean, workspace 1506/0 reproduced (+10
+tests, all rerun by name), diff reviewed (delayed check precedes entry
+conversion; exhaustive match in json_from_typed lists every rejected
+variant). No A/B: typed conversion runs once per top-level outcome
+mapping; microbench in-process loops never reach it. Next: a4 (typed
+value bridge, in) — the line's last core item, then a5 (named
+profiles).
