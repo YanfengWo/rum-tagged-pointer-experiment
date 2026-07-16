@@ -516,6 +516,7 @@ fn snapshot_decode_failure(error: std::str::Utf8Error) -> HostFailure {
 fn snapshot_input_failure(suspension: HostInputSuspension) -> HostFailure {
     HostFailure {
         code: HostFailureCode::Other,
+        exit_status: None,
         message: "snapshot restore unexpectedly requested input".to_string(),
         messages: suspension.messages,
         prints: suspension.prints,

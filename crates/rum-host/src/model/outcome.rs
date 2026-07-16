@@ -79,6 +79,11 @@ pub struct HostInputSuspension {
 pub struct HostFailure {
     /// Coarse failure classification for host dispatch.
     pub code: HostFailureCode,
+    /// Requested process exit status for an [`HostFailureCode::Exit`] failure.
+    ///
+    /// This is `Some(code)` only for a failure mapped from a language-level
+    /// `Exit[code]` request and is `None` for every other failure.
+    pub exit_status: Option<i64>,
     /// User-facing failure message.
     pub message: String,
     /// Messages emitted before failure.
@@ -132,6 +137,19 @@ pub enum HostFailureCode {
     Exit,
     /// A failure that does not map to a more specific host code.
     Other,
+}
+
+impl HostFailureCode {
+    /// Returns whether this failure requires rebuilding the host session.
+    ///
+    /// This is `true` for [`Self::Panic`] and [`Self::Poisoned`] and `false`
+    /// for every other failure code.
+    ///
+    /// Panics poison the session boundary, and a poisoned-session failure
+    /// reports that prior state. All other failures leave the session usable.
+    pub const fn requires_reset(self) -> bool {
+        matches!(self, Self::Panic | Self::Poisoned)
+    }
 }
 
 /// Host-facing value with both rendered and typed forms.
@@ -367,6 +385,10 @@ pub(crate) fn eval_failure_from_runtime(failure: SessionRequestFailure) -> HostE
 
 pub(crate) fn host_failure_from_runtime(failure: SessionRequestFailure) -> HostFailure {
     let code = failure_code(&failure.error);
+    let exit_status = match &failure.error {
+        SessionRequestError::Exit { code } => Some(*code),
+        _ => None,
+    };
     let message = failure.error.to_string();
     let messages = host_messages(failure.messages);
     let prints = failure.prints;
@@ -375,6 +397,7 @@ pub(crate) fn host_failure_from_runtime(failure: SessionRequestFailure) -> HostF
 
     HostFailure {
         code,
+        exit_status,
         message,
         messages,
         prints,
@@ -389,6 +412,7 @@ pub(crate) fn synthesized_host_failure(
 ) -> HostFailure {
     HostFailure {
         code,
+        exit_status: None,
         message: message.into(),
         messages: Vec::new(),
         prints: Vec::new(),

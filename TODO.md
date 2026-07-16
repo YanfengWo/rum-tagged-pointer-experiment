@@ -57,15 +57,33 @@ first.
   boundary-clean (generic sandbox primitives, zero dun/editor naming).
 
 **fs/os/net downstream capabilities: DEFERRED until after publication
-(user 2026-07-15) — not the next target.** NEXT: concern (a) — the
-scenario-design pass LANDED 2026-07-16
+(user 2026-07-15) — not the next target.** ACTIVE: concern (a) — the
+EMBEDDING API LINE. Scenario-design pass landed 2026-07-16
 ([docs/dev/embedding-api-line.md](./docs/dev/embedding-api-line.md)):
 three user-supplied downstream scenario families (Python/AI-infra, Rust/
 wasm tooling, tauri typst IDE = dun's ancestor) + in-tree consumer survey
-(findings F1-F8: typed-input smuggling in rum-cli, `HostTyped` zero
-consumers, b1 discriminator unadopted, `Exit` status dropped at the
-contract, streaming/script eval below the contract only) + ranked
-requirements + proposed brief queue a1-a5 (pending user sign-off).
+(findings F1-F8). USER RULINGS 2026-07-16: dogfood = stance A (port
+rum-cli/rum-repl onto rum-host; cli first with microbench A/B hard
+gate); queue signed off as a1 → a2 → a3 → a4 → a5.
+
+- [x] a1 (brief-236): host failure-classification honesty —
+  `HostFailure.exit_status` carries `Exit[code]`;
+  `HostFailureCode::requires_reset()` contract method (poison truth
+  verified: only the guard's caught-panic path poisons); rum-jupyter
+  adopts the b1 termination field (string-match killed; a literal
+  `TerminatedEvaluation["Cancelled"]` result value no longer
+  misclassifies as cancelled). Workspace 1488/0.
+- [ ] a2: trusted-host contract surface (streaming print sink,
+  script/file eval, queued input) + dogfood port (rum-cli first,
+  microbench A/B hard gate; rum-repl per-command split; rum-terminal
+  contract-type render twins).
+- [ ] a3: typed value bridge, out — widen `HostTyped`
+  (Bool/Association/Rule) + a real consumer (jupyter MIME candidate;
+  wire-visible change = user ruling at brief time).
+- [ ] a4: typed value bridge, in — value construction + typed
+  `call(head, args)`; deep-tree depth guard at the builder.
+- [ ] a5: named profiles (hermetic/scripting/interactive presets;
+  semantics = user ruling at brief time).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in

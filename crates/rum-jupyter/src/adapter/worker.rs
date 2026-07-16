@@ -6,7 +6,7 @@ use std::{
 
 use rum_host::{
     HostCancelHandle, HostEvalOutcome, HostEvalRequest, HostEvalSuccess, HostFailure,
-    HostFailureCode, HostSession,
+    HostFailureCode, HostSession, HostTerminationReason,
 };
 
 use crate::{KernelExecuteOutcome, KernelExecuteRequest, KernelMessageHeader};
@@ -116,7 +116,9 @@ impl ExecuteWorker {
 
 pub(super) fn host_outcome_to_kernel(outcome: HostEvalOutcome) -> KernelExecuteOutcome {
     match outcome {
-        HostEvalOutcome::Success(response) if is_cancelled_success(&response) => {
+        HostEvalOutcome::Success(response)
+            if response.termination == Some(HostTerminationReason::Cancelled) =>
+        {
             KernelExecuteOutcome::Failure(cancelled_failure_from_success(response))
         }
         HostEvalOutcome::Success(response) => KernelExecuteOutcome::Success(response),
@@ -127,13 +129,10 @@ pub(super) fn host_outcome_to_kernel(outcome: HostEvalOutcome) -> KernelExecuteO
     }
 }
 
-fn is_cancelled_success(response: &HostEvalSuccess) -> bool {
-    response.value.text == "TerminatedEvaluation[\"Cancelled\"]"
-}
-
 fn cancelled_failure_from_success(response: HostEvalSuccess) -> HostFailure {
     HostFailure {
         code: HostFailureCode::Cancelled,
+        exit_status: None,
         message: "evaluation cancelled".to_string(),
         messages: response.messages,
         prints: response.prints,
@@ -145,8 +144,7 @@ fn cancelled_failure_from_success(response: HostEvalSuccess) -> HostFailure {
 pub(super) fn outcome_requires_session_reset(outcome: &KernelExecuteOutcome) -> bool {
     matches!(
         outcome,
-        KernelExecuteOutcome::Failure(failure)
-            if matches!(failure.code, HostFailureCode::Panic | HostFailureCode::Poisoned)
+        KernelExecuteOutcome::Failure(failure) if failure.code.requires_reset()
     )
 }
 
@@ -190,6 +188,7 @@ fn run_segment(session: &mut HostSession, segment: ExecuteSegment) -> KernelExec
 fn worker_panic_failure(payload: &(dyn Any + Send)) -> HostFailure {
     HostFailure {
         code: HostFailureCode::Panic,
+        exit_status: None,
         message: format!(
             "jupyter execute worker caught panic: {}",
             panic_payload_message(payload)

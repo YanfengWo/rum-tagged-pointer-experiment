@@ -179,6 +179,7 @@ internal structs.
 `HostFailure` includes:
 
 - a coarse `HostFailureCode`
+- an optional `exit_status`, populated for language-level `Exit[code]` failures
 - a user-facing message
 - messages, prints, trace, and structured outputs collected before failure
 
@@ -188,6 +189,18 @@ limits, panic, poisoned session, exit, and other.
 
 Recoverable resource-limit outcomes often appear as successful values containing
 `TerminatedEvaluation[...]` rather than `HostFailure`.
+
+### Failure Classification
+
+Use `failure.code.requires_reset()` to decide whether a session must be reset
+after a failure. It returns true for caught panics and poisoned-session failures;
+other failure codes leave the session usable. For `HostFailureCode::Exit`, read
+`failure.exit_status` to obtain the requested process status.
+
+For successful evaluations, compare `success.termination` with
+`Some(HostTerminationReason::Cancelled)` to detect runtime-synthesized
+cancellation. Do not infer cancellation from the rendered value: an ordinary
+program result can itself be `TerminatedEvaluation["Cancelled"]`.
 
 ## Resumable Input
 

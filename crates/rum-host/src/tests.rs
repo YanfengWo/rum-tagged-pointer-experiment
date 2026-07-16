@@ -366,6 +366,7 @@ fn sandboxed_host_config_blocks_exit_at_dispatch_but_trusted_allows_it() {
     match trusted.eval("Exit[7]") {
         HostEvalOutcome::Failure(failure) => {
             assert_eq!(failure.code, HostFailureCode::Exit);
+            assert_eq!(failure.exit_status, Some(7));
             assert_eq!(failure.message, "Exit[7]");
         }
         other => panic!("expected trusted Exit failure, got {other:?}"),
@@ -913,9 +914,26 @@ fn host_failures_use_stable_failure_codes() {
     match outcome {
         HostEvalOutcome::Failure(failure) => {
             assert_eq!(failure.code, HostFailureCode::Syntax);
+            assert_eq!(failure.exit_status, None);
             assert!(!failure.message.is_empty());
         }
         other => panic!("expected syntax failure, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_failure_codes_report_session_reset_requirement() {
+    for code in [HostFailureCode::Panic, HostFailureCode::Poisoned] {
+        assert!(code.requires_reset(), "{code:?} should require reset");
+    }
+
+    for code in [
+        HostFailureCode::Cancelled,
+        HostFailureCode::TimeConstraintExceeded,
+        HostFailureCode::Syntax,
+        HostFailureCode::Exit,
+    ] {
+        assert!(!code.requires_reset(), "{code:?} should not require reset");
     }
 }
 

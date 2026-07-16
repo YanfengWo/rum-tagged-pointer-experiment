@@ -961,3 +961,21 @@ capability gate + provider seams), with three design prerequisites —
 the Capability u8 bitmask is FULL (a Network variant forces a widening),
 blocking syscalls do not observe cancel, stateful handles vs
 snapshot/reset.
+
+## 2026-07-16 — brief-236: host failure-classification honesty (embedding line a1)
+
+Three contract-honesty fixes, host-layer only (zero kernel changes):
+HostFailure.exit_status carries the Exit[code] status (was dropped at
+the outcome.rs mapping — a contract host could not implement Exit[7]);
+HostFailureCode::requires_reset() publishes the reset classification
+(poison truth verified from session.rs: only the guard's caught-panic
+path sets poisoned, so exactly Panic|Poisoned require reset) and
+rum-jupyter's hand-rolled copy now delegates to it; rum-jupyter adopts
+brief-231's HostEvalSuccess.termination field, killing the
+TerminatedEvaluation["Cancelled"] string-match — deliberate behavior
+fix: a program whose ordinary result VALUE is that literal is no longer
+misclassified as a cancelled failure (provenance-tested field), pinned
+by a new adapter test. Gate: scope exact (7 files, all MAY-listed),
+fmt clean, workspace 1488/0 reproduced, key claims reproduced by name
+(Exit[7] -> Some(7), reset truth table, literal-value success). No A/B:
+failure-path metadata + adapter classification only, no eval hot path.

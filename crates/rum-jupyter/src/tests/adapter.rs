@@ -42,6 +42,26 @@ fn execute_request_maps_to_session_eval_and_tracks_execution_count() {
 }
 
 #[test]
+fn execute_literal_cancelled_termination_value_remains_successful() {
+    let session = Session::new();
+    let mut adapter = KernelAdapter::new(session);
+
+    let response = adapter.execute(KernelExecuteRequest::new(
+        "TerminatedEvaluation[\"Cancelled\"]",
+    ));
+
+    assert_eq!(response.status, KernelReplyStatus::Ok);
+    assert!(response.error.is_none());
+    match response.outcome {
+        KernelExecuteOutcome::Success(result) => {
+            assert_eq!(result.value.text, "TerminatedEvaluation[\"Cancelled\"]");
+            assert_eq!(result.termination, None);
+        }
+        other => panic!("expected literal value to remain a success, got {other:?}"),
+    }
+}
+
+#[test]
 fn execute_request_cycle_termination_emits_stderr_trace_and_result() {
     let mut session = tracing_session();
     eval_text(&mut session, "f[x_Integer] := g[x]");

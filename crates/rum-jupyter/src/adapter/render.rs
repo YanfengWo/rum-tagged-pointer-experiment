@@ -337,6 +337,7 @@ mod tests {
     fn host_failure(code: HostFailureCode, message: &str) -> HostFailure {
         HostFailure {
             code,
+            exit_status: None,
             message: message.to_string(),
             messages: Vec::new(),
             prints: Vec::new(),
