@@ -115,8 +115,19 @@ gate); queue signed off as a1 → a2 → a3 → a4 → a5.
   (user-approved wire addition — only fully-representable trees:
   Integer/Str/Bool/List/string-keyed deduplicated Association;
   existing three MIME entries byte-unchanged). Workspace 1506/0.
-- [ ] a4: typed value bridge, in — value construction + typed
-  `call(head, args)`; deep-tree depth guard at the builder.
+- [x] a4 (brief-241): typed value bridge, in — `expr_from_typed`
+  construction (depth-guarded at MAX_TYPED_DEPTH; `Other` rejected as
+  output-only; BigInteger/Rational validated; rationals normalize) +
+  `HostSession::call(head, args)`, the injection-safe invocation path
+  (head + `Symbol` args resolve via the session's real
+  `resolve_symbol_name` — short names find System builtins exactly as
+  source would; injection pinned by a hostile-string test). One
+  kernel seam: `eval_expr_request` = eval_request's post-lower tail
+  extracted (behavior frozen, verified). A/B: no regression — Codex's
+  interleaved run flagged 3 labels on razor-thin per-label spreads
+  (1-11µs); the director's independent interleaved re-run measured
+  those labels' true spreads at 5-15% with deltas +0.6~0.9%, median
+  0.00%, bidirectional scatter. Workspace 1519/0.
 - [ ] a5: named profiles (hermetic/scripting/interactive presets;
   semantics = user ruling at brief time).
 

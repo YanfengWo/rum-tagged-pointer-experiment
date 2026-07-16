@@ -1,3 +1,4 @@
+use rum_core::{Atom, Expr};
 use rum_runtime::{CapabilityPolicy, Session};
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -14,7 +15,7 @@ use crate::model::{
     HostCompletionRequest, HostCompletionResponse, HostDefinitionSummary, HostEvalOutcome,
     HostEvalRequest, HostFailure, HostFailureCode, HostInputSuspension, HostInspectRequest,
     HostInspectResponse, HostIsCompleteRequest, HostIsCompleteResponse, HostMessageTemplate,
-    HostParseRequest, HostParseResponse, completeness_status, eval_failure_from_runtime,
+    HostParseRequest, HostParseResponse, HostTyped, completeness_status, eval_failure_from_runtime,
     eval_success_from_runtime, host_failure_from_runtime, inspect_response_from_runtime,
     synthesized_host_failure,
 };
@@ -327,6 +328,24 @@ impl HostSession {
         )
     }
 
+    /// Invokes a resolved function head with typed host arguments.
+    ///
+    /// This is the injection-safe invocation path: arguments are constructed as
+    /// data and are never parsed as source. Evaluation otherwise follows ordinary
+    /// call semantics, including normal argument evaluation and attributes.
+    /// [`HostTyped::Symbol`] arguments resolve exactly as the same symbol text
+    /// would in source.
+    pub fn call(&mut self, head: &str, args: &[HostTyped]) -> HostEvalOutcome {
+        if self.poisoned {
+            return poisoned_eval_outcome();
+        }
+
+        self.guard(
+            |session| session.call_unprotected(head, args),
+            panic_eval_outcome,
+        )
+    }
+
     /// Evaluates a multi-form script and returns a structured host outcome.
     ///
     /// Forms are evaluated in source order. On success, the response value and
@@ -375,6 +394,41 @@ impl HostSession {
 
     fn eval_request_unprotected(&mut self, request: HostEvalRequest) -> HostEvalOutcome {
         match self.session.eval_request(&request.source) {
+            Ok(response) => HostEvalOutcome::Success(eval_success_from_runtime(response)),
+            Err(failure) => eval_failure_from_runtime(failure),
+        }
+    }
+
+    fn call_unprotected(&mut self, head: &str, args: &[HostTyped]) -> HostEvalOutcome {
+        if head.trim().is_empty() {
+            return HostEvalOutcome::Failure(synthesized_host_failure(
+                HostFailureCode::Other,
+                "call head must not be empty",
+            ));
+        }
+
+        let Some(head) = self.session.resolve_symbol_name(head, true) else {
+            return HostEvalOutcome::Failure(synthesized_host_failure(
+                HostFailureCode::Other,
+                format!("unable to resolve call head: {head:?}"),
+            ));
+        };
+
+        let mut expr_args = Vec::with_capacity(args.len());
+        for (index, arg) in args.iter().enumerate() {
+            match arg.to_expr(&self.session) {
+                Ok(expr) => expr_args.push(expr),
+                Err(message) => {
+                    return HostEvalOutcome::Failure(synthesized_host_failure(
+                        HostFailureCode::Other,
+                        format!("call argument at index {index} is invalid: {message}"),
+                    ));
+                }
+            }
+        }
+
+        let expr = Expr::call(Expr::Atom(Atom::Symbol(head)), expr_args);
+        match self.session.eval_expr_request(expr) {
             Ok(response) => HostEvalOutcome::Success(eval_success_from_runtime(response)),
             Err(failure) => eval_failure_from_runtime(failure),
         }

@@ -115,6 +115,29 @@ impl Session {
         let expr = self
             .lower_syntax_expr(parsed.syntax())
             .map_err(|err| self.finish_request_failure(checkpoint, err))?;
+
+        self.eval_expr_request_from_checkpoint(expr, checkpoint)
+    }
+
+    /// Evaluates an already-built expression through the top-level request protocol.
+    ///
+    /// The expression is evaluated as-is: no lowering pass runs, so callers are
+    /// responsible for supplying resolved symbols.
+    pub fn eval_expr_request(
+        &mut self,
+        expr: Expr,
+    ) -> Result<SessionEvalResponse, SessionRequestFailure> {
+        self.begin_top_level_interrupt_budget();
+        let checkpoint = RequestCheckpoint::new(self);
+
+        self.eval_expr_request_from_checkpoint(expr, checkpoint)
+    }
+
+    fn eval_expr_request_from_checkpoint(
+        &mut self,
+        expr: Expr,
+        checkpoint: RequestCheckpoint,
+    ) -> Result<SessionEvalResponse, SessionRequestFailure> {
         let previous_message_list_checkpoint = self
             .current_message_list_checkpoint
             .replace(checkpoint.message_checkpoint);

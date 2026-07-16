@@ -120,6 +120,39 @@ Do not treat input suspension as a failure.
 
 It is a resumable state for `Input` and `InputString`.
 
+## Typed Invocation
+
+Use `HostSession::call(head, args)` when host values should enter the language
+without constructing source text:
+
+```rust
+use rum_host::{HostEvalOutcome, HostSession, HostTyped};
+
+let mut session = HostSession::new();
+let args = [HostTyped::Str("a".into()), HostTyped::Str("b".into())];
+
+match session.call("StringJoin", &args) {
+    HostEvalOutcome::Success(success) => assert_eq!(success.value.text, "\"ab\""),
+    other => panic!("unexpected outcome: {other:?}"),
+}
+```
+
+The head and every `HostTyped::Symbol` argument use the session's normal symbol
+resolution rules. Short names therefore search the active context path, while
+fully qualified names select their stated context. Arguments are constructed as
+expression data and are never parsed, so quotes, brackets, newlines, and other
+source-like text inside `HostTyped::Str` cannot inject evaluation. Once built,
+the call uses ordinary evaluation semantics, including argument evaluation and
+head attributes.
+
+Typed input accepts exact integers, decimal big integers, decimal
+numerator/denominator rationals, booleans, symbols, strings, lists,
+associations, and immediate rules. Decimal fields are validated, rational
+denominators must be nonzero, and exact rationals are normalized: input `2/4`
+returns as `1/2`. `HostTyped::Other` is an output-only lossy view and is always
+rejected as input because accepting its text would reintroduce parsing. Nested
+typed containers are capped at 64 levels.
+
 ## Success Values
 
 `HostEvalSuccess` includes:

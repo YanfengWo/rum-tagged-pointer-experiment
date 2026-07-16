@@ -1,6 +1,6 @@
-use rum_core::{Atom, Expr};
+use rum_core::{Atom, Expr, Rational};
 use rum_runtime::{
-    EvalTerminationReason, RuntimeInputKind, RuntimeInputRequest, RuntimeMessage,
+    EvalTerminationReason, RuntimeInputKind, RuntimeInputRequest, RuntimeMessage, Session,
     SessionEvalResponse, SessionRequestError, SessionRequestFailure, TraceEvent,
     kernel_api::{
         ToStringFormat, association_entries_from_expr, association_entry_forms_from_expr,
@@ -182,6 +182,9 @@ pub enum HostTyped {
     /// Exact integer represented as a decimal string.
     BigInteger(String),
     /// Exact rational represented by decimal numerator and denominator strings.
+    ///
+    /// Typed input is normalized as an exact rational, so `2/4` returns as
+    /// numerator `1` and denominator `2` after evaluation.
     Rational {
         /// Decimal numerator.
         numerator: String,
@@ -213,6 +216,9 @@ pub enum HostTyped {
         rhs: Box<HostTyped>,
     },
     /// Expression that does not have a specialized typed representation.
+    ///
+    /// This is an output-only lossy view. It deliberately has no typed input
+    /// path because its rendered text would need to be parsed as source.
     Other {
         /// Rendered head name.
         head: String,
@@ -459,6 +465,101 @@ pub(crate) fn synthesized_host_failure(
         trace: Vec::new(),
         outputs: Vec::new(),
     }
+}
+
+pub(crate) fn expr_from_typed(session: &Session, typed: &HostTyped) -> Result<Expr, String> {
+    expr_from_typed_at_depth(session, typed, 0)
+}
+
+impl HostTyped {
+    pub(crate) fn to_expr(&self, session: &Session) -> Result<Expr, String> {
+        expr_from_typed(session, self)
+    }
+}
+
+fn expr_from_typed_at_depth(
+    session: &Session,
+    typed: &HostTyped,
+    depth: usize,
+) -> Result<Expr, String> {
+    match typed {
+        HostTyped::Integer(value) => Ok(Expr::small_integer(*value)),
+        HostTyped::BigInteger(decimal) => decimal
+            .parse()
+            .map(Expr::integer)
+            .map_err(|_| format!("invalid decimal BigInteger value: {decimal:?}")),
+        HostTyped::Rational {
+            numerator,
+            denominator,
+        } => {
+            let numerator = numerator
+                .parse()
+                .map_err(|_| format!("invalid decimal Rational numerator: {numerator:?}"))?;
+            let denominator = denominator
+                .parse()
+                .map_err(|_| format!("invalid decimal Rational denominator: {denominator:?}"))?;
+            let rational = Rational::new(numerator, denominator)
+                .ok_or_else(|| "Rational denominator must not be zero".to_string())?;
+            Ok(Expr::rational(rational))
+        }
+        HostTyped::Bool(value) => Ok(Expr::system_symbol(if *value { "True" } else { "False" })),
+        HostTyped::Symbol(raw) => session
+            .resolve_symbol_name(raw, true)
+            .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+            .ok_or_else(|| format!("unable to resolve Symbol value: {raw:?}")),
+        HostTyped::Str(value) => Ok(Expr::string(value)),
+        HostTyped::List(items) => {
+            ensure_typed_container_depth(depth)?;
+            let items = items
+                .iter()
+                .map(|item| expr_from_typed_at_depth(session, item, depth + 1))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(system_call("List", items))
+        }
+        HostTyped::Association(entries) => {
+            ensure_typed_container_depth(depth)?;
+            let entries = entries
+                .iter()
+                .map(|(key, value)| {
+                    Ok(system_call(
+                        "Rule",
+                        vec![
+                            expr_from_typed_at_depth(session, key, depth + 1)?,
+                            expr_from_typed_at_depth(session, value, depth + 1)?,
+                        ],
+                    ))
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            Ok(system_call("Association", entries))
+        }
+        HostTyped::Rule { lhs, rhs } => {
+            ensure_typed_container_depth(depth)?;
+            Ok(system_call(
+                "Rule",
+                vec![
+                    expr_from_typed_at_depth(session, lhs, depth + 1)?,
+                    expr_from_typed_at_depth(session, rhs, depth + 1)?,
+                ],
+            ))
+        }
+        HostTyped::Other { .. } => {
+            Err("HostTyped::Other is an output-only lossy view and cannot be used as input".into())
+        }
+    }
+}
+
+fn ensure_typed_container_depth(depth: usize) -> Result<(), String> {
+    if depth >= MAX_TYPED_DEPTH {
+        Err(format!(
+            "typed value exceeds the maximum input depth of {MAX_TYPED_DEPTH}"
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn system_call(head: &str, args: Vec<Expr>) -> Expr {
+    Expr::call(Expr::system_symbol(head), args)
 }
 
 fn host_typed_from_expr(expr: &Expr) -> HostTyped {

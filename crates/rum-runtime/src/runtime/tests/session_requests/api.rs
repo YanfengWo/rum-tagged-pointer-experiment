@@ -141,6 +141,44 @@ fn eval_request_returns_transport_friendly_cycle_termination_data() {
 }
 
 #[test]
+fn eval_expr_request_aggregates_messages_and_classifies_budget_termination() {
+    let mut session = session_with_test_control_builtins();
+    session.set_recursion_limit(32);
+    session
+        .eval_request("grow[x_] := grow[f[x]]")
+        .expect("recursive definition should be stored");
+    let expr = session
+        .lower_request("Message[General::stop]; grow[1]")
+        .expect("request expression should lower")
+        .expr;
+
+    let response = session
+        .eval_expr_request(expr)
+        .expect("recursion budget should surface a termination value");
+
+    assert_eq!(
+        response.value.to_string(),
+        "TerminatedEvaluation[\"RecursionLimit\"]"
+    );
+    assert_eq!(
+        response.termination,
+        Some(EvalTerminationReason::RecursionLimit)
+    );
+    assert!(
+        response
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "stop")
+    );
+    assert!(
+        response
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reclim")
+    );
+}
+
+#[test]
 fn eval_request_memory_ceiling_returns_classified_termination_and_session_recovers() {
     let mut session = session_with_test_control_builtins();
     let mut limits = session.resource_limits();

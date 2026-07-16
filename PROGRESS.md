@@ -1082,3 +1082,35 @@ variant). No A/B: typed conversion runs once per top-level outcome
 mapping; microbench in-process loops never reach it. Next: a4 (typed
 value bridge, in) — the line's last core item, then a5 (named
 profiles).
+
+## 2026-07-16 — brief-241: typed value bridge, in (embedding line a4)
+
+The input half of the typed bridge: expr_from_typed converts HostTyped
+into kernel expressions (depth guard shares MAX_TYPED_DEPTH=64 — trees
+under the cap sit far below the documented deep-drop danger, no Drop
+machinery touched; Other rejected as an output-only lossy view;
+BigInteger/Rational strings validated, zero denominators refused,
+rationals normalize so 2/4 round-trips as 1/2) and
+HostSession::call(head, args) is the injection-safe invocation path:
+head and Symbol arguments resolve through the session's public
+resolve_symbol_name — short names hit System builtins exactly as
+source text would, fully-qualified names pin both contexts — and a
+hostile string argument ("], Print[666], x = " …) round-trips as pure
+data (pinned). One kernel seam, authorized by the line's ground rules:
+Session::eval_expr_request evaluates an already-built Expr through the
+full request protocol (checkpoint/messages/termination), implemented
+by extracting eval_request's post-lower tail into a shared helper;
+eval_request behavior frozen and verified. A/B story: Codex ran the
+newly-mandated interleaved procedure and correctly stop-lossed on 3
+labels exceeding their per-label base spreads — but those spreads
+(1-11µs, three-sample max-min) were razor-thin artifacts; the
+director's independent interleaved re-run measured the same labels'
+true cross-round spreads at 5-15% with deltas of +0.6~0.9%, median
+delta 0.00%, bidirectional scatter (fastest label -3.8%), two
+independent interleaved sessions agreeing. Verdict: no regression;
+lesson refined — a FAIL verdict needs the label to clear the WHOLE
+FIELD's |delta| distribution, not a three-sample per-label min-max.
+Gate: scope exact (6 files), fmt clean, workspace 1519/0 reproduced
+(+13 tests, call suite rerun by name; Codex had stopped before the
+full suite per its stop-loss — the director completed it). Next: a5
+(named profiles), the line's last queued item.
