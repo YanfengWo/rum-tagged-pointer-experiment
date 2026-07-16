@@ -24,11 +24,13 @@ with a scenario-design pass (candidate gaps: `HostTyped` richness, typed
 `call`, named embedding profiles, per-request rollback API — see the concern
 (a) inventory below; in-tree consumers rum-repl/jupyter/terminal/cli are
 scenario material). See `dun-plugin-requirements-line` memory for the full
-ruling chain. **UPDATE 2026-07-16: the concern-(a) scenario-design pass has
-landed — see `embedding-api-line.md` (three user-supplied downstream
-scenario families + in-tree consumer survey + ranked requirements + proposed
-brief queue). That document supersedes the inventory below as the (a) line's
-canonical doc.**
+ruling chain. **UPDATE 2026-07-16: concern (a) is COMPLETE — the EMBEDDING API LINE
+(briefs 236-242) opened with the scenario-design pass and closed the same
+day; see `embedding-api-line.md` (the (a) line's canonical doc — scenario
+families, consumer survey F1-F8, all five queue items landed and gated).
+The concern-(a) inventory below is HISTORICAL; every gap it lists was
+closed or explicitly parked by that line. This document remains as the
+diagnosis record for both concerns.**
 
 ## Framing (user rulings, 2026-07-14)
 

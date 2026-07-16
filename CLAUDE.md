@@ -207,13 +207,35 @@ rather than duplicating them.
   intrinsically multi-dimensional (correctness + timing + memory), so `Clock`
   is the honest label, not a mislabel to purify. Detail:
   `usability-pass-line.md` + tracker.
-- **HOST-EMBEDDING LINE — concern (b) CLOSED at b4 (2026-07-15); concern (a)
-  is the next line, DEFERRED to a fresh session (diagnosis
-  `docs/dev/host-embedding-line.md`).** Sequencing ruled by the user
-  2026-07-14: concern (b) dun pure-sandbox + protocol conformance FIRST
-  (explicit requirements, clear boundary), concern (a) general embedding API
-  only AFTER (b) completes, and (a) MUST open with scenario design + boundary
-  drawing — no feature bricklaying on instinct.
+- **HOST-EMBEDDING LINE — COMPLETE. Concern (b) closed at b4 (2026-07-15);
+  concern (a) = the EMBEDDING API LINE, COMPLETE (2026-07-16, briefs
+  236-242, opened and closed in one day; canonical doc
+  `docs/dev/embedding-api-line.md`, memory `embedding-line-a-scenarios`).**
+  (a) endstate: scenario design (three user-supplied abandoned downstream
+  concepts: Python/AI-infra adapter, Rust/wasm tooling, tauri typst IDE =
+  dun's ancestor) + in-tree consumer survey (findings F1-F8) drove five
+  gated increments — a1 contract honesty (exit_status, requires_reset, b1
+  termination-field adoption), a2 dogfood arc (contract surface + rum-cli +
+  rum-repl ports; **in-tree hosts are pure rum-host consumers — cli/repl
+  have ZERO rum-runtime/rum-stdlib dependencies; user ruling: dogfood
+  stance A**), a3 typed bridge out (Bool/Association/Rule + jupyter
+  application/json), a4 typed bridge in (expr_from_typed + injection-safe
+  `HostSession::call`; kernel seam `eval_expr_request`), a5 named profiles
+  (hermetic/scripting; all-8-capability pins, a ninth Capability variant
+  fails compilation until every profile takes a stance). Parked pending
+  scenario pull: background-eval helper, per-request rollback API, lighter
+  checkpoint. Cold backup `rum-2026-07-16-3d31e09.bundle`. Watch: a
+  rum-jupyter native ZeroMQ ordering flake has surfaced twice
+  (brief-165, brief-242; green in isolation both times) — brief it on a
+  third occurrence. **NEXT DIRECTION = user decision** (candidates: the
+  parked builtin message-tag registry + docgen pairing, vm_rhs_template
+  fate, or a new user direction; fs/os/net stay deferred until after
+  publication).
+  Original sequencing (user 2026-07-14): concern (b) dun pure-sandbox +
+  protocol conformance FIRST (explicit requirements, clear boundary),
+  concern (a) general embedding API only AFTER (b) completes, and (a) MUST
+  open with scenario design + boundary drawing — no feature bricklaying on
+  instinct. That is how it ran.
   **b1–b4 DONE and reviewed boundary-clean** (b1 structured termination
   discriminator, b2 request-level memory ceiling, b3 stdout-ownership hygiene
   hard line, b4 crash-only + per-request isolation contract — all generic
@@ -226,11 +248,9 @@ rather than duplicating them.
   line. Part 1 (brief-235, the `rum-dun-host` codec crate) had landed and was
   reverted (`6062c03`+`ed01e33`, revert commit `93a93d2`).** **fs/os/net
   downstream capabilities are DEFERRED until after publication (user
-  2026-07-15) — explicitly NOT the next target.** NEXT: concern (a), opened in
-  a new session, starting with a scenario-design pass (candidate gaps recorded
-  in the diagnosis doc: `HostTyped` richness, typed `call`, named embedding
-  profiles, per-request rollback API; in-tree consumers rum-repl/jupyter/
-  terminal/cli are real scenario material). Diagnosis headline: gates 1-3 done (sandboxed
+  2026-07-15) — explicitly NOT the next target.** (Historical diagnosis
+  detail below; the concern-(a) gaps it lists were all closed by briefs
+  236-242.) Diagnosis headline: gates 1-3 done (sandboxed
   profile, Interactive capability, panic isolation), stdout/crash-only/
   cold-start (~4.8 ms full cycle) already satisfied but unpinned; the two
   real seams = structured termination discriminator (graceful cancel/timeout
