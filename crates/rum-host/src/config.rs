@@ -183,6 +183,34 @@ impl HostConfig {
             .without_entropy_source()
     }
 
+    /// Returns a deterministic configuration for build-step and compile-time evaluation.
+    ///
+    /// For the same input, a hermetic session produces the same output across
+    /// sessions and resets. The fixed-seed deterministic PRNG remains available,
+    /// so `SeedRandom[seed]` and `RandomInteger` work and replay identically. The
+    /// profile exposes no wall clock, host entropy, file I/O, process control,
+    /// interactive suspension, or diagnostics.
+    ///
+    /// This currently shares its implementation with [`Self::sandboxed`], whose
+    /// framing is evaluation of untrusted source. They are separate named
+    /// contracts and may diverge in the future without changing either promise.
+    pub fn hermetic() -> Self {
+        Self::sandboxed()
+    }
+
+    /// Returns the trusted local-scripting configuration used by command-line hosts.
+    ///
+    /// This profile has full ambient authority: an unrestricted capability policy,
+    /// standard file I/O and host entropy providers, and the core builtins. It is
+    /// the shape used by `rum-cli` and `rum-repl`. Never evaluate untrusted code in
+    /// a scripting session; use [`Self::sandboxed`] or [`Self::hermetic`] instead.
+    ///
+    /// `HostConfig::default()` defines this profile, keeping the existing trusted
+    /// default and the named scripting contract identical.
+    pub fn scripting() -> Self {
+        Self::default()
+    }
+
     /// Replaces the resource limits for sessions built from this configuration.
     pub fn with_resource_limits(mut self, limits: HostResourceLimits) -> Self {
         self.resource_limits = limits;

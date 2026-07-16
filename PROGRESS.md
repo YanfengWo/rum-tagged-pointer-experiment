@@ -1114,3 +1114,36 @@ Gate: scope exact (6 files), fmt clean, workspace 1519/0 reproduced
 (+13 tests, call suite rerun by name; Codex had stopped before the
 full suite per its stop-loss — the director completed it). Next: a5
 (named profiles), the line's last queued item.
+
+## 2026-07-16 — brief-242: named profiles (embedding line a5) — LINE COMPLETE
+
+hermetic() and scripting() land as named contracts (user-ruled minimal
+set): hermetic shares sandboxed()'s implementation but carries its own
+determinism promise (same input → same output; fixed-seed PRNG replays
+— the stateful↔pure line's dividend: RandomInteger is Pure, only true
+entropy is Capability::Random, so the sandbox was already mechanically
+hermetic); scripting() names default()'s trusted-local semantics and
+rum-cli adopts it (redundant provider hand-wiring gone; the director
+removed the leftover unused imports post-gate). The drift-proofing is
+the real deliverable: each named profile is pinned by an
+all-8-capability probe test with an exhaustive Capability match — a
+ninth variant (e.g. a future Network capability, which also forces the
+u8 bitmask widening) fails compilation until every profile takes an
+explicit stance. Gate: scope exact (4 files + the import cleanup), fmt
+clean, workspace 1523/0 reproduced, all 4 new tests rerun by name. No
+A/B: config constructors only. One watch item: a rum-jupyter native
+ZeroMQ ordering flake surfaced once in Codex's first workspace attempt
+(passed in isolation and in two full reruns; also seen once around
+brief-165 — if it recurs, brief it).
+
+**EMBEDDING API LINE (concern a) COMPLETE — briefs 236-242, opened and
+closed 2026-07-16.** Scenario design (three user-supplied abandoned
+downstream concepts) + in-tree consumer survey (F1-F8) drove five
+gated increments. Structural endstate: rum-cli and rum-repl are pure
+rum-host consumers (zero rum-runtime/rum-stdlib dependencies),
+rum-terminal renders contract types only, HostTyped is a bidirectional
+injection-safe bridge with a real wire consumer, and the contract
+carries the full trusted-host surface plus three capability-pinned
+named profiles. The dogfood ruling (stance A) did the work its
+rationale promised: every gap was pulled by a real consumer, none
+invented.

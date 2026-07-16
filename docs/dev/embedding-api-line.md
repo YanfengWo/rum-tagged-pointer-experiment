@@ -1,11 +1,25 @@
 # Embedding API Line (concern a) — Scenario Design & Consumer Survey
 
-Status: scenario-design pass landed 2026-07-16 (Claude, own work — not a
-Codex brief). This opens concern (a) of the host-embedding line per the
-sequencing ruling (user 2026-07-14: (a) starts only after (b) completes,
-and MUST open with scenario design and boundary drawing — no feature
-bricklaying on instinct). Concern (b) closed at b4 on 2026-07-15
-(`host-embedding-line.md`).
+**Status: LINE COMPLETE (2026-07-16, briefs 236-242 — scenario design,
+consumer survey, and all five queue items landed and gated in one
+day).** a1 contract honesty (exit status, requires_reset, b1-field
+adoption); a2 dogfood arc (contract surface + rum-cli + rum-repl ports;
+in-tree hosts are pure rum-host consumers — cli/repl carry no
+rum-runtime/rum-stdlib dependency at all); a3 typed bridge out
+(Bool/Association/Rule + jupyter application/json consumer); a4 typed
+bridge in (expr_from_typed + injection-safe HostSession::call; kernel
+seam eval_expr_request); a5 named profiles (hermetic/scripting;
+all-8-capability pins). Parked tail (background-eval helper,
+per-request rollback API, lighter checkpoint) remains parked pending
+scenario pull. fs/os/net stay deferred until after publication (user
+2026-07-15).
+
+Original opening status: scenario-design pass landed 2026-07-16
+(Claude, own work — not a Codex brief). This opened concern (a) of the
+host-embedding line per the sequencing ruling (user 2026-07-14: (a)
+starts only after (b) completes, and MUST open with scenario design and
+boundary drawing — no feature bricklaying on instinct). Concern (b)
+closed at b4 on 2026-07-15 (`host-embedding-line.md`).
 
 Inputs: three abandoned downstream concepts supplied by the user
 (2026-07-16) as abstract scenario material, plus a fresh survey of the four

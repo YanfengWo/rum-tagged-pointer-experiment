@@ -8,7 +8,7 @@ use std::sync::{
 
 use rum_host::{
     HostConfig, HostEvalOutcome, HostEvalSuccess, HostFailure, HostFailureCode, HostInputRequest,
-    HostInputSuspension, HostSession, StdEntropySource, StdFileIo,
+    HostInputSuspension, HostSession,
 };
 use rum_repl::Repl;
 use rum_syntax::{format_parsed_source, parse_format_cli_args, parse_with_diagnostics};
@@ -200,11 +200,7 @@ fn split_script_args(raw_args: Vec<String>) -> (Vec<String>, Option<Vec<String>>
 
 fn build_host_session() -> HostSession {
     HostSession::builder()
-        .with_config(
-            HostConfig::default()
-                .with_file_io(StdFileIo::provider())
-                .with_entropy_source(StdEntropySource::provider()),
-        )
+        .with_config(HostConfig::scripting())
         .build()
 }
 

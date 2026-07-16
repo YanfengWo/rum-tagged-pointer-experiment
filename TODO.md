@@ -128,8 +128,27 @@ gate); queue signed off as a1 → a2 → a3 → a4 → a5.
   (1-11µs); the director's independent interleaved re-run measured
   those labels' true spreads at 5-15% with deltas +0.6~0.9%, median
   0.00%, bidirectional scatter. Workspace 1519/0.
-- [ ] a5: named profiles (hermetic/scripting/interactive presets;
-  semantics = user ruling at brief time).
+- [x] a5 (brief-242): named profiles, minimal set per user ruling —
+  `hermetic()` (determinism contract; shares sandboxed()'s
+  implementation today, promises may diverge) + `scripting()` (the
+  named trusted-local preset = default()'s semantics; rum-cli adopts
+  it). Each of the three named profiles pinned by an
+  all-8-capability probe test (a ninth Capability variant now fails
+  compilation until every profile takes a stance) + hermetic
+  determinism smoke (RandomInteger streams replay across sessions).
+  Workspace 1523/0.
+
+**EMBEDDING API LINE (concern a) — COMPLETE (2026-07-16, briefs
+236-242).** All five queue items landed and gated in one day. The
+in-tree hosts are pure rum-host consumers (cli/repl dropped
+rum-runtime/rum-stdlib deps entirely); the typed bridge is
+bidirectional and injection-safe; the contract carries exit status,
+syntax diagnostics, reset classification, streaming prints,
+script/file eval, queued input, lower_dump, message_catalog, and three
+named capability-pinned profiles. Canonical doc:
+docs/dev/embedding-api-line.md. Next direction = user decision
+(fs/os/net remain deferred until after publication per the 2026-07-15
+ruling; parked candidates live in the line doc's queue tail).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in

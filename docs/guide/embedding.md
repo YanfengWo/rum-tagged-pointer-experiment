@@ -82,6 +82,27 @@ install, are retained by cloned `HostConfig` values, and are re-applied by
 sandboxed session can run a downstream `Pure` builtin while denying a
 downstream `FileRead` or `FileWrite` builtin.
 
+## Profiles
+
+`HostConfig` provides three named presets:
+
+- `sandboxed()` is the untrusted-code profile. It permits only `Pure`
+  builtins and installs neither a file I/O provider nor a host entropy
+  provider.
+- `hermetic()` is the deterministic build-step and compile-time profile. The
+  same input produces the same output across sessions and resets; fixed-seed
+  deterministic random streams remain available, while wall-clock, host
+  entropy, file I/O, process, interactive, and diagnostic access are denied.
+  It has the same surface as `sandboxed()` today, but the two named contracts
+  may diverge in the future.
+- `scripting()` is the trusted local-scripting profile used by command-line
+  hosts. It installs the core builtins, standard file I/O and host entropy
+  providers, and an unrestricted capability policy, so it carries full
+  ambient authority and must never receive untrusted code.
+
+For untrusted code, choose `sandboxed()`; for deterministic build steps,
+choose `hermetic()`. For trusted local scripting, choose `scripting()`.
+
 ## Adoption Cost
 
 Measured on Intel(R) Core(TM) i9-9980HK CPU @ 2.40GHz, rustc 1.85.0,
