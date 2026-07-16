@@ -6,12 +6,14 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use rum_host::{StdEntropySource, StdFileIo};
+use rum_host::{
+    HostConfig, HostEvalOutcome, HostEvalSuccess, HostFailure, HostFailureCode, HostInputRequest,
+    HostInputSuspension, HostMessage, HostSession, StdEntropySource, StdFileIo,
+};
 use rum_repl::Repl;
-use rum_runtime::{Session, SessionEvalResponse, SessionRequestError, SessionRequestFailure};
+use rum_runtime::Session;
 use rum_stdlib::install_core;
-use rum_syntax::{format_parsed_source, parse_format_cli_args};
-use rum_terminal::{render_eval_value, render_request_failure, render_runtime_message};
+use rum_syntax::{format_parsed_source, parse_format_cli_args, parse_with_diagnostics};
 
 // The allocation-counter shim (Layer B B0 measurement) is compiled in ONLY under
 // the `alloc-count` feature. The default build uses bare mimalloc with no wrapper
@@ -44,60 +46,77 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
-    let mut session = Session::new();
-    session.set_file_io(Some(StdFileIo::provider()));
-    session.set_entropy_source(Some(StdEntropySource::provider()));
-    install_core(&mut session);
-
-    let invocation = parse_invocation(env::args().skip(1).collect())?;
+    let Invocation {
+        command,
+        script_args,
+    } = parse_invocation(env::args().skip(1).collect())?;
     let stdin_is_tty = io::stdin().is_terminal();
 
-    match invocation.command {
-        CommandMode::ReplOrFilter if stdin_is_tty => run_repl(&mut session)?,
-        CommandMode::ReplOrFilter => {
-            bind_script_args_if_present(&mut session, invocation.script_args)?;
-            let input = read_stdin_to_string()?;
-            return eval_script_source(&mut session, &input);
+    match command {
+        CommandMode::ReplOrFilter if stdin_is_tty => {
+            let mut session = build_repl_session();
+            run_repl(&mut session)?;
         }
-        CommandMode::StdinProgram => {
-            bind_script_args_if_present(&mut session, invocation.script_args)?;
-            let input = read_stdin_to_string()?;
-            return eval_script_source(&mut session, &input);
-        }
-        CommandMode::Parse(input) => match session.parse_request(&input) {
-            Ok(response) => write_stdout(response.parsed.debug_dump().as_bytes())?,
-            Err(failure) => return Err(request_failure_to_cli_error(failure, "parse failed")),
+        CommandMode::Parse(input) => match parse_with_diagnostics(input) {
+            Ok(parsed) => write_stdout(parsed.debug_dump().as_bytes())?,
+            Err(diagnostic) => {
+                eprintln!("{}", diagnostic.render());
+                return Err(io::Error::other("parse failed").into());
+            }
         },
         CommandMode::Format(raw_args) => {
             let (input, options) = parse_format_cli_args(&raw_args, "--format")
                 .map_err(|message| io::Error::new(io::ErrorKind::InvalidInput, message))?;
 
-            match session.parse_request(&input) {
-                Ok(response) => {
-                    let formatted = format_parsed_source(&response.parsed, options);
+            match parse_with_diagnostics(input) {
+                Ok(parsed) => {
+                    let formatted = format_parsed_source(&parsed, options);
                     write_stdout_line(&formatted)?;
                 }
-                Err(failure) => return Err(request_failure_to_cli_error(failure, "format failed")),
+                Err(diagnostic) => {
+                    eprintln!("{}", diagnostic.render());
+                    return Err(io::Error::other("format failed").into());
+                }
             }
+        }
+        CommandMode::Help => print_usage()?,
+        command => return run_non_interactive(command, script_args, stdin_is_tty),
+    }
+
+    Ok(ExitCode::SUCCESS)
+}
+
+fn run_non_interactive(
+    command: CommandMode,
+    script_args: Option<Vec<String>>,
+    stdin_is_tty: bool,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    let mut session = build_host_session();
+
+    match command {
+        CommandMode::ReplOrFilter | CommandMode::StdinProgram => {
+            bind_script_args_if_present(&mut session, script_args)?;
+            let input = read_stdin_to_string()?;
+            eval_script_source(&mut session, &input)
         }
         CommandMode::Eval(input) => {
             if !stdin_is_tty {
                 bind_script_input(&mut session, read_stdin_to_string()?)?;
             }
-            bind_script_args_if_present(&mut session, invocation.script_args)?;
-            return eval_source(&mut session, &input);
+            bind_script_args_if_present(&mut session, script_args)?;
+            eval_source(&mut session, &input)
         }
         CommandMode::File(path) => {
             if !stdin_is_tty {
                 bind_script_input(&mut session, read_stdin_to_string()?)?;
             }
-            bind_script_args_if_present(&mut session, invocation.script_args)?;
-            return eval_file(&mut session, &path);
+            bind_script_args_if_present(&mut session, script_args)?;
+            eval_file(&mut session, &path)
         }
-        CommandMode::Help => print_usage()?,
+        CommandMode::Parse(_) | CommandMode::Format(_) | CommandMode::Help => {
+            unreachable!("non-interactive evaluation received a non-evaluation command")
+        }
     }
-
-    Ok(ExitCode::SUCCESS)
 }
 
 struct Invocation {
@@ -180,6 +199,25 @@ fn split_script_args(raw_args: Vec<String>) -> (Vec<String>, Option<Vec<String>>
     (args, Some(script_args))
 }
 
+// a2c will unify this dual construction once the REPL accepts HostSession.
+fn build_host_session() -> HostSession {
+    HostSession::builder()
+        .with_config(
+            HostConfig::default()
+                .with_file_io(StdFileIo::provider())
+                .with_entropy_source(StdEntropySource::provider()),
+        )
+        .build()
+}
+
+fn build_repl_session() -> Session {
+    let mut session = Session::new();
+    session.set_file_io(Some(StdFileIo::provider()));
+    session.set_entropy_source(Some(StdEntropySource::provider()));
+    install_core(&mut session);
+    session
+}
+
 fn run_repl(session: &mut Session) -> io::Result<()> {
     let stdin = io::stdin();
     let stdout = io::stdout();
@@ -187,43 +225,47 @@ fn run_repl(session: &mut Session) -> io::Result<()> {
     repl.run(session)
 }
 
-fn eval_source(session: &mut Session, input: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
-    eval_request(session, "evaluation failed", |session| {
-        session.eval_request(input)
-    })
+fn eval_source(
+    session: &mut HostSession,
+    input: &str,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    eval_request(session, "evaluation failed", |session| session.eval(input))
 }
 
 fn eval_script_source(
-    session: &mut Session,
+    session: &mut HostSession,
     input: &str,
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
     eval_request(session, "evaluation failed", |session| {
-        session.eval_script_request(input)
+        session.eval_script(input)
     })
 }
 
-fn eval_file(session: &mut Session, path: &str) -> Result<ExitCode, Box<dyn std::error::Error>> {
+fn eval_file(
+    session: &mut HostSession,
+    path: &str,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
     eval_request(session, "file evaluation failed", |session| {
-        session.eval_file_request(path)
+        session.eval_file(path)
     })
 }
 
 fn eval_request(
-    session: &mut Session,
+    session: &mut HostSession,
     error_context: &str,
-    request: impl FnOnce(&mut Session) -> Result<SessionEvalResponse, SessionRequestFailure>,
+    request: impl FnOnce(&mut HostSession) -> HostEvalOutcome,
 ) -> Result<ExitCode, Box<dyn std::error::Error>> {
     let broken_pipe = install_stdout_print_sink(session);
 
     match request(session) {
-        Ok(response) => {
+        HostEvalOutcome::Success(response) => {
             if broken_pipe.load(Ordering::Relaxed) {
                 return Ok(ExitCode::SUCCESS);
             }
             print_outcome(&response)?;
             Ok(ExitCode::SUCCESS)
         }
-        Err(failure) => {
+        HostEvalOutcome::Failure(failure) => {
             if broken_pipe.load(Ordering::Relaxed) {
                 return Ok(ExitCode::SUCCESS);
             }
@@ -232,13 +274,20 @@ fn eval_request(
                 return Ok(code);
             }
 
-            Err(request_failure_to_cli_error(failure, error_context))
+            Err(host_failure_to_cli_error(failure, error_context))
+        }
+        HostEvalOutcome::InputRequired(suspension) => {
+            if broken_pipe.load(Ordering::Relaxed) {
+                return Ok(ExitCode::SUCCESS);
+            }
+
+            Err(input_suspension_to_cli_error(suspension))
         }
     }
 }
 
 fn bind_script_input(
-    session: &mut Session,
+    session: &mut HostSession,
     input: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     session.queue_input_response(input);
@@ -246,7 +295,7 @@ fn bind_script_input(
 }
 
 fn bind_script_args_if_present(
-    session: &mut Session,
+    session: &mut HostSession,
     args: Option<Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let Some(args) = args else {
@@ -264,16 +313,16 @@ fn bind_script_args_if_present(
 }
 
 fn eval_setup_binding(
-    session: &mut Session,
+    session: &mut HostSession,
     source: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    session.eval_request(source).map(|_| ()).map_err(|failure| {
-        io::Error::other(format!(
-            "failed to bind script variable: {}",
-            render_request_failure(&failure)
-        ))
-        .into()
-    })
+    let rendered = match session.eval(source) {
+        HostEvalOutcome::Success(_) => return Ok(()),
+        HostEvalOutcome::Failure(failure) => render_host_failure(&failure),
+        HostEvalOutcome::InputRequired(suspension) => render_input_suspension(&suspension),
+    };
+
+    Err(io::Error::other(format!("failed to bind script variable: {rendered}")).into())
 }
 
 fn read_stdin_to_string() -> io::Result<String> {
@@ -282,12 +331,12 @@ fn read_stdin_to_string() -> io::Result<String> {
     Ok(input)
 }
 
-fn install_stdout_print_sink(session: &mut Session) -> Arc<AtomicBool> {
+fn install_stdout_print_sink(session: &mut HostSession) -> Arc<AtomicBool> {
     let broken_pipe = Arc::new(AtomicBool::new(false));
     let sink_broken_pipe = Arc::clone(&broken_pipe);
-    let interrupt = session.interrupt_handle();
+    let cancel = session.cancel_handle();
 
-    session.set_print_sink(Box::new(move |text| {
+    session.set_print_sink(move |text| {
         if sink_broken_pipe.load(Ordering::Relaxed) {
             return;
         }
@@ -295,25 +344,76 @@ fn install_stdout_print_sink(session: &mut Session) -> Arc<AtomicBool> {
         if let Err(err) = write_stdout_line(text) {
             if err.kind() == io::ErrorKind::BrokenPipe {
                 sink_broken_pipe.store(true, Ordering::Relaxed);
-                interrupt.store(true, Ordering::Relaxed);
+                cancel.cancel();
             }
         }
-    }));
+    });
 
     broken_pipe
 }
 
-fn print_outcome(outcome: &SessionEvalResponse) -> io::Result<()> {
+fn print_outcome(outcome: &HostEvalSuccess) -> io::Result<()> {
     for message in &outcome.messages {
-        eprintln!("{}", render_runtime_message(message));
+        eprintln!("{}", render_host_message(message));
     }
 
-    write_stdout_line(&render_eval_value(outcome))
+    write_stdout_line(&outcome.value.text)
 }
 
-fn print_failure_side_effects(failure: &SessionRequestFailure) {
+fn print_failure_side_effects(failure: &HostFailure) {
     for message in &failure.messages {
-        eprintln!("{}", render_runtime_message(message));
+        eprintln!("{}", render_host_message(message));
+    }
+}
+
+fn render_host_message(message: &HostMessage) -> String {
+    format!("! {}::{}: {}", message.symbol, message.tag, message.text)
+}
+
+fn render_host_messages(messages: &[HostMessage]) -> String {
+    messages
+        .iter()
+        .map(render_host_message)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn render_host_failure(failure: &HostFailure) -> String {
+    let mut output = render_host_messages(&failure.messages);
+    if !output.is_empty() {
+        output.push('\n');
+    }
+
+    if failure.code == HostFailureCode::Syntax {
+        output.push_str(
+            failure
+                .syntax_rendered
+                .as_deref()
+                .expect("syntax host failures carry a rendered diagnostic"),
+        );
+    } else {
+        output.push_str("! ");
+        output.push_str(&failure.message);
+    }
+
+    output
+}
+
+fn render_input_suspension(suspension: &HostInputSuspension) -> String {
+    let mut output = render_host_messages(&suspension.messages);
+    if !output.is_empty() {
+        output.push('\n');
+    }
+    output.push_str("! ");
+    output.push_str(&input_required_message(&suspension.request));
+    output
+}
+
+fn input_required_message(request: &HostInputRequest) -> String {
+    if request.prompt.is_empty() {
+        "input required".to_string()
+    } else {
+        format!("input required: {}", request.prompt)
     }
 }
 
@@ -330,28 +430,34 @@ fn print_alloc_profile() {
     );
 }
 
-fn request_failure_to_cli_error(
-    failure: SessionRequestFailure,
+fn host_failure_to_cli_error(
+    failure: HostFailure,
     syntax_context: &str,
 ) -> Box<dyn std::error::Error> {
-    let rendered = render_request_failure(&failure);
+    let rendered = render_host_failure(&failure);
+    eprintln!("{rendered}");
 
-    match &failure.error {
-        SessionRequestError::Syntax(_) => {
-            eprintln!("{rendered}");
-            Box::new(io::Error::other(syntax_context.to_string()))
-        }
-        error => {
-            eprintln!("{rendered}");
-            Box::new(io::Error::other(error.to_string()))
-        }
+    if failure.code == HostFailureCode::Syntax {
+        Box::new(io::Error::other(syntax_context.to_string()))
+    } else {
+        Box::new(io::Error::other(failure.message))
     }
 }
 
-fn exit_code_from_failure(failure: &SessionRequestFailure) -> Option<ExitCode> {
-    match &failure.error {
-        SessionRequestError::Exit { code } => Some(ExitCode::from(*code as u8)),
-        _ => None,
+fn input_suspension_to_cli_error(suspension: HostInputSuspension) -> Box<dyn std::error::Error> {
+    let message = input_required_message(&suspension.request);
+    eprintln!("{}", render_input_suspension(&suspension));
+    Box::new(io::Error::other(message))
+}
+
+fn exit_code_from_failure(failure: &HostFailure) -> Option<ExitCode> {
+    if failure.code == HostFailureCode::Exit {
+        let status = failure
+            .exit_status
+            .expect("Exit host failures carry a requested status");
+        Some(ExitCode::from(status as u8))
+    } else {
+        None
     }
 }
 

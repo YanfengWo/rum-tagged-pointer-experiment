@@ -134,6 +134,7 @@ fn cancelled_failure_from_success(response: HostEvalSuccess) -> HostFailure {
         code: HostFailureCode::Cancelled,
         exit_status: None,
         message: "evaluation cancelled".to_string(),
+        syntax_rendered: None,
         messages: response.messages,
         prints: response.prints,
         trace: response.trace,
@@ -193,6 +194,7 @@ fn worker_panic_failure(payload: &(dyn Any + Send)) -> HostFailure {
             "jupyter execute worker caught panic: {}",
             panic_payload_message(payload)
         ),
+        syntax_rendered: None,
         messages: Vec::new(),
         prints: Vec::new(),
         trace: Vec::new(),

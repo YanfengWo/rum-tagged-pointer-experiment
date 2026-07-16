@@ -999,3 +999,34 @@ Gate: scope exact (3 files), fmt clean, workspace 1494/0 reproduced
 (+6 contract tests, each rerun by name). No A/B: additive host facade
 only, no kernel code touched. Next: a2b (rum-cli dogfood port,
 microbench A/B hard gate).
+
+## 2026-07-16 — brief-238: rum-cli dogfood port (embedding line a2b)
+
+rum-cli's non-interactive paths now ride the rum-host contract,
+byte-preserving (27 frozen CLI tests, zero expectation changes): eval /
+eval_script / eval_file via HostSession, streaming prints via the
+contract sink (EPIPE -> cancel_handle), batch input via
+queue_input_response (the argv/stdin smuggling is gone), exit status
+via HostFailure.exit_status, message/failure rendering rebuilt
+byte-identically from HostMessage/HostFailure. --parse/--format go
+straight to rum-syntax (no session construction at all). The REPL
+branch keeps a raw Session until a2c (marked in source). The port
+exposed and fixed two contract gaps: HostValue.text is now
+CanonicalHoldFormTransparent (canonical style with one top-level
+HoldForm peeled — the CLI's rendering; jupyter text/plain inherits the
+WL-correct display), and HostFailure.syntax_rendered carries the full
+rendered diagnostic (Syntax failures only). Process note: the first
+dispatch stop-lossed on a brief error (I wrote the expected rendering
+as infix "1 + 1" from memory; the canonical truth is "Plus[1, 1]" —
+brief revised, expectation values must be probed, not recalled). The
+second dispatch stop-lossed on the Part C A/B gate reporting 5
+regressed labels; the director's independent 4-pair INTERLEAVED re-run
+overturned it: all 5 suspects cleared (best-of-3: literal-string -4.5%,
+set-ownvalue -2.8%, block-local -2.1%, symbol-ownvalue-read +0.2%,
+downvalue-pattern-hit +0.9%), median delta 0.00%, and with-local's
+apparent +14% was label bistability (the same candidate binary observed
+at 0.85ms and 0.97ms levels across sessions; pair 4: base 0.000863 vs
+cand 0.000865). Lesson pinned: A/B rounds must be interleaved (B C B C),
+never sequential blocks — a brief allowing baseline reuse invites
+time-drift artifacts. Gate: scope exact (7 files), fmt clean, workspace
+1495/0 reproduced, raw A/B data under /tmp/rum-238-gate/.

@@ -2,6 +2,7 @@ use rum_core::{Atom, Expr};
 use rum_runtime::{
     EvalTerminationReason, RuntimeInputKind, RuntimeInputRequest, RuntimeMessage,
     SessionEvalResponse, SessionRequestError, SessionRequestFailure, TraceEvent,
+    kernel_api::{ToStringFormat, render_to_string_expr},
 };
 
 const MAX_TYPED_DEPTH: usize = 64;
@@ -86,6 +87,11 @@ pub struct HostFailure {
     pub exit_status: Option<i64>,
     /// User-facing failure message.
     pub message: String,
+    /// Full rendered source diagnostic for a syntax failure.
+    ///
+    /// This is `Some(diagnostic.rendered)` only for a failure mapped from
+    /// [`SessionRequestError::Syntax`] and is `None` for every other failure.
+    pub syntax_rendered: Option<String>,
     /// Messages emitted before failure.
     pub messages: Vec<HostMessage>,
     /// Text printed before failure.
@@ -155,7 +161,10 @@ impl HostFailureCode {
 /// Host-facing value with both rendered and typed forms.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostValue {
-    /// Rendered expression text.
+    /// Canonically rendered expression text with one top-level `HoldForm` peeled.
+    ///
+    /// This matches the value rendering used by the CLI front end. Use
+    /// [`HostTyped`] for the transport-friendly structural view.
     pub text: String,
     /// Transport-friendly typed representation of the expression.
     pub typed: HostTyped,
@@ -344,7 +353,10 @@ impl From<TraceEvent> for HostTraceEvent {
 }
 
 pub(crate) fn eval_success_from_runtime(response: SessionEvalResponse) -> HostEvalSuccess {
-    let text = response.value.to_string();
+    let text = render_to_string_expr(
+        &response.value,
+        ToStringFormat::CanonicalHoldFormTransparent,
+    );
     let typed = host_typed_from_expr(&response.value);
     let value = HostValue { text, typed };
     let termination = response.termination.map(Into::into);
@@ -389,6 +401,10 @@ pub(crate) fn host_failure_from_runtime(failure: SessionRequestFailure) -> HostF
         SessionRequestError::Exit { code } => Some(*code),
         _ => None,
     };
+    let syntax_rendered = match &failure.error {
+        SessionRequestError::Syntax(diagnostic) => Some(diagnostic.rendered.clone()),
+        _ => None,
+    };
     let message = failure.error.to_string();
     let messages = host_messages(failure.messages);
     let prints = failure.prints;
@@ -399,6 +415,7 @@ pub(crate) fn host_failure_from_runtime(failure: SessionRequestFailure) -> HostF
         code,
         exit_status,
         message,
+        syntax_rendered,
         messages,
         prints,
         trace,
@@ -414,6 +431,7 @@ pub(crate) fn synthesized_host_failure(
         code,
         exit_status: None,
         message: message.into(),
+        syntax_rendered: None,
         messages: Vec::new(),
         prints: Vec::new(),
         trace: Vec::new(),

@@ -184,6 +184,15 @@ fn host_eval_reports_value_messages_prints_and_structured_outputs() {
 }
 
 #[test]
+fn host_eval_renders_top_level_hold_form_transparently_in_canonical_style() {
+    let mut session = HostSession::new();
+
+    let success = successful_eval(session.eval("HoldForm[1 + 1]"));
+
+    assert_eq!(success.value.text, "Plus[1, 1]");
+}
+
+#[test]
 fn host_print_sink_streams_exclusively_and_clear_restores_buffering() {
     let mut session = HostSession::new();
     let streamed = Arc::new(Mutex::new(Vec::new()));
@@ -1044,6 +1053,15 @@ fn host_session_introspection_survives_poisoned_session() {
 fn host_failures_use_stable_failure_codes() {
     let mut session = HostSession::new();
 
+    let expected_syntax_rendered = match rum_runtime::Session::new()
+        .eval_request("f[1,]")
+        .expect_err("malformed source should produce a syntax request error")
+        .error
+    {
+        rum_runtime::SessionRequestError::Syntax(diagnostic) => diagnostic.rendered,
+        other => panic!("expected runtime syntax failure, got {other:?}"),
+    };
+
     // `1 2` is now valid juxtaposition (1*2) since 67a3bdc; use a still-invalid input.
     let outcome = session.eval("f[1,]");
 
@@ -1052,8 +1070,20 @@ fn host_failures_use_stable_failure_codes() {
             assert_eq!(failure.code, HostFailureCode::Syntax);
             assert_eq!(failure.exit_status, None);
             assert!(!failure.message.is_empty());
+            assert_eq!(
+                failure.syntax_rendered.as_deref(),
+                Some(expected_syntax_rendered.as_str())
+            );
         }
         other => panic!("expected syntax failure, got {other:?}"),
+    }
+
+    match session.eval("Exit[7]") {
+        HostEvalOutcome::Failure(failure) => {
+            assert_eq!(failure.code, HostFailureCode::Exit);
+            assert_eq!(failure.syntax_rendered, None);
+        }
+        other => panic!("expected non-syntax failure, got {other:?}"),
     }
 }
 

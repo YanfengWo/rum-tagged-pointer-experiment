@@ -82,11 +82,22 @@ gate); queue signed off as a1 → a2 → a3 → a4 → a5.
   `InputRequired` but is NOT resumable (`resume_with_input` fails
   `Other`; remaining forms not evaluated) — documented, future seam if
   a consumer needs it. Workspace 1494/0.
-- [ ] a2b: dogfood port of `rum-cli` onto `rum-host` (microbench A/B
-  hard gate — the CLI is the perf instrument; EPIPE→cancel sink
-  pattern; exit-status via a1's field).
+- [x] a2b (brief-238 + revision): `rum-cli` non-interactive paths
+  ported onto `HostSession`, byte-preserving (27 CLI tests frozen,
+  zero expectation changes). Fixed the two contract gaps the port
+  exposed: `HostValue.text` → CanonicalHoldFormTransparent (canonical
+  style, one top-level `HoldForm` peeled — `HoldForm[1+1]` renders
+  `Plus[1, 1]`; jupyter text/plain inherits the fix);
+  `HostFailure.syntax_rendered` carries the full diagnostic.
+  `--parse`/`--format` now go straight to `rum-syntax` (no session).
+  REPL branch stays raw until a2c (marked). A/B verdict: NO regression
+  — Codex's sequential-run STOP was overturned by the director's
+  4-pair interleaved re-test (5 suspect labels cleared, median Δ 0.00%,
+  `with-local`'s apparent +14% shown to be label bistability: the same
+  candidate binary observed at both levels). Workspace 1495/0.
 - [ ] a2c: dogfood port of `rum-repl` (per-command contract-vs-raw
-  split = user ruling; rum-terminal contract-type render twins).
+  split = user ruling; rum-terminal contract-type render twins;
+  unify the CLI's dual session construction).
 - [ ] a3: typed value bridge, out — widen `HostTyped`
   (Bool/Association/Rule) + a real consumer (jupyter MIME candidate;
   wire-visible change = user ruling at brief time).

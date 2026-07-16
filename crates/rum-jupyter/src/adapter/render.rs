@@ -339,6 +339,7 @@ mod tests {
             code,
             exit_status: None,
             message: message.to_string(),
+            syntax_rendered: None,
             messages: Vec::new(),
             prints: Vec::new(),
             trace: Vec::new(),

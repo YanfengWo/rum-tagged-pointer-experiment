@@ -596,6 +596,7 @@ fn snapshot_input_failure(suspension: HostInputSuspension) -> HostFailure {
         code: HostFailureCode::Other,
         exit_status: None,
         message: "snapshot restore unexpectedly requested input".to_string(),
+        syntax_rendered: None,
         messages: suspension.messages,
         prints: suspension.prints,
         trace: suspension.trace,

@@ -130,7 +130,10 @@ It is a resumable state for `Input` and `InputString`.
 - `trace`
 - `outputs`
 
-`value.text` is the rendered expression.
+`value.text` is the canonically rendered expression with one top-level
+`HoldForm` peeled, matching the CLI front end. For example,
+`HoldForm[1 + 1]` is rendered as `Plus[1, 1]`. The `value.typed` field keeps the
+transport-friendly structural view of the evaluated expression.
 
 `value.typed` is a transport-friendly structured value:
 
@@ -180,6 +183,8 @@ internal structs.
 - a coarse `HostFailureCode`
 - an optional `exit_status`, populated for language-level `Exit[code]` failures
 - a user-facing message
+- an optional `syntax_rendered`, populated with the full rendered source
+  diagnostic exactly for syntax failures
 - messages, prints, trace, and structured outputs collected before failure
 
 Failure codes include syntax failures, load failures, evaluation cycles,
