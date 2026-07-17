@@ -281,6 +281,12 @@ pub enum BuiltinDispatch {
 }
 pub type BuiltinFn = fn(&mut Session, &Expr, &[Expr]) -> Result<Expr, EvalError>;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BuiltinMessageSpec {
+    pub tag: &'static str,
+    pub template: &'static str,
+}
+
 // Specs compare catalog-origin function pointers; copies come from one catalog entry.
 #[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -291,6 +297,7 @@ pub struct BuiltinSpec {
     pub dispatch: BuiltinDispatch,
     pub handler: Option<BuiltinFn>,
     pub capability: Capability,
+    pub messages: &'static [BuiltinMessageSpec],
 }
 
 impl BuiltinSpec {
@@ -302,6 +309,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::None,
             handler: None,
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -313,6 +321,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::None,
             handler: None,
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -328,6 +337,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::None,
             handler: None,
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -339,6 +349,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::SpecialForm,
             handler: Some(handler),
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -355,6 +366,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::SpecialForm,
             handler: Some(handler),
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -371,6 +383,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::SpecialForm,
             handler: Some(handler),
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -382,6 +395,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::Ordinary,
             handler: Some(handler),
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -398,6 +412,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::Ordinary,
             handler: Some(handler),
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -414,6 +429,7 @@ impl BuiltinSpec {
             dispatch: BuiltinDispatch::Ordinary,
             handler: Some(handler),
             capability: Capability::Pure,
+            messages: &[],
         }
     }
 
@@ -425,6 +441,11 @@ impl BuiltinSpec {
 
     pub const fn with_capability(mut self, capability: Capability) -> Self {
         self.capability = capability;
+        self
+    }
+
+    pub const fn with_messages(mut self, messages: &'static [BuiltinMessageSpec]) -> Self {
+        self.messages = messages;
         self
     }
 

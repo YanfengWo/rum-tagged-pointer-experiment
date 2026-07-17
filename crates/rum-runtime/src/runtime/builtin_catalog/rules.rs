@@ -25,7 +25,34 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         "Set",
         "Assigns an immediate value to a symbol or pattern.",
         builtin_set,
-    ).protected(),
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly `1` argument(s), got `2`",
+        },
+        BuiltinMessageSpec {
+            tag: "kval",
+            template: "The value for the key `1` does not exist.",
+        },
+        BuiltinMessageSpec {
+            tag: "pkspec1",
+            template: "The expression `1` cannot be used as a part specification.",
+        },
+        BuiltinMessageSpec {
+            tag: "shape",
+            template: "Lists `1` and `2` are not the same shape.",
+        },
+        BuiltinMessageSpec {
+            tag: "write",
+            template: "Tag `1` in `2` is Protected.",
+        },
+        BuiltinMessageSpec {
+            tag: "wrsym",
+            template: "Symbol `1` is Protected.",
+        },
+    ])
+    .protected(),
     BuiltinSpec::ordinary_with_hold(
         "AddTo",
         "Adds an evaluated increment to a held symbol or exact Part target and stores the result.",

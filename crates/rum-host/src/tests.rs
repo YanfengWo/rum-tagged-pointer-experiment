@@ -1455,6 +1455,20 @@ fn host_message_catalog_supports_global_symbol_and_invalid_queries() {
         }]
     );
 
+    let builtin = session
+        .message_catalog(Some("Set"))
+        .expect("a builtin symbol catalog query should be valid");
+    assert_eq!(
+        builtin.first(),
+        Some(&HostMessageTemplate {
+            message_name: "Set::argx".to_string(),
+            qualified_symbol_name: "System`Set".to_string(),
+            tag: "argx".to_string(),
+            template: "\"expected exactly `1` argument(s), got `2`\"".to_string(),
+            delayed: false,
+        })
+    );
+
     assert_eq!(session.message_catalog(Some("f::")), None);
 }
 

@@ -213,7 +213,7 @@ fn messages_builtin_lists_defined_message_names() {
     );
     assert_eq!(
         session.eval_text("Messages[]").unwrap().value.to_string(),
-        "List[f::argx, f::usage, g::tag]"
+        "List[f::argx, f::usage, g::tag, Set::argx, Set::kval, Set::pkspec1, Set::shape, Set::write, Set::wrsym]"
     );
     assert_eq!(
         session
@@ -223,6 +223,37 @@ fn messages_builtin_lists_defined_message_names() {
             .to_string(),
         "List[f::argx]"
     );
+}
+
+#[test]
+fn builtin_message_registry_populates_listings_and_information() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Messages[Set]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Set::argx, Set::kval, Set::pkspec1, Set::shape, Set::write, Set::wrsym]"
+    );
+    assert_eq!(
+        session
+            .eval_text("MessageTags[Set]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]"
+    );
+
+    let information = session
+        .eval_text("Information[Set]")
+        .unwrap()
+        .value
+        .to_string();
+    assert!(information.contains(
+        "Rule[\"Messages\", List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]]"
+    ));
 }
 
 #[test]
@@ -272,7 +303,7 @@ fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
             .unwrap()
             .value
             .to_string(),
-        "List[\"argx\", \"usage\"]"
+        "List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"usage\", \"write\", \"wrsym\"]"
     );
     assert_eq!(
         session
@@ -315,6 +346,57 @@ fn inspect_message_catalog_exposes_templates_and_delayed_flags() {
     let exact = session.inspect_message_catalog(Some("f::usage")).unwrap();
     assert_eq!(exact.len(), 1);
     assert_eq!(exact[0].message_name, "f::usage");
+}
+
+#[test]
+fn inspect_message_catalog_merges_builtin_templates_and_user_overrides() {
+    let mut session = session_with_test_control_builtins();
+
+    let entries = session.inspect_message_catalog(Some("Set")).unwrap();
+    let expected = [
+        ("argx", "\"expected exactly `1` argument(s), got `2`\""),
+        ("kval", "\"The value for the key `1` does not exist.\""),
+        (
+            "pkspec1",
+            "\"The expression `1` cannot be used as a part specification.\"",
+        ),
+        ("shape", "\"Lists `1` and `2` are not the same shape.\""),
+        ("write", "\"Tag `1` in `2` is Protected.\""),
+        ("wrsym", "\"Symbol `1` is Protected.\""),
+    ];
+
+    assert_eq!(entries.len(), expected.len());
+    for (entry, (tag, template)) in entries.iter().zip(expected) {
+        assert_eq!(entry.message_name, format!("Set::{tag}"));
+        assert_eq!(entry.qualified_symbol_name, "System`Set");
+        assert_eq!(entry.tag, tag);
+        assert_eq!(entry.template.to_string(), template);
+        assert!(!entry.delayed);
+    }
+
+    let exact = session.inspect_message_catalog(Some("Set::argx")).unwrap();
+    assert_eq!(exact.len(), 1);
+    assert_eq!(exact[0], entries[0]);
+
+    session.eval_text("Unprotect[Set]").unwrap();
+    session.eval_text("Set::argx = \"custom\"").unwrap();
+    session.eval_text("Protect[Set]").unwrap();
+
+    let overridden = session.inspect_message_catalog(Some("Set")).unwrap();
+    assert_eq!(overridden.len(), expected.len());
+    let argx = overridden
+        .iter()
+        .filter(|entry| entry.tag == "argx")
+        .collect::<Vec<_>>();
+    assert_eq!(argx.len(), 1);
+    assert_eq!(argx[0].template.to_string(), "\"custom\"");
+    assert!(!argx[0].delayed);
+
+    session.eval_text("f::tag = \"user-only\"").unwrap();
+    assert_eq!(
+        session.eval_text("Messages[f]").unwrap().value.to_string(),
+        "List[f::tag]"
+    );
 }
 
 #[test]

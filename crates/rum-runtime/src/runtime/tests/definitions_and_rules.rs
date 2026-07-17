@@ -302,7 +302,9 @@ fn information_uses_catalog_and_symbol_name_usage_fallbacks_and_stored_message_t
     assert!(
         builtin.contains("Rule[\"Usage\", \"Assigns an immediate value to a symbol or pattern.\"]")
     );
-    assert!(builtin.contains("Rule[\"Messages\", List[]]"));
+    assert!(builtin.contains(
+        "Rule[\"Messages\", List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]]"
+    ));
 }
 
 #[test]

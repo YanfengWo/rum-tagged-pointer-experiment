@@ -13,6 +13,12 @@ pub(in crate::runtime) enum MessageTargetNormalizationError {
     InvalidDefinitionInspectionTarget,
 }
 
+#[derive(Clone, Copy)]
+enum MessageCatalogSource<'a> {
+    User(&'a MessageDefinition),
+    Builtin(BuiltinMessageSpec),
+}
+
 impl MessageTargetNormalizationError {
     pub(in crate::runtime) fn message(self) -> &'static str {
         match self {
@@ -241,9 +247,8 @@ impl Session {
         symbol: Option<&Symbol>,
     ) -> Expr {
         let items = self
-            .message_definitions
-            .keys()
-            .filter(|key| symbol.is_none_or(|symbol| key.symbol == *symbol))
+            .merged_message_catalog_sources(symbol)
+            .into_keys()
             .map(|key| message_name_expr(key.symbol.clone(), key.tag.clone()))
             .collect::<Vec<_>>();
 
@@ -306,10 +311,9 @@ impl Session {
         &self,
         symbol: Option<&Symbol>,
     ) -> Vec<MessageCatalogEntry> {
-        self.message_definitions
-            .iter()
-            .filter(|(key, _)| symbol.is_none_or(|symbol| key.symbol == *symbol))
-            .map(|(key, def)| self.build_message_catalog_entry(key, def))
+        self.merged_message_catalog_sources(symbol)
+            .into_iter()
+            .map(|(key, source)| self.build_merged_message_catalog_entry(&key, source))
             .collect()
     }
 
@@ -317,22 +321,22 @@ impl Session {
         &self,
         key: &MessageNameKey,
     ) -> Vec<MessageCatalogEntry> {
-        self.message_definitions
-            .get(key)
-            .map(|def| vec![self.build_message_catalog_entry(key, def)])
+        let mut sources = self.merged_message_catalog_sources(Some(&key.symbol));
+        sources
+            .remove(key)
+            .map(|source| vec![self.build_merged_message_catalog_entry(key, source)])
             .unwrap_or_default()
     }
 
     pub(in crate::runtime) fn message_tags_expr_for_symbol(&self, symbol: Option<&Symbol>) -> Expr {
         let tags = if symbol.is_some() {
-            self.message_definitions
-                .keys()
-                .filter(|key| symbol.is_none_or(|symbol| key.symbol == *symbol))
+            self.merged_message_catalog_sources(symbol)
+                .into_keys()
                 .map(|key| key.tag.clone())
                 .collect::<Vec<_>>()
         } else {
-            self.message_definitions
-                .keys()
+            self.merged_message_catalog_sources(None)
+                .into_keys()
                 .map(|key| key.tag.clone())
                 .collect::<BTreeSet<_>>()
                 .into_iter()
@@ -343,6 +347,70 @@ impl Session {
             system_expr("List"),
             tags.into_iter().map(Expr::string).collect(),
         )
+    }
+
+    fn merged_message_catalog_sources(
+        &self,
+        symbol: Option<&Symbol>,
+    ) -> BTreeMap<MessageNameKey, MessageCatalogSource<'_>> {
+        let mut sources = BTreeMap::new();
+
+        match symbol {
+            Some(symbol) => {
+                if let Some(spec) = self.builtin_spec_for_symbol(symbol) {
+                    for message in spec.messages {
+                        sources.insert(
+                            MessageNameKey {
+                                symbol: symbol.clone(),
+                                tag: message.tag.to_string(),
+                            },
+                            MessageCatalogSource::Builtin(*message),
+                        );
+                    }
+                }
+            }
+            None => {
+                for spec in self.registered_builtin_specs() {
+                    let symbol = Symbol::system(spec.name);
+                    for message in spec.messages {
+                        sources.insert(
+                            MessageNameKey {
+                                symbol: symbol.clone(),
+                                tag: message.tag.to_string(),
+                            },
+                            MessageCatalogSource::Builtin(*message),
+                        );
+                    }
+                }
+            }
+        }
+
+        for (key, definition) in &self.message_definitions {
+            if symbol.is_none_or(|symbol| key.symbol == *symbol) {
+                sources.insert(key.clone(), MessageCatalogSource::User(definition));
+            }
+        }
+
+        sources
+    }
+
+    fn build_merged_message_catalog_entry(
+        &self,
+        key: &MessageNameKey,
+        source: MessageCatalogSource<'_>,
+    ) -> MessageCatalogEntry {
+        match source {
+            MessageCatalogSource::User(definition) => {
+                self.build_message_catalog_entry(key, definition)
+            }
+            MessageCatalogSource::Builtin(spec) => MessageCatalogEntry {
+                message_name: message_name_expr(key.symbol.clone(), key.tag.clone()).to_string(),
+                qualified_symbol_name: key.symbol.fully_qualified_name(),
+                tag: key.tag.clone(),
+                template: Expr::string(spec.template),
+                delayed: false,
+            },
+        }
     }
 
     pub(in crate::runtime) fn message_definitions_expr_for_key(
