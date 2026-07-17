@@ -23,12 +23,16 @@ rather than duplicating them.
   ```
 
   It resolves `docs/dev/codex/brief-NNN-*.md`, runs `cdx exec -s
-  danger-full-access` with stdin from `/dev/null`, and logs the full report to
+  workspace-write` with stdin from `/dev/null`, and logs the full report to
   `/tmp/cdx_brief_NNN.log` (`DRY_RUN=1` prints the resolution without
   dispatching). **Launch it via the Bash tool's `run_in_background:true`** so
   the run is harness-tracked — do NOT hand-type `cdx exec … &`; the `&`-detach
-  is not tracked. `-s danger-full-access` = Codex's sandbox level (needed for
-  `cargo` and the CLI); the brief's **Scope + Hard rules** are the real fence.
+  is not tracked. Sandbox default = `workspace-write` (user ruling
+  2026-07-17, least privilege; writes confined to repo + tmp). Escalate ONLY
+  for a brief that truly needs process attach (`sample` profiling — the
+  original 2026-06-21 reason for full access), via
+  `CDX_SANDBOX=danger-full-access`, telling the user. The brief's
+  **Scope + Hard rules** remain the inner fence.
 - Do not mutate the repo while a brief is in flight (my commits queue until
   the gate).
 

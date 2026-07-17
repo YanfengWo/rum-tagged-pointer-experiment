@@ -5,12 +5,14 @@ brief exactly and self-verifies; Claude runs the authoritative gate afterward
 and commits. Copy this file to `docs/dev/codex/brief-NNN-<slug>.md`, fill every
 section, then dispatch via `scripts/dispatch-brief.sh NNN`.
 
-The dispatcher runs `cdx exec -s danger-full-access` with stdin from
-`/dev/null` and logs to `/tmp/cdx_brief_NNN.log`. `-s danger-full-access` lets
-Codex run `cargo`, the release `rum-cli`, and the macOS `sample` profiler on
-the real machine. The brief's **Scope** and **Hard rules** are the real fence:
-full machine access plus "touch nothing outside this repo, no network, only
-the listed commands."
+The dispatcher runs `cdx exec -s workspace-write` with stdin from
+`/dev/null` and logs to `/tmp/cdx_brief_NNN.log`. `workspace-write` (default
+since 2026-07-17, least privilege) confines writes to the repo + tmp while
+still allowing `cargo` and the release `rum-cli`. A brief that truly needs
+process attach (the macOS `sample` profiler) is dispatched with
+`CDX_SANDBOX=danger-full-access`, stated to the user. The brief's **Scope**
+and **Hard rules** are the inner fence on top: "touch nothing outside this
+repo, no network, only the listed commands."
 
 Two brief shapes use this template:
 

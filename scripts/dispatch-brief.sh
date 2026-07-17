@@ -11,6 +11,11 @@
 # two steps). Invoke this via the Bash tool with run_in_background:true so the run is
 # harness-tracked; never append `&` to a cdx dispatch.
 #
+# Sandbox level defaults to workspace-write (user ruling 2026-07-17: least privilege;
+# writes confined to the repo + tmp). Override per dispatch ONLY for briefs that truly
+# need process attach (the macOS `sample` profiler — the original 2026-06-21 reason for
+# full access): CDX_SANDBOX=danger-full-access scripts/dispatch-brief.sh <id>
+#
 # DRY_RUN=1 prints the resolved brief/log and exits WITHOUT dispatching (for testing).
 set -euo pipefail
 
@@ -34,9 +39,11 @@ brief="${matches[0]}"
 rel="docs/dev/codex/$(basename "$brief")"
 num=$(basename "$brief" | sed -E 's/^brief-([0-9]+).*/\1/')
 log="/tmp/cdx_brief_${num}.log"
+sandbox="${CDX_SANDBOX:-workspace-write}"
 
-echo "brief: $rel"
-echo "log:   $log"
+echo "brief:   $rel"
+echo "log:     $log"
+echo "sandbox: $sandbox"
 
 if [[ -n "$(git -C "$repo_root" status --porcelain)" ]]; then
   echo "WARNING: working tree is not clean — Codex's changes will mix with existing ones" >&2
@@ -51,7 +58,7 @@ fi
 # bash subshell — run it through an interactive zsh, which sources ~/.zshrc (giving both the
 # cdx function and the proxy env). Redirections stay on the outer call so codex inherits them.
 set +e
-zsh -ic "cdx exec -C '$repo_root' -s danger-full-access 'Read $rel and execute it exactly. Follow its Hard rules.'" \
+zsh -ic "cdx exec -C '$repo_root' -s $sandbox 'Read $rel and execute it exactly. Follow its Hard rules.'" \
   < /dev/null > "$log" 2>&1
 rc=$?
 set -e
