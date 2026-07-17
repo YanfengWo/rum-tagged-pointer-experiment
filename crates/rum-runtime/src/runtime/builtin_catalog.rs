@@ -7,6 +7,7 @@ use super::*;
 mod association_symbols;
 mod debug;
 mod functional;
+mod inert_heads;
 mod message_templates;
 mod namespace;
 mod rules;
@@ -39,6 +40,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
                     + association_symbols::ASSOCIATION_BUILTINS.len()
                     + debug::DEBUG_BUILTINS.len()
                     + functional::FUNCTIONAL_BUILTINS.len()
+                    + inert_heads::INERT_HEAD_BUILTINS.len()
                     + scoping::SCOPING_BUILTINS.len()
                     + rules::RULE_BUILTINS.len()
                     + namespace::NAMESPACE_BUILTINS.len(),
@@ -48,6 +50,7 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
             specs.extend_from_slice(association_symbols::ASSOCIATION_BUILTINS);
             specs.extend_from_slice(debug::DEBUG_BUILTINS);
             specs.extend_from_slice(functional::FUNCTIONAL_BUILTINS);
+            specs.extend_from_slice(inert_heads::INERT_HEAD_BUILTINS);
             specs.extend_from_slice(scoping::SCOPING_BUILTINS);
             specs.extend_from_slice(rules::RULE_BUILTINS);
             specs.extend_from_slice(namespace::NAMESPACE_BUILTINS);

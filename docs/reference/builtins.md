@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 613
+Builtin count: 615
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2047,6 +2047,26 @@ Groups top-level elements by evaluated keys in first-occurrence key order, inclu
 - Messages:
   - GatherBy::argx — expected exactly `1` argument(s), got `2`
   - GatherBy::normal — Nonatomic expression expected at position 1 in `1`.
+
+### General
+
+Carries general runtime message templates.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - General::cancel — Reports evaluation cancellation requested by the host.
+  - General::iterlim — Reports that ReplaceRepeated exceeded its iteration limit.
+  - General::matchreclim — Reports that evaluation exceeded the pattern-match recursion limit.
+  - General::memlim — Reports that evaluation exceeded a MemoryConstrained limit.
+  - General::noentropy — no entropy provider installed
+  - General::noio — no file provider installed
+  - General::normal — Nonatomic expression expected at position 1 in `1`.
+  - General::passlim — Reports an evaluation cycle or fixed-point pass-limit termination.
+  - General::reclim — Reports that evaluation exceeded the recursion limit.
+  - General::reslim — Reports a native-stack or configured resource work-limit termination.
+  - General::sandbox — `1` is not permitted in this sandbox.
+  - General::timelim — Reports that evaluation exceeded a TimeConstrained limit.
 
 ### Get
 
@@ -5621,6 +5641,16 @@ Stores a delayed upvalue definition on one or more tag symbols inferred from the
   - UpSetDelayed::argx — expected exactly `1` argument(s), got `2`
   - UpSetDelayed::nosym — No valid tag symbol occurs in the assignment lhs `1`.
   - UpSetDelayed::wrsym — Symbol `1` is Protected.
+
+### UpTo
+
+Represents a non-negative upper bound in supported Span selector forms.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - UpTo::argx — UpTo called with `1` arguments; 1 argument is expected.
+  - UpTo::innf — Non-negative integer or Infinity expected at position 1 in `1`.
 
 ### UpValues
 

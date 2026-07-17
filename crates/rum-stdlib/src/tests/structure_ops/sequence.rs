@@ -233,6 +233,15 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
 }
 
 #[test]
+fn take_with_upto_stays_inert() {
+    let mut session = core_session();
+
+    let outcome = session.eval_text("Take[{1,2,3}, UpTo[5]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[List[1, 2, 3], UpTo[5]]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
 fn sequence_operator_forms_rewrite_to_data_first_calls() {
     let mut session = core_session();
 

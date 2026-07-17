@@ -216,7 +216,7 @@ fn messages_builtin_lists_defined_message_names() {
         panic!("Messages[] should return a list")
     };
     let message_names = args.iter().map(ToString::to_string).collect::<Vec<_>>();
-    assert_eq!(message_names.len(), 307);
+    assert_eq!(message_names.len(), 321);
     for expected in [
         "f::argx",
         "f::usage",
@@ -238,6 +238,75 @@ fn messages_builtin_lists_defined_message_names() {
             .value
             .to_string(),
         "List[f::argx]"
+    );
+}
+
+#[test]
+fn inert_message_carriers_list_seeded_tags_and_reject_assignment() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("Messages[General]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[General::cancel, General::iterlim, General::matchreclim, General::memlim, General::noentropy, General::noio, General::normal, General::passlim, General::reclim, General::reslim, General::sandbox, General::timelim]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Messages[UpTo]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[UpTo::argx, UpTo::innf]"
+    );
+
+    for (input, expected_text) in [
+        ("General = 5", "Symbol General is Protected."),
+        ("UpTo = 5", "Symbol UpTo is Protected."),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), "5");
+        assert_eq!(outcome.messages.len(), 1);
+        assert_eq!(outcome.messages[0].symbol, "Set");
+        assert_eq!(outcome.messages[0].tag, "wrsym");
+        assert_eq!(outcome.messages[0].text, expected_text);
+    }
+    assert_eq!(
+        session.eval_text("General").unwrap().value.to_string(),
+        "General"
+    );
+    assert_eq!(session.eval_text("UpTo").unwrap().value.to_string(), "UpTo");
+}
+
+#[test]
+fn upto_stays_inert_and_selector_diagnostic_stays_exact() {
+    let mut session = session_with_test_control_builtins();
+
+    let inert = session.eval_text("UpTo[3]").unwrap();
+    assert_eq!(inert.value.to_string(), "UpTo[3]");
+    assert!(inert.messages.is_empty());
+
+    let invalid = session
+        .eval_text("Part[{1,2,3}, Span[1, UpTo[-1]]]")
+        .unwrap();
+    assert_eq!(
+        invalid.value.to_string(),
+        "Part[List[1, 2, 3], Span[1, UpTo[-1]]]"
+    );
+    assert_eq!(invalid.messages.len(), 2);
+    assert_eq!(invalid.messages[0].symbol, "UpTo");
+    assert_eq!(invalid.messages[0].tag, "innf");
+    assert_eq!(
+        invalid.messages[0].text,
+        "Non-negative integer or Infinity expected at position 1 in UpTo[-1]."
+    );
+    assert_eq!(invalid.messages[1].symbol, "Part");
+    assert_eq!(invalid.messages[1].tag, "span");
+    assert_eq!(
+        invalid.messages[1].text,
+        "1 ;; UpTo[-1] is not a valid Span specification. A Span specification should be 1, 2 or 3 machine-sized integers separated by ;;. (Any of the integers can be omitted or replaced with All.)"
     );
 }
 
@@ -318,7 +387,7 @@ fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
         panic!("MessageTags[] should return a list")
     };
     let tags = args.iter().map(ToString::to_string).collect::<Vec<_>>();
-    assert_eq!(tags.len(), 45);
+    assert_eq!(tags.len(), 56);
     for expected in [
         "\"argform\"",
         "\"argx\"",
