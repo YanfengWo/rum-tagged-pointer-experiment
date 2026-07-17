@@ -30,6 +30,7 @@ pub(crate) const BYTEARRAY: BuiltinMessageSpec = BuiltinMessageSpec {
     template: "invalid ByteArray payload",
 };
 
+#[cfg(feature = "hash")]
 pub(crate) const DIGEST_FORMAT: BuiltinMessageSpec = BuiltinMessageSpec {
     tag: "format",
     template: "unknown digest output format; use \"Hex\" (default) or \"Bytes\"",
