@@ -28,16 +28,39 @@ the catalog. Zero release-path cost: the check compiles away outside
   constructs normalized `RuntimeMessage` values for report data, not
   emissions.
 
+## REVISION 2 (2026-07-17, after the second stop-loss)
+
+The second run showed the 11 rejected pairs come from rum-runtime unit
+tests whose sessions register MINIMAL test-local specs and never install
+the stdlib catalog — there is no fallback to inherit messages from, so
+the fallback fix cannot cover them. RULING: the enforcement rule is
+refined to the repository's established hybrid-session philosophy
+(empty declaration = fall through): **a spec with an EMPTY `messages`
+slice is exempt** — only a spec that DECLARES messages is held to
+completeness. Honest trade-off, accepted: a future builtin that forgets
+`.with_messages` entirely escapes the assertion (docgen/review catch
+that); the real catalog surface is covered because full-session suites
+(stdlib installs the catalog; 489 message-bearing specs all declare)
+run under the strict check. Keep the `with_fallback_dispatch`
+messages-inheritance fix (correct for overlay sessions) and the probe
+test symbol switch — both already in the tree.
+
 ## Design (pinned — implement exactly)
 
 1. Inside `push_message`, a `#[cfg(debug_assertions)]` block AFTER the
    `message_enabled` early-return, allowing the push if ANY of:
    (a) the symbol does NOT resolve to a registered builtin spec (user
    symbols and held-call heads — the open families stay free);
+   (a') the resolved spec's `messages` slice is EMPTY (undeclared —
+   minimal/test-local specs fall through, per Revision 2);
    (b) the resolved spec's `messages` slice contains the tag;
    (c) a user `MessageName` definition exists for the exact key.
    Otherwise `debug_assert!(false, …)` naming the pair and pointing to
    the owning catalog file.
+   The firing-path test must therefore use a spec WITH declared
+   messages — e.g. a plain kernel session emitting `("Set", "bogus")`
+   (Set is kernel-cataloged with six declared pairs); the exempt-path
+   tests cover a test-local empty-slice spec and a user symbol.
 2. `eval_message` switches to a new `pub(in crate::runtime)`
    `push_message_unchecked` (the current body, no assertion);
    `push_message` keeps its signature so all ~114 builtin sites are
