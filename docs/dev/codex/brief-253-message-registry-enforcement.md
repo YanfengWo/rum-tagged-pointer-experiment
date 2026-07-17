@@ -45,6 +45,27 @@ the catalog. Zero release-path cost: the check compiles away outside
 3. Release builds: the cfg block compiles out — zero new instructions,
    no allocation, no lookup on the emit path.
 
+## REVISION (2026-07-17, after the first dispatch's stop-loss)
+
+The first run proved the assertion works and exposed two PRE-EXISTING
+seams (12 debug failures, zero real registry gaps — the 11 cataloged
+pairs' rejection list is kept as evidence in the dispatch log):
+
+1. **Hybrid test sessions lose messages on overlay**:
+   `with_fallback_dispatch` (`metadata.rs:452-463`) inherits
+   dispatch/handler/capability but NOT `messages`, so a test-local
+   registration overlaying a catalog builtin yields an empty messages
+   slice and the assertion fires on legitimate emissions. FIX (now in
+   scope, pinned): in `with_fallback_dispatch`, when `self.messages`
+   is empty, inherit `fallback.messages` — mirroring the existing
+   handler-fallback semantics.
+2. **`General::stop` in `session_config.rs:245`**: the
+   `trace_message_and_print_accessors_expose_and_take_buffers` test
+   exercises buffer accessors; its symbol choice was incidental.
+   FIX (pinned): switch that probe emission to a non-builtin symbol
+   (e.g. `"probe"`), updating its tag assertion accordingly — do NOT
+   use the unchecked variant there.
+
 ## Scope
 
 - Files you MAY modify:
@@ -52,6 +73,13 @@ the catalog. Zero release-path cost: the check compiles away outside
     seam + the unchecked variant.
   - `crates/rum-runtime/src/runtime/messages/builtins_messages.rs` —
     the one-line eval_message switch.
+  - `crates/rum-runtime/src/runtime/metadata.rs` — MECHANICAL: the
+    `with_fallback_dispatch` messages-fallback fix pinned above.
+  - `crates/rum-runtime/src/runtime/tests/session_config.rs` — the
+    pinned probe-symbol switch only.
+  - Any test expectation legitimately moved by the messages fallback
+    (hybrid sessions now list catalog messages for overlaid builtins)
+    — empirically verified, old→new listed per test.
   - `crates/rum-runtime/src/runtime/tests/messages.rs` — new tests: an
     open-family push (user symbol) stays allowed; a user-defined
     MessageName on a builtin tag stays allowed; the assertion fires for
