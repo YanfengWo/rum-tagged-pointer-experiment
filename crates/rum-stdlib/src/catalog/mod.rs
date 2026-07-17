@@ -12,6 +12,7 @@ mod ini;
 mod integer_digits;
 mod json;
 mod logic;
+mod message_templates;
 mod number_theory;
 mod polynomials;
 mod predicates;

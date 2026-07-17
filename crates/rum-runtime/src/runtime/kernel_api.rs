@@ -51,7 +51,9 @@ pub use super::substitution::lexical_substitution::substitute_lexical_bindings;
 pub use super::messages::message_selector_parsing::truthiness_symbol;
 
 // metadata
-pub use super::metadata::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute};
+pub use super::metadata::{
+    Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec, HoldAttribute,
+};
 
 // numeric traits
 pub use num_integer::{Integer, Roots};
