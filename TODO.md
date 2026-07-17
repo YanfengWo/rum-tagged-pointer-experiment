@@ -10,13 +10,18 @@ Queue, in order; each item gates before the next starts:
 1. [ ] **Builtin message-tag registry (+ docgen pairing)** — the unit-8
    deferred project, now active. ~114 `push_message` sites with no static
    catalog; `Messages[Set]` empty even right after `Set::argx` fires.
-   Opens with an inventory audit (brief-243), then registry design +
-   wiring briefs. Brief-213's `Information` `Messages` field lights up
-   from the same source.
-2. [ ] **`vm_rhs_template/` fate ruling** — gate/delete/keep, decided on
-   measured evidence (`RUM_VM_RHS_TEMPLATE` on-vs-off microbench A/B on a
-   quiet machine; today it is env-gated OFF, 1553 lines, wired only via
-   `runtime/mod.rs`).
+   Inventory audit LANDED (brief-243, eeec70a:
+   `docs/dev/message-registry-inventory.md` — 144 tags / 966 closed
+   pairs); next = registry mechanism brief, then per-catalog fill
+   sweeps, then docgen + enforcement. Brief-213's `Information`
+   `Messages` field lights up from the same source.
+2. [x] **`vm_rhs_template/` — DELETED (brief-244, ruled 2026-07-17).**
+   Evidence: the ON path crashed the guard-adjacent recursion test
+   (native stack overflow; OFF green, single-variable discriminator);
+   flip-ON preconditions from 2026-07-01 never done; only recorded win
+   was a closed-era workload. Gate: workspace 1512/0, zero references,
+   A/B no regression (two flagged control labels cleared by a 3-pair
+   interleaved re-run; downvalue tier flat-to-better).
 3. [ ] **rum-jupyter `signature.rs` sha256 debt** — replace the hand-rolled
    `sha256_compress` with the workspace `sha2`/RustCrypto path; fold in
    the ZeroMQ ordering flake if it has recurred (two sightings so far:
@@ -591,9 +596,10 @@ string-pattern surface. Batches, evidence-ranked:
 - [x] Embedding adoption cost DONE (d30fce2, brief-154): guide §Adoption
   Cost — session 0.09 ms steady / eval 4.5 us / 6.5 MiB stripped delta /
   23 external crates.
-- [ ] `vm_rhs_template/` fate (experiment, not instrumentation —
-  gate/delete/keep). The profiling/debug_tools fate is settled: they stay in
-  the kernel, runtime-gated, hidden from restricted hosts via the Diagnostic
+- [x] `vm_rhs_template/` fate — RESOLVED: DELETED (brief-244, 2026-07-17;
+  see ACTIVE PLAN item 2 for the ruling evidence). The
+  profiling/debug_tools fate is settled: they stay in the kernel,
+  runtime-gated, hidden from restricted hosts via the Diagnostic
   capability.
 
 ## Standing Engineering Debt

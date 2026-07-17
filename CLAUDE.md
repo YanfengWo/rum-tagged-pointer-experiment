@@ -137,10 +137,10 @@ rather than duplicating them.
 
 - **ACTIVE: CLEANUP + MESSAGE-REGISTRY LINE (user ruling 2026-07-17;
   queue in TODO.md §ACTIVE PLAN).** In order: (1) builtin message-tag
-  registry + docgen pairing (opens with the brief-243 inventory audit);
-  (2) `vm_rhs_template/` fate ruling (gate/delete/keep, evidence-based:
-  env-gated OFF today, 1553 lines, wired only via `runtime/mod.rs`;
-  A/B on a quiet machine); (3) rum-jupyter `signature.rs` hand-rolled
+  registry + docgen pairing (brief-243 inventory LANDED; mechanism +
+  fill + docgen briefs next); (2) `vm_rhs_template/` — DONE, DELETED
+  (brief-244: ON path crashed the guard-adjacent recursion test; A/B
+  clean); (3) rum-jupyter `signature.rs` hand-rolled
   sha256 → workspace RustCrypto (+ ZeroMQ flake if it recurs);
   (4) rum-cli feature forwarding; (5) then the wl15/wfr design pass
   (structured exceptions, SubValuesHoldAll, ReplaceAllUnheld,
