@@ -284,6 +284,113 @@ fn dispatch_plan_uses_builtin_metadata_and_head_traits() {
 }
 
 #[test]
+fn subvalues_hold_all_holds_outer_arguments_and_evaluate_pierces() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text("c = 0; op[a_][b_] := HoldComplete[a, b]; {op[c = c + 1][c = c + 1], c}",)
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldComplete[1, 2], 2]"
+    );
+
+    // Set the attribute after the first application to exercise cache invalidation.
+    assert_eq!(
+        session
+            .eval_text("c = 0; SetAttributes[op, SubValuesHoldAll]; {op[c = c + 1][c = c + 1], c}",)
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldComplete[1, Set[c, Plus[1, c]]], 1]"
+    );
+
+    assert_eq!(
+        session
+            .eval_text("c = 0; {op[c = c + 1][Evaluate[c = c + 1]], c}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldComplete[1, 2], 2]"
+    );
+}
+
+#[test]
+fn subvalues_hold_all_flattens_sequence_like_hold_all() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "SetAttributes[h, HoldAll]; h[x___] := HoldComplete[x]; h[Sequence[1 + 1, 2 + 2]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[Plus[1, 1], Plus[2, 2]]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "SetAttributes[op, SubValuesHoldAll]; op[a_][b___] := HoldComplete[a, b]; op[0][Sequence[1 + 1, 2 + 2]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "HoldComplete[0, Plus[1, 1], Plus[2, 2]]"
+    );
+}
+
+#[test]
+fn subvalues_hold_all_strips_and_restores_unevaluated() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "SetAttributes[f, SubValuesHoldAll]; SetAttributes[op, SubValuesHoldAll]; op[a_][b_] := HoldComplete[a, b]; {f[0][Unevaluated[1 + 1]], op[0][Unevaluated[1 + 1]]}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[f[0][Unevaluated[Plus[1, 1]]], HoldComplete[0, Plus[1, 1]]]"
+    );
+}
+
+#[test]
+fn subvalues_hold_all_applies_at_every_application_level() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "c = 0; SetAttributes[op, SubValuesHoldAll]; op[a_][b_][d_] := HoldComplete[a, b, d]; {op[c = c + 1][c = c + 1][c = c + 1], c}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[HoldComplete[1, Set[c, Plus[1, c]], Set[c, Plus[1, c]]], 1]"
+    );
+}
+
+#[test]
+fn subvalues_hold_all_attribute_round_trips() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "SetAttributes[f, SubValuesHoldAll]; {Attributes[f], ClearAttributes[f, SubValuesHoldAll], Attributes[f]}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[SubValuesHoldAll], Null, List[]]"
+    );
+}
+
+#[test]
 fn cycle_detection_returns_iteration_limit_for_mutual_ownvalues_and_recovers() {
     let mut session = session_with_test_control_builtins();
 

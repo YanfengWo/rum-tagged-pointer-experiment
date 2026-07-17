@@ -392,6 +392,7 @@ fn render_attribute(attribute: Attribute) -> &'static str {
         Attribute::HoldAll => "HoldAll",
         Attribute::HoldFirst => "HoldFirst",
         Attribute::HoldRest => "HoldRest",
+        Attribute::SubValuesHoldAll => "SubValuesHoldAll",
         Attribute::SequenceHold => "SequenceHold",
         Attribute::Listable => "Listable",
         Attribute::NHoldAll => "NHoldAll",

@@ -406,6 +406,7 @@ fn is_extra_known_system_symbol_name(name: &str) -> bool {
             | "RegularExpression"
             | "StepMonitor"
             | "StringExpression"
+            | "SubValuesHoldAll"
             | "Temporary"
             | "TimeObject"
             | "UpTo"

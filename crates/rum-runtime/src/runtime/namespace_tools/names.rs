@@ -34,6 +34,7 @@ const EXTRA_SYSTEM_NAME_SYMBOLS: &[&str] = &[
     "ResolveContextAliases",
     "SequenceHold",
     "SpellingCorrection",
+    "SubValuesHoldAll",
     "Temporary",
     "Verbatim",
     "StepMonitor",

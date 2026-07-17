@@ -34,6 +34,7 @@ pub enum Attribute {
     HoldAll,
     HoldFirst,
     HoldRest,
+    SubValuesHoldAll,
     SequenceHold,
     Listable,
     NHoldAll,
@@ -54,6 +55,8 @@ impl Attribute {
             Self::HoldAll => 1 << 1,
             Self::HoldFirst => 1 << 2,
             Self::HoldRest => 1 << 3,
+            // Bit 15 is the last free u16 bit; another attribute needs a wider mask.
+            Self::SubValuesHoldAll => 1 << 15,
             Self::SequenceHold => 1 << 4,
             Self::Listable => 1 << 5,
             Self::NHoldAll => 1 << 14,
@@ -74,6 +77,7 @@ impl Attribute {
             Self::HoldAll => "HoldAll",
             Self::HoldFirst => "HoldFirst",
             Self::HoldRest => "HoldRest",
+            Self::SubValuesHoldAll => "SubValuesHoldAll",
             Self::SequenceHold => "SequenceHold",
             Self::Listable => "Listable",
             Self::NHoldAll => "NHoldAll",
@@ -104,6 +108,7 @@ impl Attribute {
             "HoldAll" => Some(Self::HoldAll),
             "HoldFirst" => Some(Self::HoldFirst),
             "HoldRest" => Some(Self::HoldRest),
+            "SubValuesHoldAll" => Some(Self::SubValuesHoldAll),
             "SequenceHold" => Some(Self::SequenceHold),
             "Listable" => Some(Self::Listable),
             "NHoldAll" => Some(Self::NHoldAll),
@@ -239,11 +244,12 @@ impl AttributeSet {
     }
 }
 
-pub(super) const ALL_ATTRIBUTES: [Attribute; 15] = [
+pub(super) const ALL_ATTRIBUTES: [Attribute; 16] = [
     Attribute::HoldAllComplete,
     Attribute::HoldAll,
     Attribute::HoldFirst,
     Attribute::HoldRest,
+    Attribute::SubValuesHoldAll,
     Attribute::SequenceHold,
     Attribute::Listable,
     Attribute::NHoldAll,

@@ -2,7 +2,7 @@ use super::*;
 
 impl Session {
     pub(super) fn build_call_dispatch_plan(&mut self, head: &Expr) -> CallDispatchPlan {
-        let attributes = self.cached_attribute_set_for_head(head);
+        let mut attributes = self.cached_attribute_set_for_head(head);
         let head_symbol = expr_as_symbol(head);
         let builtin_spec =
             head_symbol.and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
@@ -12,9 +12,20 @@ impl Session {
             return CallDispatchPlan::special_form(attributes, builtin_spec);
         }
 
-        let value_definition = head_symbol
-            .or_else(|| base_head_symbol_of_nested_call(head))
-            .and_then(|symbol| self.definitions.get(symbol));
+        let value_definition = if let Some(symbol) = head_symbol {
+            self.definitions.get(symbol)
+        } else {
+            let base_symbol = base_head_symbol_of_nested_call(head);
+            if let Some(symbol) = base_symbol {
+                if self
+                    .cached_attribute_set_for_symbol(symbol)
+                    .contains(Attribute::SubValuesHoldAll)
+                {
+                    attributes = attributes.with(Attribute::HoldAll);
+                }
+            }
+            base_symbol.and_then(|symbol| self.definitions.get(symbol))
+        };
         let has_down_values = head_symbol.is_some()
             && value_definition.is_some_and(|definition| !definition.down_values.is_empty());
         let has_sub_values =
