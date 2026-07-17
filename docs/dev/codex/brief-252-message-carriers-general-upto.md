@@ -68,17 +68,26 @@ ledger row. Wire-visible by design — the ruling approved it.
 - New tests pinning: `Messages[General]` lists exactly the 12 seeded
   tags; `Messages[UpTo]` lists `argx`/`innf`; `General = 5` and
   `UpTo = 5` now fail with the protection message (WL-conformant);
-  `UpTo[3]` and `Take[{1,2,3}, UpTo[5]]` behavior UNCHANGED (inert
-  wrapper still works — pin both).
+  `UpTo[3]` stays inert AND `Take[{1,2,3}, UpTo[5]]` stays byte-identical
+  to today's result — which is the INERT form
+  `Take[List[1, 2, 3], UpTo[5]]` (VERIFIED 2026-07-17: stdlib
+  `take_drop.rs` has no UpTo case; that WL-conformance gap is a recorded
+  follow-up candidate, explicitly OUT of this brief's scope — do not
+  implement it). Additionally: locate the builtin that consumes the
+  kernel selector path emitting `UpTo::argx`/`innf`
+  (`structure_data/selectors.rs:291-295` call sites), fire ONE live probe
+  through it, and pin that its message emission is byte-identical after
+  registration.
 - Green `cargo fmt --all --check`; `cargo test --workspace` minus the 9
   known sandbox-blocked ZeroMQ loopback tests (run the suite, list the 9
   as the only failures, plus a `--exclude rum-jupyter` full-green run —
   the director's out-of-sandbox gate covers them).
 - Live probes pasted: `Messages[General]`, `Messages[UpTo]`,
-  `Take[{1,2,3}, UpTo[5]]` (expect `List[1, 2, 3]`), `General = 5`
-  (expect wrsym), one resource message end-to-end (e.g. a small
-  `$RecursionLimit`-style recursion overflow if cheaply reachable —
-  otherwise state why skipped).
+  `Take[{1,2,3}, UpTo[5]]` (expect the unchanged inert form
+  `Take[List[1, 2, 3], UpTo[5]]`), `General = 5` (expect the protection
+  message), one `UpTo`-message probe through its real consumer, and one
+  resource message end-to-end (e.g. a small recursion overflow if
+  cheaply reachable — otherwise state why skipped).
 
 ## rum / Rust pitfalls (read twice)
 
