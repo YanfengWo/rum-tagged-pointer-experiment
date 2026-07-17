@@ -11,7 +11,9 @@ description = "Jupyter adapter and transport layer for rum host sessions."
 [dependencies]
 bytes = "1"
 futures = "0.3"
+hmac.workspace = true
 rum-host = { path = "../rum-host" }
+sha2.workspace = true
 thiserror.workspace = true
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "time"] }
 zeromq = "0.5"
