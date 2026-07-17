@@ -40,10 +40,21 @@ Queue, in order; each item gates before the next starts:
    default-features=false deps); defaults byte-equivalent; NDF
    `cargo tree` shows zero digest crates; Cargo.lock unchanged;
    DIGEST_FORMAT cfg follow-up applied.
-5. [ ] Then: a design pass over the wl15/wfr feature candidates —
-   structured exceptions (folk scope), `SubValuesHoldAll`-equivalent,
-   `ReplaceAllUnheld`, ConformSchema/SchemaErrors operator forms (the
-   last three share the usability pass's hold design appendix).
+5. [ ] **IN PROGRESS: the wl15/wfr design pass** (three-batch plan
+   approved 2026-07-17): structured exceptions (folk scope),
+   `SubValuesHoldAll`-equivalent, `ReplaceAllUnheld`,
+   ConformSchema/SchemaErrors operator forms (the last three share the
+   usability pass's hold design appendix).
+   - [x] Batch 1 — Take/Drop/TakeDrop `UpTo[n]` specs DONE (brief-254,
+     5a2ef4a): clamp semantics, kernel Part-span endpoint parity;
+     gate correction narrowed `UpTo::innf` to definitely-invalid
+     contents (negative/rational), symbolic stays silent-inert.
+     Workspace 1523/0.
+   - [ ] Batch 2 — the hold half: one design doc covering the three
+     hold candidates → user rulings → 2a mechanism (A/B gate),
+     2b operator forms, 2c `ReplaceAllUnheld`.
+   - [ ] Batch 3 — structured exceptions: contract doc → user green
+     light → 3a core, 3b polish/docs.
 
 **WON'T-DO ruling (user 2026-07-17): the parked pools are CLOSED, not
 parked.** Stdlib parked candidates (`ByteArray` depth audit, compression

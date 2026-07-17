@@ -1179,3 +1179,16 @@ observed friction is loopback-bind denial on rum-jupyter's transport
 tests, covered by the out-of-sandbox authoritative gate. Cold backup
 rum-2026-07-17-dc9181a.bundle verified. Next: the wl15/wfr design
 pass (ACTIVE PLAN item 5).
+
+## 2026-07-17 — wl15/wfr pass batch 1: Take/Drop/TakeDrop UpTo (brief-254)
+
+The wl15/wfr design pass (ACTIVE PLAN item 5) opened with the mechanical
+batch: `UpTo[n]`/`UpTo[Infinity]` sequence specs for Take/Drop/TakeDrop
+(clamp-to-length, any spec position, multi-level free via per-spec
+parsing). Malformed contents reuse the brief-252-registered UpTo::innf/
+argx carriers. Gate correction: the innf trigger was narrowed to
+definitely-invalid contents (negative integer or rational) to mirror the
+kernel Part-span rule — symbolic (`UpTo[x]`) and oversize integers stay
+on the silent inert path. Workspace 1523/0; probes reproduced at the
+gate. Commits cd81665 (brief) + 5a2ef4a (impl). Batches 2 (hold design)
+and 3 (structured exceptions) proceed design-first.
