@@ -32,8 +32,11 @@ Queue, in order; each item gates before the next starts:
    workspace-write sandbox dispatch — works; loopback-bind denial makes
    the 9 native ZeroMQ tests sandbox-blocked (deterministic, not the
    flake); the director's out-of-sandbox gate covers them.
-4. [ ] **rum-cli feature forwarding** — make the CLI binary
-   feature-trimmable (forward `rum-stdlib` features such as `hash`).
+4. [x] **rum-cli feature forwarding — DONE (brief-251).** Four-crate
+   chain (rum-host/rum-terminal/rum-repl/rum-cli forward `hash` with
+   default-features=false deps); defaults byte-equivalent; NDF
+   `cargo tree` shows zero digest crates; Cargo.lock unchanged;
+   DIGEST_FORMAT cfg follow-up applied.
 5. [ ] Then: a design pass over the wl15/wfr feature candidates —
    structured exceptions (folk scope), `SubValuesHoldAll`-equivalent,
    `ReplaceAllUnheld`, ConformSchema/SchemaErrors operator forms (the
