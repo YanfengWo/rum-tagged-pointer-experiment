@@ -1,6 +1,20 @@
 # Brief 257 — ConformSchema/SchemaErrors operator forms via special-dispatch capture (wl15/wfr batch 2b-II)
 
-## Goal
+> **REVISION 1 (2026-07-18).** The first run stop-lossed on an
+> over-strong probe expectation written by the director — NOT on a
+> mechanism defect. Director-verified truth on HEAD: the DIRECT form
+> today also evaluates ordinary subexpressions inside the schema
+> during validation (`SchemaValidator::match_leaf` → `MatchQ` pattern
+> resolution): `c = 0; ConformSchema[<|"a" -> 1|>, (c = c + 1;
+> <|"a" -> _|>)]` yields `$Failed` with `c = 1`. HoldRest prevents
+> ARGUMENT-time evaluation; validation-time resolution is a shared,
+> pre-existing property of both calling forms. The first run's
+> candidate already achieved exactly the right thing: capture
+> evaluates nothing, and application output was byte-identical to the
+> direct call (same `$Failed`, same messages, same final `c`). The
+> timing probe and its deliverable bullet below are corrected to pin
+> THAT parity contract; everything else is unchanged. Re-implement
+> (the previous work was reverted under stop-loss).
 
 `ConformSchema[schema][value]` and `SchemaErrors[schema][value]` work,
 with the schema NEVER evaluated in either calling form (user ruling B2
@@ -91,11 +105,15 @@ becomes a quiet inert callable (today it emits a `schema` message).
   (measured expectations — probe the release CLI first, then pin):
   operator form for both heads (conform success, conform failure →
   `$Failed` + `schema` message parity, SchemaErrors error list),
-  schema-side-effect timing (never evaluated in EITHER form —
-  `ConformSchema[(c = c + 1; <|…|>)]` leaves c untouched at capture
-  AND at application), value-side-effect single-fire, quiet capture,
-  wrapper argx, direct-call byte-identity probes, options form
-  (`"AllowExtraKeys"`) through both calling shapes.
+  schema-side-effect timing per the REVISED contract — the CAPTURE
+  evaluates nothing (`w = ConformSchema[(c = c + 1; <|…|>)]` leaves
+  `c` at 0), and APPLICATION behavior is byte-identical to the direct
+  call (same result, same messages, same final `c` — validation-time
+  evaluation included; the direct-form baseline for the same schema
+  expression is the comparison, pasted side by side),
+  value-side-effect single-fire, quiet capture, wrapper argx,
+  direct-call byte-identity probes, options form (`"AllowExtraKeys"`)
+  through both calling shapes.
 - Full existing schema suite green UNCHANGED.
 - Microbench A/B (best-of-2 per side, interleaved runs B C B C):
   downvalue tier + neighbors; the panel has no compound-head label —
@@ -128,6 +146,7 @@ ConformSchema[<|"a" -> _Integer|>][<|"a" -> 1|>]
 ConformSchema[<|"a" -> _Integer|>][<|"a" -> "x"|>]
 SchemaErrors[<|"a" -> _Integer|>][<|"a" -> "x"|>]
 c = 0; w = ConformSchema[(c = c + 1; <|"a" -> _|>)]; {c, w[<|"a" -> 1|>], c}
+c = 0; {ConformSchema[<|"a" -> 1|>, (c = c + 1; <|"a" -> _|>)], c}
 d = 0; ConformSchema[<|"a" -> _Integer|>][(d = d + 1; <|"a" -> 1|>)]; d
 ConformSchema[<|"a" -> _Integer|>]
 ConformSchema[<|"a" -> _Integer|>][1, 2]
