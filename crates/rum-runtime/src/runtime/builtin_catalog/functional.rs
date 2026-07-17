@@ -7,6 +7,10 @@ pub(super) const FUNCTIONAL_BUILTINS: &[BuiltinSpec] = &[
         HoldAttribute::HoldAll,
         builtin_hold_literal,
     )
+    .with_messages(&[BuiltinMessageSpec {
+        tag: "argx",
+        template: "expected at least `1` argument(s), got `2`",
+    }])
     .protected(),
     BuiltinSpec::with_attributes(
         "HoldForm",

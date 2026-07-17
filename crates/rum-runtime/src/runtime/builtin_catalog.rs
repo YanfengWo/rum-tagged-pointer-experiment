@@ -7,6 +7,7 @@ use super::*;
 mod association_symbols;
 mod debug;
 mod functional;
+mod message_templates;
 mod namespace;
 mod rules;
 mod scoping;

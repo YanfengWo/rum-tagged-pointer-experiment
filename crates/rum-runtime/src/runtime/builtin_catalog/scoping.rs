@@ -1,3 +1,4 @@
+use super::message_templates::*;
 use super::*;
 
 pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
@@ -6,24 +7,60 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Lexically substitutes local constants into a body, with each additional declaration list forming a nested stage.",
         HoldAttribute::HoldAll,
         builtin_with,
-    ).protected(),
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a list of symbol assignments or rules as the first argument",
+        },
+        ARGX_EXACT,
+    ])
+    .protected(),
     BuiltinSpec::special_with_hold(
         "Module",
         "Creates lexical local symbols.",
         HoldAttribute::HoldAll,
         builtin_module,
-    ).protected(),
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a list of symbols or symbol initializers as the first argument",
+        },
+        ARGX_EXACT,
+    ])
+    .protected(),
     BuiltinSpec::ordinary(
         "Unique",
         "Creates fresh symbols using prefix, list, and attribute forms.",
         builtin_unique,
-    ).protected(),
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected an attribute symbol or list of attribute symbols as the second argument",
+        },
+        ARGTU,
+        BuiltinMessageSpec {
+            tag: "usym",
+            template: "`1` is not a symbol or a valid symbol name.",
+        },
+    ])
+    .protected(),
     BuiltinSpec::special_with_hold(
         "Block",
         "Temporarily rebinds symbols dynamically.",
         HoldAttribute::HoldAll,
         builtin_block,
-    ).protected(),
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a list of symbols or symbol initializers as the first argument",
+        },
+        ARGX_EXACT,
+    ])
+    .protected(),
     BuiltinSpec::ordinary_with_hold(
         "Hold",
         "Prevents evaluation of its arguments.",
@@ -83,7 +120,11 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Removes one outer layer of Hold, HoldForm, HoldComplete, HoldPattern, HoldFirst, HoldRest, HoldAll, or HoldAllComplete, then resumes evaluation.",
         HoldAttribute::HoldAll,
         builtin_release_hold,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ])
+    .protected(),
     BuiltinSpec::ordinary(
         "Sequence",
         "Splices a sequence of arguments into a call.",
@@ -93,13 +134,34 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Thread",
         "Threads an expression over arguments that share a common head.",
         Session::eval_thread,
-    ).protected(),
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected the third argument to be a standard sequence specification such as All, None, n, -n, {n}, {m, n}, or {m, n, s}",
+        },
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected 1, 2, or 3 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "tdlen",
+            template: "Reports incompatible argument lengths while threading an expression.",
+        },
+    ])
+    .protected(),
     BuiltinSpec::ordinary_with_hold(
         "Dialog",
         "Runs the current first-pass dialog subset with Return-sensitive evaluation and host-input suspension; requires Capability::Interactive.",
         HoldAttribute::HoldAll,
         builtin_dialog,
     )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "Reports invalid Dialog option rules or DialogSymbols bindings.",
+        },
+    ])
     .protected()
     .with_capability(Capability::Interactive),
     BuiltinSpec::ordinary(
@@ -107,6 +169,17 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Requests one line of host-provided text and returns it as a string; requires Capability::Interactive.",
         builtin_input_string,
     )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "nonopt",
+            template: "Options expected (instead of `1`) beyond position 1 in `2`. An option must be a rule or a list of rules.",
+        },
+        OPTRS,
+        BuiltinMessageSpec {
+            tag: "optx",
+            template: "Unknown option `1` in `2`.",
+        },
+    ])
     .protected()
     .with_capability(Capability::Interactive),
     BuiltinSpec::ordinary(
@@ -114,6 +187,17 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Requests one line of host-provided text, parses it as rum source, and evaluates the resulting expression in the current first-pass subset; requires Capability::Interactive.",
         builtin_input,
     )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "nonopt",
+            template: "Options expected (instead of `1`) beyond position 1 in `2`. An option must be a rule or a list of rules.",
+        },
+        OPTRS,
+        BuiltinMessageSpec {
+            tag: "optx",
+            template: "Unknown option `1` in `2`.",
+        },
+    ])
     .protected()
     .with_capability(Capability::Interactive),
     BuiltinSpec::ordinary(
@@ -125,6 +209,14 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         "Pause",
         "Pauses for at least a nonnegative exact number of seconds in the current first-pass subset.",
         builtin_pause,
-    ).protected()
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "numnm",
+            template: "Non-negative machine-sized number expected at position 1 in `1`.",
+        },
+    ])
+    .protected()
     .with_capability(Capability::Clock),
 ];

@@ -1461,10 +1461,11 @@ fn host_message_catalog_supports_global_symbol_and_invalid_queries() {
     assert_eq!(
         builtin.first(),
         Some(&HostMessageTemplate {
-            message_name: "Set::argx".to_string(),
+            message_name: "Set::argform".to_string(),
             qualified_symbol_name: "System`Set".to_string(),
-            tag: "argx".to_string(),
-            template: "\"expected exactly `1` argument(s), got `2`\"".to_string(),
+            tag: "argform".to_string(),
+            template: "\"Reports an invalid assignment target or assigned metadata value.\""
+                .to_string(),
             delayed: false,
         })
     );

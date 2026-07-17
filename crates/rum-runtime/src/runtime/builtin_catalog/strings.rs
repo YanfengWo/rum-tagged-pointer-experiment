@@ -1,3 +1,4 @@
+use super::message_templates::*;
 use super::*;
 
 pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
@@ -89,11 +90,19 @@ pub(super) const STRING_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::new(
         "Repeated",
         "Represents the current string-pattern repetition head for one or more matches.",
-    ).protected(),
+    )
+    .with_messages(&[
+        REPEATED_RANGE,
+    ])
+    .protected(),
     BuiltinSpec::new(
         "RepeatedNull",
         "Represents the current string-pattern repetition head for zero or more matches.",
-    ).protected(),
+    )
+    .with_messages(&[
+        REPEATED_RANGE,
+    ])
+    .protected(),
     BuiltinSpec::new(
         "Shortest",
         "Represents the current string-pattern wrapper that prefers the shortest match.",

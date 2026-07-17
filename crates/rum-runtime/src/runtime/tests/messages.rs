@@ -211,10 +211,26 @@ fn messages_builtin_lists_defined_message_names() {
         session.eval_text("Messages[f]").unwrap().value.to_string(),
         "List[f::argx, f::usage]"
     );
-    assert_eq!(
-        session.eval_text("Messages[]").unwrap().value.to_string(),
-        "List[f::argx, f::usage, g::tag, Set::argx, Set::kval, Set::pkspec1, Set::shape, Set::write, Set::wrsym]"
-    );
+    let all_messages = session.eval_text("Messages[]").unwrap().value;
+    let Expr::Call { args, .. } = all_messages else {
+        panic!("Messages[] should return a list")
+    };
+    let message_names = args.iter().map(ToString::to_string).collect::<Vec<_>>();
+    assert_eq!(message_names.len(), 307);
+    for expected in [
+        "f::argx",
+        "f::usage",
+        "g::tag",
+        "MissingQ::argx",
+        "Trace::argtu",
+        "Function::argx",
+        "Get::syntax",
+        "Part::partw",
+        "Input::optx",
+        "RepeatedNull::range",
+    ] {
+        assert!(message_names.iter().any(|name| name == expected));
+    }
     assert_eq!(
         session
             .eval_text("Messages[f::argx]")
@@ -235,7 +251,7 @@ fn builtin_message_registry_populates_listings_and_information() {
             .unwrap()
             .value
             .to_string(),
-        "List[Set::argx, Set::kval, Set::pkspec1, Set::shape, Set::write, Set::wrsym]"
+        "List[Set::argform, Set::argx, Set::kval, Set::pkspec1, Set::shape, Set::write, Set::wrsym]"
     );
     assert_eq!(
         session
@@ -243,7 +259,7 @@ fn builtin_message_registry_populates_listings_and_information() {
             .unwrap()
             .value
             .to_string(),
-        "List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]"
+        "List[\"argform\", \"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]"
     );
 
     let information = session
@@ -252,7 +268,7 @@ fn builtin_message_registry_populates_listings_and_information() {
         .value
         .to_string();
     assert!(information.contains(
-        "Rule[\"Messages\", List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]]"
+        "Rule[\"Messages\", List[\"argform\", \"argx\", \"kval\", \"pkspec1\", \"shape\", \"write\", \"wrsym\"]]"
     ));
 }
 
@@ -297,14 +313,23 @@ fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
             .to_string(),
         "List[\"argx\", \"usage\"]"
     );
-    assert_eq!(
-        session
-            .eval_text("MessageTags[]")
-            .unwrap()
-            .value
-            .to_string(),
-        "List[\"argx\", \"kval\", \"pkspec1\", \"shape\", \"usage\", \"write\", \"wrsym\"]"
-    );
+    let all_tags = session.eval_text("MessageTags[]").unwrap().value;
+    let Expr::Call { args, .. } = all_tags else {
+        panic!("MessageTags[] should return a list")
+    };
+    let tags = args.iter().map(ToString::to_string).collect::<Vec<_>>();
+    assert_eq!(tags.len(), 45);
+    for expected in [
+        "\"argform\"",
+        "\"argx\"",
+        "\"notfound\"",
+        "\"range\"",
+        "\"setval\"",
+        "\"usage\"",
+        "\"wrsym\"",
+    ] {
+        assert!(tags.iter().any(|tag| tag == expected));
+    }
     assert_eq!(
         session
             .eval_text("MessageTags[f::argx]")
@@ -354,6 +379,10 @@ fn inspect_message_catalog_merges_builtin_templates_and_user_overrides() {
 
     let entries = session.inspect_message_catalog(Some("Set")).unwrap();
     let expected = [
+        (
+            "argform",
+            "\"Reports an invalid assignment target or assigned metadata value.\"",
+        ),
         ("argx", "\"expected exactly `1` argument(s), got `2`\""),
         ("kval", "\"The value for the key `1` does not exist.\""),
         (
@@ -376,7 +405,7 @@ fn inspect_message_catalog_merges_builtin_templates_and_user_overrides() {
 
     let exact = session.inspect_message_catalog(Some("Set::argx")).unwrap();
     assert_eq!(exact.len(), 1);
-    assert_eq!(exact[0], entries[0]);
+    assert_eq!(exact[0], entries[1]);
 
     session.eval_text("Unprotect[Set]").unwrap();
     session.eval_text("Set::argx = \"custom\"").unwrap();
