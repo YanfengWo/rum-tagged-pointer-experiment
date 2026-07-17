@@ -242,7 +242,7 @@ fn random_u64_sequences_are_pinned_for_byte_and_integer_seeds() {
 fn trace_message_and_print_accessors_expose_and_take_buffers() {
     let mut session = Session::new();
 
-    session.push_message("General", "stop", "stopped");
+    session.push_message("probe", "stop", "stopped");
     session.push_print("printed");
     assert_eq!(session.messages().len(), 1);
     assert_eq!(session.prints(), &["printed".to_string()]);

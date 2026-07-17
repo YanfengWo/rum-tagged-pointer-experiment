@@ -459,6 +459,10 @@ impl BuiltinSpec {
             self.capability = fallback.capability;
         }
 
+        if self.messages.is_empty() {
+            self.messages = fallback.messages;
+        }
+
         self
     }
 }

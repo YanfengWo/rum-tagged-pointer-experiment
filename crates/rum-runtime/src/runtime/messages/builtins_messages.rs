@@ -23,7 +23,7 @@ impl Session {
         let tag = key.tag.clone();
 
         self.drive_internal_value::<String, Expr, _>(rendered_text, move |session, text| {
-            session.push_message(&symbol_name, &tag, text);
+            session.push_message_unchecked(&symbol_name, &tag, text);
             Ok(system_expr("Null"))
         })
     }

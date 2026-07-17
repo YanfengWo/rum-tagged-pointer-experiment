@@ -342,6 +342,62 @@ fn builtin_message_registry_populates_listings_and_information() {
 }
 
 #[test]
+fn push_message_allows_open_user_symbol_families() {
+    let mut session = session_with_test_control_builtins();
+
+    session.eval_text("f = 1").unwrap();
+    session.push_message("f", "custom", "open family");
+
+    assert!(session.messages.iter().any(|message| {
+        message.symbol == "f" && message.tag == "custom" && message.text == "open family"
+    }));
+}
+
+#[test]
+fn push_message_allows_test_local_builtins_without_declared_messages() {
+    let mut session = Session::new();
+    session.register_builtin(BuiltinSpec::new(
+        "MessageProbe",
+        "Test-local builtin with no declared messages.",
+    ));
+
+    session.push_message("MessageProbe", "custom", "undeclared family");
+
+    assert!(session.messages.iter().any(|message| {
+        message.symbol == "MessageProbe"
+            && message.tag == "custom"
+            && message.text == "undeclared family"
+    }));
+}
+
+#[test]
+fn push_message_allows_user_defined_builtin_message_names() {
+    let mut session = session_with_test_control_builtins();
+
+    session.eval_text("Unprotect[Set]").unwrap();
+    session
+        .eval_text("Set::custom = \"custom message\"")
+        .unwrap();
+    session.eval_text("Protect[Set]").unwrap();
+    session.push_message("Set", "custom", "user-defined builtin tag");
+
+    assert!(session.messages.iter().any(|message| {
+        message.symbol == "Set"
+            && message.tag == "custom"
+            && message.text == "user-defined builtin tag"
+    }));
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "unregistered builtin message Set::bogus")]
+fn push_message_rejects_unregistered_builtin_message_tags() {
+    let mut session = Session::new();
+
+    session.push_message("Set", "bogus", "missing registry entry");
+}
+
+#[test]
 fn message_definitions_builtin_lists_immediate_and_delayed_templates() {
     let mut session = session_with_test_control_builtins();
 

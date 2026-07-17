@@ -167,6 +167,45 @@ impl Session {
             return;
         }
 
+        #[cfg(debug_assertions)]
+        if let Some(symbol) = self.resolve_symbol_name(symbol, false) {
+            if let Some(spec) = self.builtin_spec_for_symbol(&symbol) {
+                if !spec.messages.is_empty() {
+                    let key = MessageNameKey {
+                        symbol,
+                        tag: tag.to_string(),
+                    };
+                    if !spec.messages.iter().any(|message| message.tag == tag)
+                        && !self.message_definitions.contains_key(&key)
+                    {
+                        debug_assert!(
+                            false,
+                            "unregistered builtin message {}::{}; add it to the owning catalog file",
+                            key.symbol, key.tag
+                        );
+                    }
+                }
+            }
+        }
+
+        self.current_message_list_dirty = true;
+        self.messages.push(RuntimeMessage {
+            symbol: symbol.to_string(),
+            tag: tag.to_string(),
+            text: text.into(),
+        });
+    }
+
+    pub(in crate::runtime) fn push_message_unchecked(
+        &mut self,
+        symbol: &str,
+        tag: &str,
+        text: impl Into<String>,
+    ) {
+        if !self.message_enabled(symbol, tag) {
+            return;
+        }
+
         self.current_message_list_dirty = true;
         self.messages.push(RuntimeMessage {
             symbol: symbol.to_string(),
