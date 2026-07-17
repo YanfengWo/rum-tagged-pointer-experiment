@@ -50,11 +50,26 @@ Queue, in order; each item gates before the next starts:
      gate correction narrowed `UpTo::innf` to definitely-invalid
      contents (negative/rational), symbolic stays silent-inert.
      Workspace 1523/0.
-   - [ ] Batch 2 — the hold half: one design doc covering the three
-     hold candidates → user rulings → 2a mechanism (A/B gate),
-     2b operator forms, 2c `ReplaceAllUnheld`.
-   - [ ] Batch 3 — structured exceptions: contract doc → user green
-     light → 3a core, 3b polish/docs.
+   - [~] Batch 2 — the hold half (design doc `docs/dev/wl15-wfr-hold-design.md`;
+     rulings A1/B1/B2/C1 recorded 2026-07-17):
+     - [x] 2a mechanism — `SubValuesHoldAll` attribute (brief-255,
+       8186536): bit 1<<15, compound-head args prepare as HoldAll via
+       the existing base-symbol walk; symbol-head calls untouched.
+       Workspace 1528/0; A/B no regression (director 3-pair interleaved).
+     - [x] 2b-I mutation operator forms (brief-256, acaf1f3): nine
+       compound-assignment heads adopt the attribute + one wrapper
+       family; unary captures quiet-inert. Workspace 1537/0; A/B clean.
+       Two revisions (stdlib file ownership; kernel handler location).
+     - [x] 2b-II schema operator forms (brief-257, 476cf19):
+       ConformSchema/SchemaErrors → special_with_hold; capture
+       evaluates nothing, application byte-parity with direct call
+       (validation-time resolution is pre-existing on both forms).
+       Workspace 1543/0; A/B clean. One revision (parity-contract probe).
+     - [ ] 2c `ReplaceAllUnheld` — separate builtin (C1); draft
+       brief-258 ready.
+   - [ ] Batch 3 — structured exceptions: contract doc
+     `docs/dev/structured-exceptions-contract.md` → user green light on
+     E1-E6 → 3a core, 3b polish/docs.
 
 **WON'T-DO ruling (user 2026-07-17): the parked pools are CLOSED, not
 parked.** Stdlib parked candidates (`ByteArray` depth audit, compression

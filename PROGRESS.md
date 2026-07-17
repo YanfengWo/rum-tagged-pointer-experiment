@@ -1192,3 +1192,23 @@ kernel Part-span rule — symbolic (`UpTo[x]`) and oversize integers stay
 on the silent inert path. Workspace 1523/0; probes reproduced at the
 gate. Commits cd81665 (brief) + 5a2ef4a (impl). Batches 2 (hold design)
 and 3 (structured exceptions) proceed design-first.
+
+## 2026-07-18 — wl15/wfr pass batch 2 (hold half) COMPLETE bar 2c
+
+Batch 2 landed the SubValuesHoldAll line: 2a mechanism (brief-255,
+8186536 — new attribute bit 1<<15, compound-head args prepared as
+HoldAll via the existing base-symbol walk, symbol-head calls
+untouched); 2b-I mutation operator forms (brief-256, acaf1f3 — nine
+compound-assignment heads AddTo/AppendTo/ApplyTo/AssociateTo/DivideBy/
+KeyDropFrom/PrependTo/SubtractFrom/TimesBy adopt the attribute + a
+mutation wrapper family; unary captures quiet-inert; two brief
+revisions on file ownership); 2b-II schema operator forms (brief-257,
+476cf19 — ConformSchema/SchemaErrors switch to special_with_hold, raw
+schema captured, value evaluation handler-owned, byte-parity with the
+direct form incl. its pre-existing validation-time pattern resolution).
+Workspace 1543/0. All three A/B gates clean (no same-direction hot-label
+regression). Remaining: 2c ReplaceAllUnheld (brief-258). Gate lessons
+this batch: file ownership must be opened-and-verified not name-grepped
+(brief-256 two stop-losses); equivalence contracts pin A==B side-by-side
+not "both have property P" (brief-257 one stop-loss). Both recorded in
+[[brief-may-list-must-cover-mechanical-ripple]].
