@@ -1147,3 +1147,35 @@ carries the full trusted-host surface plus three capability-pinned
 named profiles. The dogfood ruling (stance A) did the work its
 rationale promised: every gap was pulled by a real consumer, none
 invented.
+
+## 2026-07-17 — briefs 243-253: cleanup + message-registry line — LINE COMPLETE
+
+One day, eight gated briefs, all four queue items closed (user ruling
+2026-07-17 opened the line; the same ruling closed the parked pools
+WON'T-DO). (1) The message-tag registry arc: inventory (brief-243: 114
+push_message sites, 144 tags, 966 closed pairs, live probes proving
+Messages[Set] empty), mechanism (245: BuiltinSpec.messages + the
+four-surface merge — user definitions win, output shapes frozen), fill
+sweeps (246-248: kernel 304 + stdlib 433 + 214 pairs, reconciled
+exactly against the inventory; one ledger row proven unreachable at the
+source), docgen pairing (249: the reference renders Messages blocks
+from the registry — 951 rows, additions-only diff), carriers (252, user
+ruling: General 12 pairs + UpTo 2 as inert Protected specs; reference
+615 entries; the first dispatch's stop-loss caught an unverified
+Take[..., UpTo[...]] expectation — Take/Drop UpTo support recorded as a
+WL-conformance follow-up candidate), and enforcement (253: a
+debug-assertions check at the push_message seam, declared-or-exempt
+rule shaped by two correct stop-loss rounds; zero registry gaps at
+landing). (2) vm_rhs_template DELETED (244): the opt-in experiment's ON
+path crashed the guard-adjacent recursion test; removal A/B clean.
+(3) rum-jupyter signature.rs ported onto Hmac<Sha256> (250) — the
+repository's last hand-rolled crypto gone; the ZeroMQ ordering flake
+did not recur. (4) rum-cli feature forwarding (251): a four-crate
+chain makes the CLI digest-free under --no-default-features with
+defaults byte-equivalent. Tooling: the dispatch sandbox now defaults
+to workspace-write (danger-full-access reserved, by env override, for
+sample-profiling briefs — the original 2026-06-21 reason); the one
+observed friction is loopback-bind denial on rum-jupyter's transport
+tests, covered by the out-of-sandbox authoritative gate. Cold backup
+rum-2026-07-17-dc9181a.bundle verified. Next: the wl15/wfr design
+pass (ACTIVE PLAN item 5).

@@ -70,8 +70,9 @@ always-on; small pure-Rust dep → default-on Cargo feature; heavy/C-lib dep
   plain release 8.53 MiB → +strip 7.24 MiB → +lto+codegen-units=1
   6.19 MiB (env-var profile overrides; repo untouched). For comparison:
   libpython3.14 core 5.26 MiB + 60 MB stdlib dir; Lua ~0.3 MiB (no
-  batteries). Candidate follow-up: rum-cli feature forwarding so the CLI
-  binary itself is feature-trimmable.
+  batteries). The candidate follow-up landed 2026-07-17 (brief-251):
+  rum-cli forwards `hash` end-to-end and is digest-trimmable via
+  `--no-default-features`.
 - Compression = downstream `rum-compress` crate, AFTER `rum-fs` (C-library
   deps; never in `rum-stdlib`). Heavy encryption beyond hashing = non-
   default feature or downstream.
@@ -418,9 +419,9 @@ tail is closed WON'T-DO by the same 2026-07-17 ruling).
   TestReport → Clock kept; FileNames → `FileRead` glob restored). **USABILITY
   PASS COMPLETE — 605 builtins swept, all 10 units closed.** Next: the
   host-embedding line (header above).
-- [ ] rum-jupyter `signature.rs` hand-rolls its own `sha256_compress`
-  for wire signing (found by brief-163's sweep; out of its scope) —
-  small brief: switch to the workspace `sha2`/RustCrypto path.
+- [x] rum-jupyter `signature.rs` hand-rolled `sha256_compress` (found by
+  brief-163's sweep) — RESOLVED 2026-07-17 (brief-250): ported onto the
+  workspace `Hmac<Sha256>`; see ACTIVE PLAN item 3.
 
 ## Release Transformation — COMPLETE (2026-07-06)
 
