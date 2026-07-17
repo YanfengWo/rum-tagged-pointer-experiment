@@ -128,12 +128,12 @@ args and disables re-enabling inside.
 
 ## 6. Decision points and rulings
 
-| # | Question | Recommendation | Ruling |
+| # | Question | Recommendation | Ruling (user, 2026-07-17) |
 |---|---|---|---|
-| A1 | Adopt WL name `SubValuesHoldAll`? | yes | PENDING |
-| B1 | AppendTo-family attribute + operator forms? | yes | PENDING |
-| B2 | ConformSchema/SchemaErrors: special-dispatch capture vs stay deferred | option 1 if small, else 3 | PENDING |
-| C1 | `ReplaceAllUnheld` as separate builtin? | yes | PENDING |
+| A1 | Adopt WL name `SubValuesHoldAll`? | yes | **ADOPT the WL name** |
+| B1 | AppendTo-family attribute + operator forms? | yes | **FULL FAMILY** (HoldFirst compound-assignment heads; list enumerated at brief time) |
+| B2 | ConformSchema/SchemaErrors: special-dispatch capture vs stay deferred | option 1 if small, else 3 | **OPTION 1 with stop-loss**: special-dispatch the unary capture; if the diff bloats, stop-loss back to DEFERRED |
+| C1 | `ReplaceAllUnheld` as separate builtin? | yes | **SEPARATE BUILTIN** (never an option on ReplaceAll) |
 
 ## 7. Batch split (implementation, post-rulings)
 
