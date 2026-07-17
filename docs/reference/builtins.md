@@ -135,7 +135,7 @@ Returns running totals in the current first-pass subset.
 
 Adds an evaluated increment to a held symbol or exact Part target and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - AddTo::argform — expected an exact Part target as the first argument
@@ -245,7 +245,7 @@ Appends an element to the end of a normal expression, with current operator-form
 
 Appends an evaluated item to a held symbol or exact Part target and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - AppendTo::argform — expected an exact Part target as the first argument
@@ -268,7 +268,7 @@ Replaces the head of an expression in the current first-pass subset.
 
 Applies an evaluated function to a held symbol or exact Part target and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - ApplyTo::argform — expected an exact Part target as the first argument
@@ -341,11 +341,12 @@ Represents an assertion site and supports the current session flag plus $AssertF
 
 Adds or replaces association entries, including held symbol mutation in the current first-pass subset.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - AssociateTo::argr — AssociateTo called with 1 argument; 2 arguments are expected.
   - AssociateTo::argrx — AssociateTo called with `1` arguments; 2 arguments are expected.
+  - AssociateTo::argx — `1` called with `2` arguments; 1 argument is expected.
   - AssociateTo::blnoval — The symbol `1` at position `2` should have an immediate value defined.
   - AssociateTo::invak — The argument `1` is not a valid Association.
   - AssociateTo::invlb — The argument `1` is not a list, Rule or Association.
@@ -1375,7 +1376,7 @@ Divides exact numbers, producing exact rationals when possible.
 
 Divides a held symbol or exact Part target by an evaluated divisor and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - DivideBy::argform — expected an exact Part target as the first argument
@@ -2448,11 +2449,12 @@ Drops selected keys from an association in the current first-pass subset.
 
 Drops keys from an association, including held symbol mutation in the current first-pass subset.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - KeyDropFrom::argr — KeyDropFrom called with 1 argument; 2 arguments are expected.
   - KeyDropFrom::argrx — KeyDropFrom called with `1` arguments; 2 arguments are expected.
+  - KeyDropFrom::argx — `1` called with `2` arguments; 1 argument is expected.
   - KeyDropFrom::blnoval — The symbol `1` at position `2` should have an immediate value defined.
   - KeyDropFrom::invak — The argument `1` is not a valid Association.
   - KeyDropFrom::rvalue — `1` is not a variable with a value, so its value cannot be changed.
@@ -3744,7 +3746,7 @@ Prepends an element to the front of a normal expression, with current operator-f
 
 Prepends an evaluated item to a held symbol or exact Part target and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - PrependTo::argform — expected an exact Part target as the first argument
@@ -5000,7 +5002,7 @@ Subtracts one exact number from another.
 
 Subtracts an evaluated decrement from a held symbol or exact Part target and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - SubtractFrom::argform — expected an exact Part target as the first argument
@@ -5308,7 +5310,7 @@ Multiplies exact numbers and canonically combines multiplicative expressions.
 
 Multiplies a held symbol or exact Part target by an evaluated factor and stores the result.
 
-- Attributes: `HoldFirst`, `Protected`
+- Attributes: `HoldFirst`, `SubValuesHoldAll`, `Protected`
 - Capability: `Pure`
 - Messages:
   - TimesBy::argform — expected an exact Part target as the first argument

@@ -155,12 +155,7 @@ fn association_mutation_diagnostics_cover_invalid_targets_and_arity() {
 
         let outcome = session.eval_text(one_arg_call).unwrap();
         assert_eq!(outcome.value.to_string(), one_arg_call);
-        assert!(outcome.messages.iter().any(|message| {
-            message.symbol == symbol
-                && message.tag == "argr"
-                && message.text
-                    == format!("{symbol} called with 1 argument; 2 arguments are expected.")
-        }));
+        assert!(outcome.messages.is_empty());
 
         let outcome = session.eval_text(three_arg_call).unwrap();
         assert_eq!(outcome.value.to_string(), three_arg_call);

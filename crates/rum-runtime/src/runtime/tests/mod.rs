@@ -136,6 +136,7 @@ mod lowering_golden;
 mod messages;
 mod messages_part2;
 mod messages_part3;
+mod mutation_operator_forms;
 mod namespace_names;
 mod nothing;
 mod options_and_protection;

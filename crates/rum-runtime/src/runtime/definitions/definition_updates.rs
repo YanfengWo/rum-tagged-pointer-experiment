@@ -30,6 +30,9 @@ enum HeldUpdateCurrent {
 impl Session {
     pub(in crate::runtime) fn eval_add_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, increment] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("AddTo", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("AddTo", args, 2));
         };
 
@@ -47,6 +50,9 @@ impl Session {
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
         let [target_expr, decrement] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("SubtractFrom", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("SubtractFrom", args, 2));
         };
 
@@ -62,6 +68,9 @@ impl Session {
 
     pub(in crate::runtime) fn eval_times_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, factor] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("TimesBy", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("TimesBy", args, 2));
         };
 
@@ -76,6 +85,9 @@ impl Session {
 
     pub(in crate::runtime) fn eval_divide_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, divisor] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("DivideBy", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("DivideBy", args, 2));
         };
 
@@ -91,6 +103,9 @@ impl Session {
 
     pub(in crate::runtime) fn eval_apply_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, function] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("ApplyTo", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("ApplyTo", args, 2));
         };
 
@@ -105,6 +120,9 @@ impl Session {
 
     pub(in crate::runtime) fn eval_append_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, item] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("AppendTo", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("AppendTo", args, 2));
         };
 
@@ -139,6 +157,9 @@ impl Session {
 
     pub(in crate::runtime) fn eval_prepend_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         let [target_expr, item] = args else {
+            if args.len() == 1 {
+                return Ok(self.invalid_call("PrependTo", args));
+            }
             return Ok(self.invalid_call_with_exact_arg_count("PrependTo", args, 2));
         };
 

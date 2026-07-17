@@ -18,6 +18,7 @@ mod associations_key_value_pattern;
 mod associations_missing_diagnostics;
 mod associations_mutation;
 mod associations_mutation_diagnostics;
+mod associations_mutation_operator_forms;
 mod associations_mutation_surface;
 mod associations_part2;
 mod associations_set_lvalue;

@@ -69,6 +69,7 @@ pub(in crate::runtime) fn is_callable_operator_wrapper(expr: &Expr) -> bool {
         || is_reverse_applied_wrapper(expr)
         || is_comparison_operator_wrapper(expr)
         || is_nearest_to_wrapper(expr)
+        || is_mutation_operator_wrapper(expr)
         || is_string_unary_operator_wrapper(expr)
         || is_structure_operator_wrapper(expr)
         || is_predicate_operator_wrapper(expr)
@@ -96,6 +97,10 @@ pub(in crate::runtime) fn apply_callable_operator_wrapper_to_args(
         return Some(expr);
     }
 
+    if let Some(expr) = apply_mutation_operator_wrapper_to_args(head, args) {
+        return Some(expr);
+    }
+
     if let Some(expr) = apply_string_unary_operator_wrapper_to_args(head, args) {
         return Some(expr);
     }
@@ -119,6 +124,10 @@ pub(in crate::runtime) fn invalid_callable_operator_wrapper_argx_symbol(
     head: &Expr,
     args: &[Expr],
 ) -> Option<&'static str> {
+    if let Some(symbol) = invalid_mutation_operator_wrapper_argx_symbol(head, args) {
+        return Some(symbol);
+    }
+
     if let Some(symbol) = invalid_string_unary_operator_wrapper_argx_symbol(head, args) {
         return Some(symbol);
     }
@@ -588,6 +597,69 @@ fn compare_rationals_for_nearest_to(lhs: &Rational, rhs: &Rational) -> std::cmp:
     let lhs_cross = lhs.numerator() * rhs.denominator();
     let rhs_cross = rhs.numerator() * lhs.denominator();
     lhs_cross.cmp(&rhs_cross)
+}
+
+#[derive(Clone, Copy, Debug)]
+struct MutationOperatorSpec<'a> {
+    symbol: &'static str,
+    value: &'a Expr,
+}
+
+fn is_mutation_operator_wrapper(expr: &Expr) -> bool {
+    parse_mutation_operator_wrapper(expr).is_some()
+}
+
+fn apply_mutation_operator_wrapper_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
+    let spec = parse_mutation_operator_wrapper(head)?;
+    let [target] = args else {
+        return None;
+    };
+
+    Some(Expr::call(
+        system_expr(spec.symbol),
+        vec![target.clone(), spec.value.clone()],
+    ))
+}
+
+fn invalid_mutation_operator_wrapper_argx_symbol(
+    head: &Expr,
+    args: &[Expr],
+) -> Option<&'static str> {
+    let spec = parse_mutation_operator_wrapper(head)?;
+    (args.len() != 1).then_some(spec.symbol)
+}
+
+fn parse_mutation_operator_wrapper(expr: &Expr) -> Option<MutationOperatorSpec<'_>> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    let [value] = args.as_slice() else {
+        return None;
+    };
+
+    let symbol = if is_system_symbol_name(head, "AddTo") {
+        "AddTo"
+    } else if is_system_symbol_name(head, "AppendTo") {
+        "AppendTo"
+    } else if is_system_symbol_name(head, "ApplyTo") {
+        "ApplyTo"
+    } else if is_system_symbol_name(head, "AssociateTo") {
+        "AssociateTo"
+    } else if is_system_symbol_name(head, "DivideBy") {
+        "DivideBy"
+    } else if is_system_symbol_name(head, "KeyDropFrom") {
+        "KeyDropFrom"
+    } else if is_system_symbol_name(head, "PrependTo") {
+        "PrependTo"
+    } else if is_system_symbol_name(head, "SubtractFrom") {
+        "SubtractFrom"
+    } else if is_system_symbol_name(head, "TimesBy") {
+        "TimesBy"
+    } else {
+        return None;
+    };
+
+    Some(MutationOperatorSpec { symbol, value })
 }
 
 #[derive(Clone, Copy, Debug)]

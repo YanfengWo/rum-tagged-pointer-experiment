@@ -1,4 +1,6 @@
-use rum_runtime::kernel_api::{BuiltinMessageSpec, BuiltinSpec, HoldAttribute};
+use rum_runtime::kernel_api::{
+    Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec, HoldAttribute,
+};
 
 use super::message_templates::*;
 
@@ -384,10 +386,10 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
             template: "Normal called with `1` arguments; between 1 and 3 arguments are expected.",
         },
     ]).protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "AssociateTo",
         "Adds or replaces association entries, including held symbol mutation in the current first-pass subset.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         associations::eval_associate_to,
     )
     .with_messages(&[
@@ -399,6 +401,7 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
             tag: "argrx",
             template: "AssociateTo called with `1` arguments; 2 arguments are expected.",
         },
+        ARGX_OPERATOR,
         BuiltinMessageSpec {
             tag: "blnoval",
             template: "The symbol `1` at position `2` should have an immediate value defined.",
@@ -419,10 +422,10 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
         RVALUE,
         WRSYM,
     ]).protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "KeyDropFrom",
         "Drops keys from an association, including held symbol mutation in the current first-pass subset.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         associations::eval_key_drop_from,
     )
     .with_messages(&[
@@ -434,6 +437,7 @@ pub(crate) const ASSOCIATION_BUILTINS: &[BuiltinSpec] = &[
             tag: "argrx",
             template: "KeyDropFrom called with `1` arguments; 2 arguments are expected.",
         },
+        ARGX_OPERATOR,
         BuiltinMessageSpec {
             tag: "blnoval",
             template: "The symbol `1` at position `2` should have an immediate value defined.",

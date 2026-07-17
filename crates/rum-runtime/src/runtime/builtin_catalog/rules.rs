@@ -118,10 +118,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "AddTo",
         "Adds an evaluated increment to a held symbol or exact Part target and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_add_to,
     )
     .with_messages(&[
@@ -134,10 +134,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "SubtractFrom",
         "Subtracts an evaluated decrement from a held symbol or exact Part target and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_subtract_from,
     )
     .with_messages(&[
@@ -150,10 +150,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "TimesBy",
         "Multiplies a held symbol or exact Part target by an evaluated factor and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_times_by,
     )
     .with_messages(&[
@@ -166,10 +166,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "DivideBy",
         "Divides a held symbol or exact Part target by an evaluated divisor and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_divide_by,
     )
     .with_messages(&[
@@ -182,10 +182,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "ApplyTo",
         "Applies an evaluated function to a held symbol or exact Part target and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_apply_to,
     )
     .with_messages(&[
@@ -198,10 +198,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "AppendTo",
         "Appends an evaluated item to a held symbol or exact Part target and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_append_to,
     )
     .with_messages(&[
@@ -218,10 +218,10 @@ pub(super) const RULE_BUILTINS: &[BuiltinSpec] = &[
         WRSYM,
     ])
     .protected(),
-    BuiltinSpec::ordinary_with_hold(
+    BuiltinSpec::ordinary_with_attributes(
         "PrependTo",
         "Prepends an evaluated item to a held symbol or exact Part target and stores the result.",
-        HoldAttribute::HoldFirst,
+        AttributeSet::from_hold(HoldAttribute::HoldFirst).with(Attribute::SubValuesHoldAll),
         builtin_prepend_to,
     )
     .with_messages(&[

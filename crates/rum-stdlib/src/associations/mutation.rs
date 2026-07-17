@@ -115,6 +115,9 @@ pub(crate) fn eval_associate_to(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [target_expr, spec] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_message(
             "AssociateTo",
             args,
@@ -227,10 +230,13 @@ fn apply_associate_to_value(expr: Expr, spec: Expr) -> Option<Expr> {
 
 pub(crate) fn eval_key_drop_from(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let [target_expr, key_spec] = args else {
+        if args.len() == 1 {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        }
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
             args,

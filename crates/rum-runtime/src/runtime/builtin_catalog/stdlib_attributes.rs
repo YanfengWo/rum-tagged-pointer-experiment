@@ -116,7 +116,12 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("ArrayQ", ATTR_PROTECTED),
     Spec::new("ArrayReduce", ATTR_PROTECTED),
     Spec::new("Assert", ATTR_HOLD_ALL.with(Attribute::Protected)),
-    Spec::new("AssociateTo", ATTR_HOLD_FIRST.with(Attribute::Protected)),
+    Spec::new(
+        "AssociateTo",
+        ATTR_HOLD_FIRST
+            .with(Attribute::SubValuesHoldAll)
+            .with(Attribute::Protected),
+    ),
     Spec::new("Association", ATTR_PROTECTED),
     Spec::new("AssociationKeyDeflatten", ATTR_PROTECTED),
     Spec::new("AssociationKeyFlatten", ATTR_PROTECTED),
@@ -296,7 +301,12 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("Key", ATTR_PROTECTED),
     Spec::new("KeyComplement", ATTR_PROTECTED),
     Spec::new("KeyDrop", ATTR_PROTECTED),
-    Spec::new("KeyDropFrom", ATTR_HOLD_FIRST.with(Attribute::Protected)),
+    Spec::new(
+        "KeyDropFrom",
+        ATTR_HOLD_FIRST
+            .with(Attribute::SubValuesHoldAll)
+            .with(Attribute::Protected),
+    ),
     Spec::new("KeyExistsQ", ATTR_PROTECTED),
     Spec::new("KeyFreeQ", ATTR_PROTECTED),
     Spec::new("KeyGroupBy", ATTR_PROTECTED),
