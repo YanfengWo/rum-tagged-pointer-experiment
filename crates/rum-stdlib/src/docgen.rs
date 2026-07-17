@@ -358,6 +358,16 @@ fn push_entry(markdown: &mut String, spec: &BuiltinSpec) -> Result<(), String> {
         markdown.push_str(&format!("- Limits: {note}\n"));
     }
 
+    if !spec.messages.is_empty() {
+        markdown.push_str("- Messages:\n");
+        for message in spec.messages {
+            markdown.push_str(&format!(
+                "  - {}::{} — {}\n",
+                spec.name, message.tag, message.template
+            ));
+        }
+    }
+
     markdown.push('\n');
     Ok(())
 }
