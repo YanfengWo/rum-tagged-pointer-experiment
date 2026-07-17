@@ -9,6 +9,19 @@
 > and a stdlib↔runtime attribute lockstep test at
 > `crates/rum-stdlib/src/tests.rs:178`. The Scope below now grants those
 > files. Everything else is unchanged.
+>
+> **REVISION 2 (2026-07-17).** Second stop-loss was also correct: the
+> SEVEN kernel heads' unary handlers live in
+> `crates/rum-runtime/src/runtime/definitions/definition_updates.rs:31-172`
+> (each destructures `[target_expr, value]` and routes ≠2 arities to
+> `invalid_call_with_exact_arg_count(sym, args, 2)`), NOT in
+> `kernel_data/*.rs`. Scope now grants that file for the quiet-inert
+> unary change ONLY (a 1-argument call returns the inert call, no
+> message; other arities keep today's behavior). Director-verified: no
+> kernel-side test asserts the old unary argx for these heads. Catalog
+> entries confirmed at `builtin_catalog/rules.rs:122-222` (seven),
+> `catalog/associations.rs:388/:423` (two), mirror
+> `stdlib_attributes.rs:119/:299`.
 
 ## Goal
 
@@ -70,8 +83,9 @@ byte-identical to today.
     mirror (`builtin_catalog/stdlib_attributes.rs`) — attributes; plus
     a message declaration ONLY if the wrapper argx path needs one that
     is missing (the push_message debug assertion is the arbiter)
-  - the `kernel_data/*.rs` file(s) implementing the kernel heads' unary
-    arity path (quiet-inert change only)
+  - `crates/rum-runtime/src/runtime/definitions/definition_updates.rs`
+    — the seven kernel heads' unary arity paths (quiet-inert change
+    ONLY; see revision 2)
   - `crates/rum-stdlib/src/catalog/associations.rs` — the
     `AssociateTo`/`KeyDropFrom` `BuiltinSpec` entries (attributes only)
   - `crates/rum-stdlib/src/associations/mutation.rs` — their unary
