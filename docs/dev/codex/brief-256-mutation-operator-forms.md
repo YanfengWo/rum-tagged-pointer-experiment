@@ -1,5 +1,15 @@
 # Brief 256 — mutation-family operator forms via `SubValuesHoldAll` (wl15/wfr batch 2b-I)
 
+> **REVISION 1 (2026-07-17).** The first dispatch stop-lossed correctly:
+> two of the nine heads (`AssociateTo`, `KeyDropFrom`) are STDLIB heads —
+> real `BuiltinSpec` entries in `crates/rum-stdlib/src/catalog/associations.rs:387`
+> area, unary `argr` messages in `crates/rum-stdlib/src/associations/mutation.rs:112`/`:228`,
+> the old unary-message behavior asserted in
+> `crates/rum-stdlib/src/tests/associations/associations_mutation_diagnostics.rs:133`,
+> and a stdlib↔runtime attribute lockstep test at
+> `crates/rum-stdlib/src/tests.rs:178`. The Scope below now grants those
+> files. Everything else is unchanged.
+
 ## Goal
 
 The nine compound-assignment heads — `AddTo`, `AppendTo`, `ApplyTo`,
@@ -55,20 +65,27 @@ byte-identical to today.
 
 - Files you MAY modify:
   - `crates/rum-runtime/src/runtime/kernel_data/functional_data.rs`
-  - the kernel `builtin_catalog/*.rs` file(s) containing the nine
-    heads' `BuiltinSpec` entries (attributes; plus an `argx` message
-    declaration ONLY if the wrapper argx path needs one that is
-    missing — the push_message debug assertion is the arbiter)
-  - the `kernel_data/*.rs` file(s) implementing the nine heads' unary
+  - the kernel `builtin_catalog/*.rs` file(s) containing the
+    kernel-side heads' `BuiltinSpec` entries AND the stdlib-attribute
+    mirror (`builtin_catalog/stdlib_attributes.rs`) — attributes; plus
+    a message declaration ONLY if the wrapper argx path needs one that
+    is missing (the push_message debug assertion is the arbiter)
+  - the `kernel_data/*.rs` file(s) implementing the kernel heads' unary
     arity path (quiet-inert change only)
+  - `crates/rum-stdlib/src/catalog/associations.rs` — the
+    `AssociateTo`/`KeyDropFrom` `BuiltinSpec` entries (attributes only)
+  - `crates/rum-stdlib/src/associations/mutation.rs` — their unary
+    arity paths (quiet-inert change only)
+  - `crates/rum-stdlib/src/tests/associations/` — ripple edits to
+    tests asserting the old unary-message behavior + new tests
   - `crates/rum-runtime/src/runtime/tests/` — new tests plus EXISTING
-    tests that assert the old unary-argx behavior (each such edit is
+    tests that assert the old unary-message behavior (each such edit is
     necessary ripple; list every one in the report with the old/new
     expectation)
   - `docs/reference/builtins.md` (regeneration output only)
 - MUST NOT touch: brief-255's planner code (`eval_dispatch/mod.rs`,
   `metadata.rs`) — consume the attribute, do not modify the mechanism;
-  stdlib catalog; everything else.
+  stdlib files beyond the three listed; everything else.
 - No unconditional default-path cost: the new recognizer runs only on
   compound-head dispatch; symbol-head calls must be untouched.
 
