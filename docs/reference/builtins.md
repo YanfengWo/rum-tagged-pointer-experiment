@@ -889,6 +889,7 @@ Validates a value against a symbolic schema and returns the normalized value wit
 - Capability: `Pure`
 - Messages:
   - ConformSchema::schema — Reports a malformed schema or conformance failure.
+  - ConformSchema::argx — `1` called with `2` arguments; 1 argument is expected.
 
 ### ConstantArray
 
@@ -4336,6 +4337,7 @@ Returns path-keyed validation errors for a value checked against a symbolic sche
 - Capability: `Pure`
 - Messages:
   - SchemaErrors::schema — Reports a malformed schema or conformance failure.
+  - SchemaErrors::argx — `1` called with `2` arguments; 1 argument is expected.
 
 ### SeedRandom
 

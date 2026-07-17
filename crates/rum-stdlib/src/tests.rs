@@ -146,6 +146,8 @@ mod predicates_part2;
 mod random;
 #[path = "tests/schema.rs"]
 mod schema;
+#[path = "tests/schema_operator_forms.rs"]
+mod schema_operator_forms;
 #[path = "tests/session_requests/functional_iteration_resume.rs"]
 mod session_requests_functional_iteration_resume;
 #[path = "tests/session_requests/functional_sequence_resume.rs"]

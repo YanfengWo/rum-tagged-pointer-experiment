@@ -1,14 +1,14 @@
-use rum_runtime::kernel_api::{
-    Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec, HoldAttribute,
-};
+use rum_runtime::kernel_api::{BuiltinMessageSpec, BuiltinSpec, HoldAttribute};
+
+use super::message_templates::ARGX_OPERATOR;
 
 use crate::schema;
 
 pub(crate) const SCHEMA_BUILTINS: &[BuiltinSpec] = &[
-    BuiltinSpec::ordinary_with_attributes(
+    BuiltinSpec::special_with_hold(
         "ConformSchema",
         "Validates a value against a symbolic schema and returns the normalized value with defaults filled.",
-        AttributeSet::from_hold(HoldAttribute::HoldRest).with(Attribute::Protected),
+        HoldAttribute::HoldRest,
         schema::eval_conform_schema,
     )
     .with_messages(&[
@@ -16,11 +16,13 @@ pub(crate) const SCHEMA_BUILTINS: &[BuiltinSpec] = &[
             tag: "schema",
             template: "Reports a malformed schema or conformance failure.",
         },
-    ]),
-    BuiltinSpec::ordinary_with_attributes(
+        ARGX_OPERATOR,
+    ])
+    .protected(),
+    BuiltinSpec::special_with_hold(
         "SchemaErrors",
         "Returns path-keyed validation errors for a value checked against a symbolic schema.",
-        AttributeSet::from_hold(HoldAttribute::HoldRest).with(Attribute::Protected),
+        HoldAttribute::HoldRest,
         schema::eval_schema_errors,
     )
     .with_messages(&[
@@ -28,5 +30,7 @@ pub(crate) const SCHEMA_BUILTINS: &[BuiltinSpec] = &[
             tag: "schema",
             template: "Reports a malformed schema or conformance failure.",
         },
-    ]),
+        ARGX_OPERATOR,
+    ])
+    .protected(),
 ];

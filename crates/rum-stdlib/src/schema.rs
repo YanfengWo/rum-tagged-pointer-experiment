@@ -48,9 +48,36 @@ struct SchemaValidator<'a> {
 
 pub(crate) fn eval_schema_errors(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+    if args.len() >= 2 {
+        let value_result = session.evaluate(args[0].clone());
+        let value = session.suspend_with_frame(value_result, {
+            let tail = args[1..].to_vec();
+            move |session, value| eval_schema_errors_with_value(session, value, &tail)
+        })?;
+        return eval_schema_errors_with_value(session, value, &args[1..]);
+    }
+
+    finish_schema_errors(session, args)
+}
+
+fn eval_schema_errors_with_value(
+    session: &mut Session,
+    value: Expr,
+    tail: &[Expr],
+) -> Result<Expr, EvalError> {
+    let mut args = Vec::with_capacity(tail.len() + 1);
+    args.push(value);
+    args.extend_from_slice(tail);
+    finish_schema_errors(session, &args)
+}
+
+fn finish_schema_errors(session: &mut Session, args: &[Expr]) -> Result<Expr, EvalError> {
     let (value, schema, options) = match parse_schema_call("SchemaErrors", args) {
         Ok(parsed) => parsed,
         Err(message) => return Ok(fail_schema(session, "SchemaErrors", message)),
@@ -66,9 +93,36 @@ pub(crate) fn eval_schema_errors(
 
 pub(crate) fn eval_conform_schema(
     session: &mut Session,
-    _head: &Expr,
+    head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.len() == 1 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+    if args.len() >= 2 {
+        let value_result = session.evaluate(args[0].clone());
+        let value = session.suspend_with_frame(value_result, {
+            let tail = args[1..].to_vec();
+            move |session, value| eval_conform_schema_with_value(session, value, &tail)
+        })?;
+        return eval_conform_schema_with_value(session, value, &args[1..]);
+    }
+
+    finish_conform_schema(session, args)
+}
+
+fn eval_conform_schema_with_value(
+    session: &mut Session,
+    value: Expr,
+    tail: &[Expr],
+) -> Result<Expr, EvalError> {
+    let mut args = Vec::with_capacity(tail.len() + 1);
+    args.push(value);
+    args.extend_from_slice(tail);
+    finish_conform_schema(session, &args)
+}
+
+fn finish_conform_schema(session: &mut Session, args: &[Expr]) -> Result<Expr, EvalError> {
     let (value, schema, options) = match parse_schema_call("ConformSchema", args) {
         Ok(parsed) => parsed,
         Err(message) => return Ok(fail_schema(session, "ConformSchema", message)),
