@@ -12,9 +12,12 @@ Queue, in order; each item gates before the next starts:
    catalog; `Messages[Set]` empty even right after `Set::argx` fires.
    Inventory audit LANDED (brief-243, eeec70a:
    `docs/dev/message-registry-inventory.md` — 144 tags / 966 closed
-   pairs); next = registry mechanism brief, then per-catalog fill
-   sweeps, then docgen + enforcement. Brief-213's `Information`
-   `Messages` field lights up from the same source.
+   pairs). Mechanism LANDED (brief-245, e5a1135): `BuiltinSpec.messages`
+   + four-surface merge (user wins, shapes frozen), Set seeded with six
+   verified tags — `Messages[Set]` is non-empty. Next = per-catalog fill
+   sweeps (966 pairs, inventory-driven), then docgen pairing +
+   emission-side enforcement. Open design note: `General` is not a
+   registered builtin — its carrier needs a fill-design decision.
 2. [x] **`vm_rhs_template/` — DELETED (brief-244, ruled 2026-07-17).**
    Evidence: the ON path crashed the guard-adjacent recursion test
    (native stack overflow; OFF green, single-variable discriminator);
