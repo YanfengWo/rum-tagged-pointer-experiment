@@ -25,10 +25,13 @@ Queue, in order; each item gates before the next starts:
    was a closed-era workload. Gate: workspace 1512/0, zero references,
    A/B no regression (two flagged control labels cleared by a 3-pair
    interleaved re-run; downvalue tier flat-to-better).
-3. [ ] **rum-jupyter `signature.rs` sha256 debt** — replace the hand-rolled
-   `sha256_compress` with the workspace `sha2`/RustCrypto path; fold in
-   the ZeroMQ ordering flake if it has recurred (two sightings so far:
-   brief-165, brief-242).
+3. [x] **rum-jupyter `signature.rs` sha256 debt — DONE (brief-250).**
+   Hmac<Sha256> replaces the hand-rolled stack (165→42 lines); frozen
+   vector test proves equivalence; deps 070a23d. ZeroMQ ordering flake
+   did NOT recur (watch stays at two sightings). Side result: first
+   workspace-write sandbox dispatch — works; loopback-bind denial makes
+   the 9 native ZeroMQ tests sandbox-blocked (deterministic, not the
+   flake); the director's out-of-sandbox gate covers them.
 4. [ ] **rum-cli feature forwarding** — make the CLI binary
    feature-trimmable (forward `rum-stdlib` features such as `hash`).
 5. [ ] Then: a design pass over the wl15/wfr feature candidates —
