@@ -53,7 +53,6 @@ mod suspension;
 #[cfg(test)]
 mod test_builtins;
 mod tree_walkers;
-mod vm_rhs_template;
 
 #[allow(unused_imports)]
 use self::{
@@ -64,7 +63,7 @@ use self::{
     kernel_data::*, listable_dispatch::*, lowering::*, matcher_and_symbols::*, messages::*,
     metadata::*, model::*, namespace_tools::*, options::*, package_tools::*, pattern_matching::*,
     profiling::*, random::*, resolution::*, scoping::*, session::*, substitution::*, suspension::*,
-    tree_walkers::*, vm_rhs_template::*,
+    tree_walkers::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, file_io::*, lowering::lower_syntax_expr,

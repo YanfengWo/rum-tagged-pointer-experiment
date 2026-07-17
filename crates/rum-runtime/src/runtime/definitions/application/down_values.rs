@@ -108,22 +108,15 @@ impl Session {
 
             let lhs = down_value.lhs.clone();
             let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
-            let prepared = {
+            let rhs = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
-                prepare_rule_bindings_for_rhs_with_template(
+                substitute_rule_bindings_for_rhs(
                     &down_value.rhs,
                     &SymbolExprMap::default(),
                     down_value.rhs_may_splice_without_bindings,
-                    self.evaluation_epoch,
                 )
             };
-            let trace_rhs = trace_rhs_for_prepared_template(
-                &prepared,
-                &down_value.rhs,
-                &SymbolExprMap::default(),
-                down_value.rhs_may_splice_without_bindings,
-                self.tracing_enabled,
-            );
+            let trace_rhs = rhs.clone();
             self.push_rule_applied_trace(
                 RuleApplicationSource::DownValue,
                 &candidate,
@@ -133,7 +126,7 @@ impl Session {
             self.record_profile_down_value_application(&symbol);
             let _profile_definition_source = evaluation_profile_definition_source(symbol);
             let profile_rule_start = definition_rule_timing_start();
-            let result = evaluate_prepared_rhs_template(self, prepared, option_scope);
+            let result = self.evaluate_definition_rhs(option_scope, rhs);
             record_profile_definition_rule_timing(
                 "down_value_rhs_eval",
                 &symbol,
@@ -198,16 +191,15 @@ impl Session {
 
             let lhs = down_value.lhs.clone();
             let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
-            let prepared = {
+            let rhs = {
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
                 let runtime_profile_rhs_substitution =
                     runtime_path_timing_start("down_values.rhs_substitution");
                 let rhs_substitution_start = definition_dispatch_timing_start();
-                let prepared = prepare_rule_bindings_for_rhs_with_template(
+                let rhs = substitute_rule_bindings_for_rhs(
                     &down_value.rhs,
                     &outcome.bindings,
                     down_value.rhs_may_splice_without_bindings,
-                    self.evaluation_epoch,
                 );
                 record_profile_definition_dispatch_phase_timing(
                     "down_value",
@@ -219,15 +211,9 @@ impl Session {
                     runtime_profile_rhs_substitution,
                     RuntimeProfileOutcome::Ok,
                 );
-                prepared
+                rhs
             };
-            let trace_rhs = trace_rhs_for_prepared_template(
-                &prepared,
-                &down_value.rhs,
-                &outcome.bindings,
-                down_value.rhs_may_splice_without_bindings,
-                self.tracing_enabled,
-            );
+            let trace_rhs = rhs.clone();
             self.push_rule_applied_trace(
                 RuleApplicationSource::DownValue,
                 &candidate,
@@ -237,7 +223,7 @@ impl Session {
             self.record_profile_down_value_application(&symbol);
             let _profile_definition_source = evaluation_profile_definition_source(symbol);
             let profile_rule_start = definition_rule_timing_start();
-            let result = evaluate_prepared_rhs_template(self, prepared, option_scope);
+            let result = self.evaluate_definition_rhs(option_scope, rhs);
             record_profile_definition_rule_timing(
                 "down_value_rhs_eval",
                 &symbol,
@@ -292,11 +278,10 @@ impl Session {
             let runtime_profile_rhs_substitution =
                 runtime_path_timing_start("down_values.rhs_substitution");
             let rhs_substitution_start = definition_dispatch_timing_start();
-            let prepared = prepare_rule_bindings_for_rhs_with_template(
+            let rhs = substitute_rule_bindings_for_rhs(
                 &down_value.rhs,
                 &outcome.bindings,
                 down_value.rhs_may_splice_without_bindings,
-                session.evaluation_epoch,
             );
             record_profile_definition_dispatch_phase_timing(
                 "down_value",
@@ -310,13 +295,7 @@ impl Session {
             );
             let option_scope =
                 session.option_value_scope_for_definition(&down_value.lhs, &candidate);
-            let trace_rhs = trace_rhs_for_prepared_template(
-                &prepared,
-                &down_value.rhs,
-                &outcome.bindings,
-                down_value.rhs_may_splice_without_bindings,
-                session.tracing_enabled,
-            );
+            let trace_rhs = rhs.clone();
             session.push_rule_applied_trace(
                 RuleApplicationSource::DownValue,
                 &candidate,
@@ -326,7 +305,7 @@ impl Session {
             session.record_profile_down_value_application(&symbol);
             let _profile_definition_source = evaluation_profile_definition_source(symbol);
             let profile_rule_start = definition_rule_timing_start();
-            let result = evaluate_prepared_rhs_template(session, prepared, option_scope);
+            let result = session.evaluate_definition_rhs(option_scope, rhs);
             record_profile_definition_rule_timing(
                 "down_value_rhs_eval",
                 &symbol,
