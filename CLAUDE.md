@@ -140,15 +140,22 @@ rather than duplicating them.
 ## Current direction (read these for state)
 
 - **ACTIVE: CLEANUP + MESSAGE-REGISTRY LINE (user ruling 2026-07-17;
-  queue in TODO.md §ACTIVE PLAN).** In order: (1) builtin message-tag
-  registry + docgen pairing (brief-243 inventory LANDED; mechanism +
-  fill + docgen briefs next); (2) `vm_rhs_template/` — DONE, DELETED
-  (brief-244: ON path crashed the guard-adjacent recursion test; A/B
-  clean); (3) rum-jupyter `signature.rs` hand-rolled
-  sha256 → workspace RustCrypto (+ ZeroMQ flake if it recurs);
-  (4) rum-cli feature forwarding; (5) then the wl15/wfr design pass
-  (structured exceptions, SubValuesHoldAll, ReplaceAllUnheld,
-  ConformSchema operator forms). **Same ruling: the parked pools are
+  queue in TODO.md §ACTIVE PLAN). Items 1-4 COMPLETE same day:**
+  (1) message-tag registry + docgen — briefs 243, 245-249, 252-253
+  (965 registered pairs, reference 615, four-surface merge,
+  debug-assertion enforcement with the declared-or-exempt rule;
+  carriers General+UpTo per user ruling); (2) `vm_rhs_template/`
+  DELETED (brief-244: ON path crashed the guard-adjacent recursion
+  test; A/B clean); (3) jupyter `signature.rs` → RustCrypto
+  (brief-250; flake did NOT recur); (4) rum-cli feature forwarding
+  (brief-251, four-crate chain, NDF digest-free). **NEXT: (5) the
+  wl15/wfr design pass** (structured exceptions, SubValuesHoldAll,
+  ReplaceAllUnheld, ConformSchema operator forms; new candidate from
+  252's stop-loss: Take/Drop UpTo support). Follow-up candidates
+  recorded not queued: catalog file splits (five files entered
+  size-warning ranges). Dispatch sandbox now defaults to
+  workspace-write (67cbc88; loopback caveat + escalation path in
+  TEMPLATE.md). **Same ruling: the parked pools are
   CLOSED WON'T-DO** — stdlib parked candidates (ByteArray audit,
   compression, unicode normalization, ipaddress folk, fuzzing, codec
   follow-ons) and the embedding parked tail (background-eval helper,

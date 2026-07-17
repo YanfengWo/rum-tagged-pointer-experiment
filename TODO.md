@@ -7,17 +7,20 @@ operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
 Queue, in order; each item gates before the next starts:
 
-1. [ ] **Builtin message-tag registry (+ docgen pairing)** — the unit-8
-   deferred project, now active. ~114 `push_message` sites with no static
-   catalog; `Messages[Set]` empty even right after `Set::argx` fires.
-   Inventory audit LANDED (brief-243, eeec70a:
-   `docs/dev/message-registry-inventory.md` — 144 tags / 966 closed
-   pairs). Mechanism LANDED (brief-245, e5a1135): `BuiltinSpec.messages`
-   + four-surface merge (user wins, shapes frozen), Set seeded with six
-   verified tags — `Messages[Set]` is non-empty. Next = per-catalog fill
-   sweeps (966 pairs, inventory-driven), then docgen pairing +
-   emission-side enforcement. Open design note: `General` is not a
-   registered builtin — its carrier needs a fill-design decision.
+1. [x] **Builtin message-tag registry (+ docgen pairing) — COMPLETE
+   (briefs 243, 245-249, 252-253; 2026-07-17, one day).** Inventory
+   (114 sites, 144 tags, 966 closed pairs) → mechanism
+   (`BuiltinSpec.messages` + four-surface merge, user wins, shapes
+   frozen) → fills (kernel 304 + stdlib 433/214) → docgen pairing
+   (reference renders Messages blocks from the same source) → carriers
+   (General 12 + UpTo 2, user ruling; 965 registered pairs, reference
+   615 entries) → enforcement (debug assertion at push_message,
+   declared-or-exempt rule; zero gaps at landing). Excluded by proof:
+   open families + one unreachable ledger row (SetDelayed::argform).
+   Follow-up candidates recorded, NOT queued: Take/Drop `UpTo` support
+   (WL-conformance gap found by brief-252's stop-loss); catalog file
+   splits (namespace/rules/strings/structure/associations.rs entered
+   size-warning ranges from the fill).
 2. [x] **`vm_rhs_template/` — DELETED (brief-244, ruled 2026-07-17).**
    Evidence: the ON path crashed the guard-adjacent recursion test
    (native stack overflow; OFF green, single-variable discriminator);
