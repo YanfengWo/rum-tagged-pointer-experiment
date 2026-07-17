@@ -233,12 +233,82 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
 }
 
 #[test]
-fn take_with_upto_stays_inert() {
+fn take_drop_accept_upto_sequence_specs() {
     let mut session = core_session();
 
-    let outcome = session.eval_text("Take[{1,2,3}, UpTo[5]]").unwrap();
-    assert_eq!(outcome.value.to_string(), "Take[List[1, 2, 3], UpTo[5]]");
+    for (input, expected) in [
+        ("Take[{1,2,3}, UpTo[5]]", "List[1, 2, 3]"),
+        ("Take[{1,2,3}, UpTo[2]]", "List[1, 2]"),
+        ("Take[{1,2,3}, UpTo[0]]", "List[]"),
+        ("Drop[{1,2,3}, UpTo[5]]", "List[]"),
+        ("TakeDrop[{1,2,3}, UpTo[2]]", "List[List[1, 2], List[3]]"),
+        ("Take[{1,2,3}, UpTo[Infinity]]", "List[1, 2, 3]"),
+        (
+            "Take[{{1,2,3},{4,5}}, UpTo[3], UpTo[2]]",
+            "List[List[1, 2], List[4, 5]]",
+        ),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected);
+        assert!(outcome.messages.is_empty());
+    }
+}
+
+#[test]
+fn take_upto_reports_atom_and_malformed_spec_messages() {
+    let mut session = core_session();
+
+    let outcome = session.eval_text("Take[7, UpTo[2]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[7, UpTo[2]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "Take"
+            && message.tag == "take"
+            && message.text == "Cannot take positions 1 through 2 in 7."
+    }));
+
+    let outcome = session.eval_text("Take[{1,2,3}, UpTo[-2]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[List[1, 2, 3], UpTo[-2]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "UpTo"
+            && message.tag == "innf"
+            && message.text
+                == "Non-negative integer or Infinity expected at position 1 in UpTo[-2]."
+    }));
+
+    let outcome = session.eval_text("Take[{1,2,3}, UpTo[1/2]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[List[1, 2, 3], UpTo[1/2]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "UpTo"
+            && message.tag == "innf"
+            && message.text
+                == "Non-negative integer or Infinity expected at position 1 in UpTo[1/2]."
+    }));
+
+    let outcome = session.eval_text("Take[{1,2,3}, UpTo[x]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[List[1, 2, 3], UpTo[x]]");
     assert!(outcome.messages.is_empty());
+
+    let outcome = session.eval_text("Take[{1,2,3}, UpTo[1,2]]").unwrap();
+    assert_eq!(outcome.value.to_string(), "Take[List[1, 2, 3], UpTo[1, 2]]");
+    assert!(outcome.messages.iter().any(|message| {
+        message.symbol == "UpTo"
+            && message.tag == "argx"
+            && message.text == "UpTo called with 2 arguments; 1 argument is expected."
+    }));
+}
+
+#[test]
+fn take_existing_sequence_specs_are_unchanged() {
+    let mut session = core_session();
+
+    for (input, expected) in [
+        ("Take[{1,2,3}, 2]", "List[1, 2]"),
+        ("Take[{1,2,3}, {2,3}]", "List[2, 3]"),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected);
+        assert!(outcome.messages.is_empty());
+    }
 }
 
 #[test]

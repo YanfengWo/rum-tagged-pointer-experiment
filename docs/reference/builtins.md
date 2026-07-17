@@ -1433,7 +1433,7 @@ Lists stored downvalue definitions for a symbol.
 
 ### Drop
 
-Drops structural elements using the current standard sequence-spec subset.
+Drops structural elements using the current standard sequence-spec subset, including UpTo bounds.
 
 - Attributes: `Protected`
 - Capability: `Pure`
@@ -5121,7 +5121,7 @@ Removes a tagged definition using an explicit tag and lhs.
 
 ### Take
 
-Takes structural elements using the current standard sequence-spec subset.
+Takes structural elements using the current standard sequence-spec subset, including UpTo bounds.
 
 - Attributes: `Protected`
 - Capability: `Pure`
@@ -5131,7 +5131,7 @@ Takes structural elements using the current standard sequence-spec subset.
 
 ### TakeDrop
 
-Returns both the taken and dropped structural elements using the current standard sequence-spec subset.
+Returns both the taken and dropped structural elements using the current standard sequence-spec subset, including UpTo bounds.
 
 - Attributes: `Protected`
 - Capability: `Pure`

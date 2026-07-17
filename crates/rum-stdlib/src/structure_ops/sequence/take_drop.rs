@@ -4,6 +4,7 @@ use super::*;
 enum StructuralSequenceSpec {
     All,
     None,
+    UpTo(Option<isize>),
     Count(isize),
     Single(isize),
     Range {
@@ -30,7 +31,7 @@ pub(crate) fn eval_take(
         ));
     }
 
-    let Some(specs) = parse_structural_sequence_specs(&args[1..]) else {
+    let Some(specs) = parse_structural_sequence_specs(session, &args[1..]) else {
         return Ok(Expr::call(system_expr("Take"), args.to_vec()));
     };
 
@@ -62,7 +63,7 @@ pub(crate) fn eval_drop(
         ));
     }
 
-    let Some(specs) = parse_structural_sequence_specs(&args[1..]) else {
+    let Some(specs) = parse_structural_sequence_specs(session, &args[1..]) else {
         return Ok(Expr::call(system_expr("Drop"), args.to_vec()));
     };
 
@@ -91,7 +92,7 @@ pub(crate) fn eval_take_drop(
         ));
     }
 
-    let Some(specs) = parse_structural_sequence_specs(&args[1..]) else {
+    let Some(specs) = parse_structural_sequence_specs(session, &args[1..]) else {
         return Ok(Expr::call(system_expr("TakeDrop"), args.to_vec()));
     };
 
@@ -168,6 +169,8 @@ fn take_drop_message_range(spec: StructuralSequenceSpec) -> (isize, isize) {
     match spec {
         StructuralSequenceSpec::All => (1, -1),
         StructuralSequenceSpec::None => (1, 0),
+        StructuralSequenceSpec::UpTo(Some(limit)) => (1, limit),
+        StructuralSequenceSpec::UpTo(None) => (1, -1),
         StructuralSequenceSpec::Count(count) if count >= 0 => (1, count),
         StructuralSequenceSpec::Count(count) => (count, -1),
         StructuralSequenceSpec::Single(index) => (index, index),
@@ -175,11 +178,19 @@ fn take_drop_message_range(spec: StructuralSequenceSpec) -> (isize, isize) {
     }
 }
 
-fn parse_structural_sequence_specs(args: &[Expr]) -> Option<Vec<StructuralSequenceSpec>> {
-    args.iter().map(parse_structural_sequence_spec).collect()
+fn parse_structural_sequence_specs(
+    session: &mut Session,
+    args: &[Expr],
+) -> Option<Vec<StructuralSequenceSpec>> {
+    args.iter()
+        .map(|expr| parse_structural_sequence_spec(session, expr))
+        .collect()
 }
 
-fn parse_structural_sequence_spec(expr: &Expr) -> Option<StructuralSequenceSpec> {
+fn parse_structural_sequence_spec(
+    session: &mut Session,
+    expr: &Expr,
+) -> Option<StructuralSequenceSpec> {
     if is_system_symbol_name(expr, heads::structure::ALL) {
         return Some(StructuralSequenceSpec::All);
     }
@@ -195,6 +206,45 @@ fn parse_structural_sequence_spec(expr: &Expr) -> Option<StructuralSequenceSpec>
     let Expr::Call { head, args } = expr else {
         return None;
     };
+
+    if is_system_symbol_name(head, "UpTo") {
+        let [limit] = args.as_slice() else {
+            session.push_message(
+                "UpTo",
+                "argx",
+                format!(
+                    "UpTo called with {} arguments; 1 argument is expected.",
+                    args.len()
+                ),
+            );
+            return None;
+        };
+
+        if is_system_symbol_name(limit, heads::structure::INFINITY) {
+            return Some(StructuralSequenceSpec::UpTo(None));
+        }
+
+        if let Some(limit) = expr_as_signed_isize(limit).filter(|limit| *limit >= 0) {
+            return Some(StructuralSequenceSpec::UpTo(Some(limit)));
+        }
+
+        // Message only on definitely-invalid contents (negative integer or
+        // rational), matching the kernel Part-span rule; anything else stays
+        // on the silent inert path like any other out-of-subset spec.
+        let definitely_invalid = match limit {
+            Expr::Atom(Atom::Integer(value)) => value.to_bigint() < BigInt::from(0),
+            Expr::Atom(Atom::Rational(_)) => true,
+            _ => false,
+        };
+        if definitely_invalid {
+            session.push_message(
+                "UpTo",
+                "innf",
+                format!("Non-negative integer or Infinity expected at position 1 in {expr}."),
+            );
+        }
+        return None;
+    }
 
     if !is_system_symbol_name(head, heads::structure::LIST) {
         return None;
@@ -288,6 +338,13 @@ fn resolve_take_components(spec: StructuralSequenceSpec, len: usize) -> Option<V
     match spec {
         StructuralSequenceSpec::All => Some((1..=len).map(|index| index as isize).collect()),
         StructuralSequenceSpec::None => Some(Vec::new()),
+        StructuralSequenceSpec::UpTo(limit) => {
+            let end = match limit {
+                Some(limit) => usize::try_from(limit).ok()?.min(len),
+                None => len,
+            };
+            Some((1..=end).map(|index| index as isize).collect())
+        }
         StructuralSequenceSpec::Count(0) => Some(Vec::new()),
         StructuralSequenceSpec::Count(count) if count > 0 => {
             let count = usize::try_from(count).ok()?;

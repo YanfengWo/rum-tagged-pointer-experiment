@@ -135,7 +135,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ]).protected(),
     BuiltinSpec::ordinary(
         "Take",
-        "Takes structural elements using the current standard sequence-spec subset.",
+        "Takes structural elements using the current standard sequence-spec subset, including UpTo bounds.",
         structure_ops::eval_take,
     )
     .with_messages(&[
@@ -147,7 +147,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ]).protected(),
     BuiltinSpec::ordinary(
         "Drop",
-        "Drops structural elements using the current standard sequence-spec subset.",
+        "Drops structural elements using the current standard sequence-spec subset, including UpTo bounds.",
         structure_ops::eval_drop,
     )
     .with_messages(&[
@@ -159,7 +159,7 @@ pub(crate) const STRUCTURE_BUILTINS: &[BuiltinSpec] = &[
     ]).protected(),
     BuiltinSpec::ordinary(
         "TakeDrop",
-        "Returns both the taken and dropped structural elements using the current standard sequence-spec subset.",
+        "Returns both the taken and dropped structural elements using the current standard sequence-spec subset, including UpTo bounds.",
         structure_ops::eval_take_drop,
     )
     .with_messages(&[
