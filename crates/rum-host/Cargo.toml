@@ -8,7 +8,11 @@ keywords.workspace = true
 categories.workspace = true
 description = "Rust embedding facade for rum runtime sessions, structured outcomes, and resumable input."
 
+[features]
+default = ["hash"]
+hash = ["rum-stdlib/hash"]
+
 [dependencies]
 rum-core = { path = "../rum-core" }
 rum-runtime = { path = "../rum-runtime" }
-rum-stdlib = { path = "../rum-stdlib" }
+rum-stdlib = { path = "../rum-stdlib", default-features = false }

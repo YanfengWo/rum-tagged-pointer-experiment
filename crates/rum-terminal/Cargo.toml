@@ -8,5 +8,9 @@ keywords.workspace = true
 categories.workspace = true
 description = "Terminal rendering helpers for rum diagnostics, messages, and inspection."
 
+[features]
+default = ["hash"]
+hash = ["rum-host/hash"]
+
 [dependencies]
-rum-host = { path = "../rum-host" }
+rum-host = { path = "../rum-host", default-features = false }

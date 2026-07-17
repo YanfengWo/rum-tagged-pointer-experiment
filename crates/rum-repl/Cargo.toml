@@ -8,7 +8,11 @@ keywords.workspace = true
 categories.workspace = true
 description = "Interactive shell layer for rum."
 
+[features]
+default = ["hash"]
+hash = ["rum-host/hash", "rum-terminal/hash"]
+
 [dependencies]
-rum-host = { path = "../rum-host" }
+rum-host = { path = "../rum-host", default-features = false }
 rum-syntax = { path = "../rum-syntax" }
-rum-terminal = { path = "../rum-terminal" }
+rum-terminal = { path = "../rum-terminal", default-features = false }
