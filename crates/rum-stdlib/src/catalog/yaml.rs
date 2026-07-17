@@ -1,4 +1,4 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec};
 
 use crate::yaml;
 
@@ -8,11 +8,19 @@ pub(crate) const YAML_BUILTINS: &[BuiltinSpec] = &[
         "Parses rum's documented fail-closed YAML block subset into exact rum values.",
         AttributeSet::empty().with(Attribute::Protected),
         yaml::eval_from_yaml,
-    ),
+    )
+    .with_messages(&[BuiltinMessageSpec {
+        tag: "yaml",
+        template: "Reports a YAML decoding or argument failure.",
+    }]),
     BuiltinSpec::ordinary_with_attributes(
         "ToYaml",
         "Renders the YAML-representable subset of rum values as YAML text.",
         AttributeSet::empty().with(Attribute::Protected),
         yaml::eval_to_yaml,
-    ),
+    )
+    .with_messages(&[BuiltinMessageSpec {
+        tag: "yaml",
+        template: "Reports a YAML encoding or argument failure.",
+    }]),
 ];

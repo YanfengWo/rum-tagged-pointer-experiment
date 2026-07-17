@@ -1,4 +1,6 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec};
+
+use super::message_templates::*;
 
 use crate::arithmetic;
 
@@ -33,17 +35,26 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
         "Raises an exact number to an integer power when possible.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_power,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Subtract",
         "Subtracts one exact number from another.",
         arithmetic::eval_subtract,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Divide",
         "Divides exact numbers, producing exact rationals when possible.",
         arithmetic::eval_divide,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Abs",
         "Returns the absolute value of exact integers and rationals.",
@@ -52,7 +63,10 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::NumericFunction)
             .with(Attribute::Protected),
         arithmetic::eval_abs,
-    ),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]),
     BuiltinSpec::ordinary_with_attributes(
         "Sign",
         "Returns the sign of exact integers and rationals.",
@@ -112,19 +126,28 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
         "Rounds exact numbers to the nearest integer or exact multiple in the current snapshot-helper subset.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_round,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGTU,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Factorial",
         "Computes factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_factorial,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Factorial2",
         "Computes double factorials for non-negative exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_factorial2,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Total",
         "Totals list elements through the current exact Plus semantics.",
@@ -134,52 +157,99 @@ pub(crate) const ARITHMETIC_BUILTINS: &[BuiltinSpec] = &[
         "Mean",
         "Aggregates a non-empty list as Total[list] divided by Length[list] through exact arithmetic.",
         arithmetic::eval_mean,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "empty",
+            template: "Mean cannot aggregate an empty list.",
+        },
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Median",
         "Returns the middle element of a canonically sorted non-empty list, averaging the two middle values exactly for even lengths.",
         arithmetic::eval_median,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "empty",
+            template: "Median cannot aggregate an empty list.",
+        },
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Commonest",
         "Returns the most frequent elements of a list in first-occurrence order, including all ties.",
         arithmetic::eval_commonest,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Quantile",
         "Returns the nearest-rank quantile of a non-empty list using Ceiling[q * n] clamped to 1..n, with q exact in [0, 1].",
         arithmetic::eval_quantile,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "empty",
+            template: "Quantile cannot aggregate an empty list.",
+        },
+        BuiltinMessageSpec {
+            tag: "range",
+            template: "Quantile rank parameter must be an exact number between 0 and 1.",
+        },
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Denominator",
         "Returns the denominator of exact integers and rationals.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_denominator,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Numerator",
         "Returns the numerator of exact integers and rationals.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_numerator,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Mod",
         "Returns the modulus of one integer with respect to another.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_mod,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "Quotient",
         "Returns the floor-division quotient of two integers.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_quotient,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "PowerMod",
         "Computes modular exponentiation for exact integers.",
         AttributeSet::from_attribute(Attribute::Listable),
         arithmetic::eval_power_mod,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "ninv",
+            template: "`1` is not invertible modulo `2`.",
+        },
+    ]).protected(),
     BuiltinSpec::ordinary_with_attributes(
         "GCD",
         "Computes the greatest common divisor of exact integers.",

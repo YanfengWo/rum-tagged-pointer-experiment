@@ -1,4 +1,4 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec};
 
 use crate::toml;
 
@@ -8,11 +8,19 @@ pub(crate) const TOML_BUILTINS: &[BuiltinSpec] = &[
         "Parses rum's documented fail-closed TOML subset into exact rum values.",
         AttributeSet::empty().with(Attribute::Protected),
         toml::eval_from_toml,
-    ),
+    )
+    .with_messages(&[BuiltinMessageSpec {
+        tag: "toml",
+        template: "Reports a TOML decoding or argument failure.",
+    }]),
     BuiltinSpec::ordinary_with_attributes(
         "ToToml",
         "Renders the TOML-representable subset of rum Associations as TOML text.",
         AttributeSet::empty().with(Attribute::Protected),
         toml::eval_to_toml,
-    ),
+    )
+    .with_messages(&[BuiltinMessageSpec {
+        tag: "toml",
+        template: "Reports a TOML encoding or argument failure.",
+    }]),
 ];

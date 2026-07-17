@@ -1,4 +1,6 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec};
+use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec};
+
+use super::message_templates::*;
 
 use crate::number_theory;
 
@@ -10,7 +12,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::Protected),
         number_theory::eval_divisors,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "EulerPhi",
         "Computes Euler's totient function for an exact integer.",
@@ -18,7 +21,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::Protected),
         number_theory::eval_euler_phi,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "MoebiusMu",
         "Computes the Moebius mu function for an exact integer.",
@@ -26,7 +30,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::Protected),
         number_theory::eval_moebius_mu,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "DivisorSigma",
         "Computes exact divisor power sums for exact integer arguments.",
@@ -35,7 +40,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::NHoldAll)
             .with(Attribute::Protected),
         number_theory::eval_divisor_sigma,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "Prime",
         "Returns the n-th positive prime for a positive integer n.",
@@ -43,7 +49,14 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::Protected),
         number_theory::eval_prime,
-    ),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "intpp",
+            template: "Positive integer argument expected in `1`.",
+        },
+    ]),
     BuiltinSpec::ordinary_with_attributes(
         "PrimePi",
         "Counts primes not greater than an exact integer or rational argument.",
@@ -51,7 +64,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Listable)
             .with(Attribute::Protected),
         number_theory::eval_prime_pi,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "PrimeNu",
         "Counts distinct prime factors of an exact integer.",
@@ -59,7 +73,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
         number_theory::eval_prime_nu,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "PrimeOmega",
         "Counts prime factors with multiplicity for an exact integer.",
@@ -67,7 +82,8 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
         number_theory::eval_prime_omega,
-    ),
+    )
+    .with_messages(&[ARGX_EXACT]),
     BuiltinSpec::ordinary_with_attributes(
         "NextPrime",
         "Returns the next or previous prime in rum's signed-prime order.",
@@ -75,5 +91,6 @@ pub(crate) const NUMBER_THEORY_BUILTINS: &[BuiltinSpec] = &[
             .with(Attribute::Protected)
             .with(Attribute::ReadProtected),
         number_theory::eval_next_prime,
-    ),
+    )
+    .with_messages(&[ARGTU]),
 ];

@@ -1,5 +1,7 @@
 use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinSpec, HoldAttribute};
 
+use super::message_templates::*;
+
 use crate::logic;
 
 pub(crate) const LOGIC_BUILTINS: &[BuiltinSpec] = &[
@@ -46,12 +48,18 @@ pub(crate) const LOGIC_BUILTINS: &[BuiltinSpec] = &[
         "Implies",
         "Evaluates binary logical implication over exact boolean arguments in the current subset.",
         logic::eval_implies,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Not",
         "Negates a boolean value in the current exact boolean subset.",
         logic::eval_not,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Equal",
         "Tests equality in the current exact subset for numbers, strings, and obviously identical expressions.",
@@ -86,22 +94,34 @@ pub(crate) const LOGIC_BUILTINS: &[BuiltinSpec] = &[
         "LessThan",
         "Represents a unary comparison operator equivalent to Less[#, bound] when applied.",
         logic::eval_comparison_operator_wrapper,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_OPERATOR,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "GreaterThan",
         "Represents a unary comparison operator equivalent to Greater[#, bound] when applied.",
         logic::eval_comparison_operator_wrapper,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_OPERATOR,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "LessEqualThan",
         "Represents a unary comparison operator equivalent to LessEqual[#, bound] when applied.",
         logic::eval_comparison_operator_wrapper,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_OPERATOR,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "GreaterEqualThan",
         "Represents a unary comparison operator equivalent to GreaterEqual[#, bound] when applied.",
         logic::eval_comparison_operator_wrapper,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_OPERATOR,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "EqualTo",
         "Represents a unary comparison operator equivalent to Equal[#, bound] when applied.",

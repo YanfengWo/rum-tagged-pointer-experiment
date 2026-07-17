@@ -1,5 +1,7 @@
 use rum_runtime::kernel_api::BuiltinSpec;
 
+use super::message_templates::*;
+
 use crate::polynomials;
 
 pub(crate) const POLYNOMIAL_BUILTINS: &[BuiltinSpec] = &[
@@ -7,25 +9,40 @@ pub(crate) const POLYNOMIAL_BUILTINS: &[BuiltinSpec] = &[
         "Expand",
         "Expands rational-coefficient polynomial expressions over pattern-free indeterminates.",
         polynomials::eval_expand,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Coefficient",
         "Extracts coefficients of exact monomial powers from rational-coefficient polynomial expressions.",
         polynomials::eval_coefficient,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGTU,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "CoefficientList",
         "Builds coefficient arrays for rational-coefficient polynomial expressions in specified indeterminates.",
         polynomials::eval_coefficient_list,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Together",
         "Combines rational-function terms over a common polynomial denominator.",
         polynomials::eval_together,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Factor",
         "Factors rational-coefficient polynomials over the rationals using the current polynomial kernel.",
         polynomials::eval_factor,
-    ).protected(),
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
 ];
