@@ -241,3 +241,99 @@ exceptions.
 
 The registry is session state. It is captured and restored with the loader
 snapshot like other definitions.
+
+## Lazy Sequences
+
+A lazy sequence is an opaque value that describes elements without computing
+them. Generators build one; realizers force as many as you ask for.
+
+`LazyRange` is the basic generator. It is infinite, and it prints as a
+descriptor, not as elements.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'LazyRange[1, 1]'
+LazyList[LazyRange[1, 1]]
+```
+
+`LazyList[...]` is not a `List`. It does not match `_List`, and no ordinary
+list operation forces it — it stays symbolic until a realizer touches it.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'MatchQ[LazyRange[1, 1], _List]'
+False
+$ cargo run -q -p rum-cli -- --eval 'Total[LazyRange[1, 1]]'
+Total[LazyList[LazyRange[1, 1]]]
+```
+
+The realizers are `Normal`, `Take`, `First`, `Rest`, and `Part` (`[[i]]`).
+`Take`/`First`/`Part` pull a bounded number of elements and return an ordinary
+`List` or element, so they are safe on an infinite sequence.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Take[LazyRange[10, 5], 4]'
+List[10, 15, 20, 25]
+$ cargo run -q -p rum-cli -- --eval 'First[LazyRange[7, 2]]'
+7
+```
+
+`Normal` realizes everything. On an infinite sequence it fails closed at the
+iteration work limit — it returns a `TerminatedEvaluation`, it does not hang.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Normal[LazyRange[1, 1]]'
+! General::reslim: evaluation exceeded iteration work limit (100000)
+TerminatedEvaluation["IterationWorkLimit"]
+```
+
+The `Lazy*` transformers stay lazy — they take a lazy sequence and return a
+lazy sequence, so they compose without computing anything. `LazyTake` is what
+caps an infinite sequence down to a finite one; `Normal` of that finite
+sequence then terminates naturally.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Normal[LazyTake[LazyMap[Function[x, x^2], LazyRange[1, 1]], 5]]'
+List[1, 4, 9, 16, 25]
+```
+
+`LazySelect` keeps elements whose predicate returns `True`. Under a bounded
+realizer it pulls the source until enough have passed.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Take[LazySelect[EvenQ, LazyRange[1, 1]], 4]'
+List[2, 4, 6, 8]
+```
+
+`LazyTable` is a lazy `Table`; its body is held and evaluated once per realized
+element. `LazyNestList` iterates a function; `LazyFoldList` is a lazy
+`FoldList` that emits the initial value first.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Normal[LazyTable[i^2, {i, 1, 5}]]'
+List[1, 4, 9, 16, 25]
+$ cargo run -q -p rum-cli -- --eval 'Normal[LazyTake[LazyNestList[Function[x, 2 x], 1], 6]]'
+List[1, 2, 4, 8, 16, 32]
+$ cargo run -q -p rum-cli -- --eval 'Normal[LazyFoldList[Plus, 0, LazyTake[LazyRange[1, 1], 5]]]'
+List[0, 1, 3, 6, 10, 15]
+```
+
+The combinatorial sources — `LazySubsets`, `LazyTuples`, `LazyPermutations` —
+enumerate finite but often enormous spaces. They never materialize the whole
+space, so a bounded `Take` is cheap even when the full result would be
+astronomically large. Their order matches the eager `Subsets`/`Tuples`/
+`Permutations` builtins exactly.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'Take[LazySubsets[Range[100]], 4]'
+List[List[], List[1], List[2], List[3]]
+$ cargo run -q -p rum-cli -- --eval 'Normal[LazyTuples[{{1, 2}, {3, 4}}]]'
+List[List[1, 3], List[1, 4], List[2, 3], List[2, 4]]
+$ cargo run -q -p rum-cli -- --eval 'Take[LazyPermutations[Range[20]], 2]'
+List[List[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], List[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 19]]
+```
+
+Lazy sequences are pure. A realizer runs under the same iteration ceiling and
+cancellation as `Do` and `Table`, so no lazy realization can hang the host —
+an unbounded pull fails closed. A lazy value is an ordinary immutable
+expression, so it is captured and restored with the session snapshot and
+re-derives identically. There is no mutable cursor: `Rest` returns a new lazy
+tail, and realizing the same value twice recomputes it.
