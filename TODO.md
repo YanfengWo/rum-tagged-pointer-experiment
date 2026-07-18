@@ -68,11 +68,14 @@ cancel (fail-closed on infinite); snapshot round-trips for free
   descriptor holds only input; `stepper_from_descriptor` re-validates so
   crafted descriptors don't panic; 2^40 space fails closed in ~0.03s;
   bounded `Take` cheap. Reference 630→632.
-- [ ] Batch 3c — `Permutations` (eager) + `LazyPermutations` (user ruling
-  2026-07-18: add the pair; rum has no eager `Permutations` today).
-  Distinct multiset permutations, lexicographic order; lazy = a
-  next-permutation cursor; `Normal[LazyPermutations[l]] === Permutations[l]`.
-  Full-length form first; `Permutations[l, {n}]` deferred.
+- [x] Batch 3c — `Permutations` (eager) + `LazyPermutations`. **DONE
+  (brief-267 rev 1, 1b4f7a0):** distinct multiset perms in canonical lex
+  order; eager + lazy share ONE `next_permutation` helper +
+  `compare_expr_canonical`, so `Normal[LazyPermutations[l]] ===
+  Permutations[l]` by construction. Eager enforces generated-element +
+  memory guards (Range[50]→GeneratedElementLimit; MemoryConstrained→fail);
+  lazy charges the source-pull ceiling. Reference 632→634.
+  `Permutations[l, {n}]` deferred. **BATCH 3 (broad set) CLOSED.**
 - [ ] Batch 4 — guide section + reference regen + close-out.
 
 **(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`
