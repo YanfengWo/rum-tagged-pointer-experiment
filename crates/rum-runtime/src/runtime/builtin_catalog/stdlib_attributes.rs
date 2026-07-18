@@ -334,6 +334,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("LazyMap", ATTR_PROTECTED),
     Spec::new("LazyRange", ATTR_PROTECTED),
     Spec::new("LazySelect", ATTR_PROTECTED),
+    Spec::new("LazyTable", ATTR_HOLD_ALL_PROTECTED),
     Spec::new("LazyTake", ATTR_PROTECTED),
     Spec::new("LeafCount", ATTR_PROTECTED),
     Spec::new("LeapYearQ", ATTR_PROTECTED),

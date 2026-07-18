@@ -1,4 +1,6 @@
-use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec};
+use rum_runtime::kernel_api::{
+    Attribute, AttributeSet, BuiltinMessageSpec, BuiltinSpec, HoldAttribute,
+};
 
 use crate::lazy;
 
@@ -70,6 +72,23 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
         BuiltinMessageSpec {
             tag: "argform",
             template: "expected a LazyList as the second argument",
+        },
+    ])
+    .protected(),
+    BuiltinSpec::ordinary_with_hold(
+        "LazyTable",
+        "Builds a lazy arithmetic table whose held body evaluates once per realized element.",
+        HoldAttribute::HoldAll,
+        lazy::eval_lazy_table,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 2 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected an arithmetic iterator with a symbol, exact rational bounds, and a nonzero step",
         },
     ])
     .protected(),

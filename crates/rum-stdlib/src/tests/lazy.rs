@@ -306,6 +306,106 @@ fn never_matching_lazy_select_fails_closed_at_source_pull_ceiling() {
 }
 
 #[test]
+fn lazy_table_realizes_arithmetic_iterator_forms() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        ("Normal[LazyTable[i^2, {i, 1, 5}]]", "List[1, 4, 9, 16, 25]"),
+        (
+            "Normal[LazyTable[i, {i, 2, 10, 2}]]",
+            "List[2, 4, 6, 8, 10]",
+        ),
+        ("Normal[LazyTable[i, {i, 3}]]", "List[1, 2, 3]"),
+        ("Normal[LazyTable[i, {i, 5, 1}]]", "List[]"),
+        ("Normal[LazyTable[i, {i, 5, 1, -2}]]", "List[5, 3, 1]"),
+        (
+            "Normal[LazyTable[i, {i, 1/2, 2, 1/2}]]",
+            "List[1/2, 1, 3/2, 2]",
+        ),
+    ] {
+        assert_eq!(eval_text(&mut session, source), expected, "source {source}");
+    }
+
+    assert_eq!(
+        eval_text(&mut session, "Attributes[LazyTable]"),
+        "List[HoldAll, Protected]"
+    );
+}
+
+#[test]
+fn lazy_table_holds_its_body_and_binds_the_iterator_lexically() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "n = 0; i = 99; lz = LazyTable[(n = n + 1); i^2, {i, 1, 3}]; n"
+        ),
+        "0"
+    );
+    assert_eq!(eval_text(&mut session, "Normal[lz]"), "List[1, 4, 9]");
+    assert_eq!(eval_text(&mut session, "n"), "3");
+}
+
+#[test]
+fn lazy_table_rejects_invalid_specs_without_partial_values() {
+    let mut session = core_session();
+
+    for (source, expected, tag) in [
+        ("LazyTable[i]", "LazyTable[i]", "argx"),
+        ("LazyTable[i, bad]", "LazyTable[i, bad]", "argform"),
+        (
+            "LazyTable[i, {1, 1, 3}]",
+            "LazyTable[i, List[1, 1, 3]]",
+            "argform",
+        ),
+        (
+            "LazyTable[i, {i, missing}]",
+            "LazyTable[i, List[i, missing]]",
+            "argform",
+        ),
+        (
+            "LazyTable[i, {i, 1, 3, 0}]",
+            "LazyTable[i, List[i, 1, 3, 0]]",
+            "argform",
+        ),
+        (
+            "LazyTable[i, {i, {1, 2}}]",
+            "LazyTable[i, List[i, List[1, 2]]]",
+            "argform",
+        ),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "source {source}");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "LazyTable" && message.tag == tag),
+            "source {source}"
+        );
+    }
+}
+
+#[test]
+fn lazy_table_result_is_opaque_and_bounded_take_is_lazy() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazyTable[i, {i, 1, 3}], _LazyList]"),
+        "True"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazyTable[i, {i, 1, 3}], _List]"),
+        "False"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Take[LazyTable[i^2, {i, 1, 1000000}], 3]"),
+        "List[1, 4, 9]"
+    );
+}
+
+#[test]
 fn lazy_drop_and_rest_keep_the_tail_lazy() {
     let mut session = core_session();
 
@@ -374,4 +474,25 @@ fn snapshot_roundtrip_rederives_composed_lazy_descriptor() {
         "LazyList[LazyTake[LazyMap[f, LazyRange[3, 2]], 4]]"
     );
     assert_eq!(eval_text(&mut restored, "Normal[lz]"), "List[4, 6, 8, 10]");
+}
+
+#[test]
+fn snapshot_roundtrip_rederives_lazy_table_descriptor() {
+    let mut source = core_session();
+    assert_eq!(
+        eval_text(&mut source, "lz = LazyTable[i^2, {i, 2, 6, 2}]"),
+        "LazyList[LazyTake[LazyMap[Function[i, Power[i, 2]], LazyRange[2, 2]], 3]]"
+    );
+    let snapshot = source.snapshot_definitions_source();
+
+    let mut restored = core_session();
+    restored
+        .eval_script(&snapshot)
+        .expect("lazy-table snapshot should restore");
+
+    assert_eq!(
+        eval_text(&mut restored, "lz"),
+        "LazyList[LazyTake[LazyMap[Function[i, Power[i, 2]], LazyRange[2, 2]], 3]]"
+    );
+    assert_eq!(eval_text(&mut restored, "Normal[lz]"), "List[4, 16, 36]");
 }

@@ -5,8 +5,8 @@ use std::sync::{
 
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
-    EvalError, Session, expr_as_exact_rational, expr_as_non_negative_usize, is_system_symbol_name,
-    system_expr, truthiness_symbol,
+    EvalError, Session, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_symbol,
+    is_system_symbol_name, system_expr, truthiness_symbol,
 };
 
 #[derive(Clone, Copy)]
@@ -230,6 +230,62 @@ pub(crate) fn eval_lazy_select(
     )))
 }
 
+pub(crate) fn eval_lazy_table(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [body, spec] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("LazyTable", args, 2));
+    };
+    let Expr::Call {
+        head: spec_head,
+        args: spec_args,
+    } = spec
+    else {
+        return Ok(invalid_lazy_table_spec(session, args));
+    };
+    if !is_system_symbol_name(spec_head, "List") {
+        return Ok(invalid_lazy_table_spec(session, args));
+    }
+
+    let one = || Expr::small_integer(1);
+    let (iterator, [imin, imax, step]) = match spec_args.as_slice() {
+        [iterator, imax] => (iterator, [one(), imax.clone(), one()]),
+        [iterator, imin, imax] => (iterator, [imin.clone(), imax.clone(), one()]),
+        [iterator, imin, imax, step] => (iterator, [imin.clone(), imax.clone(), step.clone()]),
+        _ => return Ok(invalid_lazy_table_spec(session, args)),
+    };
+    if expr_as_symbol(iterator).is_none() {
+        return Ok(invalid_lazy_table_spec(session, args));
+    }
+
+    let imin = session.evaluate(imin)?;
+    let imax = session.evaluate(imax)?;
+    let step = session.evaluate(step)?;
+    let (Some(imin_value), Some(imax_value), Some(step_value)) = (
+        expr_as_exact_rational(&imin),
+        expr_as_exact_rational(&imax),
+        expr_as_exact_rational(&step),
+    ) else {
+        return Ok(invalid_lazy_table_spec(session, args));
+    };
+    let Some(count) = lazy_table_count(&imin_value, &imax_value, &step_value) else {
+        return Ok(invalid_lazy_table_spec(session, args));
+    };
+
+    let function = Expr::call(
+        system_expr("Function"),
+        vec![iterator.clone(), body.clone()],
+    );
+    let range = Expr::call(system_expr("LazyRange"), vec![imin, step]);
+    let map = Expr::call(system_expr("LazyMap"), vec![function, range]);
+    Ok(wrap_descriptor(Expr::call(
+        system_expr("LazyTake"),
+        vec![map, Expr::integer(BigInt::from(count))],
+    )))
+}
+
 pub(crate) fn eval_lazy_take(
     session: &mut Session,
     _head: &Expr,
@@ -338,6 +394,34 @@ fn parse_lazy_take_count(expr: &Expr) -> Option<usize> {
         return None;
     };
     expr_as_non_negative_usize(count)
+}
+
+fn invalid_lazy_table_spec(session: &mut Session, args: &[Expr]) -> Expr {
+    session.invalid_call_with_arg_form(
+        "LazyTable",
+        args,
+        "expected an arithmetic iterator with a symbol, exact rational bounds, and a nonzero step",
+    )
+}
+
+fn lazy_table_count(imin: &Rational, imax: &Rational, step: &Rational) -> Option<usize> {
+    if step.is_zero() {
+        return None;
+    }
+
+    let zero = BigInt::from(0_u8);
+    let (span, step_magnitude) = if step.numerator() > &zero {
+        (imax.sub(imin), step.clone())
+    } else {
+        (imin.sub(imax), step.negated())
+    };
+    if span.numerator() < &zero {
+        return Some(0);
+    }
+
+    let quotient = span.div(&step_magnitude)?;
+    let count = quotient.numerator() / quotient.denominator() + BigInt::from(1_u8);
+    expr_as_non_negative_usize(&Expr::integer(count))
 }
 
 fn stepper_from_descriptor(descriptor: &Expr) -> Option<PullStepper> {

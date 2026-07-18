@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 627
+Builtin count: 628
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2692,6 +2692,16 @@ Builds a lazy sequence retaining source elements whose predicate returns True.
 - Messages:
   - LazySelect::argx — expected exactly 2 argument(s), got `1`
   - LazySelect::argform — expected a LazyList as the second argument
+
+### LazyTable
+
+Builds a lazy arithmetic table whose held body evaluates once per realized element.
+
+- Attributes: `HoldAll`, `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyTable::argx — expected exactly 2 argument(s), got `1`
+  - LazyTable::argform — expected an arithmetic iterator with a symbol, exact rational bounds, and a nonzero step
 
 ### LazyTake
 
