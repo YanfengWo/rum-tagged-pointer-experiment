@@ -61,9 +61,18 @@ cancel (fail-closed on infinite); snapshot round-trips for free
   base-vs-candidate A/B = no `part-list` regression (one head-check;
   +3.1% within a +2.4% untouched-control noise band). Known minor:
   out-of-range `lz[[i]]` surfaces `First::nofirst` (fail-closed).
-- [ ] Batch 3b — combinatorial enumeration sources `LazySubsets`/
-  `LazyTuples`/`LazyPermutations` (finite spaces, enumeration cursor in
-  the transient stepper; huge spaces fail closed at the ceiling).
+- [x] Batch 3b — combinatorial enumeration sources `LazySubsets`/
+  `LazyTuples`. **DONE (brief-266, 482c20b):** size-then-lex
+  (next-combination) + mixed-radix (last-fastest) cursors, order-identical
+  to eager `Subsets`/`Tuples` (`Normal[Lazy*] === *`); transient cursor,
+  descriptor holds only input; `stepper_from_descriptor` re-validates so
+  crafted descriptors don't panic; 2^40 space fails closed in ~0.03s;
+  bounded `Take` cheap. Reference 630→632.
+- [ ] Batch 3c — `Permutations` (eager) + `LazyPermutations` (user ruling
+  2026-07-18: add the pair; rum has no eager `Permutations` today).
+  Distinct multiset permutations, lexicographic order; lazy = a
+  next-permutation cursor; `Normal[LazyPermutations[l]] === Permutations[l]`.
+  Full-length form first; `Permutations[l, {n}]` deferred.
 - [ ] Batch 4 — guide section + reference regen + close-out.
 
 **(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`
