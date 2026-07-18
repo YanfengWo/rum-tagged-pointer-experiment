@@ -18,9 +18,15 @@ Queue, in order; each item gates before the next starts:
    declared-or-exempt rule; zero gaps at landing). Excluded by proof:
    open families + one unreachable ledger row (SetDelayed::argform).
    Follow-up candidates recorded, NOT queued: Take/Drop `UpTo` support
-   (WL-conformance gap found by brief-252's stop-loss); catalog file
-   splits (namespace/rules/strings/structure/associations.rs entered
-   size-warning ranges from the fill).
+   (WL-conformance gap found by brief-252's stop-loss; DONE in brief-254);
+   catalog file splits (DONE 2026-07-18, briefs 260-261: kernel
+   namespace.rs → variables/contexts/symbols; stdlib strings/structure/
+   associations split by family; all now under threshold, reference
+   byte-identical. `rules.rs` 17KB is warning-only, left. Remaining:
+   `stdlib_attributes.rs` 28KB — a flat alphabetically-SORTED mirror with
+   a `binary_search_by` consumer, so a split needs a lookup-mechanism
+   change and has no family boundary; pending a user call vs. accepting
+   it as documented debt).
 2. [x] **`vm_rhs_template/` — DELETED (brief-244, ruled 2026-07-17).**
    Evidence: the ON path crashed the guard-adjacent recursion test
    (native stack overflow; OFF green, single-variable discriminator);

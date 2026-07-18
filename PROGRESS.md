@@ -1263,3 +1263,23 @@ guide section (director-written, examples measured on the release CLI).
 + mutation/schema operator forms + ReplaceAllUnheld); batch 3 structured
 exceptions. The cleanup + message-registry line (item 5 was its last
 open item) is now fully closed.
+
+## 2026-07-18 — catalog file-size splits (briefs 260-261)
+
+Cleared the split-plan-range (20-35KB) catalog files left by the
+message-registry fill. brief-260 (e48d12f): kernel builtin_catalog/
+namespace.rs (26.0KB) → namespace/{variables,contexts,symbols}.rs
+(1.4/10.4/14.4KB), Vec aggregator concatenates in order. brief-261
+(fdf2d6a): stdlib strings.rs (27.5KB) → strings/strings_text/strings_match
+(STRING_CORE/TEXT/MATCH), structure.rs (25.4KB) → structure/
+structure_ordering, associations.rs (21.0KB) → associations/
+associations_transform; sibling files preserve super::message_templates
+imports; seven sub-consts registered across catalog/mod.rs + lib.rs +
+tests.rs in preserved family order. Both briefs: pure reorganization,
+reference byte-identical (the master gate — docgen reads registered
+specs and sorts by name), workspace 1554/0, all resulting files under
+15KB. rules.rs (17KB) is warning-range only, left as-is. Remaining
+over-20KB: stdlib_attributes.rs (28KB) — a flat alphabetically-sorted
+attribute mirror with a binary_search_by consumer, so splitting is a
+lookup-mechanism change with no family boundary; surfaced to the user
+as split-with-adaptation vs. accept-as-debt.
