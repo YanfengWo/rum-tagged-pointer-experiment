@@ -22,11 +22,10 @@ Queue, in order; each item gates before the next starts:
    catalog file splits (DONE 2026-07-18, briefs 260-261: kernel
    namespace.rs → variables/contexts/symbols; stdlib strings/structure/
    associations split by family; all now under threshold, reference
-   byte-identical. `rules.rs` 17KB is warning-only, left. Remaining:
-   `stdlib_attributes.rs` 28KB — a flat alphabetically-SORTED mirror with
-   a `binary_search_by` consumer, so a split needs a lookup-mechanism
-   change and has no family boundary; pending a user call vs. accepting
-   it as documented debt).
+   byte-identical. `rules.rs` 17KB is warning-only, left.
+   `stdlib_attributes.rs` 28KB is ACCEPTED DEBT (user 2026-07-18;
+   binary_search_by over one sorted const, no family boundary — see
+   Standing Engineering Debt). **Catalog split work COMPLETE.**）.
 2. [x] **`vm_rhs_template/` — DELETED (brief-244, ruled 2026-07-17).**
    Evidence: the ON path crashed the guard-adjacent recursion test
    (native stack overflow; OFF green, single-variable discriminator);
@@ -667,6 +666,14 @@ string-pattern surface. Batches, evidence-ranked:
 
 ## Standing Engineering Debt
 
+- [ ] `builtin_catalog/stdlib_attributes.rs` (~28KB, split-plan range) is
+  ACCEPTED DEBT (user ruling 2026-07-18), not scheduled to split. It is a
+  flat, alphabetically-SORTED attribute mirror (~459 `Spec::new` rows) whose
+  `default_stdlib_attribute_set_for_symbol` does a `binary_search_by(name)`
+  over the single const — so a split would force a lookup-mechanism change
+  (search multiple segments, or build+search a Vec) and there is no
+  responsibility boundary to cut on. Readability would not improve. Revisit
+  only if it approaches the 35KB architecture-debt line.
 - [ ] Matcher: three known gaps in `Flat`+`Orderless`+`Optional` combinations
   (binding order for flat-wrapped singletons; `ReplaceList` under-collection
   of grouped flat matches; their compound). Low urgency, exotic corner. The
