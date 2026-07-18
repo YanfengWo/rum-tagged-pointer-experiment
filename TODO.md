@@ -24,11 +24,18 @@ lazy; all `Capability::Pure`; realize loop under the iteration ceiling +
 cancel (fail-closed on infinite); snapshot round-trips for free
 (re-derive, no memo in v1).
 
-- [ ] Batch 1 — mechanism (spine): `LazyList` + descriptor tree + pull
+- [x] Batch 1 — mechanism (spine): `LazyList` + descriptor tree + pull
   interpreter + `LazyRange` + realizers (`Normal`/`Take`/`First`) +
-  opaque semantics + ceiling/cancel + snapshot round-trip. (brief-262;
-  `Rest`/`Part` deferred — `Part` is a kernel builtin needing a
-  kernel→stdlib re-dispatch seam, `Rest` pairs with `LazyDrop`.)
+  opaque semantics + ceiling/cancel + snapshot round-trip. **DONE
+  (brief-262 rev 1, baa4ff6):** interpreter reuses real
+  `iteration_work_limit` + `interrupt_handle` (fail-closed infinite
+  `Normal` in 0.034s; cancel-observing); exact-rational streams; `Take`
+  `UpTo` reuse; opaque `_LazyList`/inert `HoldAllComplete` proven;
+  snapshot re-derives. Reference 621→623; workspace green; live probes
+  reproduced at gate; A/B not runnable (no Take/First/Normal-on-list
+  label — single `is_lazy_list` head-check branch). `Rest`/`Part`
+  deferred — `Part` is a kernel builtin needing a kernel→stdlib
+  re-dispatch seam, `Rest` pairs with `LazyDrop`.
 - [ ] Batch 2 — transformers: `LazyMap`/`LazySelect`/`LazyTake`/
   `LazyDrop`/`LazyTable` + the `Rest` realizer (= `LazyDrop[·,1]`).
 - [ ] Batch 3 — broad combinatorial/streaming: `LazySubsets`/
