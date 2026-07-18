@@ -87,6 +87,26 @@ impl Session {
             ));
         }
 
+        if let [
+            Expr::Call {
+                head: lazy_head, ..
+            },
+            index_expr,
+        ] = args
+        {
+            if is_system_symbol_name(lazy_head, "LazyList") {
+                if let Some(index) = expr_as_exact_integer(index_expr) {
+                    if index > BigInt::from(0_u8) {
+                        let lazy_drop = Expr::call(
+                            system_expr("LazyDrop"),
+                            vec![args[0].clone(), Expr::integer(index - BigInt::from(1_u8))],
+                        );
+                        return self.evaluate(Expr::call(system_expr("First"), vec![lazy_drop]));
+                    }
+                }
+            }
+        }
+
         if let Some(value) = fast_exact_integer_part_path(args) {
             return Ok(value);
         }

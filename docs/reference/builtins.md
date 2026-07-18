@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 628
+Builtin count: 630
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2656,6 +2656,16 @@ Builds a lazy sequence that skips a non-negative number of source elements.
   - LazyDrop::argx — expected exactly 2 argument(s), got `1`
   - LazyDrop::argform — expected a LazyList and a non-negative integer
 
+### LazyFoldList
+
+Builds a lazy sequence of successive accumulated values, including the initial value.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyFoldList::argx — expected exactly 3 argument(s), got `1`
+  - LazyFoldList::argform — expected a LazyList as the third argument
+
 ### LazyList
 
 Represents an opaque pure lazy sequence descriptor.
@@ -2672,6 +2682,15 @@ Builds a lazy sequence that applies a function to each source element.
 - Messages:
   - LazyMap::argx — expected exactly 2 argument(s), got `1`
   - LazyMap::argform — expected a LazyList as the second argument
+
+### LazyNestList
+
+Builds an infinite lazy sequence by repeatedly applying a function to an initial value.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyNestList::argx — expected exactly 2 argument(s), got `1`
 
 ### LazyRange
 

@@ -21,6 +21,22 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
         },
     ])
     .protected(),
+    BuiltinSpec::ordinary(
+        "LazyFoldList",
+        "Builds a lazy sequence of successive accumulated values, including the initial value.",
+        lazy::eval_lazy_fold_list,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 3 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a LazyList as the third argument",
+        },
+    ])
+    .protected(),
     BuiltinSpec::with_attributes(
         "LazyList",
         "Represents an opaque pure lazy sequence descriptor.",
@@ -42,6 +58,16 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
             template: "expected a LazyList as the second argument",
         },
     ])
+    .protected(),
+    BuiltinSpec::ordinary(
+        "LazyNestList",
+        "Builds an infinite lazy sequence by repeatedly applying a function to an initial value.",
+        lazy::eval_lazy_nest_list,
+    )
+    .with_messages(&[BuiltinMessageSpec {
+        tag: "argx",
+        template: "expected exactly 2 argument(s), got `1`",
+    }])
     .protected(),
     BuiltinSpec::ordinary(
         "LazyRange",

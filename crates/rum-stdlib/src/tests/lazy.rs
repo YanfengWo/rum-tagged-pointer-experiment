@@ -496,3 +496,260 @@ fn snapshot_roundtrip_rederives_lazy_table_descriptor() {
     );
     assert_eq!(eval_text(&mut restored, "Normal[lz]"), "List[4, 16, 36]");
 }
+
+#[test]
+fn positive_integer_part_redispatches_through_lazy_realizers() {
+    let mut session = core_session();
+
+    assert_eq!(eval_text(&mut session, "LazyRange[10, 5][[3]]"), "20");
+    assert_eq!(eval_text(&mut session, "LazyRange[1, 1][[1]]"), "1");
+
+    let out_of_range = session
+        .eval_text("LazyTake[LazyRange[1, 1], 2][[3]]")
+        .unwrap();
+    assert_eq!(out_of_range.value.to_string(), "First[List[]]");
+    assert!(
+        out_of_range
+            .messages
+            .iter()
+            .any(|message| message.symbol == "First" && message.tag == "nofirst")
+    );
+}
+
+#[test]
+fn other_lazy_part_specs_follow_the_existing_part_path() {
+    let mut session = core_session();
+
+    let non_integer = session.eval_text("LazyRange[1, 1][[x]]").unwrap();
+    assert_eq!(
+        non_integer.value.to_string(),
+        "Part[LazyList[LazyRange[1, 1]], x]"
+    );
+    assert!(
+        non_integer
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "pkspec1")
+    );
+
+    assert_eq!(
+        eval_text(&mut session, "LazyRange[1, 1][[-1]]"),
+        "LazyList[LazyRange[1, 1]]"
+    );
+    assert_eq!(eval_text(&mut session, "LazyRange[1, 1][[0]]"), "LazyList");
+    assert_eq!(eval_text(&mut session, "LazyRange[1, 1][[1, 1]]"), "1");
+
+    let span = session.eval_text("LazyRange[1, 1][[1 ;; 2]]").unwrap();
+    assert_eq!(
+        span.value.to_string(),
+        "Part[LazyList[LazyRange[1, 1]], Span[1, 2]]"
+    );
+    assert!(
+        span.messages
+            .iter()
+            .any(|message| message.symbol == "Part" && message.tag == "take")
+    );
+}
+
+#[test]
+fn lazy_nest_list_builds_an_opaque_doubling_stream() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "LazyNestList[Function[x, 2 x], 1]"),
+        "LazyList[LazyNestList[Function[x, Times[2, x]], 1]]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "Normal[LazyTake[LazyNestList[Function[x, 2 x], 1], 5]]"
+        ),
+        "List[1, 2, 4, 8, 16]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "MatchQ[LazyNestList[Function[x, x + 1], 0], _LazyList]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "MatchQ[LazyNestList[Function[x, x + 1], 0], _List]"
+        ),
+        "False"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Attributes[LazyNestList]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn normal_on_infinite_lazy_nest_list_fails_closed() {
+    let mut session = core_session();
+    session.set_iteration_work_limit(3);
+
+    let outcome = session
+        .eval_text("Normal[LazyNestList[Function[x, x + 1], 0]]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"IterationWorkLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+    assert_eq!(eval_text(&mut session, "1 + 1"), "2");
+}
+
+#[test]
+fn lazy_fold_list_emits_init_then_running_accumulators() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "LazyFoldList[Plus, 0, LazyTake[LazyRange[1, 1], 4]]"
+        ),
+        "LazyList[LazyFoldList[Plus, 0, LazyTake[LazyRange[1, 1], 4]]]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "Normal[LazyFoldList[Plus, 0, LazyTake[LazyRange[1, 1], 4]]]"
+        ),
+        "List[0, 1, 3, 6, 10]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "Normal[LazyFoldList[Plus, 10, LazyTake[LazyRange[2, 2], 3]]]"
+        ),
+        "List[10, 12, 16, 22]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "Normal[LazyFoldList[Plus, 10, LazyTake[LazyRange[1, 1], 0]]]"
+        ),
+        "List[10]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "MatchQ[LazyFoldList[Plus, 0, LazyRange[1, 1]], _LazyList]"
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_text(
+            &mut session,
+            "MatchQ[LazyFoldList[Plus, 0, LazyRange[1, 1]], _List]"
+        ),
+        "False"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Attributes[LazyFoldList]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn new_lazy_builders_reject_invalid_arity_and_fold_input() {
+    let mut session = core_session();
+
+    for (source, expected, symbol, tag) in [
+        ("LazyNestList[f]", "LazyNestList[f]", "LazyNestList", "argx"),
+        (
+            "LazyFoldList[f, 0]",
+            "LazyFoldList[f, 0]",
+            "LazyFoldList",
+            "argx",
+        ),
+        (
+            "LazyFoldList[f, 0, {1, 2}]",
+            "LazyFoldList[f, 0, List[1, 2]]",
+            "LazyFoldList",
+            "argform",
+        ),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "source {source}");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == symbol && message.tag == tag),
+            "source {source}"
+        );
+    }
+}
+
+#[test]
+fn lazy_nest_and_fold_nested_errors_propagate() {
+    let mut session = core_session();
+
+    for (source, expected_value, expected_tag) in [
+        (
+            "Normal[LazyTake[LazyNestList[Function[x, Throw[x, nestTag]], 1], 1]]",
+            "1",
+            "nestTag",
+        ),
+        (
+            "Normal[LazyFoldList[Function[{acc, x}, Throw[x, foldTag]], 0, LazyTake[LazyRange[1, 1], 1]]]",
+            "1",
+            "foldTag",
+        ),
+    ] {
+        match session
+            .eval_text(source)
+            .expect_err("nested Throw should propagate out of the lazy realizer")
+        {
+            EvalError::Thrown { value, tag, .. } => {
+                assert_eq!(value.to_string(), expected_value, "source {source}");
+                assert_eq!(tag.to_string(), expected_tag, "source {source}");
+            }
+            other => panic!("expected nested Throw from {source}, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn snapshot_roundtrip_rederives_lazy_nest_and_fold_descriptors() {
+    let mut source = core_session();
+    assert_eq!(
+        eval_text(
+            &mut source,
+            "step[x_] := x + 2; combine[x_, y_] := x + y; nest = LazyNestList[step, 1]; fold = LazyFoldList[combine, 10, LazyTake[LazyRange[1, 1], 3]]"
+        ),
+        "LazyList[LazyFoldList[combine, 10, LazyTake[LazyRange[1, 1], 3]]]"
+    );
+    let snapshot = source.snapshot_definitions_source();
+
+    let mut restored = core_session();
+    restored
+        .eval_script(&snapshot)
+        .expect("lazy NestList and FoldList snapshot should restore");
+
+    assert_eq!(
+        eval_text(&mut restored, "nest"),
+        "LazyList[LazyNestList[step, 1]]"
+    );
+    assert_eq!(
+        eval_text(&mut restored, "Normal[LazyTake[nest, 4]]"),
+        "List[1, 3, 5, 7]"
+    );
+    assert_eq!(
+        eval_text(&mut restored, "fold"),
+        "LazyList[LazyFoldList[combine, 10, LazyTake[LazyRange[1, 1], 3]]]"
+    );
+    assert_eq!(
+        eval_text(&mut restored, "Normal[fold]"),
+        "List[10, 11, 13, 16]"
+    );
+}

@@ -59,6 +59,10 @@ enum PullStepper {
         current: Rational,
         step: Rational,
     },
+    NestList {
+        function: Expr,
+        current: Expr,
+    },
     Map {
         function: Expr,
         inner: Box<PullStepper>,
@@ -75,6 +79,12 @@ enum PullStepper {
         inner: Box<PullStepper>,
         remaining: usize,
     },
+    FoldList {
+        function: Expr,
+        accumulator: Expr,
+        emitted_init: bool,
+        inner: Box<PullStepper>,
+    },
 }
 
 impl PullStepper {
@@ -88,6 +98,12 @@ impl PullStepper {
                 ctx.charge_source_pull()?;
                 let value = Expr::rational(current.clone());
                 *current = current.add(step);
+                Ok(Some(value))
+            }
+            Self::NestList { function, current } => {
+                ctx.charge_source_pull()?;
+                let value = current.clone();
+                *current = session.evaluate(Expr::call(function.clone(), vec![value.clone()]))?;
                 Ok(Some(value))
             }
             Self::Map { function, inner } => {
@@ -125,6 +141,25 @@ impl PullStepper {
                 }
                 inner.next(session, ctx)
             }
+            Self::FoldList {
+                function,
+                accumulator,
+                emitted_init,
+                inner,
+            } => {
+                if !*emitted_init {
+                    *emitted_init = true;
+                    return Ok(Some(accumulator.clone()));
+                }
+                let Some(value) = inner.next(session, ctx)? else {
+                    return Ok(None);
+                };
+                *accumulator = session.evaluate(Expr::call(
+                    function.clone(),
+                    vec![accumulator.clone(), value],
+                ))?;
+                Ok(Some(accumulator.clone()))
+            }
         }
     }
 }
@@ -154,6 +189,28 @@ pub(crate) fn eval_lazy_drop(
     )))
 }
 
+pub(crate) fn eval_lazy_fold_list(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [function, init, lazy_list] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("LazyFoldList", args, 3));
+    };
+    let Some(descriptor) = lazy_list_descriptor(lazy_list) else {
+        return Ok(session.invalid_call_with_arg_form(
+            "LazyFoldList",
+            args,
+            "expected a LazyList as the third argument",
+        ));
+    };
+
+    Ok(wrap_descriptor(Expr::call(
+        system_expr("LazyFoldList"),
+        vec![function.clone(), init.clone(), descriptor.clone()],
+    )))
+}
+
 pub(crate) fn eval_lazy_map(
     session: &mut Session,
     _head: &Expr,
@@ -173,6 +230,21 @@ pub(crate) fn eval_lazy_map(
     Ok(wrap_descriptor(Expr::call(
         system_expr("LazyMap"),
         vec![function.clone(), descriptor.clone()],
+    )))
+}
+
+pub(crate) fn eval_lazy_nest_list(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [function, init] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("LazyNestList", args, 2));
+    };
+
+    Ok(wrap_descriptor(Expr::call(
+        system_expr("LazyNestList"),
+        vec![function.clone(), init.clone()],
     )))
 }
 
@@ -438,6 +510,15 @@ fn stepper_from_descriptor(descriptor: &Expr) -> Option<PullStepper> {
             step: expr_as_exact_rational(step)?,
         });
     }
+    if is_system_symbol_name(head, "LazyNestList") {
+        let [function, init] = args.as_slice() else {
+            return None;
+        };
+        return Some(PullStepper::NestList {
+            function: function.clone(),
+            current: init.clone(),
+        });
+    }
     if is_system_symbol_name(head, "LazyMap") {
         let [function, inner] = args.as_slice() else {
             return None;
@@ -472,6 +553,17 @@ fn stepper_from_descriptor(descriptor: &Expr) -> Option<PullStepper> {
         return Some(PullStepper::Drop {
             inner: Box::new(stepper_from_descriptor(inner)?),
             remaining: expr_as_non_negative_usize(count)?,
+        });
+    }
+    if is_system_symbol_name(head, "LazyFoldList") {
+        let [function, init, inner] = args.as_slice() else {
+            return None;
+        };
+        return Some(PullStepper::FoldList {
+            function: function.clone(),
+            accumulator: init.clone(),
+            emitted_init: false,
+            inner: Box::new(stepper_from_descriptor(inner)?),
         });
     }
 
