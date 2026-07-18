@@ -45,17 +45,16 @@ Queue, in order; each item gates before the next starts:
    default-features=false deps); defaults byte-equivalent; NDF
    `cargo tree` shows zero digest crates; Cargo.lock unchanged;
    DIGEST_FORMAT cfg follow-up applied.
-5. [ ] **IN PROGRESS: the wl15/wfr design pass** (three-batch plan
-   approved 2026-07-17): structured exceptions (folk scope),
-   `SubValuesHoldAll`-equivalent, `ReplaceAllUnheld`,
-   ConformSchema/SchemaErrors operator forms (the last three share the
-   usability pass's hold design appendix).
+5. [x] **THE wl15/wfr DESIGN PASS — COMPLETE (2026-07-18, briefs
+   254-259).** Three-batch plan approved 2026-07-17; all landed.
+   With this item the whole cleanup + message-registry line is CLOSED
+   (and the catalog-split follow-up from item 1 is done, briefs 260-261).
    - [x] Batch 1 — Take/Drop/TakeDrop `UpTo[n]` specs DONE (brief-254,
      5a2ef4a): clamp semantics, kernel Part-span endpoint parity;
      gate correction narrowed `UpTo::innf` to definitely-invalid
      contents (negative/rational), symbolic stays silent-inert.
      Workspace 1523/0.
-   - [~] Batch 2 — the hold half (design doc `docs/dev/wl15-wfr-hold-design.md`;
+   - [x] Batch 2 — the hold half (design doc `docs/dev/wl15-wfr-hold-design.md`;
      rulings A1/B1/B2/C1 recorded 2026-07-17):
      - [x] 2a mechanism — `SubValuesHoldAll` attribute (brief-255,
        8186536): bit 1<<15, compound-head args prepare as HoldAll via

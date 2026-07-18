@@ -139,30 +139,40 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
-- **ACTIVE: CLEANUP + MESSAGE-REGISTRY LINE (user ruling 2026-07-17;
-  queue in TODO.md §ACTIVE PLAN). Items 1-4 COMPLETE same day:**
-  (1) message-tag registry + docgen — briefs 243, 245-249, 252-253
-  (965 registered pairs, reference 615, four-surface merge,
+- **CLEANUP + MESSAGE-REGISTRY LINE — COMPLETE (2026-07-17 → 07-18;
+  user ruling 2026-07-17; queue in TODO.md §ACTIVE PLAN). All five
+  items closed:** (1) message-tag registry + docgen — briefs 243,
+  245-249, 252-253 (965 registered pairs, four-surface merge,
   debug-assertion enforcement with the declared-or-exempt rule;
   carriers General+UpTo per user ruling); (2) `vm_rhs_template/`
   DELETED (brief-244: ON path crashed the guard-adjacent recursion
   test; A/B clean); (3) jupyter `signature.rs` → RustCrypto
   (brief-250; flake did NOT recur); (4) rum-cli feature forwarding
-  (brief-251, four-crate chain, NDF digest-free). **NEXT: (5) the
-  wl15/wfr design pass** (structured exceptions, SubValuesHoldAll,
-  ReplaceAllUnheld, ConformSchema operator forms; new candidate from
-  252's stop-loss: Take/Drop UpTo support). Follow-up candidates
-  recorded not queued: catalog file splits (five files entered
-  size-warning ranges). Dispatch sandbox now defaults to
-  workspace-write (67cbc88; loopback caveat + escalation path in
-  TEMPLATE.md). **Same ruling: the parked pools are
-  CLOSED WON'T-DO** — stdlib parked candidates (ByteArray audit,
-  compression, unicode normalization, ipaddress folk, fuzzing, codec
-  follow-ons) and the embedding parked tail (background-eval helper,
-  per-request rollback API, lighter checkpoint). Standing Engineering
-  Debt stays a record of known limitations, not a queue. fs/os/net
-  stay deferred until after publication. Memory:
-  `message-registry-cleanup-line.md`.
+  (brief-251, four-crate chain, NDF digest-free); (5) **the wl15/wfr
+  design pass — COMPLETE (briefs 254-259, 2026-07-18)**: batch 1
+  Take/Drop `UpTo`; batch 2 the hold half (`SubValuesHoldAll` 255 +
+  mutation/schema operator forms 256-257 + `ReplaceAllUnheld` 258);
+  batch 3 structured exceptions (259 — new `EvalError::ExceptionThrown`
+  channel separate from Throw/Catch by construction, string type
+  hierarchy, ancestry dispatch, in-band `Failure` on uncaught).
+  Memory `wl15-wfr-pass-line.md`; control-family registration lesson
+  `control-family-builtin-architecture.md`. **Catalog-split follow-up
+  from item 1 — DONE (briefs 260-261):** kernel `namespace.rs` and the
+  stdlib strings/structure/associations catalogs split by family, all
+  now under threshold, reference byte-identical.
+  `stdlib_attributes.rs` (28KB) accepted as debt (user 2026-07-18;
+  binary_search over one sorted const, no family boundary).
+  Reference now 621; workspace 1554/0. Dispatch sandbox defaults to
+  workspace-write (67cbc88; loopback caveat + escalation in
+  TEMPLATE.md). **Same 2026-07-17 ruling: the parked pools are CLOSED
+  WON'T-DO** — stdlib parked candidates (ByteArray audit, compression,
+  unicode normalization, ipaddress folk, fuzzing, codec follow-ons)
+  and the embedding parked tail (background-eval helper, per-request
+  rollback API, lighter checkpoint). Standing Engineering Debt stays a
+  record of known limitations, not a queue. fs/os/net stay deferred
+  until after publication. **NEXT DIRECTION: undecided — awaiting a
+  user call in the next session.** Memory:
+  `message-registry-cleanup-line.md`, `wl15-wfr-pass-line.md`.
 - **RELEASE TRANSFORMATION LINE — COMPLETE (2026-07-04 → 07-06).** `main`
   itself was transformed into release shape with full history kept (no
   remote; endpoint = clean tree + bundle cold backup; publication mechanics
