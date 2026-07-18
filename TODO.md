@@ -36,8 +36,16 @@ cancel (fail-closed on infinite); snapshot round-trips for free
   label — single `is_lazy_list` head-check branch). `Rest`/`Part`
   deferred — `Part` is a kernel builtin needing a kernel→stdlib
   re-dispatch seam, `Rest` pairs with `LazyDrop`.
-- [ ] Batch 2 — transformers: `LazyMap`/`LazySelect`/`LazyTake`/
-  `LazyDrop`/`LazyTable` + the `Rest` realizer (= `LazyDrop[·,1]`).
+- [x] Batch 2a — transformers `LazyMap`/`LazySelect`/`LazyTake`/
+  `LazyDrop` + `Rest` realizer (= `LazyDrop[·,1]`). **DONE (brief-263,
+  596bc71):** interpreter refactored to a per-element `PullStepper`
+  (Range source + Map/Select/Take/Drop arms) so filtering composes under
+  a budget; ceiling/cancel accounting in the source (never-matching
+  `LazySelect` fails closed in 0.11s); nested `f[x]`/`pred[x]` errors
+  propagate. `LazyTake` = first finite lazy stream (Normal-on-exhaustion
+  now exercised). Reference 623→627; workspace green; probes reproduced.
+- [ ] Batch 2b — `LazyTable[body, {i, …}]` (held-body generator +
+  iterator-variable binding; the one non-transformer of the batch).
 - [ ] Batch 3 — broad combinatorial/streaming: `LazySubsets`/
   `LazyTuples`/`LazyPermutations`/`LazyFoldList`/`LazyNestList` + the
   kernel `Part` re-dispatch seam (`lz[[i]]`).
