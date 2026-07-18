@@ -10,6 +10,15 @@ ambition. Sequencing (user 2026-07-18): **(c) first** (new cold symbols,
 no core-path change, low risk), then **(d)** (touches symbol resolution,
 higher risk). Each batch gates before the next.
 
+**(c) LAZY SEQUENCES — COMPLETE (2026-07-18, briefs 262-267).** All four
+batches closed (1 spine, 2a transformers + 2b LazyTable, 3a Part seam +
+NestList/FoldList, 3b Subsets/Tuples, 3c Permutations pair, 4 guide).
+Twelve lazy heads + the kernel `Part` re-dispatch seam + a folk eager
+`Permutations`; reference 621→634; guide `evaluation.md` §Lazy Sequences.
+Core asset = the per-element `PullStepper` (source/transformer arms,
+ceiling/cancel charged at the source, everything fails closed, never
+hangs). **NEXT: (d) sealed scoping.**
+
 Design docs: [docs/dev/lazy-sequences-design.md](./docs/dev/lazy-sequences-design.md),
 [docs/dev/sealed-scoping-design.md](./docs/dev/sealed-scoping-design.md).
 
@@ -76,7 +85,10 @@ cancel (fail-closed on infinite); snapshot round-trips for free
   memory guards (Range[50]→GeneratedElementLimit; MemoryConstrained→fail);
   lazy charges the source-pull ceiling. Reference 632→634.
   `Permutations[l, {n}]` deferred. **BATCH 3 (broad set) CLOSED.**
-- [ ] Batch 4 — guide section + reference regen + close-out.
+- [x] Batch 4 — guide section + reference regen + close-out. **DONE
+  (99e9a75):** `evaluation.md` §Lazy Sequences (director-written,
+  measured transcripts); reference at 634 (regenerated per batch).
+  **(c) LAZY SEQUENCES LINE COMPLETE.**
 
 **(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`
 downstream, never kernel). Ruling: **private = REAL encapsulation**
