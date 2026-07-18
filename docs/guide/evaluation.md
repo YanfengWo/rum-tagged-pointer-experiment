@@ -188,3 +188,56 @@ Host-driven input is part of the evaluator model.
 request with input instead of replaying the whole source string.
 
 The embedding chapter shows the `HostEvalOutcome::InputRequired` path.
+
+## Structured Exceptions
+
+Structured exceptions are a typed, hierarchical alternative to tagged
+`Throw`/`Catch`.
+
+An exception type is a string registered in a single-parent hierarchy.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'RegisterExceptionType["NetError"]; RegisterExceptionType["Timeout", "NetError"]; ExceptionTypes[]'
+List[Rule["NetError", "Exception"], Rule["Timeout", "NetError"]]
+```
+
+Registration is required. Every registered type descends from the implicit
+root `"Exception"`. Re-registering a type with a different parent is refused
+and leaves the registration unchanged.
+
+`ThrowException[type, payload]` raises. The payload is an `Association`.
+`CatchExceptions[expr, handlers]` runs `expr` and matches each raised
+`Exception[type, payload]` object against the handler rules.
+
+A handler registered for a parent type catches its registered subtypes.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'RegisterExceptionType["NetError"]; RegisterExceptionType["Timeout", "NetError"]; CatchExceptions[ThrowException["Timeout", <|"ms" -> 30|>], {Exception["NetError", p_] :> {"caught-by-parent", p}}]'
+List["caught-by-parent", Association[Rule["ms", 30]]]
+```
+
+Handlers are tried in list order. Within a handler, the nearest matching
+ancestor binds. A handler list that matches nothing re-raises the exception
+outward. `CatchExceptions[expr]` without handlers catches any exception and
+returns the exception object.
+
+An uncaught exception is an in-band value at the request boundary, not a host
+failure. It becomes a `Failure["UncaughtException", …]` result carrying the
+type and payload, plus a `ThrowException::nocatch` message.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'RegisterExceptionType["NetError"]; ThrowException["NetError", <|"url" -> "x"|>]'
+Failure["UncaughtException", Association[Rule["Type", "NetError"], Rule["Payload", Association[Rule["url", "x"]]]]]
+! ThrowException::nocatch: Uncaught Exception["NetError", Association[Rule["url", "x"]]] returned to top level.
+```
+
+Throwing an unregistered type fails closed the same way: a message plus a root
+`Exception` carrying the original type and payload.
+
+The two channels are separate. `Catch` never catches a `ThrowException`, and
+`CatchExceptions` never catches a classic `Throw`. `WithCleanup` still runs its
+cleanup when an exception unwinds through it. `Enclose` does not confine
+exceptions.
+
+The registry is session state. It is captured and restored with the loader
+snapshot like other definitions.

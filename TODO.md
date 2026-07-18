@@ -72,10 +72,22 @@ Queue, in order; each item gates before the next starts:
        unchanged. Workspace 1547/0; A/B replaceall-simple -2.53%
        (clean). Director completed the one vocabulary-mirror line Codex
        stop-lossed on. **BATCH 2 CLOSED.**
-   - [ ] Batch 3 — structured exceptions: contract doc
-     `docs/dev/structured-exceptions-contract.md` → user green light on
-     E1-E6 → 3a core, 3b polish/docs. **NEXT: awaiting user green light
-     on E1-E6.**
+   - [x] Batch 3 — structured exceptions (E1-E6 green-lit 2026-07-18,
+     all per recommendation). **3a core (brief-259, 42a2476):** new
+     `EvalError::ExceptionThrown` channel (separate from Throw/Catch by
+     construction — Catch never mentions it); five heads (Exception
+     inert + ThrowException/CatchExceptions/RegisterExceptionType/
+     ExceptionTypes, stdlib-registered via ControlDataBuiltin); string
+     type hierarchy in a session-field registry (snapshot round-trip);
+     ancestry dispatch (handler order × nearest ancestor,
+     suspension-safe); E4 uncaught → in-band Failure["UncaughtException"];
+     E5 registration-required fail-closed; E6 WithCleanup runs / Enclose
+     passes through. Workspace 1554/0; reference 621. Two brief revisions
+     (both correct Codex stop-losses on my brief omissions).
+     **3b guide+close-out:** evaluation.md §Structured Exceptions added
+     (director-written, examples measured). **BATCH 3 CLOSED.**
+   **THE wl15/wfr DESIGN PASS IS COMPLETE** (batches 1+2+3;
+   briefs 254-259).
 
 **WON'T-DO ruling (user 2026-07-17): the parked pools are CLOSED, not
 parked.** Stdlib parked candidates (`ByteArray` depth audit, compression

@@ -1233,3 +1233,33 @@ full gate rather than waste a re-dispatch. Lesson recorded in
 now fully closed: 2a SubValuesHoldAll + 2b-I mutation forms + 2b-II
 schema forms + 2c ReplaceAllUnheld. Remaining in the wl15/wfr pass:
 batch 3 structured exceptions, pending user green light on E1-E6.
+
+## 2026-07-18 — wl15/wfr batch 3 CLOSED + THE LINE COMPLETE: structured exceptions (brief-259)
+
+3a core landed (42a2476): a folk structured-exception system with
+observably-separate channels from classic Throw/Catch. A new
+EvalError::ExceptionThrown variant carries the Exception[type, payload]
+object; Catch's match arms never mention it, so the type system makes
+cross-catching impossible (director sized this via cargo check: exactly
+one non-wildcard EvalError match breaks, the top-level mapper). Five
+heads register in stdlib and dispatch to kernel eval via
+ControlDataBuiltin (Exception inert; ThrowException/CatchExceptions/
+RegisterExceptionType/ExceptionTypes active). String type hierarchy in
+a session-field registry mirroring message_definitions (snapshot
+round-trip covered). Ancestry dispatch = handler list-order priority ×
+nearest-ancestor, suspension-safe via the same matcher Catch uses;
+no-match re-raises. E4 uncaught → in-band Failure["UncaughtException",
+<|Type,Payload|>] at finalize_top_level_eval_value + a nocatch message.
+E5 unregistered-throw fails closed to a root exception. E6: WithCleanup
+runs cleanup on unwind (free via its wildcard path), Enclose passes
+exceptions through. Workspace 1554/0; reference 621. Two brief revisions,
+both correct Codex stop-losses on my brief omissions (stdlib file
+ownership for the control family; the kernel-eval/stdlib-registration
+ControlDataBuiltin split). 3b = the evaluation.md §Structured Exceptions
+guide section (director-written, examples measured on the release CLI).
+
+**THE wl15/wfr DESIGN PASS IS COMPLETE** (ACTIVE PLAN item 5, briefs
+254-259): batch 1 Take/Drop UpTo; batch 2 the hold half (SubValuesHoldAll
++ mutation/schema operator forms + ReplaceAllUnheld); batch 3 structured
+exceptions. The cleanup + message-registry line (item 5 was its last
+open item) is now fully closed.
