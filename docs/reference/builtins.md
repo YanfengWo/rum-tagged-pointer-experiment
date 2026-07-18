@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 615
+Builtin count: 616
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -4087,6 +4087,16 @@ Applies rules everywhere in an expression.
 - Messages:
   - ReplaceAll::argform — expected a rule or list of rules as the second argument
   - ReplaceAll::argx — expected exactly `1` argument(s), got `2`
+
+### ReplaceAllUnheld
+
+Applies rules throughout the parts of an expression that would evaluate.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - ReplaceAllUnheld::argform — expected a rule or list of rules as the second argument
+  - ReplaceAllUnheld::argx — expected exactly `1` argument(s), got `2`
 
 ### ReplaceAt
 

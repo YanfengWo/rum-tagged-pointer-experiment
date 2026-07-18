@@ -18,6 +18,7 @@ pub enum RuleApplicationSource {
     ReplaceList,
     ReplaceAt,
     ReplaceAll,
+    ReplaceAllUnheld,
     ReplaceRepeated,
 }
 

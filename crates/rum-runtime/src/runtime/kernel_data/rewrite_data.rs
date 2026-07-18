@@ -7,6 +7,7 @@ pub enum RewriteDataBuiltin {
     MatchQ,
     Replace,
     ReplaceAll,
+    ReplaceAllUnheld,
     ReplaceList,
     ReplaceRepeated,
 }
@@ -180,6 +181,7 @@ impl Session {
             RewriteDataBuiltin::MatchQ => self.eval_match_q(args),
             RewriteDataBuiltin::Replace => self.eval_replace(args),
             RewriteDataBuiltin::ReplaceAll => self.eval_replace_all(args),
+            RewriteDataBuiltin::ReplaceAllUnheld => self.eval_replace_all_unheld(args),
             RewriteDataBuiltin::ReplaceList => self.eval_replace_list(args),
             RewriteDataBuiltin::ReplaceRepeated => self.eval_replace_repeated(args),
         }

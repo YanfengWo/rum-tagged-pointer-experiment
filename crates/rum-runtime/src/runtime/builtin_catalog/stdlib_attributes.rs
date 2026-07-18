@@ -439,6 +439,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("RemoveDiacritics", ATTR_PROTECTED),
     Spec::new("Replace", ATTR_PROTECTED),
     Spec::new("ReplaceAll", ATTR_PROTECTED),
+    Spec::new("ReplaceAllUnheld", ATTR_PROTECTED),
     Spec::new("ReplaceList", ATTR_PROTECTED),
     Spec::new("ReplaceRepeated", ATTR_PROTECTED),
     Spec::new("ReseedRandom", ATTR_PROTECTED),

@@ -99,6 +99,11 @@ impl Session {
                 changed: false,
             }),
             Expr::Call { head, args } => {
+                let hold_attribute = if source == RuleApplicationSource::ReplaceAllUnheld {
+                    self.replace_all_unheld_hold_attribute_for_head(&head)
+                } else {
+                    HoldAttribute::None
+                };
                 let remaining_args = args.into_vec();
                 let head_result =
                     self.apply_replace_all_owned(head.into_owned(), rules.clone(), source);
@@ -110,10 +115,29 @@ impl Session {
                         rules,
                         source,
                         head_outcome.changed,
+                        hold_attribute,
+                        0,
                     )
                 })
             }
         }
+    }
+
+    fn replace_all_unheld_hold_attribute_for_head(&mut self, head: &Expr) -> HoldAttribute {
+        let mut attributes = self.cached_attribute_set_for_head(head);
+
+        if expr_as_symbol(head).is_none() {
+            if let Some(symbol) = base_head_symbol_of_nested_call(head) {
+                if self
+                    .cached_attribute_set_for_symbol(symbol)
+                    .contains(Attribute::SubValuesHoldAll)
+                {
+                    attributes = attributes.with(Attribute::HoldAll);
+                }
+            }
+        }
+
+        attributes.hold_attribute()
     }
 
     fn apply_replace_all_args(
@@ -124,6 +148,8 @@ impl Session {
         rules: Vec<RewriteRule>,
         source: RuleApplicationSource,
         changed: bool,
+        hold_attribute: HoldAttribute,
+        argument_index: usize,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
         let Some((current, rest)) = remaining_args.split_first() else {
             return Ok(ReplaceAllTraversalOutcome {
@@ -133,6 +159,22 @@ impl Session {
         };
 
         let rest = rest.to_vec();
+        if source == RuleApplicationSource::ReplaceAllUnheld
+            && hold_attribute.holds_argument(argument_index)
+        {
+            rewritten_args.push(current.clone());
+            return self.apply_replace_all_args(
+                head,
+                rewritten_args,
+                rest,
+                rules,
+                source,
+                changed,
+                hold_attribute,
+                argument_index + 1,
+            );
+        }
+
         let arg_result = self.apply_replace_all_owned(current.clone(), rules.clone(), source);
 
         self.drive_internal_value(arg_result, move |session, outcome| {
@@ -148,6 +190,8 @@ impl Session {
                 rules,
                 source,
                 changed || outcome.changed,
+                hold_attribute,
+                argument_index + 1,
             )
         })
     }

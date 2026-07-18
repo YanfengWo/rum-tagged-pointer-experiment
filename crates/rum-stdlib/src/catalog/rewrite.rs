@@ -99,6 +99,18 @@ pub(crate) const REWRITE_BUILTINS: &[BuiltinSpec] = &[
         ARGX_EXACT,
     ]).protected(),
     BuiltinSpec::special(
+        "ReplaceAllUnheld",
+        "Applies rules throughout the parts of an expression that would evaluate.",
+        rewrite_builtins::eval_replace_all_unheld,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a rule or list of rules as the second argument",
+        },
+        ARGX_EXACT,
+    ]).protected(),
+    BuiltinSpec::special(
         "ReplaceRepeated",
         "Repeatedly applies rules until an expression reaches a fixed point.",
         rewrite_builtins::eval_replace_repeated,

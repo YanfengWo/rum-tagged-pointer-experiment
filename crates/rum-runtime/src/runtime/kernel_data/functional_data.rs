@@ -963,6 +963,7 @@ fn rewrite_operator_symbol(head: &Expr, arity: usize) -> Option<&'static str> {
         1 if is_system_symbol_name(head, "Count") => Some("Count"),
         1 if is_system_symbol_name(head, "Replace") => Some("Replace"),
         1 if is_system_symbol_name(head, "ReplaceAll") => Some("ReplaceAll"),
+        1 if is_system_symbol_name(head, "ReplaceAllUnheld") => Some("ReplaceAllUnheld"),
         1 if is_system_symbol_name(head, "ReplaceRepeated") => Some("ReplaceRepeated"),
         _ => None,
     }

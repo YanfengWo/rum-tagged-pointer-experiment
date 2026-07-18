@@ -50,6 +50,14 @@ pub(crate) fn eval_replace_all(
     dispatch(session, RewriteDataBuiltin::ReplaceAll, head, args)
 }
 
+pub(crate) fn eval_replace_all_unheld(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    dispatch(session, RewriteDataBuiltin::ReplaceAllUnheld, head, args)
+}
+
 pub(crate) fn eval_replace_list(
     session: &mut Session,
     head: &Expr,
