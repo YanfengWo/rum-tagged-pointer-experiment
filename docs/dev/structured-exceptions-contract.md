@@ -1,7 +1,10 @@
 # Structured exceptions contract (wl15/wfr pass, batch 3)
 
-Status: contract draft for batch 3 of the wl15/wfr pass (TODO §ACTIVE
-PLAN item 5), pending user green light on E1-E6. Source discipline:
+Status: GREEN-LIT 2026-07-18 — user ruled E1-E6 all per recommendation.
+Implementation: 3a = brief-259 (channel + registry + five builtins +
+ancestry dispatch + E4 Failure boundary), 3b = guide/reference/close-out.
+Batch 3 of the wl15/wfr pass (TODO §ACTIVE PLAN item 5). Source
+discipline:
 WL15 survey facts only (named exceptions propagate to the nearest
 enclosing catcher registered for that type; types form a registered
 hierarchy — catching a parent catches registered subtypes; handlers
@@ -55,7 +58,14 @@ Failure). Everything below is a rum folk design from those facts.
 - `ExceptionTypes[]` — registered list, parent-annotated (introspection
   for scripts and tests).
 
-## 4. Decision points for the user
+## 4. Decision points — ALL RULED (user 2026-07-18: "全按推荐" = adopt every recommendation)
+
+E1 fixed 2-slot object · E2 string type identity · E3 separate channels
+(new `EvalError::ExceptionThrown` variant; `Catch`/`CatchExceptions`
+never cross-catch) · E4 in-band `Failure["UncaughtException", …]` at
+`finalize_top_level_eval_value` · E5 registration-required fail-closed ·
+E6 WithCleanup runs on unwind, exceptions pass through Enclose.
+Rationale for each recommendation follows.
 
 - **E1 object shape**: fixed 2-slot `Exception[type, payload]`
   (RECOMMEND — pattern matching stays trivial) vs variadic.
