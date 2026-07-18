@@ -70,6 +70,22 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
     }])
     .protected(),
     BuiltinSpec::ordinary(
+        "LazyPermutations",
+        "Enumerates distinct list permutations lazily in rum's canonical lexicographic (sorted-first, not input-first) order.",
+        lazy::eval_lazy_permutations,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 1 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a List",
+        },
+    ])
+    .protected(),
+    BuiltinSpec::ordinary(
         "LazyRange",
         "Builds an infinite lazy arithmetic sequence from an optional start and step.",
         lazy::eval_lazy_range,

@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 632
+Builtin count: 634
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2692,6 +2692,16 @@ Builds an infinite lazy sequence by repeatedly applying a function to an initial
 - Messages:
   - LazyNestList::argx — expected exactly 2 argument(s), got `1`
 
+### LazyPermutations
+
+Enumerates distinct list permutations lazily in rum's canonical lexicographic (sorted-first, not input-first) order.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyPermutations::argx — expected exactly 1 argument(s), got `1`
+  - LazyPermutations::argform — expected a List
+
 ### LazyRange
 
 Builds an infinite lazy arithmetic sequence from an optional start and step.
@@ -3731,6 +3741,16 @@ Pauses for at least a nonnegative exact number of seconds in the current first-p
 - Messages:
   - Pause::argx — expected exactly `1` argument(s), got `2`
   - Pause::numnm — Non-negative machine-sized number expected at position 1 in `1`.
+
+### Permutations
+
+Returns distinct permutations of a list in rum's canonical lexicographic (sorted-first, not input-first) order; fixed-length forms are deferred.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - Permutations::argx — expected exactly `1` argument(s), got `2`
+  - Permutations::normal — List expected at position 1 in `1`.
 
 ### Pluralize
 

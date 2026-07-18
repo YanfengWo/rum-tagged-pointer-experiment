@@ -25,6 +25,10 @@ fn list_plumbing_attributes_match_wk_anchors() {
         "List[Protected]"
     );
     assert_eq!(
+        eval_to_string(&mut session, "Attributes[Permutations]"),
+        "List[Protected]"
+    );
+    assert_eq!(
         eval_to_string(&mut session, "Attributes[Subsets]"),
         "List[Protected]"
     );
@@ -267,6 +271,59 @@ fn tuples_covers_wk_anchored_repetition_and_cartesian_forms() {
 }
 
 #[test]
+fn permutations_are_distinct_and_canonically_lexicographic() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut session, "Permutations[{a, b, c}]"),
+        "List[List[a, b, c], List[a, c, b], List[b, a, c], List[b, c, a], List[c, a, b], List[c, b, a]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Permutations[{c, a, b}]"),
+        "List[List[a, b, c], List[a, c, b], List[b, a, c], List[b, c, a], List[c, a, b], List[c, b, a]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Permutations[{1, 1, 2}]"),
+        "List[List[1, 1, 2], List[1, 2, 1], List[2, 1, 1]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Permutations[{}]"),
+        "List[List[]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Permutations[{a}]"),
+        "List[List[a]]"
+    );
+}
+
+#[test]
+fn permutations_fail_before_materializing_a_huge_result() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "MemoryConstrained[Permutations[{1, 2, 3, 4, 5}], 100, memfail]"
+        ),
+        "memfail"
+    );
+
+    session.set_generated_element_limit(50);
+
+    let outcome = session.eval_text("Permutations[Range[50]]").unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+}
+
+#[test]
 fn partition_covers_wk_anchored_block_and_offset_forms() {
     let mut session = core_session();
 
@@ -324,6 +381,30 @@ fn partition_operator_form_rewrites_to_data_first_call() {
 #[test]
 fn combinatorial_list_ops_symbolically_passthrough_invalid_boundaries() {
     let mut session = core_session();
+
+    for source in ["Permutations[x]", "Permutations[f[a, b]]"] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), source, "source {source}");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "Permutations" && message.tag == "normal"),
+            "source {source}"
+        );
+    }
+
+    let permutations_arity = session.eval_text("Permutations[{a}, 1]").unwrap();
+    assert_eq!(
+        permutations_arity.value.to_string(),
+        "Permutations[List[a], 1]"
+    );
+    assert!(
+        permutations_arity
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Permutations" && message.tag == "argx")
+    );
 
     let subsets_atom = session.eval_text("Subsets[x]").unwrap();
     assert_eq!(subsets_atom.value.to_string(), "Subsets[x]");

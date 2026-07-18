@@ -264,6 +264,19 @@ pub(crate) const STRUCTURE_CORE_BUILTINS: &[BuiltinSpec] = &[
         },
     ]),
     BuiltinSpec::ordinary_with_attributes(
+        "Permutations",
+        "Returns distinct permutations of a list in rum's canonical lexicographic (sorted-first, not input-first) order; fixed-length forms are deferred.",
+        AttributeSet::from_attribute(Attribute::Protected),
+        structure_ops::eval_permutations,
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+        BuiltinMessageSpec {
+            tag: "normal",
+            template: "List expected at position 1 in `1`.",
+        },
+    ]),
+    BuiltinSpec::ordinary_with_attributes(
         "Subsets",
         "Returns subsets of a normal expression in rum's size-major order for scalar, All, Infinity, and range size specs.",
         AttributeSet::from_attribute(Attribute::Protected),

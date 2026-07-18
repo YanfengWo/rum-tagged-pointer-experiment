@@ -27,7 +27,9 @@ pub(crate) use self::{
         eval_gather_by, eval_max_by, eval_min_by, eval_reverse_sort, eval_reverse_sort_by,
         eval_riffle, eval_take_largest_by, eval_take_smallest_by, eval_tally,
     },
-    combinatorial_lists::{eval_partition, eval_subsets, eval_tuples},
+    combinatorial_lists::{
+        eval_partition, eval_permutations, eval_subsets, eval_tuples, next_permutation,
+    },
     dedup::{eval_delete_duplicates, eval_delete_duplicates_by},
     flatten::eval_flatten,
     join::eval_join,

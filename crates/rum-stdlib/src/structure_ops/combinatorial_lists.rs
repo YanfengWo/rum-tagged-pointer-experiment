@@ -1,5 +1,45 @@
 use super::*;
 
+pub(crate) fn eval_permutations(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [list] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("Permutations", args, 1));
+    };
+    let Some(items) = list_items(list) else {
+        return Ok(invalid_permutations_normal_call(session, args));
+    };
+
+    let mut current = items.to_vec();
+    current.sort_by(compare_expr_canonical);
+
+    let permutation_count = distinct_permutation_count(&current);
+    session.enforce_generated_element_limit_for_big_count(&permutation_count)?;
+    session.enforce_active_memory_limit_for_projected_bytes(
+        generated_expr_nodes_memory_proxy_bytes(
+            bigint_count_to_usize(&permutation_count).unwrap_or(usize::MAX),
+        ),
+    )?;
+
+    let mut permutations = Vec::new();
+    loop {
+        permutations.push(Expr::call(
+            system_expr(heads::structure::LIST),
+            current.clone(),
+        ));
+        if !next_permutation(&mut current) {
+            break;
+        }
+    }
+
+    Ok(Expr::call(
+        system_expr(heads::structure::LIST),
+        permutations,
+    ))
+}
+
 pub(crate) fn eval_subsets(
     session: &mut Session,
     _head: &Expr,
@@ -251,6 +291,18 @@ fn invalid_subsets_normal_call(session: &mut Session, args: &[Expr]) -> Expr {
     )
 }
 
+fn invalid_permutations_normal_call(session: &mut Session, args: &[Expr]) -> Expr {
+    session.invalid_call_with_message(
+        "Permutations",
+        args,
+        "normal",
+        format!(
+            "List expected at position 1 in {}.",
+            Expr::call(system_expr("Permutations"), args.to_vec())
+        ),
+    )
+}
+
 fn invalid_subsets_size_spec_call(session: &mut Session, args: &[Expr]) -> Expr {
     session.invalid_call_with_message(
             "Subsets",
@@ -407,6 +459,45 @@ fn subset_sizes_count(item_count: usize, sizes: &[usize]) -> BigInt {
         .iter()
         .map(|size| binomial_count(item_count, *size))
         .sum()
+}
+
+fn distinct_permutation_count(sorted_items: &[Expr]) -> BigInt {
+    let mut count = factorial_count(sorted_items.len());
+    let mut run_start = 0;
+
+    while run_start < sorted_items.len() {
+        let mut run_end = run_start + 1;
+        while run_end < sorted_items.len()
+            && compare_expr_canonical(&sorted_items[run_start], &sorted_items[run_end]).is_eq()
+        {
+            run_end += 1;
+        }
+        count /= factorial_count(run_end - run_start);
+        run_start = run_end;
+    }
+
+    count
+}
+
+fn factorial_count(n: usize) -> BigInt {
+    (2..=n).map(BigInt::from).product()
+}
+
+pub(crate) fn next_permutation(items: &mut [Expr]) -> bool {
+    let Some(pivot) = (0..items.len().saturating_sub(1))
+        .rev()
+        .find(|index| compare_expr_canonical(&items[*index], &items[*index + 1]).is_lt())
+    else {
+        return false;
+    };
+    let successor = (pivot + 1..items.len())
+        .rev()
+        .find(|index| compare_expr_canonical(&items[*index], &items[pivot]).is_gt())
+        .expect("an ascending pivot has a greater successor");
+
+    items.swap(pivot, successor);
+    items[pivot + 1..].reverse();
+    true
 }
 
 fn binomial_count(item_count: usize, size: usize) -> BigInt {

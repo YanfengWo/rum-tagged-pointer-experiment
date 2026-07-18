@@ -5,9 +5,11 @@ use std::sync::{
 
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
-    EvalError, Session, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_symbol,
-    is_system_symbol_name, list_items, system_expr, truthiness_symbol,
+    EvalError, Session, compare_expr_canonical, expr_as_exact_rational, expr_as_non_negative_usize,
+    expr_as_symbol, is_system_symbol_name, list_items, system_expr, truthiness_symbol,
 };
+
+use crate::structure_ops::next_permutation;
 
 #[derive(Clone, Copy)]
 enum PullBudget {
@@ -59,6 +61,10 @@ enum PullStepper {
         current: Rational,
         step: Rational,
     },
+    Permutations {
+        current: Vec<Expr>,
+        exhausted: bool,
+    },
     Subsets {
         elements: Vec<Expr>,
         k: usize,
@@ -109,6 +115,15 @@ impl PullStepper {
                 let value = Expr::rational(current.clone());
                 *current = current.add(step);
                 Ok(Some(value))
+            }
+            Self::Permutations { current, exhausted } => {
+                if *exhausted {
+                    return Ok(None);
+                }
+                ctx.charge_source_pull()?;
+                let permutation = Expr::call(system_expr("List"), current.clone());
+                *exhausted = !next_permutation(current);
+                Ok(Some(permutation))
             }
             Self::Subsets { elements, k, combo } => {
                 if *k > elements.len() {
@@ -289,6 +304,24 @@ pub(crate) fn eval_lazy_nest_list(
     Ok(wrap_descriptor(Expr::call(
         system_expr("LazyNestList"),
         vec![function.clone(), init.clone()],
+    )))
+}
+
+pub(crate) fn eval_lazy_permutations(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [list] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("LazyPermutations", args, 1));
+    };
+    if list_items(list).is_none() {
+        return Ok(session.invalid_call_with_arg_form("LazyPermutations", args, "expected a List"));
+    }
+
+    Ok(wrap_descriptor(Expr::call(
+        system_expr("LazyPermutations"),
+        vec![list.clone()],
     )))
 }
 
@@ -652,6 +685,17 @@ fn stepper_from_descriptor(descriptor: &Expr) -> Option<PullStepper> {
         return Some(PullStepper::Range {
             current: expr_as_exact_rational(start)?,
             step: expr_as_exact_rational(step)?,
+        });
+    }
+    if is_system_symbol_name(head, "LazyPermutations") {
+        let [list] = args.as_slice() else {
+            return None;
+        };
+        let mut current = list_items(list)?.to_vec();
+        current.sort_by(compare_expr_canonical);
+        return Some(PullStepper::Permutations {
+            current,
+            exhausted: false,
         });
     }
     if is_system_symbol_name(head, "LazySubsets") {

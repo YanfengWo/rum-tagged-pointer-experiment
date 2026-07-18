@@ -780,6 +780,55 @@ fn lazy_subsets_matches_eager_order_and_edges() {
 }
 
 #[test]
+fn lazy_permutations_matches_eager_canonical_order_and_edges() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "LazyPermutations[{c, a, b}]"),
+        "LazyList[LazyPermutations[List[c, a, b]]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Normal[LazyPermutations[{c, a, b}]]"),
+        "List[List[a, b, c], List[a, c, b], List[b, a, c], List[b, c, a], List[c, a, b], List[c, b, a]]"
+    );
+    for source in [
+        "Normal[LazyPermutations[{a, b, c}]] === Permutations[{a, b, c}]",
+        "Normal[LazyPermutations[{1, 1, 2}]] === Permutations[{1, 1, 2}]",
+        "Normal[LazyPermutations[{}]] === Permutations[{}]",
+        "Normal[LazyPermutations[{a}]] === Permutations[{a}]",
+        "Normal[LazyPermutations[{c, a, b}]] === Permutations[{c, a, b}]",
+    ] {
+        assert_eq!(eval_text(&mut session, source), "True", "source {source}");
+    }
+    assert_eq!(
+        eval_text(&mut session, "Attributes[LazyPermutations]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn lazy_permutations_large_take_is_lazy_cheap_and_opaque() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "Take[LazyPermutations[Range[12]], 3]"),
+        "List[List[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], List[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 11], List[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 10, 12]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "LazyPermutations[Range[12]][[3]]"),
+        "List[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 10, 12]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazyPermutations[{1, 2}], _LazyList]"),
+        "True"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazyPermutations[{1, 2}], _List]"),
+        "False"
+    );
+}
+
+#[test]
 fn lazy_subsets_large_take_is_lazy_and_opaque() {
     let mut session = core_session();
 
@@ -850,6 +899,7 @@ fn huge_lazy_combinatorial_spaces_fail_closed_at_iteration_ceiling() {
     session.set_iteration_work_limit(3);
 
     for source in [
+        "Normal[LazyPermutations[Range[50]]]",
         "Normal[LazySubsets[Range[40]]]",
         "Normal[LazyTuples[{a, b}, 40]]",
     ] {
@@ -876,9 +926,9 @@ fn snapshot_roundtrip_rederives_lazy_combinatorial_descriptors() {
     assert_eq!(
         eval_text(
             &mut source,
-            "subsets = LazySubsets[{a, b, c}]; tuples = LazyTuples[{{1, 2}, {3, 4}}]"
+            "subsets = LazySubsets[{a, b, c}]; tuples = LazyTuples[{{1, 2}, {3, 4}}]; permutations = LazyPermutations[{b, a, a}]"
         ),
-        "LazyList[LazyTuples[List[List[1, 2], List[3, 4]]]]"
+        "LazyList[LazyPermutations[List[b, a, a]]]"
     );
     let snapshot = source.snapshot_definitions_source();
 
@@ -903,6 +953,17 @@ fn snapshot_roundtrip_rederives_lazy_combinatorial_descriptors() {
         eval_text(&mut restored, "Normal[tuples] === Tuples[{{1, 2}, {3, 4}}]"),
         "True"
     );
+    assert_eq!(
+        eval_text(&mut restored, "permutations"),
+        "LazyList[LazyPermutations[List[b, a, a]]]"
+    );
+    assert_eq!(
+        eval_text(
+            &mut restored,
+            "Normal[permutations] === Permutations[{b, a, a}]"
+        ),
+        "True"
+    );
 }
 
 #[test]
@@ -910,6 +971,24 @@ fn lazy_combinatorial_builders_reject_invalid_inputs_without_partial_values() {
     let mut session = core_session();
 
     for (source, expected, symbol, tag) in [
+        (
+            "LazyPermutations[x]",
+            "LazyPermutations[x]",
+            "LazyPermutations",
+            "argform",
+        ),
+        (
+            "LazyPermutations[f[a]]",
+            "LazyPermutations[f[a]]",
+            "LazyPermutations",
+            "argform",
+        ),
+        (
+            "LazyPermutations[{}, 1]",
+            "LazyPermutations[List[], 1]",
+            "LazyPermutations",
+            "argx",
+        ),
         ("LazySubsets[x]", "LazySubsets[x]", "LazySubsets", "argform"),
         (
             "LazySubsets[{}, 1]",

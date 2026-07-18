@@ -334,6 +334,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("LazyList", ATTR_HOLD_ALL_COMPLETE_PROTECTED),
     Spec::new("LazyMap", ATTR_PROTECTED),
     Spec::new("LazyNestList", ATTR_PROTECTED),
+    Spec::new("LazyPermutations", ATTR_PROTECTED),
     Spec::new("LazyRange", ATTR_PROTECTED),
     Spec::new("LazySelect", ATTR_PROTECTED),
     Spec::new("LazySubsets", ATTR_PROTECTED),
@@ -416,6 +417,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("PartitionsP", ATTR_LISTABLE_PROTECTED),
     Spec::new("PartitionsQ", ATTR_LISTABLE_PROTECTED),
     Spec::new("Pattern", ATTR_PROTECTED),
+    Spec::new("Permutations", ATTR_PROTECTED),
     Spec::new("Pluralize", ATTR_PROTECTED),
     Spec::new(
         "Plus",
