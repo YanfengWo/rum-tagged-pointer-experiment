@@ -3,11 +3,43 @@ use rum_runtime::kernel_api::{Attribute, AttributeSet, BuiltinMessageSpec, Built
 use crate::lazy;
 
 pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
+    BuiltinSpec::ordinary(
+        "LazyDrop",
+        "Builds a lazy sequence that skips a non-negative number of source elements.",
+        lazy::eval_lazy_drop,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 2 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a LazyList and a non-negative integer",
+        },
+    ])
+    .protected(),
     BuiltinSpec::with_attributes(
         "LazyList",
         "Represents an opaque pure lazy sequence descriptor.",
         AttributeSet::from_attribute(Attribute::HoldAllComplete),
     )
+    .protected(),
+    BuiltinSpec::ordinary(
+        "LazyMap",
+        "Builds a lazy sequence that applies a function to each source element.",
+        lazy::eval_lazy_map,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 2 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a LazyList as the second argument",
+        },
+    ])
     .protected(),
     BuiltinSpec::ordinary(
         "LazyRange",
@@ -22,6 +54,38 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
         BuiltinMessageSpec {
             tag: "argform",
             template: "start and step must be Integer or Rational values",
+        },
+    ])
+    .protected(),
+    BuiltinSpec::ordinary(
+        "LazySelect",
+        "Builds a lazy sequence retaining source elements whose predicate returns True.",
+        lazy::eval_lazy_select,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 2 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a LazyList as the second argument",
+        },
+    ])
+    .protected(),
+    BuiltinSpec::ordinary(
+        "LazyTake",
+        "Builds a finite lazy sequence capped by a non-negative element count.",
+        lazy::eval_lazy_take,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 2 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a LazyList and a non-negative integer or UpTo[n]",
         },
     ])
     .protected(),

@@ -148,6 +148,11 @@ pub(crate) fn eval_rest(
         return Ok(session.invalid_call_with_exact_arg_count("Rest", args, 1));
     };
 
+    if crate::lazy::is_lazy_list(expr) {
+        return Ok(crate::lazy::lazy_drop(expr, 1)
+            .unwrap_or_else(|| Expr::call(system_expr("Rest"), args.to_vec())));
+    }
+
     if let Some(entries) = association_entry_forms_from_expr(expr) {
         if entries.is_empty() {
             return Ok(invalid_empty_sequence_selection_call(

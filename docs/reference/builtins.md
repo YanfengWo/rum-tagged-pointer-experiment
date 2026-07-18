@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 623
+Builtin count: 627
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2646,12 +2646,32 @@ Returns the last structural element, with an optional held default.
   - Last::nolast — `1` has zero length and no `2` element.
   - Last::normal — Nonatomic expression expected at position 1 in `1`.
 
+### LazyDrop
+
+Builds a lazy sequence that skips a non-negative number of source elements.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyDrop::argx — expected exactly 2 argument(s), got `1`
+  - LazyDrop::argform — expected a LazyList and a non-negative integer
+
 ### LazyList
 
 Represents an opaque pure lazy sequence descriptor.
 
 - Attributes: `HoldAllComplete`, `Protected`
 - Capability: `Pure`
+
+### LazyMap
+
+Builds a lazy sequence that applies a function to each source element.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyMap::argx — expected exactly 2 argument(s), got `1`
+  - LazyMap::argform — expected a LazyList as the second argument
 
 ### LazyRange
 
@@ -2662,6 +2682,26 @@ Builds an infinite lazy arithmetic sequence from an optional start and step.
 - Messages:
   - LazyRange::argtu — expected between 0 and 2 argument(s), got `1`
   - LazyRange::argform — start and step must be Integer or Rational values
+
+### LazySelect
+
+Builds a lazy sequence retaining source elements whose predicate returns True.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazySelect::argx — expected exactly 2 argument(s), got `1`
+  - LazySelect::argform — expected a LazyList as the second argument
+
+### LazyTake
+
+Builds a finite lazy sequence capped by a non-negative element count.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyTake::argx — expected exactly 2 argument(s), got `1`
+  - LazyTake::argform — expected a LazyList and a non-negative integer or UpTo[n]
 
 ### LeafCount
 
