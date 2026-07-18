@@ -52,9 +52,18 @@ cancel (fail-closed on infinite); snapshot round-trips for free
   ordering `{0,{1,2,3},3}` proven); empty range → `List[]`; step 0 /
   non-rational / bad spec fail closed. Reference 627→628; workspace
   green. **BATCH 2 CLOSED.**
-- [ ] Batch 3 — broad combinatorial/streaming: `LazySubsets`/
-  `LazyTuples`/`LazyPermutations`/`LazyFoldList`/`LazyNestList` + the
-  kernel `Part` re-dispatch seam (`lz[[i]]`).
+- [x] Batch 3a — streaming `LazyNestList`/`LazyFoldList` + the kernel
+  `Part` re-dispatch seam (`lz[[i]]`). **DONE (brief-265, 0158cbb):**
+  `eval_part` on `LazyList` + single positive integer emits
+  `self.evaluate(First[LazyDrop[lz, i-1]])` (no reverse crate dep; other
+  specs fall through); `LazyNestList` source + `LazyFoldList` transformer
+  steppers; nested `f` errors propagate. Reference 628→630; real
+  base-vs-candidate A/B = no `part-list` regression (one head-check;
+  +3.1% within a +2.4% untouched-control noise band). Known minor:
+  out-of-range `lz[[i]]` surfaces `First::nofirst` (fail-closed).
+- [ ] Batch 3b — combinatorial enumeration sources `LazySubsets`/
+  `LazyTuples`/`LazyPermutations` (finite spaces, enumeration cursor in
+  the transient stepper; huge spaces fail closed at the ceiling).
 - [ ] Batch 4 — guide section + reference regen + close-out.
 
 **(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`
