@@ -16,6 +16,9 @@ const ATTR_FLAT_ONE_IDENTITY_PROTECTED_READ_PROTECTED: AttributeSet = AttributeS
 
 const ATTR_HOLD_ALL: AttributeSet = AttributeSet::from_hold(HoldAttribute::HoldAll);
 
+const ATTR_HOLD_ALL_COMPLETE_PROTECTED: AttributeSet =
+    AttributeSet::from_attribute(Attribute::HoldAllComplete).with(Attribute::Protected);
+
 const ATTR_HOLD_ALL_PROTECTED: AttributeSet =
     AttributeSet::from_hold(HoldAttribute::HoldAll).with(Attribute::Protected);
 
@@ -326,6 +329,8 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
     Spec::new("Keys", ATTR_PROTECTED),
     Spec::new("LCM", ATTR_LISTABLE_PROTECTED),
     Spec::new("Last", ATTR_HOLD_REST.with(Attribute::Protected)),
+    Spec::new("LazyList", ATTR_HOLD_ALL_COMPLETE_PROTECTED),
+    Spec::new("LazyRange", ATTR_PROTECTED),
     Spec::new("LeafCount", ATTR_PROTECTED),
     Spec::new("LeapYearQ", ATTR_PROTECTED),
     Spec::new("Length", ATTR_PROTECTED),

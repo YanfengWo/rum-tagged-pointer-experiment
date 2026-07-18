@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 621
+Builtin count: 623
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2645,6 +2645,23 @@ Returns the last structural element, with an optional held default.
   - Last::argtu — expected between `1` and `2` argument(s), got `3`
   - Last::nolast — `1` has zero length and no `2` element.
   - Last::normal — Nonatomic expression expected at position 1 in `1`.
+
+### LazyList
+
+Represents an opaque pure lazy sequence descriptor.
+
+- Attributes: `HoldAllComplete`, `Protected`
+- Capability: `Pure`
+
+### LazyRange
+
+Builds an infinite lazy arithmetic sequence from an optional start and step.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyRange::argtu — expected between 0 and 2 argument(s), got `1`
+  - LazyRange::argform — start and step must be Integer or Rational values
 
 ### LeafCount
 

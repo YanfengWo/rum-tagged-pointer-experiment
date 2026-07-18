@@ -1817,6 +1817,32 @@ fn host_session_snapshot_bytes_roundtrip_and_restore_replaces_user_state() {
 }
 
 #[test]
+fn host_session_snapshot_roundtrip_rederives_lazy_list_identically() {
+    let mut source = HostSession::new();
+    assert_eq!(
+        successful_eval(source.eval("lz = LazyRange[3, 2]"))
+            .value
+            .text,
+        "LazyList[LazyRange[3, 2]]"
+    );
+    let bytes = source.snapshot_to_bytes();
+
+    let mut restored = HostSession::new();
+    restored
+        .restore_from_bytes(&bytes)
+        .expect("lazy-list snapshot bytes should restore");
+
+    assert_eq!(
+        successful_eval(restored.eval("lz")).value.text,
+        "LazyList[LazyRange[3, 2]]"
+    );
+    assert_eq!(
+        successful_eval(restored.eval("Take[lz, 3]")).value.text,
+        "List[3, 5, 7]"
+    );
+}
+
+#[test]
 fn host_eval_ordinary_value_has_no_termination_reason() {
     let mut session = HostSession::new();
 

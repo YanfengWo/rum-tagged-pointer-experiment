@@ -87,6 +87,21 @@ pub(crate) fn eval_first(
     _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if matches!(args.len(), 1 | 2) && args.first().is_some_and(crate::lazy::is_lazy_list) {
+        let expr = &args[0];
+        let Some(realized) = crate::lazy::realize_at_most(session, expr, 1)? else {
+            return Ok(Expr::call(system_expr("First"), args.to_vec()));
+        };
+        return Ok(resolve_first_like(
+            session,
+            &realized,
+            args.get(1),
+            "First",
+            "nofirst",
+            true,
+        ));
+    }
+
     match args {
         [expr] => Ok(resolve_first_like(
             session, expr, None, "First", "nofirst", true,

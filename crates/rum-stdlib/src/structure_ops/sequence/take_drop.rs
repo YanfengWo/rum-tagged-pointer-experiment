@@ -19,6 +19,10 @@ pub(crate) fn eval_take(
     head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
+    if args.first().is_some_and(crate::lazy::is_lazy_list) {
+        return eval_take_lazy_list(session, head, args);
+    }
+
     if args.len() < 2 {
         if args.len() == 1 {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -44,6 +48,32 @@ pub(crate) fn eval_take(
             session, "Take", "take", args,
         )),
     }
+}
+
+fn eval_take_lazy_list(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [lazy_list, spec_expr] = args else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let Some(spec) = parse_structural_sequence_spec(session, spec_expr) else {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let limit = match spec {
+        StructuralSequenceSpec::Count(count) if count >= 0 => usize::try_from(count).ok(),
+        StructuralSequenceSpec::UpTo(Some(limit)) => usize::try_from(limit).ok(),
+        _ => None,
+    };
+    let Some(limit) = limit else {
+        return Ok(invalid_take_drop_sequence_call(
+            session, "Take", "take", args,
+        ));
+    };
+
+    Ok(crate::lazy::realize_at_most(session, lazy_list, limit)?
+        .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())))
 }
 
 pub(crate) fn eval_drop(

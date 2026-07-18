@@ -384,6 +384,13 @@ pub(crate) fn eval_normal(
         ));
     }
 
+    if let [expr] = args {
+        if crate::lazy::is_lazy_list(expr) {
+            return Ok(crate::lazy::realize_all(session, expr)?
+                .unwrap_or_else(|| Expr::call(head.clone(), args.to_vec())));
+        }
+    }
+
     match args {
         [expr] => Ok(normalize_association_expr(expr)),
         [expr, target] => {
