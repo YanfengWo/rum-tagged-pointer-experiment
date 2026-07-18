@@ -25,12 +25,15 @@ cancel (fail-closed on infinite); snapshot round-trips for free
 (re-derive, no memo in v1).
 
 - [ ] Batch 1 — mechanism (spine): `LazyList` + descriptor tree + pull
-  interpreter + `LazyRange` + realizers (`Normal`/`Take`/`First`/`Rest`/
-  `Part`) + opaque semantics + ceiling/cancel + snapshot round-trip.
+  interpreter + `LazyRange` + realizers (`Normal`/`Take`/`First`) +
+  opaque semantics + ceiling/cancel + snapshot round-trip. (brief-262;
+  `Rest`/`Part` deferred — `Part` is a kernel builtin needing a
+  kernel→stdlib re-dispatch seam, `Rest` pairs with `LazyDrop`.)
 - [ ] Batch 2 — transformers: `LazyMap`/`LazySelect`/`LazyTake`/
-  `LazyDrop`/`LazyTable`.
+  `LazyDrop`/`LazyTable` + the `Rest` realizer (= `LazyDrop[·,1]`).
 - [ ] Batch 3 — broad combinatorial/streaming: `LazySubsets`/
-  `LazyTuples`/`LazyPermutations`/`LazyFoldList`/`LazyNestList`.
+  `LazyTuples`/`LazyPermutations`/`LazyFoldList`/`LazyNestList` + the
+  kernel `Part` re-dispatch seam (`lz[[i]]`).
 - [ ] Batch 4 — guide section + reference regen + close-out.
 
 **(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`

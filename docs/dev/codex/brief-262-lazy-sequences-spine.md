@@ -3,18 +3,31 @@
 Implementation brief. First brief of the (c) lazy-sequences line. Read
 `docs/dev/lazy-sequences-design.md` in full before touching anything.
 
+> **REVISION 1 (director, 2026-07-18):** `Part` is DEFERRED from this
+> batch. Codex's first-pass seam mapping correctly found the blocker:
+> `Part` is a **kernel (rum-runtime) builtin** (`kernel_data/
+> structure_data/selectors.rs`), and `rum-stdlib` depends on
+> `rum-runtime` (one-directional), so the kernel's `Part` cannot call the
+> stdlib pull interpreter without a reverse dependency cycle. Verified.
+> Kernel-side realization needs a symbolic re-dispatch seam (kernel `Part`
+> on a `LazyList` emits a stdlib call) — its own design decision, a later
+> batch. This batch's three realizers (`Normal`/`Take`/`First`) are ALL
+> in rum-stdlib, so they call the interpreter with no cycle. Implement
+> those and the spine; do NOT touch `Part`.
+
 ## Goal
 
 When done: rum has an opaque, pure, immutable lazy-sequence value
 `LazyList[<descriptor>]` (a reserved inert head), a single generator
 `LazyRange` producing infinite arithmetic streams, a Rust pull
 interpreter that realizes a descriptor under the session iteration
-ceiling + cancellation, and four realizers taught to force a `LazyList`:
-`Normal`, `Take`, `First`, `Part`. `LazyList` is opaque (does not match
-`_List`, does not auto-force), all-`Pure`, and round-trips through
-session snapshot/restore re-deriving identically. This is the extensible
-spine; transformers and the broad set come in later batches. NO change
-to the default evaluation path or to list operations other than the four
+ceiling + cancellation, and three realizers taught to force a `LazyList`:
+`Normal`, `Take`, `First` (all rum-stdlib-side). `LazyList` is opaque
+(does not match `_List`, does not auto-force), all-`Pure`, and
+round-trips through session snapshot/restore re-deriving identically.
+This is the extensible spine; transformers, the broad set, and the
+kernel-side `Part`/`Rest` realizers come in later batches. NO change to
+the default evaluation path or to list operations other than the three
 named realizers.
 
 ## Context pointers
@@ -36,13 +49,13 @@ named realizers.
   `BuiltinSpec::new(name, summary).protected()` entry + an attribute
   mirror row — no shim, no eval function. `LazyList` is such a head.
 - Realizer seams to extend (locate the exact function; add a `LazyList`
-  branch at the top that does NOT perturb the existing List path):
+  branch at the top that does NOT perturb the existing List path). All
+  three are in rum-stdlib, so they can call the interpreter directly:
   - `Normal` → `crates/rum-stdlib/src/associations/basic.rs` (`eval_normal`, ~373).
   - `Take` → `crates/rum-stdlib/src/structure_ops/sequence/take_drop.rs` (`eval_take`, ~17).
   - `First` → `crates/rum-stdlib/src/structure_ops/surface.rs` (`eval_first`, ~85).
-  - `Part` → locate the `Part` implementation (structure_ops; the `[[i]]`
-    selector). If `Part` on an opaque head is intrusive to reach cleanly,
-    STOP and report the seam rather than forcing it.
+  - `Part` is DEFERRED (see REVISION 1) — do NOT touch
+    `kernel_data/structure_data/selectors.rs`.
 - The iteration ceiling + cancellation: find how `Do`/`Table`/`NestWhile`
   bound their loops and check cancellation (the per-session iteration
   budget + the cancel/interrupt check). The realize loop MUST use the
@@ -96,11 +109,6 @@ named realizers.
     "pull up to n, stop early if exhausted" shape anyway.
   - `First[LazyList[d]]` → pull 1, return the element; empty → `First`'s
     existing empty message.
-  - `Part[LazyList[d], i]` (i a positive Integer, 1-based) → pull i,
-    return the i-th; out of range on a finite stream → `Part`'s existing
-    range message. Negative/other Part specs on a `LazyList` → fail
-    closed with the existing Part message (do NOT try to support
-    from-the-end indexing on a lazy stream).
 - Every realizer branch is entered ONLY when the argument's head is
   `LazyList`; the existing List/Association code path is byte-unchanged.
 
@@ -137,8 +145,8 @@ named realizers.
   - `crates/rum-stdlib/src/associations/basic.rs` (`eval_normal`),
     `crates/rum-stdlib/src/structure_ops/surface.rs` (`eval_first`),
     `crates/rum-stdlib/src/structure_ops/sequence/take_drop.rs`
-    (`eval_take`), and the `Part` implementation — each gains ONE
-    `LazyList` branch.
+    (`eval_take`) — each gains ONE `LazyList` branch. (NOT `Part` —
+    deferred; do not touch `kernel_data/structure_data/selectors.rs`.)
   - Tests: a new `crates/rum-stdlib/src/tests/lazy.rs` (or the closest
     existing tests module pattern) + wiring; and ONE snapshot round-trip
     test in the runtime tests where session snapshot/restore is already
@@ -159,16 +167,16 @@ named realizers.
 ## Deliverable
 
 - `LazyList` opaque value + `LazyRange` (three infinite forms) + the pull
-  interpreter (one arm, extensible) + `Normal`/`Take`(+`UpTo`)/`First`/
-  `Part` realizer branches.
+  interpreter (one arm, extensible) + `Normal`/`Take`(+`UpTo`)/`First`
+  realizer branches.
 - Catalog + attribute-mirror registration (reference regenerates cleanly;
   vocabulary test green).
 - Tests: opaque semantics (matches `_LazyList` not `_List`; non-realizer
-  ops do not force), realizer correctness (`Take`/`First`/`Part` on an
-  infinite `LazyRange`), `Normal`-on-infinite fail-closed
-  (`TerminatedEvaluation`, bounded, does not hang), rendering, structural
-  equality, snapshot round-trip re-derive.
-- If any structure-op microbench label (Take/First/Part/Normal neighbors)
+  ops do not force), realizer correctness (`Take`/`First` on an infinite
+  `LazyRange`), `Normal`-on-infinite fail-closed (`TerminatedEvaluation`,
+  bounded, does not hang), rendering, structural equality, snapshot
+  round-trip re-derive.
+- If any structure-op microbench label (Take/First/Normal neighbors)
   exists, the A/B rows before/after (these realizers are touched).
 
 ## rum / Rust pitfalls (read twice)
@@ -189,9 +197,9 @@ named realizers.
    element.
 6. One variable per measurement; rerun the same label + same-tier
    neighbors.
-7. Stop-loss is real: if `Part`-on-opaque or the ceiling reuse fights you
-   twice for the same reason, STOP and report the seam — do not keep
-   forcing it.
+7. Stop-loss is real: if the ceiling/cancellation reuse fights you twice
+   for the same reason, STOP and report the seam — do not keep forcing
+   it.
 
 ## Verification (MANDATORY — you run it; iterate to green)
 
@@ -200,8 +208,8 @@ cargo fmt --check
 cargo test --workspace
 ```
 
-Then, because the four realizers (`eval_normal`/`eval_take`/`eval_first`/
-`Part`) are touched, run the microbench A/B and paste the structure-op /
+Then, because the three realizers (`eval_normal`/`eval_take`/`eval_first`)
+are touched, run the microbench A/B and paste the structure-op /
 realizer label rows + their same-tier neighbors:
 
 ```
@@ -214,7 +222,7 @@ Also paste, as live `rum-cli` probes, the verbatim output of:
 - `MatchQ[LazyRange[1, 1], _List]` → `False`;
   `MatchQ[LazyRange[1, 1], _LazyList]` → `True`.
 - `Take[LazyRange[10, 5], 3]` → `{10, 15, 20}`.
-- `First[LazyRange[7, 2]]` → `7`; `LazyRange[1, 1][[4]]` → `4`.
+- `First[LazyRange[7, 2]]` → `7`.
 - `Normal[LazyRange[1, 1]]` → a `TerminatedEvaluation[...]` (fail-closed,
   returns promptly).
 - The render of `LazyRange[1, 1]` (shows `LazyList[LazyRange[1, 1]]`, no
@@ -244,5 +252,4 @@ Also paste, as live `rum-cli` probes, the verbatim output of:
    per-label A/B rows, the live probes above).
 3. Verdict — realizer before/after rows + any neighbor checked; confirm
    opaque semantics and the fail-closed infinite `Normal`.
-4. Stop-loss / open questions (empty if none) — in particular the `Part`
-   seam if it was awkward.
+4. Stop-loss / open questions (empty if none).
