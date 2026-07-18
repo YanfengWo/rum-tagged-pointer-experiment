@@ -139,6 +139,33 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
+- **LAZY SEQUENCES + SEALED SCOPING LINE — (c) COMPLETE, (d) NEXT
+  (2026-07-18; user ruling; two WL15-survey outcomes, design-first, full
+  ambition; queue in TODO.md §ACTIVE PLAN; design docs
+  `docs/dev/lazy-sequences-design.md` + `sealed-scoping-design.md`;
+  memory `lazy-and-sealed-scoping-line.md`).** Sequencing: (c) first (low
+  risk), then (d) (touches symbol resolution). **(c) LAZY PURE SEQUENCES
+  — COMPLETE (briefs 262-267):** 12 lazy heads (`LazyList`/`LazyRange`/
+  `LazyMap`/`LazySelect`/`LazyTake`/`LazyDrop`/`LazyTable`/`LazyNestList`/
+  `LazyFoldList`/`LazySubsets`/`LazyTuples`/`LazyPermutations`) + the
+  kernel `Part` symbolic re-dispatch seam (`lz[[i]]` →
+  `self.evaluate(First[LazyDrop[lz, i-1]])`, no reverse crate dep) + a
+  folk eager `Permutations`. Opaque `LazyList` (`{HoldAllComplete,
+  Protected}`) over a per-element pull `PullStepper` (source/transformer
+  arms; ceiling+cancel charged at the source → infinite/huge spaces fail
+  closed, never hang); all `Pure`, zero new capability, snapshot
+  re-derives (no memo in v1); reference 621→634; guide `evaluation.md`
+  §Lazy Sequences. The STATEFUL half (`IncrementalObject`/`NextValue`
+  cursors) is CLOSED WON'T-DO in-kernel (downstream pkg only if pulled).
+  Codex stop-lossed 3× on my brief scope/ripple omissions (Part
+  cross-crate; `structure_ops/mod.rs` re-export) — clean each time,
+  revise+redispatch. **NEXT: (d) SEALED SCOPING** — private = real
+  encapsulation (Module identity-seal kept OUT of `symbol_generations` →
+  unforgeable vs `ToExpression`/`Symbol[]`); hidden-by-default
+  introspection (Diagnostic reveals); full three-tier Public/Package/
+  Private; wrapper `DefinePackage` form; loader half stays rum-fs. Design
+  ready; first brief opens with grounding (core symbol-resolution path —
+  gate watches default-path cost).
 - **CLEANUP + MESSAGE-REGISTRY LINE — COMPLETE (2026-07-17 → 07-18;
   user ruling 2026-07-17; queue in TODO.md §ACTIVE PLAN). All five
   items closed:** (1) message-tag registry + docgen — briefs 243,
@@ -170,9 +197,10 @@ rather than duplicating them.
   and the embedding parked tail (background-eval helper, per-request
   rollback API, lighter checkpoint). Standing Engineering Debt stays a
   record of known limitations, not a queue. fs/os/net stay deferred
-  until after publication. **NEXT DIRECTION: undecided — awaiting a
-  user call in the next session.** Memory:
-  `message-registry-cleanup-line.md`, `wl15-wfr-pass-line.md`.
+  until after publication. **NEXT DIRECTION decided 2026-07-18: the lazy
+  sequences + sealed scoping line (top of this section) — (c) done, (d)
+  next.** Memory: `message-registry-cleanup-line.md`,
+  `wl15-wfr-pass-line.md`.
 - **RELEASE TRANSFORMATION LINE — COMPLETE (2026-07-04 → 07-06).** `main`
   itself was transformed into release shape with full history kept (no
   remote; endpoint = clean tree + bundle cold backup; publication mechanics
