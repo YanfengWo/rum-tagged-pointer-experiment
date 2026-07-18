@@ -44,8 +44,14 @@ cancel (fail-closed on infinite); snapshot round-trips for free
   `LazySelect` fails closed in 0.11s); nested `f[x]`/`pred[x]` errors
   propagate. `LazyTake` = first finite lazy stream (Normal-on-exhaustion
   now exercised). Reference 623→627; workspace green; probes reproduced.
-- [ ] Batch 2b — `LazyTable[body, {i, …}]` (held-body generator +
-  iterator-variable binding; the one non-transformer of the batch).
+- [x] Batch 2b — `LazyTable[body, {i, …}]`. **DONE (brief-264, 827d6b2):**
+  pure desugaring onto 2a primitives —
+  `LazyList[LazyTake[LazyMap[Function[i, body], LazyRange[imin, step]],
+  count]]`; no new stepper arm, no kernel iteration seam; `HoldAll` body
+  bound lexically via `Function` (once per realized element; held-body
+  ordering `{0,{1,2,3},3}` proven); empty range → `List[]`; step 0 /
+  non-rational / bad spec fail closed. Reference 627→628; workspace
+  green. **BATCH 2 CLOSED.**
 - [ ] Batch 3 — broad combinatorial/streaming: `LazySubsets`/
   `LazyTuples`/`LazyPermutations`/`LazyFoldList`/`LazyNestList` + the
   kernel `Part` re-dispatch seam (`lz[[i]]`).
