@@ -3,7 +3,58 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## ACTIVE PLAN — cleanup + message-registry line (user ruling 2026-07-17)
+## ACTIVE PLAN — lazy sequences + sealed scoping line (user ruling 2026-07-18)
+
+Two parallel WL15-survey outcomes, both design-first, both taken to full
+ambition. Sequencing (user 2026-07-18): **(c) first** (new cold symbols,
+no core-path change, low risk), then **(d)** (touches symbol resolution,
+higher risk). Each batch gates before the next.
+
+Design docs: [docs/dev/lazy-sequences-design.md](./docs/dev/lazy-sequences-design.md),
+[docs/dev/sealed-scoping-design.md](./docs/dev/sealed-scoping-design.md).
+
+**(c) Lazy PURE sequences** — the pure half only; the stateful half
+(`IncrementalObject`/`NextValue` cursors, external-source streaming) is
+CLOSED WON'T-DO in the kernel (downstream package only if ever pulled).
+Rulings: opaque `LazyList` head (not list-transparent); broad v1 set.
+Design: `LazyList[<descriptor>]` reserved head (`{HoldAllComplete,
+Protected}`, inert value) over a pull-based descriptor tree + Rust pull
+interpreter; realizers force to List/element, `Lazy*` transformers stay
+lazy; all `Capability::Pure`; realize loop under the iteration ceiling +
+cancel (fail-closed on infinite); snapshot round-trips for free
+(re-derive, no memo in v1).
+
+- [ ] Batch 1 — mechanism (spine): `LazyList` + descriptor tree + pull
+  interpreter + `LazyRange` + realizers (`Normal`/`Take`/`First`/`Rest`/
+  `Part`) + opaque semantics + ceiling/cancel + snapshot round-trip.
+- [ ] Batch 2 — transformers: `LazyMap`/`LazySelect`/`LazyTake`/
+  `LazyDrop`/`LazyTable`.
+- [ ] Batch 3 — broad combinatorial/streaming: `LazySubsets`/
+  `LazyTuples`/`LazyPermutations`/`LazyFoldList`/`LazyNestList`.
+- [ ] Batch 4 — guide section + reference regen + close-out.
+
+**(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`
+downstream, never kernel). Ruling: **private = REAL encapsulation**
+(kernel-enforced, not a naming convention); hidden-by-default
+introspection; full three-tier; wrapper declaration form. Design:
+Public/Package = honest name-resolvable conventions; **Private =
+identity-sealed via the Module-over-source-unit model** (fresh identity,
+body rewritten, identity kept OUT of `symbol_generations` — covers
+`ToExpression`/`Symbol[]`/string-name forgery uniformly); introspection
+hidden unless `Capability::Diagnostic`. Neither line adds a capability.
+Declaration surface = wrapper form `DefinePackage["`Pkg`",
+Public[{...}], PackageScope[{...}], body...]`; host seam deferred to a
+consumer.
+
+- [ ] Batch 1 — mechanism (spine): registration form + two-pass scan +
+  private identity-sealing + Public/Package/Private resolution +
+  forgery-path closure with tests.
+- [ ] Batch 2 — introspection hidden-by-default + `Diagnostic` reveal +
+  name-existence hiding.
+- [ ] Batch 3 — snapshot round-trip + `Definition` display + guide +
+  close-out.
+
+## COMPLETE — cleanup + message-registry line (user ruling 2026-07-17)
 
 Queue, in order; each item gates before the next starts:
 
@@ -591,17 +642,16 @@ string-pattern surface. Batches, evidence-ranked:
 - [x] CLOSED WON'T-DO (user ruling 2026-07-17; was "candidates parked"):
   `ByteArray` depth audit; compression codecs; unicode normalization;
   ipaddress folk; fuzzing; codec follow-ons.
-- [ ] WL15 survey outcomes (2026-07-07, docs/dev/wl15-core-survey.md):
-  (a) `SubValuesHoldAll`-equivalent — worth doing, FROZEN until the
-  perf moratorium lifts (argument-evaluation path); design with the
-  kernel units 8-10 audit. (b) Structured-exceptions line
-  (ThrowException/CatchExceptions-style, folk scope) — design-first
-  candidate, pending user green light. (c) Incremental/lazy
-  collections — parked (stateful handles vs snapshot/reset).
-  (d) Structured Package Format: loader half = rum-fs territory
-  (never kernel); scoping half (declarative Public/Package/Private,
-  private-by-default per source unit) = required design input for the
-  unit-10 package-surface audit; relevant to dun plugins.
+- [~] WL15 survey outcomes (2026-07-07, docs/dev/wl15-core-survey.md):
+  (a) `SubValuesHoldAll`-equivalent — **DONE** (brief-255, wl15/wfr
+  batch 2a). (b) Structured-exceptions line — **DONE** (brief-259,
+  wl15/wfr batch 3a). (c) Incremental/lazy collections — the PURE half
+  is the ACTIVE PLAN line above (user 2026-07-18); the STATEFUL half
+  (`IncrementalObject`/`NextValue` cursors) is CLOSED WON'T-DO in the
+  kernel (downstream package only if ever pulled). (d) Structured
+  Package Format: loader half = rum-fs territory (never kernel); the
+  scoping half is the ACTIVE PLAN line above (real-encapsulation
+  private, user 2026-07-18); relevant to dun plugins.
 - [ ] WFR survey (2026-07-07, docs/dev/wfr-core-survey.md; idea-level
   absorption only, sources never read): unit-2 batch candidates
   `SelectPositions`/`Duplicates`/`BinarySearch`; unit-3 candidates
