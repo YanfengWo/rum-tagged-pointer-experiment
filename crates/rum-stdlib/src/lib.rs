@@ -48,7 +48,10 @@ pub fn install_core(session: &mut Session) {
     for spec in catalog::PREDICATE_BUILTINS {
         session.register_builtin(*spec);
     }
-    for spec in catalog::ASSOCIATION_BUILTINS {
+    for spec in catalog::ASSOCIATION_CORE_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::ASSOCIATION_TRANSFORM_BUILTINS {
         session.register_builtin(*spec);
     }
     #[cfg(feature = "hash")]
@@ -103,10 +106,19 @@ pub fn install_core(session: &mut Session) {
     for spec in catalog::SCHEMA_BUILTINS {
         session.register_builtin(*spec);
     }
-    for spec in catalog::STRING_BUILTINS {
+    for spec in catalog::STRING_CORE_BUILTINS {
         session.register_builtin(*spec);
     }
-    for spec in catalog::STRUCTURE_BUILTINS {
+    for spec in catalog::STRING_TEXT_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::STRING_MATCH_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::STRUCTURE_CORE_BUILTINS {
+        session.register_builtin(*spec);
+    }
+    for spec in catalog::STRUCTURE_ORDERING_BUILTINS {
         session.register_builtin(*spec);
     }
     for spec in catalog::TOML_BUILTINS {
