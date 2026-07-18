@@ -65,11 +65,17 @@ Queue, in order; each item gates before the next starts:
        evaluates nothing, application byte-parity with direct call
        (validation-time resolution is pre-existing on both forms).
        Workspace 1543/0; A/B clean. One revision (parity-contract probe).
-     - [ ] 2c `ReplaceAllUnheld` — separate builtin (C1); draft
-       brief-258 ready.
+     - [x] 2c `ReplaceAllUnheld` — separate builtin (brief-258,
+       48e909f): evaluates target first, then a structural descent mask
+       skips held arg positions (original pre-rewrite head attributes;
+       compound-head SubValuesHoldAll honored). ReplaceAll byte-
+       unchanged. Workspace 1547/0; A/B replaceall-simple -2.53%
+       (clean). Director completed the one vocabulary-mirror line Codex
+       stop-lossed on. **BATCH 2 CLOSED.**
    - [ ] Batch 3 — structured exceptions: contract doc
      `docs/dev/structured-exceptions-contract.md` → user green light on
-     E1-E6 → 3a core, 3b polish/docs.
+     E1-E6 → 3a core, 3b polish/docs. **NEXT: awaiting user green light
+     on E1-E6.**
 
 **WON'T-DO ruling (user 2026-07-17): the parked pools are CLOSED, not
 parked.** Stdlib parked candidates (`ByteArray` depth audit, compression

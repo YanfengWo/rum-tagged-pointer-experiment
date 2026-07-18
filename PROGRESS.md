@@ -1212,3 +1212,24 @@ this batch: file ownership must be opened-and-verified not name-grepped
 (brief-256 two stop-losses); equivalence contracts pin A==B side-by-side
 not "both have property P" (brief-257 one stop-loss). Both recorded in
 [[brief-may-list-must-cover-mechanical-ripple]].
+
+## 2026-07-18 — wl15/wfr batch 2 CLOSED: ReplaceAllUnheld (brief-258)
+
+2c landed as a separate builtin (ruling C1, 48e909f): ReplaceAllUnheld
+evaluates its target first (mirror ReplaceAll), then traverses the
+evaluated tree with a structural descent mask that skips held argument
+positions. The mask reads the ORIGINAL pre-rewrite head attributes and
+honors compound-head SubValuesHoldAll (brief-255 consistency);
+ReplaceAll's own path is byte-unchanged (the mask branch short-circuits
+on the source discriminant). Operator form via one line in
+rewrite_operator_symbol. Workspace 1547/0; A/B 3-pair interleaved with
+replaceall-simple as the hard veto — -2.53% (faster), tier flat-to-
+better, inside the control noise floor. Codex correctly stop-lossed on
+a missing stdlib_attributes.rs vocabulary-mirror line (new-builtin
+ripple I omitted from MAY); it left the complete correct implementation
+in the tree, so the director added that one mechanical line and ran the
+full gate rather than waste a re-dispatch. Lesson recorded in
+[[brief-may-list-must-cover-mechanical-ripple]]. BATCH 2 (the hold half)
+now fully closed: 2a SubValuesHoldAll + 2b-I mutation forms + 2b-II
+schema forms + 2c ReplaceAllUnheld. Remaining in the wl15/wfr pass:
+batch 3 structured exceptions, pending user green light on E1-E6.
