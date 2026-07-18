@@ -753,3 +753,205 @@ fn snapshot_roundtrip_rederives_lazy_nest_and_fold_descriptors() {
         "List[10, 11, 13, 16]"
     );
 }
+
+#[test]
+fn lazy_subsets_matches_eager_order_and_edges() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "LazySubsets[{a, b, c}]"),
+        "LazyList[LazySubsets[List[a, b, c]]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Normal[LazySubsets[{a, b, c}]]"),
+        "List[List[], List[a], List[b], List[c], List[a, b], List[a, c], List[b, c], List[a, b, c]]"
+    );
+    for source in [
+        "Normal[LazySubsets[{a, b, c}]] === Subsets[{a, b, c}]",
+        "Normal[LazySubsets[{}]] === Subsets[{}]",
+        "Normal[LazySubsets[{a}]] === Subsets[{a}]",
+    ] {
+        assert_eq!(eval_text(&mut session, source), "True", "source {source}");
+    }
+    assert_eq!(
+        eval_text(&mut session, "Attributes[LazySubsets]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn lazy_subsets_large_take_is_lazy_and_opaque() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "Take[LazySubsets[Range[40]], 3]"),
+        "List[List[], List[1], List[2]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazySubsets[{1, 2}], _LazyList]"),
+        "True"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazySubsets[{1, 2}], _List]"),
+        "False"
+    );
+}
+
+#[test]
+fn lazy_tuples_matches_eager_order_and_edges() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_text(&mut session, "LazyTuples[{a, b}, 2]"),
+        "LazyList[LazyTuples[List[List[a, b], List[a, b]]]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Normal[LazyTuples[{a, b}, 2]]"),
+        "List[List[a, a], List[a, b], List[b, a], List[b, b]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Normal[LazyTuples[{{1, 2}, {3, 4}}]]"),
+        "List[List[1, 3], List[1, 4], List[2, 3], List[2, 4]]"
+    );
+    for source in [
+        "Normal[LazyTuples[{a, b}, 2]] === Tuples[{a, b}, 2]",
+        "Normal[LazyTuples[{{1, 2}, {3, 4}}]] === Tuples[{{1, 2}, {3, 4}}]",
+        "Normal[LazyTuples[{a, b}, 0]] === Tuples[{a, b}, 0]",
+        "Normal[LazyTuples[{}]] === Tuples[{}]",
+        "Normal[LazyTuples[{{1, 2}, {}}]] === Tuples[{{1, 2}, {}}]",
+    ] {
+        assert_eq!(eval_text(&mut session, source), "True", "source {source}");
+    }
+    assert_eq!(
+        eval_text(&mut session, "Normal[LazyTuples[{a, b}, 0]]"),
+        "List[List[]]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Normal[LazyTuples[{{1, 2}, {}}]]"),
+        "List[]"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazyTuples[{a, b}, 2], _LazyList]"),
+        "True"
+    );
+    assert_eq!(
+        eval_text(&mut session, "MatchQ[LazyTuples[{a, b}, 2], _List]"),
+        "False"
+    );
+    assert_eq!(
+        eval_text(&mut session, "Attributes[LazyTuples]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn huge_lazy_combinatorial_spaces_fail_closed_at_iteration_ceiling() {
+    let mut session = core_session();
+    session.set_iteration_work_limit(3);
+
+    for source in [
+        "Normal[LazySubsets[Range[40]]]",
+        "Normal[LazyTuples[{a, b}, 40]]",
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(
+            outcome.value.to_string(),
+            "TerminatedEvaluation[\"IterationWorkLimit\"]",
+            "source {source}"
+        );
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == "General" && message.tag == "reslim"),
+            "source {source}"
+        );
+    }
+    assert_eq!(eval_text(&mut session, "1 + 1"), "2");
+}
+
+#[test]
+fn snapshot_roundtrip_rederives_lazy_combinatorial_descriptors() {
+    let mut source = core_session();
+    assert_eq!(
+        eval_text(
+            &mut source,
+            "subsets = LazySubsets[{a, b, c}]; tuples = LazyTuples[{{1, 2}, {3, 4}}]"
+        ),
+        "LazyList[LazyTuples[List[List[1, 2], List[3, 4]]]]"
+    );
+    let snapshot = source.snapshot_definitions_source();
+
+    let mut restored = core_session();
+    restored
+        .eval_script(&snapshot)
+        .expect("lazy combinatorial descriptors should restore");
+
+    assert_eq!(
+        eval_text(&mut restored, "subsets"),
+        "LazyList[LazySubsets[List[a, b, c]]]"
+    );
+    assert_eq!(
+        eval_text(&mut restored, "Normal[subsets] === Subsets[{a, b, c}]"),
+        "True"
+    );
+    assert_eq!(
+        eval_text(&mut restored, "tuples"),
+        "LazyList[LazyTuples[List[List[1, 2], List[3, 4]]]]"
+    );
+    assert_eq!(
+        eval_text(&mut restored, "Normal[tuples] === Tuples[{{1, 2}, {3, 4}}]"),
+        "True"
+    );
+}
+
+#[test]
+fn lazy_combinatorial_builders_reject_invalid_inputs_without_partial_values() {
+    let mut session = core_session();
+
+    for (source, expected, symbol, tag) in [
+        ("LazySubsets[x]", "LazySubsets[x]", "LazySubsets", "argform"),
+        (
+            "LazySubsets[{}, 1]",
+            "LazySubsets[List[], 1]",
+            "LazySubsets",
+            "argx",
+        ),
+        ("LazyTuples[x]", "LazyTuples[x]", "LazyTuples", "argform"),
+        (
+            "LazyTuples[{{1}, x}]",
+            "LazyTuples[List[List[1], x]]",
+            "LazyTuples",
+            "argform",
+        ),
+        (
+            "LazyTuples[x, 2]",
+            "LazyTuples[x, 2]",
+            "LazyTuples",
+            "argform",
+        ),
+        (
+            "LazyTuples[{a, b}, -1]",
+            "LazyTuples[List[a, b], -1]",
+            "LazyTuples",
+            "argform",
+        ),
+        ("LazyTuples[]", "LazyTuples[]", "LazyTuples", "argx"),
+        (
+            "LazyTuples[{a}, 1, 2]",
+            "LazyTuples[List[a], 1, 2]",
+            "LazyTuples",
+            "argx",
+        ),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "source {source}");
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == symbol && message.tag == tag),
+            "source {source}"
+        );
+    }
+}

@@ -101,6 +101,22 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
         },
     ])
     .protected(),
+    BuiltinSpec::ordinary(
+        "LazySubsets",
+        "Enumerates the subsets of a list lazily in size-major, index-lexicographic order.",
+        lazy::eval_lazy_subsets,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected exactly 1 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a List",
+        },
+    ])
+    .protected(),
     BuiltinSpec::ordinary_with_hold(
         "LazyTable",
         "Builds a lazy arithmetic table whose held body evaluates once per realized element.",
@@ -131,6 +147,22 @@ pub(crate) const LAZY_BUILTINS: &[BuiltinSpec] = &[
         BuiltinMessageSpec {
             tag: "argform",
             template: "expected a LazyList and a non-negative integer or UpTo[n]",
+        },
+    ])
+    .protected(),
+    BuiltinSpec::ordinary(
+        "LazyTuples",
+        "Enumerates repeated tuples or a list-of-lists cartesian product lazily with the last index varying fastest.",
+        lazy::eval_lazy_tuples,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argx",
+            template: "expected 1 or 2 argument(s), got `1`",
+        },
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a list of lists, or a list and a non-negative integer",
         },
     ])
     .protected(),

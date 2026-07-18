@@ -6,7 +6,7 @@ use std::sync::{
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, expr_as_exact_rational, expr_as_non_negative_usize, expr_as_symbol,
-    is_system_symbol_name, system_expr, truthiness_symbol,
+    is_system_symbol_name, list_items, system_expr, truthiness_symbol,
 };
 
 #[derive(Clone, Copy)]
@@ -59,6 +59,16 @@ enum PullStepper {
         current: Rational,
         step: Rational,
     },
+    Subsets {
+        elements: Vec<Expr>,
+        k: usize,
+        combo: Vec<usize>,
+    },
+    Tuples {
+        inner_lists: Vec<Expr>,
+        digits: Vec<usize>,
+        exhausted: bool,
+    },
     NestList {
         function: Expr,
         current: Expr,
@@ -99,6 +109,40 @@ impl PullStepper {
                 let value = Expr::rational(current.clone());
                 *current = current.add(step);
                 Ok(Some(value))
+            }
+            Self::Subsets { elements, k, combo } => {
+                if *k > elements.len() {
+                    return Ok(None);
+                }
+                ctx.charge_source_pull()?;
+                let subset = Expr::call(
+                    system_expr("List"),
+                    combo.iter().map(|index| elements[*index].clone()).collect(),
+                );
+                advance_subset_cursor(elements.len(), k, combo);
+                Ok(Some(subset))
+            }
+            Self::Tuples {
+                inner_lists,
+                digits,
+                exhausted,
+            } => {
+                if *exhausted {
+                    return Ok(None);
+                }
+                ctx.charge_source_pull()?;
+                let tuple = Expr::call(
+                    system_expr("List"),
+                    inner_lists
+                        .iter()
+                        .zip(digits.iter())
+                        .map(|(list, digit)| {
+                            list_items(list).expect("tuple factors were validated")[*digit].clone()
+                        })
+                        .collect(),
+                );
+                *exhausted = advance_tuple_cursor(inner_lists, digits);
+                Ok(Some(tuple))
             }
             Self::NestList { function, current } => {
                 ctx.charge_source_pull()?;
@@ -302,6 +346,24 @@ pub(crate) fn eval_lazy_select(
     )))
 }
 
+pub(crate) fn eval_lazy_subsets(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let [list] = args else {
+        return Ok(session.invalid_call_with_exact_arg_count("LazySubsets", args, 1));
+    };
+    if list_items(list).is_none() {
+        return Ok(session.invalid_call_with_arg_form("LazySubsets", args, "expected a List"));
+    }
+
+    Ok(wrap_descriptor(Expr::call(
+        system_expr("LazySubsets"),
+        vec![list.clone()],
+    )))
+}
+
 pub(crate) fn eval_lazy_table(
     session: &mut Session,
     _head: &Expr,
@@ -380,6 +442,52 @@ pub(crate) fn eval_lazy_take(
     Ok(wrap_descriptor(Expr::call(
         system_expr("LazyTake"),
         vec![descriptor.clone(), Expr::integer(BigInt::from(count))],
+    )))
+}
+
+pub(crate) fn eval_lazy_tuples(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    let list_of_lists = match args {
+        [list_of_lists]
+            if list_items(list_of_lists)
+                .is_some_and(|items| items.iter().all(|item| list_items(item).is_some())) =>
+        {
+            list_of_lists.clone()
+        }
+        [list, count] => {
+            let (Some(_), Some(count)) = (list_items(list), expr_as_non_negative_usize(count))
+            else {
+                return Ok(session.invalid_call_with_arg_form(
+                    "LazyTuples",
+                    args,
+                    "expected a list of lists, or a list and a non-negative integer",
+                ));
+            };
+            Expr::call(system_expr("List"), vec![list.clone(); count])
+        }
+        [_] => {
+            return Ok(session.invalid_call_with_arg_form(
+                "LazyTuples",
+                args,
+                "expected a list of lists, or a list and a non-negative integer",
+            ));
+        }
+        _ => {
+            return Ok(session.invalid_call_with_message(
+                "LazyTuples",
+                args,
+                "argx",
+                format!("expected 1 or 2 argument(s), got {}", args.len()),
+            ));
+        }
+    };
+
+    Ok(wrap_descriptor(Expr::call(
+        system_expr("LazyTuples"),
+        vec![list_of_lists],
     )))
 }
 
@@ -496,6 +604,42 @@ fn lazy_table_count(imin: &Rational, imax: &Rational, step: &Rational) -> Option
     expr_as_non_negative_usize(&Expr::integer(count))
 }
 
+fn advance_subset_cursor(item_count: usize, k: &mut usize, combo: &mut Vec<usize>) {
+    if *k == item_count {
+        *k += 1;
+        combo.clear();
+        return;
+    }
+
+    if let Some(index) = (0..combo.len())
+        .rev()
+        .find(|index| combo[*index] < item_count - *k + *index)
+    {
+        combo[index] += 1;
+        for next in index + 1..combo.len() {
+            combo[next] = combo[next - 1] + 1;
+        }
+    } else {
+        *k += 1;
+        *combo = (0..*k).collect();
+    }
+}
+
+fn advance_tuple_cursor(inner_lists: &[Expr], digits: &mut [usize]) -> bool {
+    for index in (0..digits.len()).rev() {
+        digits[index] += 1;
+        if digits[index]
+            < list_items(&inner_lists[index])
+                .expect("tuple factors were validated")
+                .len()
+        {
+            return false;
+        }
+        digits[index] = 0;
+    }
+    true
+}
+
 fn stepper_from_descriptor(descriptor: &Expr) -> Option<PullStepper> {
     let Expr::Call { head, args } = descriptor else {
         return None;
@@ -508,6 +652,33 @@ fn stepper_from_descriptor(descriptor: &Expr) -> Option<PullStepper> {
         return Some(PullStepper::Range {
             current: expr_as_exact_rational(start)?,
             step: expr_as_exact_rational(step)?,
+        });
+    }
+    if is_system_symbol_name(head, "LazySubsets") {
+        let [list] = args.as_slice() else {
+            return None;
+        };
+        return Some(PullStepper::Subsets {
+            elements: list_items(list)?.to_vec(),
+            k: 0,
+            combo: Vec::new(),
+        });
+    }
+    if is_system_symbol_name(head, "LazyTuples") {
+        let [list_of_lists] = args.as_slice() else {
+            return None;
+        };
+        let inner_lists = list_items(list_of_lists)?;
+        if !inner_lists.iter().all(|list| list_items(list).is_some()) {
+            return None;
+        }
+        let exhausted = inner_lists
+            .iter()
+            .any(|list| list_items(list).is_some_and(<[Expr]>::is_empty));
+        return Some(PullStepper::Tuples {
+            digits: vec![0; inner_lists.len()],
+            inner_lists: inner_lists.to_vec(),
+            exhausted,
         });
     }
     if is_system_symbol_name(head, "LazyNestList") {

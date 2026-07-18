@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 630
+Builtin count: 632
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2712,6 +2712,16 @@ Builds a lazy sequence retaining source elements whose predicate returns True.
   - LazySelect::argx — expected exactly 2 argument(s), got `1`
   - LazySelect::argform — expected a LazyList as the second argument
 
+### LazySubsets
+
+Enumerates the subsets of a list lazily in size-major, index-lexicographic order.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazySubsets::argx — expected exactly 1 argument(s), got `1`
+  - LazySubsets::argform — expected a List
+
 ### LazyTable
 
 Builds a lazy arithmetic table whose held body evaluates once per realized element.
@@ -2731,6 +2741,16 @@ Builds a finite lazy sequence capped by a non-negative element count.
 - Messages:
   - LazyTake::argx — expected exactly 2 argument(s), got `1`
   - LazyTake::argform — expected a LazyList and a non-negative integer or UpTo[n]
+
+### LazyTuples
+
+Enumerates repeated tuples or a list-of-lists cartesian product lazily with the last index varying fastest.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - LazyTuples::argx — expected 1 or 2 argument(s), got `1`
+  - LazyTuples::argform — expected a list of lists, or a list and a non-negative integer
 
 ### LeafCount
 
