@@ -8,6 +8,16 @@ Implementation brief. Sixth brief of the (c) lazy-sequences line. Read
 
 ## Goal
 
+> **REVISION 1 (director, 2026-07-18):** Codex correctly stop-lossed on a
+> scope omission — `catalog/structure.rs` registers via
+> `structure_ops::eval_X`, so a new `eval_permutations` in
+> `combinatorial_lists.rs` must be re-exported from
+> `structure_ops/mod.rs` (line ~30, the `pub(crate) use
+> combinatorial_lists::{…}` list). That file (and the same re-export for
+> the shared `next_permutation` helper if `lazy.rs` reaches it that way)
+> is now IN SCOPE for MECHANICAL re-export additions only. Nothing else in
+> `mod.rs` changes.
+
 Add the pair (user ruling 2026-07-18 — rum has no eager `Permutations`
 today): an eager `Permutations[list]` and a lazy `LazyPermutations[list]`,
 sharing ONE order so `Normal[LazyPermutations[l]] === Permutations[l]`.
@@ -73,6 +83,11 @@ arrangement.
   - `crates/rum-stdlib/src/structure_ops/combinatorial_lists.rs` —
     `eval_permutations` + the shared `next_permutation` helper (or put the
     helper where both eager and `lazy.rs` can reach it as `pub(crate)`).
+  - `crates/rum-stdlib/src/structure_ops/mod.rs` — MECHANICAL: add
+    `eval_permutations` (and the shared `next_permutation` helper if
+    `lazy.rs` reaches it here) to the `pub(crate) use
+    combinatorial_lists::{…}` re-export at ~line 30. No other change to
+    this file.
   - `crates/rum-stdlib/src/catalog/structure.rs` — `Permutations` catalog
     entry (`.protected()`; declared message tags).
   - `crates/rum-stdlib/src/lazy.rs` — `eval_lazy_permutations` shim + a
