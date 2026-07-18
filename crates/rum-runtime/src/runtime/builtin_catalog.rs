@@ -43,7 +43,9 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
                     + inert_heads::INERT_HEAD_BUILTINS.len()
                     + scoping::SCOPING_BUILTINS.len()
                     + rules::RULE_BUILTINS.len()
-                    + namespace::NAMESPACE_BUILTINS.len(),
+                    + namespace::NAMESPACE_VARIABLE_BUILTINS.len()
+                    + namespace::NAMESPACE_CONTEXT_BUILTINS.len()
+                    + namespace::NAMESPACE_SYMBOL_BUILTINS.len(),
             );
             specs.extend_from_slice(string_symbols::STRING_BUILTINS);
             specs.extend_from_slice(structure::STRUCTURE_BUILTINS);
@@ -53,7 +55,9 @@ pub fn core_builtin_specs() -> &'static [BuiltinSpec] {
             specs.extend_from_slice(inert_heads::INERT_HEAD_BUILTINS);
             specs.extend_from_slice(scoping::SCOPING_BUILTINS);
             specs.extend_from_slice(rules::RULE_BUILTINS);
-            specs.extend_from_slice(namespace::NAMESPACE_BUILTINS);
+            specs.extend_from_slice(namespace::NAMESPACE_VARIABLE_BUILTINS);
+            specs.extend_from_slice(namespace::NAMESPACE_CONTEXT_BUILTINS);
+            specs.extend_from_slice(namespace::NAMESPACE_SYMBOL_BUILTINS);
             specs
         })
         .as_slice()
