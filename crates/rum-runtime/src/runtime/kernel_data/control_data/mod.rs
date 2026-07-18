@@ -6,6 +6,7 @@ mod branching_loops;
 mod check_quiet;
 mod cleanup;
 mod confirmation;
+mod exceptions;
 mod failsafe;
 mod nonlocal;
 mod status;
@@ -22,6 +23,7 @@ pub enum ControlDataBuiltin {
     Assert,
     Break,
     Catch,
+    CatchExceptions,
     CheckAbort,
     CompoundExpression,
     Confirm,
@@ -32,6 +34,7 @@ pub enum ControlDataBuiltin {
     Continue,
     Do,
     Enclose,
+    ExceptionTypes,
     Exit,
     Failsafe,
     Failure,
@@ -39,6 +42,7 @@ pub enum ControlDataBuiltin {
     For,
     If,
     Product,
+    RegisterExceptionType,
     Return,
     Success,
     Sum,
@@ -46,6 +50,7 @@ pub enum ControlDataBuiltin {
     Table,
     TerminatedEvaluation,
     Throw,
+    ThrowException,
     Until,
     Which,
     While,
@@ -66,6 +71,7 @@ impl Session {
             ControlDataBuiltin::Assert => self.eval_assert(args),
             ControlDataBuiltin::Break => self.eval_break(head, args),
             ControlDataBuiltin::Catch => self.eval_catch(args),
+            ControlDataBuiltin::CatchExceptions => self.eval_catch_exceptions(args),
             ControlDataBuiltin::CheckAbort => self.eval_check_abort(args),
             ControlDataBuiltin::CompoundExpression => self.eval_compound_expression(args),
             ControlDataBuiltin::Confirm => self.eval_confirm(args),
@@ -76,6 +82,7 @@ impl Session {
             ControlDataBuiltin::Continue => self.eval_continue(head, args),
             ControlDataBuiltin::Do => self.eval_do(args),
             ControlDataBuiltin::Enclose => self.eval_enclose(args),
+            ControlDataBuiltin::ExceptionTypes => self.eval_exception_types(head, args),
             ControlDataBuiltin::Exit => self.eval_exit(args),
             ControlDataBuiltin::Failsafe => self.eval_failsafe(head, args),
             ControlDataBuiltin::Failure => self.eval_failure(head, args),
@@ -83,6 +90,9 @@ impl Session {
             ControlDataBuiltin::For => self.eval_for(args),
             ControlDataBuiltin::If => self.eval_if(args),
             ControlDataBuiltin::Product => self.eval_product(args),
+            ControlDataBuiltin::RegisterExceptionType => {
+                self.eval_register_exception_type(head, args)
+            }
             ControlDataBuiltin::Return => self.eval_return(head, args),
             ControlDataBuiltin::Success => self.eval_success(head, args),
             ControlDataBuiltin::Sum => self.eval_sum(args),
@@ -90,6 +100,7 @@ impl Session {
             ControlDataBuiltin::Table => self.eval_table(args),
             ControlDataBuiltin::TerminatedEvaluation => self.eval_terminated_evaluation(head, args),
             ControlDataBuiltin::Throw => self.eval_throw(head, args),
+            ControlDataBuiltin::ThrowException => self.eval_throw_exception(head, args),
             ControlDataBuiltin::Until => self.eval_until(args),
             ControlDataBuiltin::Which => self.eval_which(args),
             ControlDataBuiltin::While => self.eval_while(args),

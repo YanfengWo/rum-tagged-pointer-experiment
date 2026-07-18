@@ -25,6 +25,11 @@ impl Session {
         handled_error_checkpoint: usize,
     ) -> Result<(Expr, Option<EvalTerminationReason>), EvalError> {
         match self.finalize_top_level_control_flow(outcome) {
+            Err(error @ EvalError::ExceptionThrown { .. }) => {
+                let failure = uncaught_exception_failure(&error);
+                self.emit_non_loader_eval_message(handled_error_checkpoint, &error);
+                Ok((failure, None))
+            }
             Err(error) => match Self::terminated_evaluation_reason_for_top_level_error(&error) {
                 Some(reason) => {
                     let value = Expr::call(
@@ -335,4 +340,34 @@ impl Session {
                 }))
         })
     }
+}
+
+fn uncaught_exception_failure(error: &EvalError) -> Expr {
+    let EvalError::ExceptionThrown { exception } = error else {
+        unreachable!("uncaught exception failures require ExceptionThrown")
+    };
+    let Expr::Call { head, args } = exception else {
+        unreachable!("ExceptionThrown must carry an Exception object")
+    };
+    assert!(is_system_symbol_name(head, "Exception") && args.len() == 2);
+
+    Expr::call(
+        system_expr("Failure"),
+        vec![
+            Expr::string("UncaughtException"),
+            Expr::call(
+                system_expr("Association"),
+                vec![
+                    Expr::call(
+                        system_expr("Rule"),
+                        vec![Expr::string("Type"), args[0].clone()],
+                    ),
+                    Expr::call(
+                        system_expr("Rule"),
+                        vec![Expr::string("Payload"), args[1].clone()],
+                    ),
+                ],
+            ),
+        ],
+    )
 }

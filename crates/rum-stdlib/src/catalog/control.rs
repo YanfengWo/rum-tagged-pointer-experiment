@@ -336,6 +336,67 @@ pub(crate) const CONTROL_BUILTINS: &[BuiltinSpec] = &[
     .with_messages(&[
         ARGTU,
     ]).protected(),
+    BuiltinSpec::new(
+        "Exception",
+        "Represents a typed exception with an Association payload.",
+    ).protected(),
+    BuiltinSpec::ordinary(
+        "RegisterExceptionType",
+        "Registers a string exception type with an optional parent type.",
+        control_flow::eval_register_exception_type,
+    )
+    .with_messages(&[
+        ARGTU,
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "exception type and parent must be strings",
+        },
+        BuiltinMessageSpec {
+            tag: "reregister",
+            template: "The exception type is already registered with a different parent.",
+        },
+    ]).protected(),
+    BuiltinSpec::ordinary(
+        "ExceptionTypes",
+        "Returns registered exception types as sorted type-to-parent rules.",
+        control_flow::eval_exception_types,
+    )
+    .with_messages(&[
+        ARGX_EXACT,
+    ]).protected(),
+    BuiltinSpec::ordinary(
+        "ThrowException",
+        "Raises a registered typed exception with an optional Association payload.",
+        control_flow::eval_throw_exception,
+    )
+    .with_messages(&[
+        ARGTU,
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "exception type must be a string and payload must be an Association",
+        },
+        BuiltinMessageSpec {
+            tag: "unreg",
+            template: "The exception type is not registered.",
+        },
+        BuiltinMessageSpec {
+            tag: "nocatch",
+            template: "Uncaught exception returned to top level.",
+        },
+    ]).protected(),
+    BuiltinSpec::ordinary_with_hold(
+        "CatchExceptions",
+        "Catches typed exceptions and dispatches ordered ancestry-aware handler rules.",
+        HoldAttribute::HoldAll,
+        control_flow::eval_catch_exceptions,
+    )
+    .with_messages(&[
+        ARGTU,
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "handlers must be a List of rules",
+        },
+    ]).protected(),
     BuiltinSpec::ordinary(
         "Failure",
         "Represents a failure object with associated details in the current first-pass subset.",

@@ -55,6 +55,7 @@ impl Session {
             installed_system_own_values: self.installed_system_own_values.clone(),
             has_up_value_definitions: self.has_up_value_definitions,
             message_definitions: self.message_definitions.clone(),
+            exception_types: self.exception_types.clone(),
             next_generated_symbol_id: self.next_generated_symbol_id,
             trace_events: self.trace_events.clone(),
             trace_event_depths: self.trace_event_depths.clone(),
@@ -82,6 +83,7 @@ impl Session {
         self.installed_system_own_values = snapshot.installed_system_own_values;
         self.has_up_value_definitions = snapshot.has_up_value_definitions;
         self.message_definitions = snapshot.message_definitions;
+        self.exception_types = snapshot.exception_types;
         self.rebuild_message_symbol_counts();
         self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
         self.trace_events = snapshot.trace_events;
@@ -226,6 +228,14 @@ impl Session {
     pub(in crate::runtime) fn runtime_message_for_non_loader_eval_error(
         error: &EvalError,
     ) -> Option<RuntimeMessage> {
+        if let EvalError::ExceptionThrown { exception } = error {
+            return Some(RuntimeMessage {
+                symbol: "ThrowException".to_string(),
+                tag: "nocatch".to_string(),
+                text: format!("Uncaught {exception} returned to top level."),
+            });
+        }
+
         let tag = match error {
             EvalError::EvaluationCycleDetected { .. } => "passlim",
             EvalError::RecursionLimitExceeded { .. } => "reclim",

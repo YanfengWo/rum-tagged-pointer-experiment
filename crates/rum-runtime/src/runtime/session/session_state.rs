@@ -148,6 +148,7 @@ pub(in crate::runtime) struct LoaderSnapshot {
     pub(in crate::runtime) installed_system_own_values: SymbolSet,
     pub(in crate::runtime) has_up_value_definitions: bool,
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
+    pub(in crate::runtime) exception_types: BTreeMap<String, Option<String>>,
     pub(in crate::runtime) next_generated_symbol_id: u64,
     pub(in crate::runtime) trace_events: Vec<TraceEvent>,
     pub(in crate::runtime) trace_event_depths: Vec<usize>,
@@ -353,6 +354,8 @@ pub enum EvalError {
     Exit { code: i64 },
     #[error("{request}")]
     InputRequired { request: RuntimeInputRequest },
+    #[error("uncaught exception: {exception}")]
+    ExceptionThrown { exception: Expr },
 }
 
 impl Session {
@@ -395,6 +398,7 @@ impl Session {
             installed_system_own_values: SymbolSet::default(),
             has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),
+            exception_types: BTreeMap::new(),
             message_symbol_counts: SymbolCountMap::default(),
             next_generated_symbol_id: 0,
             resource_limits: ResourceLimits::default(),

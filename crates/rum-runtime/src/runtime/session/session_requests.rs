@@ -473,6 +473,9 @@ fn session_request_error_from_eval_error_with_source(
         EvalError::InputRequired { request } => SessionRequestError::InputRequired {
             request: request.clone(),
         },
+        EvalError::ExceptionThrown { exception } => SessionRequestError::Other {
+            message: format!("uncaught exception: {exception}"),
+        },
     }
 }
 

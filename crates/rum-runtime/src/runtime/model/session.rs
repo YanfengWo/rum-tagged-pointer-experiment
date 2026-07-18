@@ -58,6 +58,7 @@ pub struct Session {
     pub(in crate::runtime) installed_system_own_values: SymbolSet,
     pub(in crate::runtime) has_up_value_definitions: bool,
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
+    pub(in crate::runtime) exception_types: BTreeMap<String, Option<String>>,
     pub(in crate::runtime) message_symbol_counts: SymbolCountMap,
     pub(in crate::runtime) next_generated_symbol_id: u64,
     pub(in crate::runtime) resource_limits: ResourceLimits,

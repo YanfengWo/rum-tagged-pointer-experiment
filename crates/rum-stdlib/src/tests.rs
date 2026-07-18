@@ -164,6 +164,8 @@ mod stress_corpus;
 mod strings;
 #[path = "tests/structure_ops/mod.rs"]
 mod structure_ops;
+#[path = "tests/structured_exceptions.rs"]
+mod structured_exceptions;
 #[path = "tests/traversal.rs"]
 mod traversal;
 

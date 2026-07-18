@@ -242,6 +242,43 @@ pub(crate) fn eval_catch(
     dispatch(session, ControlDataBuiltin::Catch, head, args)
 }
 
+pub(crate) fn eval_catch_exceptions(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    dispatch(session, ControlDataBuiltin::CatchExceptions, head, args)
+}
+
+pub(crate) fn eval_throw_exception(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    dispatch(session, ControlDataBuiltin::ThrowException, head, args)
+}
+
+pub(crate) fn eval_register_exception_type(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    dispatch(
+        session,
+        ControlDataBuiltin::RegisterExceptionType,
+        head,
+        args,
+    )
+}
+
+pub(crate) fn eval_exception_types(
+    session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    dispatch(session, ControlDataBuiltin::ExceptionTypes, head, args)
+}
+
 pub(crate) fn eval_failure(
     session: &mut Session,
     head: &Expr,

@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 616
+Builtin count: 621
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -644,6 +644,16 @@ Evaluates an expression and intercepts matching Throw values.
 - Capability: `Pure`
 - Messages:
   - Catch::argtu — expected between `1` and `2` argument(s), got `3`
+
+### CatchExceptions
+
+Catches typed exceptions and dispatches ordered ancestry-aware handler rules.
+
+- Attributes: `HoldAll`, `Protected`
+- Capability: `Pure`
+- Messages:
+  - CatchExceptions::argtu — expected between `1` and `2` argument(s), got `3`
+  - CatchExceptions::argform — handlers must be a List of rules
 
 ### Catenate
 
@@ -1610,6 +1620,22 @@ Represents the current pattern exclusion head.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+
+### Exception
+
+Represents a typed exception with an Association payload.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+
+### ExceptionTypes
+
+Returns registered exception types as sorted type-to-parent rules.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - ExceptionTypes::argx — expected exactly `1` argument(s), got `2`
 
 ### Exit
 
@@ -4002,6 +4028,17 @@ Evaluates an expression and collects values emitted by Sow in the current first-
 - Messages:
   - Reap::argtu — expected between `1` and `2` argument(s), got `3`
 
+### RegisterExceptionType
+
+Registers a string exception type with an optional parent type.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - RegisterExceptionType::argtu — expected between `1` and `2` argument(s), got `3`
+  - RegisterExceptionType::argform — exception type and parent must be strings
+  - RegisterExceptionType::reregister — The exception type is already registered with a different parent.
+
 ### RegularExpression
 
 Represents the current regular-expression string-pattern wrapper.
@@ -5291,6 +5328,18 @@ Propagates a nonlocal value, optionally tagged for Catch matching.
 - Messages:
   - Throw::argtu — expected between `1` and `2` argument(s), got `3`
   - Throw::nocatch — Uncaught `1` returned to top level.
+
+### ThrowException
+
+Raises a registered typed exception with an optional Association payload.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - ThrowException::argtu — expected between `1` and `2` argument(s), got `3`
+  - ThrowException::argform — exception type must be a string and payload must be an Association
+  - ThrowException::unreg — The exception type is not registered.
+  - ThrowException::nocatch — Uncaught exception returned to top level.
 
 ### TimeConstrained
 

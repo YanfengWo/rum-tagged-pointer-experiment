@@ -150,6 +150,7 @@ mod scoping_unique;
 mod session_config;
 mod session_requests;
 mod structure_data;
+mod structured_exceptions;
 mod syntax_information_debug_catalog;
 mod syntax_information_lifecycle;
 mod thread_and_dispatch;
