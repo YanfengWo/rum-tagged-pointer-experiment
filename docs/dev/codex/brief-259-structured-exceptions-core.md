@@ -1,5 +1,26 @@
 # Brief 259 — structured exceptions core (wl15/wfr batch 3a)
 
+> **REVISION 1 (2026-07-18).** First run stop-lossed correctly: I said
+> "register the builtins in the kernel builtin_catalog", but control-
+> family builtins register in STDLIB and dispatch to kernel eval logic
+> via the `ControlDataBuiltin` enum. Director-verified the real pattern
+> (how `Throw`/`Catch` work) and corrected the registration sites below
+> — see "The builtins (corrected)". Kernel-side sites (EvalError
+> variant, registry field, E4 boundary) are unchanged. Registration
+> path now:
+> - kernel eval fns → NEW `kernel_data/control_data/exceptions.rs`;
+> - `ControlDataBuiltin` enum + dispatch → `control_data/mod.rs:19-100`
+>   (add 4 variants + 4 dispatch arms — the ONE exhaustive match,
+>   director-verified);
+> - stdlib shims → `rum-stdlib/src/control_flow.rs` (mirror
+>   `eval_throw` at `:229`, calling `dispatch(session,
+>   ControlDataBuiltin::X, head, args)`);
+> - stdlib catalog entries → `rum-stdlib/src/catalog/control.rs`
+>   (beside `Throw`/`Catch` at `:318-338`);
+> - attribute mirror → `builtin_catalog/stdlib_attributes.rs` (one
+>   `Spec::new` per head, alphabetical — the vocabulary test at
+>   `rum-stdlib/src/tests.rs:180` enforces it; the brief-258 lesson).
+
 ## Goal
 
 A folk structured-exception system with OBSERVABLY SEPARATE channels
@@ -68,16 +89,32 @@ propagates the new variant for free via `Err(error) => Err(error)`.
   `restore_loader_snapshot` (`session_helpers.rs:67-90`, assign it).
   That is the full lifecycle (empty + snapshot round-trip); no separate
   reset path exists.
-- **The builtins** go in a NEW kernel file
-  `crates/rum-runtime/src/runtime/kernel_data/control_data/exceptions.rs`
-  (mod-register it next to `nonlocal`/`cleanup` in
-  `kernel_data/control_data/mod.rs`), registered in the kernel
-  `builtin_catalog/` (locate the control-family catalog file the way
-  `Throw`/`Catch` are registered — `builtin_catalog/*.rs`; grep
-  `"Throw"`). Attributes: `Exception` `{Protected}`;
-  `CatchExceptions` `{HoldAll, Protected}` (like `Catch` — body +
-  handlers held); `ThrowException`/`RegisterExceptionType`/
-  `ExceptionTypes` ordinary `{Protected}` (args evaluate).
+- **The builtins (corrected — see REVISION 1)**. Control-family
+  builtins keep their eval logic in the kernel and register in stdlib
+  via `ControlDataBuiltin`. Five heads:
+  - `Exception` is INERT (no eval fn, no `ControlDataBuiltin` variant):
+    register `BuiltinSpec::new("Exception", "…").protected()` in
+    `rum-stdlib/src/catalog/control.rs`.
+  - The four ACTIVE heads (`ThrowException`, `CatchExceptions`,
+    `RegisterExceptionType`, `ExceptionTypes`) each get:
+    - a kernel eval fn in NEW
+      `kernel_data/control_data/exceptions.rs` (mod-register in
+      `control_data/mod.rs`'s `mod` list);
+    - a `ControlDataBuiltin` variant + a dispatch arm in
+      `control_data/mod.rs:19-100` (director-verified: the ONLY
+      exhaustive `ControlDataBuiltin` match);
+    - a thin shim in `rum-stdlib/src/control_flow.rs` (copy the
+      `eval_throw` shape at `:229`);
+    - a `BuiltinSpec` entry in `rum-stdlib/src/catalog/control.rs`
+      with its message declarations.
+  - Attributes (in the stdlib catalog entry AND the
+    `stdlib_attributes.rs` mirror — both required; the vocabulary test
+    `rum-stdlib/src/tests.rs:180` enforces agreement):
+    `Exception` `{Protected}`; `CatchExceptions` `{HoldAll, Protected}`
+    (like `Catch`); `ThrowException`/`RegisterExceptionType`/
+    `ExceptionTypes` `{Protected}` (args evaluate). Add the five
+    `Spec::new(...)` mirror rows in `stdlib_attributes.rs`,
+    alphabetically placed.
 
 ## Dispatch (write this contract exactly; it is a design decision)
 
@@ -131,11 +168,16 @@ stops at an unregistered parent as if it were a root child).
   - `crates/rum-runtime/src/runtime/session/session_eval.rs` (E4
     boundary)
   - NEW `crates/rum-runtime/src/runtime/kernel_data/control_data/exceptions.rs`
-    + its `mod` line in `kernel_data/control_data/mod.rs`
-  - the kernel `builtin_catalog/*.rs` file registering the control
-    family (the five new entries + their message declarations)
+    + its `mod` line AND the 4 enum variants + 4 dispatch arms in
+    `kernel_data/control_data/mod.rs`
+  - `crates/rum-runtime/src/runtime/builtin_catalog/stdlib_attributes.rs`
+    (5 `Spec::new` mirror rows — MECHANICAL, alphabetical)
+  - `crates/rum-stdlib/src/control_flow.rs` (4 shim fns)
+  - `crates/rum-stdlib/src/catalog/control.rs` (5 catalog entries +
+    message declarations)
   - `crates/rum-runtime/src/runtime/tests/` — a new test module + its
-    `mod` line in `tests/mod.rs`
+    `mod` line in `tests/mod.rs`; a `rum-stdlib` test module is fine
+    too if the probes live better there
   - `docs/reference/builtins.md` (regeneration output only)
 - MUST NOT touch: `Throw`/`Catch`/`WithCleanup`/`Enclose` eval code
   (their behavior is frozen; you only ADD the parallel channel and rely
