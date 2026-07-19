@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::scoping::packages::SourceUnit;
 
 use std::sync::{Arc, atomic::AtomicBool};
 
@@ -61,6 +62,9 @@ pub struct Session {
     pub(in crate::runtime) exception_types: BTreeMap<String, Option<String>>,
     pub(in crate::runtime) message_symbol_counts: SymbolCountMap,
     pub(in crate::runtime) next_generated_symbol_id: u64,
+    pub(in crate::runtime) sealed_units: Vec<SourceUnit>,
+    pub(in crate::runtime) next_sealed_symbol_id: u64,
+    pub(in crate::runtime) next_source_unit_epoch: u64,
     pub(in crate::runtime) resource_limits: ResourceLimits,
     pub(in crate::runtime) evaluation_depth: usize,
     pub(in crate::runtime) match_depth: usize,

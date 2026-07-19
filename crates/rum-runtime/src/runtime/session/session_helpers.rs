@@ -57,6 +57,9 @@ impl Session {
             message_definitions: self.message_definitions.clone(),
             exception_types: self.exception_types.clone(),
             next_generated_symbol_id: self.next_generated_symbol_id,
+            sealed_units: self.sealed_units.clone(),
+            next_sealed_symbol_id: self.next_sealed_symbol_id,
+            next_source_unit_epoch: self.next_source_unit_epoch,
             trace_events: self.trace_events.clone(),
             trace_event_depths: self.trace_event_depths.clone(),
             disabled_message_selectors: self.disabled_message_selectors.clone(),
@@ -86,6 +89,9 @@ impl Session {
         self.exception_types = snapshot.exception_types;
         self.rebuild_message_symbol_counts();
         self.next_generated_symbol_id = snapshot.next_generated_symbol_id;
+        self.sealed_units = snapshot.sealed_units;
+        self.next_sealed_symbol_id = snapshot.next_sealed_symbol_id;
+        self.next_source_unit_epoch = snapshot.next_source_unit_epoch;
         self.trace_events = snapshot.trace_events;
         self.trace_event_depths = snapshot.trace_event_depths;
         self.disabled_message_selectors = snapshot.disabled_message_selectors;

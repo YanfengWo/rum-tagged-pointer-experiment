@@ -332,6 +332,30 @@ pub(in crate::runtime) fn builtin_module(
     session.eval_module(args)
 }
 
+pub(in crate::runtime) fn builtin_define_package(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    session.eval_define_package(args)
+}
+
+pub(in crate::runtime) fn builtin_public(
+    _session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+pub(in crate::runtime) fn builtin_package_scope(
+    _session: &mut Session,
+    head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
 pub(in crate::runtime) fn builtin_unique(
     session: &mut Session,
     _head: &Expr,

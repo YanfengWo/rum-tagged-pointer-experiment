@@ -216,7 +216,7 @@ fn messages_builtin_lists_defined_message_names() {
         panic!("Messages[] should return a list")
     };
     let message_names = args.iter().map(ToString::to_string).collect::<Vec<_>>();
-    assert_eq!(message_names.len(), 321);
+    assert_eq!(message_names.len(), 324);
     for expected in [
         "f::argx",
         "f::usage",
@@ -228,6 +228,7 @@ fn messages_builtin_lists_defined_message_names() {
         "Part::partw",
         "Input::optx",
         "RepeatedNull::range",
+        "DefinePackage::failed",
     ] {
         assert!(message_names.iter().any(|name| name == expected));
     }
@@ -443,10 +444,12 @@ fn message_tags_builtin_lists_global_symbol_and_exact_message_tags() {
         panic!("MessageTags[] should return a list")
     };
     let tags = args.iter().map(ToString::to_string).collect::<Vec<_>>();
-    assert_eq!(tags.len(), 56);
+    assert_eq!(tags.len(), 58);
     for expected in [
         "\"argform\"",
         "\"argx\"",
+        "\"decl\"",
+        "\"failed\"",
         "\"notfound\"",
         "\"range\"",
         "\"setval\"",

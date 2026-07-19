@@ -30,6 +30,41 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         ARGX_EXACT,
     ])
     .protected(),
+    BuiltinSpec::special_with_attributes(
+        "DefinePackage",
+        "Registers a held source unit with public, package-scope, and identity-sealed private symbols.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        builtin_define_package,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a non-empty valid context string with a trailing context separator as the first argument",
+        },
+        BuiltinMessageSpec {
+            tag: "decl",
+            template: "expected at most one Public and PackageScope declaration containing only current-context symbols",
+        },
+        BuiltinMessageSpec {
+            tag: "failed",
+            template: "package source-unit registration failed during body evaluation",
+        },
+    ])
+    .protected(),
+    BuiltinSpec::ordinary_with_hold(
+        "Public",
+        "Declares public symbols inside a held DefinePackage source unit.",
+        HoldAttribute::HoldAll,
+        builtin_public,
+    )
+    .protected(),
+    BuiltinSpec::ordinary_with_hold(
+        "PackageScope",
+        "Declares conventionally package-scoped symbols inside a held DefinePackage source unit.",
+        HoldAttribute::HoldAll,
+        builtin_package_scope,
+    )
+    .protected(),
     BuiltinSpec::ordinary(
         "Unique",
         "Creates fresh symbols using prefix, list, and attribute forms.",

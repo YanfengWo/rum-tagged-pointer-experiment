@@ -147,6 +147,7 @@ mod replace_all_unheld;
 mod rule_rhs_materialization;
 mod scoping_gensym_gc;
 mod scoping_unique;
+mod sealed_packages;
 mod session_config;
 mod session_requests;
 mod structure_data;

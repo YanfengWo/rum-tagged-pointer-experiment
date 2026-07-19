@@ -314,6 +314,12 @@ impl Session {
             return;
         }
 
+        if symbol.identity().is_some_and(|identity| {
+            identity & crate::runtime::scoping::packages::SEALED_IDENTITY_MARKER != 0
+        }) {
+            return;
+        }
+
         let key = symbol_generation_key(symbol.context(), symbol.name());
         let current_generation = self.symbol_generations.get(&key).copied().unwrap_or(0);
         let removed_generation = symbol.identity().unwrap_or(0);

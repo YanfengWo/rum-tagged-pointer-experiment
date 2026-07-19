@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 634
+Builtin count: 637
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1195,6 +1195,17 @@ Lists stored Default[...] definitions for a symbol in the current optional-patte
 - Messages:
   - DefaultValues::argform — expected a symbol or symbol-name string argument
   - DefaultValues::argx — expected exactly `1` argument(s), got `2`
+
+### DefinePackage
+
+Registers a held source unit with public, package-scope, and identity-sealed private symbols.
+
+- Attributes: `HoldAllComplete`, `Protected`
+- Capability: `Pure`
+- Messages:
+  - DefinePackage::argform — expected a non-empty valid context string with a trailing context separator as the first argument
+  - DefinePackage::decl — expected at most one Public and PackageScope declaration containing only current-context symbols
+  - DefinePackage::failed — package source-unit registration failed during body evaluation
 
 ### Definition
 
@@ -3633,6 +3644,13 @@ Lists stored immediate or delayed ownvalue definitions for a symbol.
   - OwnValues::argx — expected exactly `1` argument(s), got `2`
   - OwnValues::setval — Reports an invalid OwnValues assignment.
 
+### PackageScope
+
+Declares conventionally package-scoped symbols inside a held DefinePackage source unit.
+
+- Attributes: `HoldAll`, `Protected`
+- Capability: `Pure`
+
 ### PadLeft
 
 Pads or truncates a normal expression on the left using scalar lengths or rectangular list dimensions.
@@ -3989,6 +4007,13 @@ Adds the Protected attribute to one or more symbols.
 - Capability: `Pure`
 - Messages:
   - Protect::argform — expected one or more symbols, symbol-name strings, or lists of them
+
+### Public
+
+Declares public symbols inside a held DefinePackage source unit.
+
+- Attributes: `HoldAll`, `Protected`
+- Capability: `Pure`
 
 ### PunctuationCharacter
 

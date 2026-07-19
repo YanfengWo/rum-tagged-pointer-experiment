@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::runtime::scoping::packages::SourceUnit;
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -150,6 +151,9 @@ pub(in crate::runtime) struct LoaderSnapshot {
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(in crate::runtime) exception_types: BTreeMap<String, Option<String>>,
     pub(in crate::runtime) next_generated_symbol_id: u64,
+    pub(in crate::runtime) sealed_units: Vec<SourceUnit>,
+    pub(in crate::runtime) next_sealed_symbol_id: u64,
+    pub(in crate::runtime) next_source_unit_epoch: u64,
     pub(in crate::runtime) trace_events: Vec<TraceEvent>,
     pub(in crate::runtime) trace_event_depths: Vec<usize>,
     pub(in crate::runtime) disabled_message_selectors: Vec<MessageSelector>,
@@ -401,6 +405,9 @@ impl Session {
             exception_types: BTreeMap::new(),
             message_symbol_counts: SymbolCountMap::default(),
             next_generated_symbol_id: 0,
+            sealed_units: Vec::new(),
+            next_sealed_symbol_id: 0,
+            next_source_unit_epoch: 0,
             resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,
             match_depth: 0,
