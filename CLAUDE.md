@@ -159,13 +159,26 @@ rather than duplicating them.
   cursors) is CLOSED WON'T-DO in-kernel (downstream pkg only if pulled).
   Codex stop-lossed 3× on my brief scope/ripple omissions (Part
   cross-crate; `structure_ops/mod.rs` re-export) — clean each time,
-  revise+redispatch. **NEXT: (d) SEALED SCOPING** — private = real
-  encapsulation (Module identity-seal kept OUT of `symbol_generations` →
-  unforgeable vs `ToExpression`/`Symbol[]`); hidden-by-default
-  introspection (Diagnostic reveals); full three-tier Public/Package/
-  Private; wrapper `DefinePackage` form; loader half stays rum-fs. Design
-  ready; first brief opens with grounding (core symbol-resolution path —
-  gate watches default-path cost).
+  revise+redispatch. **ACTIVE: (d) SEALED SCOPING** — private = real
+  encapsulation; hidden-by-default introspection (Diagnostic reveals);
+  full three-tier; wrapper `DefinePackage` form; loader half stays
+  rum-fs. **Grounding DONE (brief-268, e5c9e1c) and it REFUTED the
+  design's original substrate**: Module gensyms are name-mangled
+  (`x$NN`, `identity: None`, source-reachable — `allocate_fresh_symbol`
+  is NOT a seal). Corrected mechanism: NEW bit-62 identity allocator +
+  `substitute_lexical_bindings` rewrite + identity kept OUT of
+  `symbol_generations` (resolver byte-untouched; miss branch = the
+  boundary) + `mark_symbol_removed` exclusion (it inherits removed
+  identities). **Snapshot ruling (user 2026-07-19):
+  snapshot-by-re-registration** (held `DefinePackage` form = the unit's
+  snapshot representation; fresh identities on restore, observably
+  faithful; v1 private mutations don't persist) + leaked-sealed-ref
+  detection floor + **re-link as a first-class design part** (marker +
+  restore-mode rewrite + stale-epoch refusal; calibrated by the mma-hol
+  strict/stable thought experiment — one mode beats both halves; dual
+  dividend → README at batch-3 close-out, divergence-with-value
+  posture). Design doc updated 2026-07-19; batch 1 = brief-269
+  (mechanism spine).
 - **CLEANUP + MESSAGE-REGISTRY LINE — COMPLETE (2026-07-17 → 07-18;
   user ruling 2026-07-17; queue in TODO.md §ACTIVE PLAN). All five
   items closed:** (1) message-tag registry + docgen — briefs 243,

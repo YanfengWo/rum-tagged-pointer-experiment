@@ -93,23 +93,43 @@ cancel (fail-closed on infinite); snapshot round-trips for free
 **(d) Sealed scoping** — SPF scoping half only (loader half = `rum-fs`
 downstream, never kernel). Ruling: **private = REAL encapsulation**
 (kernel-enforced, not a naming convention); hidden-by-default
-introspection; full three-tier; wrapper declaration form. Design:
-Public/Package = honest name-resolvable conventions; **Private =
-identity-sealed via the Module-over-source-unit model** (fresh identity,
-body rewritten, identity kept OUT of `symbol_generations` — covers
-`ToExpression`/`Symbol[]`/string-name forgery uniformly); introspection
-hidden unless `Capability::Diagnostic`. Neither line adds a capability.
-Declaration surface = wrapper form `DefinePackage["`Pkg`",
-Public[{...}], PackageScope[{...}], body...]`; host seam deferred to a
-consumer.
+introspection; full three-tier; wrapper declaration form
+`DefinePackage["`Pkg`", Public[{...}], PackageScope[{...}], body...]`.
+Neither line adds a capability. **Grounding landed (brief-268,
+e5c9e1c):** design §1 substrate CORRECTED — Module gensyms are
+name-mangled (`x$NN`, `identity: None`, source-reachable), so the seal
+is a NEW bit-62 identity allocator + `substitute_lexical_bindings`
+rewrite + identity kept OUT of `symbol_generations` (resolver
+byte-untouched; the miss branch IS the boundary), plus a
+`mark_symbol_removed` exclusion (it inherits removed identities into
+the generation map). **Snapshot ruling (user 2026-07-19):
+snapshot-by-re-registration** — the held `DefinePackage` form is the
+unit's snapshot representation (restore re-runs registration, fresh
+identities, observably faithful); private post-registration mutations
+don't persist in v1 (re-derive); leaked sealed references (opaque-value
+pattern) get detect-fail-loudly as the floor and **re-link in the
+design as a first-class part** (marker + restore-mode rewrite + stale-
+epoch refusal). Rationale calibrated by the mma-hol strict/stable
+thought experiment: one mode = boundary stronger than WL-strict +
+persistence equal to WL-stable; **dual dividend goes into README.md at
+batch-3 close-out (divergence-with-value posture)**.
 
-- [ ] Batch 1 — mechanism (spine): registration form + two-pass scan +
-  private identity-sealing + Public/Package/Private resolution +
-  forgery-path closure with tests.
-- [ ] Batch 2 — introspection hidden-by-default + `Diagnostic` reveal +
-  name-existence hiding.
-- [ ] Batch 3 — snapshot round-trip + `Definition` display + guide +
-  close-out.
+- [ ] Batch 1 (brief-269) — mechanism spine: `DefinePackage`
+  registration chain (catalog + adapter + session method + inert
+  `Public`/`PackageScope` + message declarations) + two-pass scan +
+  sealed allocator/registry (+ four-site session-snapshot field ripple)
+  + body rewrite/install/failure-cleanup + re-registration replace +
+  `mark_symbol_removed` exclusion + §5 forgery-closure tests +
+  resolution A/B (resolver untouched, expect noise-level).
+- [ ] Batch 2 — introspection hidden-by-default across the full
+  grounding-Q5 enumeration list (`Names` incl. explicit-context bypass,
+  `NameQ`, `Contexts`, `Definition`/`Information`, completion, message
+  catalogs, `Save`/`DumpSave`) + `Diagnostic` reveal + name-existence
+  hiding + host-API classification.
+- [ ] Batch 3 — snapshot: unit emission + owned-key skip +
+  leak-detection floor + re-link (marker, restore-mode rewrite, epoch
+  rule); `Definition` display; guide; reference regen; **README
+  divergence section (user ruling 2026-07-19)**; close-out.
 
 ## COMPLETE — cleanup + message-registry line (user ruling 2026-07-17)
 
