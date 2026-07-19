@@ -314,9 +314,7 @@ impl Session {
             return;
         }
 
-        if symbol.identity().is_some_and(|identity| {
-            identity & crate::runtime::scoping::packages::SEALED_IDENTITY_MARKER != 0
-        }) {
+        if crate::runtime::scoping::packages::symbol_is_sealed_private(symbol) {
             return;
         }
 

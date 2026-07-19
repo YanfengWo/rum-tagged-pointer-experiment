@@ -190,13 +190,21 @@ impl Session {
         ignore_case: bool,
     ) -> Vec<String> {
         let visible_contexts = self.visible_contexts();
+        let sealed_symbols_visible = self.sealed_symbols_visible();
         let mut names = BTreeSet::new();
 
         for symbol in self.enumerated_names_symbols() {
+            let sealed_private =
+                crate::runtime::scoping::packages::symbol_is_sealed_private(&symbol);
+            if sealed_private && !sealed_symbols_visible {
+                continue;
+            }
+
             let candidate = if explicit_context {
                 symbol.fully_qualified_name()
             } else {
-                if symbol.context() != SYSTEM_CONTEXT
+                if !sealed_private
+                    && symbol.context() != SYSTEM_CONTEXT
                     && symbol.context() != GLOBAL_CONTEXT
                     && !visible_contexts.contains(symbol.context())
                 {

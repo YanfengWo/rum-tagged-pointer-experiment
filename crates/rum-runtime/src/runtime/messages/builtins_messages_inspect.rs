@@ -4,7 +4,13 @@ impl Session {
     pub(in crate::runtime) fn eval_definition(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
             [expr] => match self.normalize_definition_inspection_target(expr) {
-                Ok(symbol) => Ok(self.definition_expr_for_symbol(&symbol)),
+                Ok(symbol) => {
+                    if self.sealed_inspection_hidden(&symbol) {
+                        Ok(Expr::call(system_expr("HoldComplete"), Vec::new()))
+                    } else {
+                        Ok(self.definition_expr_for_symbol(&symbol))
+                    }
+                }
                 Err(error) => {
                     Ok(self.invalid_call_with_arg_form("Definition", args, error.message()))
                 }
@@ -25,8 +31,9 @@ impl Session {
         let Some(symbol) = self.normalize_symbol_target_expr(target, true) else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
+        let include_symbol_state = !self.sealed_inspection_hidden(&symbol);
 
-        Ok(self.information_data_expr_for_symbol(&symbol))
+        Ok(self.information_data_expr_for_symbol(&symbol, include_symbol_state))
     }
 
     pub(in crate::runtime) fn eval_value_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -156,6 +163,11 @@ impl Session {
         )
     }
 
+    fn sealed_inspection_hidden(&self, symbol: &Symbol) -> bool {
+        !self.sealed_symbols_visible()
+            && crate::runtime::scoping::packages::symbol_is_sealed_private(symbol)
+    }
+
     fn definition_statements_for_symbol(&self, symbol: &Symbol) -> Vec<Expr> {
         let mut statements = Vec::new();
 
@@ -242,32 +254,94 @@ impl Session {
             .collect()
     }
 
-    fn information_data_expr_for_symbol(&self, symbol: &Symbol) -> Expr {
+    fn information_data_expr_for_symbol(
+        &self,
+        symbol: &Symbol,
+        include_symbol_state: bool,
+    ) -> Expr {
+        let empty_list = || Expr::call(system_expr("List"), Vec::new());
         let entries = vec![
             information_rule("ObjectType", Expr::string("Symbol")),
-            information_rule("Usage", self.usage_message_expr_for_symbol(symbol)),
+            information_rule(
+                "Usage",
+                if include_symbol_state {
+                    self.usage_message_expr_for_symbol(symbol)
+                } else {
+                    Expr::string(symbol.fully_qualified_name())
+                },
+            ),
             information_rule("Documentation", system_expr("None")),
-            information_rule("Messages", self.message_tags_expr_for_symbol(Some(symbol))),
-            information_values_rule("OwnValues", symbol, self.own_values_expr_for_symbol(symbol)),
-            information_values_rule("UpValues", symbol, self.up_values_expr_for_symbol(symbol)),
+            information_rule(
+                "Messages",
+                if include_symbol_state {
+                    self.message_tags_expr_for_symbol(Some(symbol))
+                } else {
+                    empty_list()
+                },
+            ),
+            information_values_rule(
+                "OwnValues",
+                symbol,
+                if include_symbol_state {
+                    self.own_values_expr_for_symbol(symbol)
+                } else {
+                    empty_list()
+                },
+            ),
+            information_values_rule(
+                "UpValues",
+                symbol,
+                if include_symbol_state {
+                    self.up_values_expr_for_symbol(symbol)
+                } else {
+                    empty_list()
+                },
+            ),
             information_values_rule(
                 "DownValues",
                 symbol,
-                self.down_values_expr_for_symbol(symbol),
+                if include_symbol_state {
+                    self.down_values_expr_for_symbol(symbol)
+                } else {
+                    empty_list()
+                },
             ),
-            information_values_rule("SubValues", symbol, self.sub_values_expr_for_symbol(symbol)),
+            information_values_rule(
+                "SubValues",
+                symbol,
+                if include_symbol_state {
+                    self.sub_values_expr_for_symbol(symbol)
+                } else {
+                    empty_list()
+                },
+            ),
             information_values_rule(
                 "DefaultValues",
                 symbol,
-                self.default_values_expr_for_symbol(symbol),
+                if include_symbol_state {
+                    self.default_values_expr_for_symbol(symbol)
+                } else {
+                    empty_list()
+                },
             ),
             information_rule("NValues", system_expr("None")),
             information_rule("FormatValues", system_expr("None")),
             information_rule(
                 "Options",
-                none_if_empty_list(self.options_for_symbol(symbol).expr()),
+                none_if_empty_list(if include_symbol_state {
+                    self.options_for_symbol(symbol).expr()
+                } else {
+                    empty_list()
+                }),
             ),
-            information_rule("Attributes", self.attribute_set_for_symbol(symbol).expr()),
+            information_rule(
+                "Attributes",
+                if include_symbol_state {
+                    self.attribute_set_for_symbol(symbol).expr()
+                } else {
+                    empty_list()
+                },
+            ),
             information_rule("FullName", Expr::string(symbol.fully_qualified_name())),
         ];
 

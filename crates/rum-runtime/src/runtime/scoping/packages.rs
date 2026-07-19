@@ -2,6 +2,12 @@ use super::*;
 
 pub(in crate::runtime) const SEALED_IDENTITY_MARKER: u64 = 1 << 62;
 
+pub(in crate::runtime) fn symbol_is_sealed_private(symbol: &Symbol) -> bool {
+    symbol
+        .identity()
+        .is_some_and(|identity| identity & SEALED_IDENTITY_MARKER != 0)
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) struct SourceUnit {
     pub(in crate::runtime) package_context: String,
@@ -17,7 +23,6 @@ struct PackageInstallPlan {
     forms: Vec<Expr>,
     source_unit: SourceUnit,
     minted_sealed: Vec<Symbol>,
-    replacement_index: Option<usize>,
 }
 
 #[derive(Default)]
@@ -27,6 +32,10 @@ struct PackageDeclarations {
 }
 
 impl Session {
+    pub(in crate::runtime) fn sealed_symbols_visible(&self) -> bool {
+        self.capability_policy.allows(Capability::Diagnostic)
+    }
+
     pub(in crate::runtime) fn eval_define_package(
         &mut self,
         args: &[Expr],
@@ -119,7 +128,6 @@ impl Session {
                     private_index,
                 },
                 minted_sealed,
-                replacement_index,
             },
             0,
         )
@@ -172,7 +180,11 @@ impl Session {
         plan.source_unit.epoch = self.next_source_unit_epoch;
         let package_context = plan.source_unit.package_context.clone();
 
-        if let Some(index) = plan.replacement_index {
+        if let Some(index) = self
+            .sealed_units
+            .iter()
+            .position(|unit| unit.package_context == package_context)
+        {
             self.sealed_units[index] = plan.source_unit;
         } else {
             self.sealed_units.push(plan.source_unit);
@@ -186,7 +198,11 @@ impl Session {
             self.clear_symbol_state(symbol, true, true, true, true, true);
         }
 
-        if let Some(index) = plan.replacement_index {
+        if let Some(index) = self
+            .sealed_units
+            .iter()
+            .position(|unit| unit.package_context == plan.source_unit.package_context)
+        {
             self.sealed_units.remove(index);
         }
 

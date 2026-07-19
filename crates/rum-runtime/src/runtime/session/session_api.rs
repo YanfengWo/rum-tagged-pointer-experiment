@@ -442,6 +442,18 @@ impl Session {
         prefix: &str,
         explicit_context: bool,
     ) {
+        let sealed_private = crate::runtime::scoping::packages::symbol_is_sealed_private(symbol);
+        if sealed_private && !self.sealed_symbols_visible() {
+            return;
+        }
+
+        if sealed_private {
+            let context = normalize_context_name(symbol.context());
+            if context.starts_with(prefix) {
+                candidates.insert(context);
+            }
+        }
+
         let candidate = if explicit_context {
             symbol.fully_qualified_name()
         } else {

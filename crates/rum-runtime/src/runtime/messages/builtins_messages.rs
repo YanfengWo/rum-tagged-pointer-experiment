@@ -52,7 +52,9 @@ impl Session {
             [] => Ok(self.message_names_expr_for_symbol(None)),
             [expr] => match self.normalize_message_query_target(expr) {
                 Ok(MessageQueryTarget::Key(key)) => {
-                    let items = if self.message_definitions.contains_key(&key) {
+                    let sealed_hidden = !self.sealed_symbols_visible()
+                        && crate::runtime::scoping::packages::symbol_is_sealed_private(&key.symbol);
+                    let items = if !sealed_hidden && self.message_definitions.contains_key(&key) {
                         vec![message_name_expr(key.symbol, key.tag)]
                     } else {
                         Vec::new()

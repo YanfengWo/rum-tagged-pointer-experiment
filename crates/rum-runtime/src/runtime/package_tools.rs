@@ -238,7 +238,12 @@ impl Session {
                 return Ok(self.invalid_call_with_arg_form(operator, args, error.message()));
             }
         };
-        let symbols = self.filter_persist_symbols_by_contexts(symbols, &context_filters);
+        let mut symbols = self.filter_persist_symbols_by_contexts(symbols, &context_filters);
+        if !self.sealed_symbols_visible() {
+            symbols.retain(|symbol| {
+                !crate::runtime::scoping::packages::symbol_is_sealed_private(symbol)
+            });
+        }
 
         let include_attributes = if overwrite {
             self.dump_save_include_attributes(explicit_options.as_ref())

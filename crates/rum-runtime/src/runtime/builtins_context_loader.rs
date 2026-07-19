@@ -135,6 +135,7 @@ impl Session {
                 .map(|context| normalize_context_name(context)),
         );
 
+        let sealed_symbols_visible = self.sealed_symbols_visible();
         for symbol in self
             .definitions
             .keys()
@@ -144,9 +145,19 @@ impl Session {
             .chain(self.declared_stubs.iter())
             .chain(self.removed_symbols.iter())
         {
+            if !sealed_symbols_visible
+                && crate::runtime::scoping::packages::symbol_is_sealed_private(symbol)
+            {
+                continue;
+            }
             contexts.insert(symbol.context().to_string());
         }
         for key in self.message_definitions.keys() {
+            if !sealed_symbols_visible
+                && crate::runtime::scoping::packages::symbol_is_sealed_private(&key.symbol)
+            {
+                continue;
+            }
             contexts.insert(key.symbol.context().to_string());
         }
         for (context, _) in self.symbol_generations.keys() {

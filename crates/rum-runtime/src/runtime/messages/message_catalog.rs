@@ -297,9 +297,14 @@ impl Session {
         &self,
         symbol: Option<&Symbol>,
     ) -> Expr {
+        let sealed_symbols_visible = self.sealed_symbols_visible();
         let items = self
             .message_definitions
             .iter()
+            .filter(|(key, _)| {
+                sealed_symbols_visible
+                    || !crate::runtime::scoping::packages::symbol_is_sealed_private(&key.symbol)
+            })
             .filter(|(key, _)| symbol.is_none_or(|symbol| key.symbol == *symbol))
             .map(|(key, def)| self.message_definition_rule_expr(key, def))
             .collect::<Vec<_>>();
@@ -353,6 +358,7 @@ impl Session {
         &self,
         symbol: Option<&Symbol>,
     ) -> BTreeMap<MessageNameKey, MessageCatalogSource<'_>> {
+        let sealed_symbols_visible = self.sealed_symbols_visible();
         let mut sources = BTreeMap::new();
 
         match symbol {
@@ -386,7 +392,10 @@ impl Session {
         }
 
         for (key, definition) in &self.message_definitions {
-            if symbol.is_none_or(|symbol| key.symbol == *symbol) {
+            if (sealed_symbols_visible
+                || !crate::runtime::scoping::packages::symbol_is_sealed_private(&key.symbol))
+                && symbol.is_none_or(|symbol| key.symbol == *symbol)
+            {
                 sources.insert(key.clone(), MessageCatalogSource::User(definition));
             }
         }
@@ -417,6 +426,12 @@ impl Session {
         &self,
         key: &MessageNameKey,
     ) -> Expr {
+        if !self.sealed_symbols_visible()
+            && crate::runtime::scoping::packages::symbol_is_sealed_private(&key.symbol)
+        {
+            return Expr::call(system_expr("List"), Vec::new());
+        }
+
         let items = self
             .message_definitions
             .get(key)
@@ -427,6 +442,12 @@ impl Session {
     }
 
     pub(in crate::runtime) fn message_tags_expr_for_key(&self, key: &MessageNameKey) -> Expr {
+        if !self.sealed_symbols_visible()
+            && crate::runtime::scoping::packages::symbol_is_sealed_private(&key.symbol)
+        {
+            return Expr::call(system_expr("List"), Vec::new());
+        }
+
         let items = self
             .message_definitions
             .contains_key(key)
