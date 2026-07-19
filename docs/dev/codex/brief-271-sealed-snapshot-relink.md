@@ -131,6 +131,9 @@ for non-sealed symbols and when hidden). No other display change; no
     (the transient flag: declare + init ONLY)
   - `crates/rum-runtime/src/runtime/builtin_catalog/scoping.rs`,
     `crates/rum-runtime/src/runtime/builtin_adapters.rs`
+  - `crates/rum-runtime/src/runtime/builtin_catalog/namespace/contexts.rs`
+    (REVISION 1: the `Save`/`DumpSave` specs live here since the
+    260-261 catalog split — message declarations only)
   - `crates/rum-runtime/src/runtime/package_tools.rs`
   - `crates/rum-runtime/src/runtime/messages/builtins_messages_inspect.rs`
   - `crates/rum-host/src/session.rs` + in-tree `snapshot_to_bytes`
