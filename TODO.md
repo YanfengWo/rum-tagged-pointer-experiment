@@ -114,13 +114,21 @@ thought experiment: one mode = boundary stronger than WL-strict +
 persistence equal to WL-stable; **dual dividend goes into README.md at
 batch-3 close-out (divergence-with-value posture)**.
 
-- [ ] Batch 1 (brief-269) — mechanism spine: `DefinePackage`
-  registration chain (catalog + adapter + session method + inert
-  `Public`/`PackageScope` + message declarations) + two-pass scan +
-  sealed allocator/registry (+ four-site session-snapshot field ripple)
-  + body rewrite/install/failure-cleanup + re-registration replace +
-  `mark_symbol_removed` exclusion + §5 forgery-closure tests +
-  resolution A/B (resolver untouched, expect noise-level).
+- [x] Batch 1 (brief-269) — mechanism spine. **DONE (f2e1448):** full
+  chain landed exactly per design (bit-62 seal, resolver byte-untouched,
+  suspension-safe install mirroring Module, four-site snapshot mirror,
+  `mark_symbol_removed` guard); 12 reachability tests; reference
+  634→637; workspace 1604/0 (director ran the 9 sandbox-blocked jupyter
+  loopback tests out of sandbox); live probes reproduced at gate. A/B:
+  3 interleaved pairs + checksum-verified clean rebuilds — NO semantic
+  regression (scoping/dispatch tier flat ±5%); a bidirectional
+  layout-class movement on seven microsecond list-tier labels
+  (+21..63% / five labels faster) recorded as binary layout lottery
+  (no diff instruction on those paths; brief-265 precedent), re-observe
+  at the next A/B. **Known v1 edge for batch 2 opener:**
+  `replacement_index` captured pre-install can go stale if a body
+  registers/unregisters other packages — re-locate by context at
+  finish/fail + nested-registration test.
 - [ ] Batch 2 — introspection hidden-by-default across the full
   grounding-Q5 enumeration list (`Names` incl. explicit-context bypass,
   `NameQ`, `Contexts`, `Definition`/`Information`, completion, message
