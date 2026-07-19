@@ -129,11 +129,16 @@ batch-3 close-out (divergence-with-value posture)**.
   `replacement_index` captured pre-install can go stale if a body
   registers/unregisters other packages — re-locate by context at
   finish/fail + nested-registration test.
-- [ ] Batch 2 — introspection hidden-by-default across the full
-  grounding-Q5 enumeration list (`Names` incl. explicit-context bypass,
-  `NameQ`, `Contexts`, `Definition`/`Information`, completion, message
-  catalogs, `Save`/`DumpSave`) + `Diagnostic` reveal + name-existence
-  hiding + host-API classification.
+- [x] Batch 2 (brief-270) — hidden-by-default introspection. **DONE
+  (e9fb37c):** one predicate (bit-62) + one gate (policy allows
+  `Diagnostic`) across Names/Contexts/Definition/Information/message
+  catalogs/completion/Save-DumpSave call sites (persist helper + host
+  snapshot byte-untouched, pinned); NameQ + SymbolName/Context unchanged
+  by ruling; host APIs classified trusted. Batch-1 `replacement_index`
+  hardening landed (re-locate by context + nested-registration test).
+  17 dual-variant tests; workspace 1621/0; A/B clean (bidirectional
+  layout scatter only; same-binary +17% cross-session drift observed on
+  list-literal-small, confirming the batch-1 layout-lottery reading).
 - [ ] Batch 3 — snapshot: unit emission + owned-key skip +
   leak-detection floor + re-link (marker, restore-mode rewrite, epoch
   rule); `Definition` display; guide; reference regen; **README
