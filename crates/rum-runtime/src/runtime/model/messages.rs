@@ -25,19 +25,19 @@ pub enum RuleApplicationSource {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TraceEvent {
     EvaluationPass {
-        before: String,
-        after: String,
+        before: Expr,
+        after: Expr,
     },
     DefinitionStored {
         symbol: String,
         kind: DefinitionKind,
-        value: String,
+        value: Expr,
     },
     RuleApplied {
         source: RuleApplicationSource,
-        input: String,
-        rule: String,
-        result: String,
+        input: Expr,
+        rule: Expr,
+        result: Expr,
     },
 }
 

@@ -105,7 +105,7 @@ fn eval_request_returns_transport_friendly_success_data() {
             source: RuleApplicationSource::DownValue,
             input,
             ..
-        } if input == "f[1]"
+        } if input.to_string() == "f[1]"
     )));
 }
 
@@ -130,7 +130,7 @@ fn eval_request_returns_transport_friendly_cycle_termination_data() {
             source: RuleApplicationSource::DownValue,
             input,
             ..
-        } if input == "f[1]" || input == "g[1]"
+        } if input.to_string() == "f[1]" || input.to_string() == "g[1]"
     )));
     assert!(
         response

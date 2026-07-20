@@ -419,7 +419,7 @@ impl Session {
         record_profile_runtime_path_timing(runtime_profile_store, RuntimeProfileOutcome::Ok);
 
         let runtime_profile_trace = runtime_path_timing_start("set.symbol_own_value.trace");
-        self.push_definition_stored_trace(&target, DefinitionKind::OwnValue, || rhs.to_string());
+        self.push_definition_stored_trace(&target, DefinitionKind::OwnValue, || rhs.clone());
         record_profile_runtime_path_timing(runtime_profile_trace, RuntimeProfileOutcome::Ok);
 
         let runtime_profile_epoch = runtime_path_timing_start("set.symbol_own_value.epoch_bump");

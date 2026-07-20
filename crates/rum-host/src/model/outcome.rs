@@ -355,7 +355,10 @@ impl From<EvalTerminationReason> for HostTerminationReason {
 impl From<TraceEvent> for HostTraceEvent {
     fn from(event: TraceEvent) -> Self {
         match event {
-            TraceEvent::EvaluationPass { before, after } => Self::EvaluationPass { before, after },
+            TraceEvent::EvaluationPass { before, after } => Self::EvaluationPass {
+                before: before.to_string(),
+                after: after.to_string(),
+            },
             TraceEvent::DefinitionStored {
                 symbol,
                 kind,
@@ -363,7 +366,7 @@ impl From<TraceEvent> for HostTraceEvent {
             } => Self::DefinitionStored {
                 symbol,
                 kind: format!("{kind:?}"),
-                value,
+                value: value.to_string(),
             },
             TraceEvent::RuleApplied {
                 source,
@@ -372,9 +375,9 @@ impl From<TraceEvent> for HostTraceEvent {
                 result,
             } => Self::RuleApplied {
                 source: format!("{source:?}"),
-                input,
-                rule,
-                result,
+                input: input.to_string(),
+                rule: rule.to_string(),
+                result: result.to_string(),
             },
         }
     }

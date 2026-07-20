@@ -476,21 +476,20 @@ fn render_monitor_scope_memory_proxy_bytes(scope: &MonitorScope) -> usize {
 fn render_trace_event_memory_proxy_bytes(event: &TraceEvent) -> usize {
     match event {
         TraceEvent::EvaluationPass { before, after } => std::mem::size_of::<TraceEvent>()
-            .saturating_add(before.capacity())
-            .saturating_add(after.capacity()),
+            .saturating_add(expr_memory_proxy_bytes(before))
+            .saturating_add(expr_memory_proxy_bytes(after)),
         TraceEvent::DefinitionStored { symbol, value, .. } => std::mem::size_of::<TraceEvent>()
             .saturating_add(symbol.capacity())
-            .saturating_add(value.capacity()),
+            .saturating_add(expr_memory_proxy_bytes(value)),
         TraceEvent::RuleApplied {
             input,
             rule,
             result,
             ..
         } => std::mem::size_of::<TraceEvent>().saturating_add(
-            input
-                .capacity()
-                .saturating_add(rule.capacity())
-                .saturating_add(result.capacity()),
+            expr_memory_proxy_bytes(input)
+                .saturating_add(expr_memory_proxy_bytes(rule))
+                .saturating_add(expr_memory_proxy_bytes(result)),
         ),
     }
 }

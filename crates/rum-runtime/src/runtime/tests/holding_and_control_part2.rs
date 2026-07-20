@@ -561,12 +561,12 @@ fn tracing_records_definition_rule_and_evaluation_events() {
             source: RuleApplicationSource::DownValue,
             input,
             ..
-        } if input == "f[1]"
+        } if input.to_string() == "f[1]"
     )));
     assert!(trace.iter().any(|event| matches!(
         event,
         TraceEvent::EvaluationPass { before, after }
-            if before == "f[1]" && after == "1"
+            if before.to_string() == "f[1]" && after.to_string() == "1"
     )));
     assert!(session.take_trace().is_empty());
 }

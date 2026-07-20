@@ -25,7 +25,7 @@ impl Session {
         kind: DefinitionKind,
         value: F,
     ) where
-        F: FnOnce() -> String,
+        F: FnOnce() -> Expr,
     {
         if !self.tracing_enabled
             && (self.monitor_scopes.is_empty() || !self.monitor_callbacks_enabled)
@@ -33,18 +33,10 @@ impl Session {
             return;
         }
 
-        let event = if self.tracing_enabled {
-            TraceEvent::DefinitionStored {
-                symbol: symbol.to_string(),
-                kind,
-                value: value(),
-            }
-        } else {
-            TraceEvent::DefinitionStored {
-                symbol: String::new(),
-                kind,
-                value: String::new(),
-            }
+        let event = TraceEvent::DefinitionStored {
+            symbol: symbol.to_string(),
+            kind,
+            value: value(),
         };
 
         self.push_trace(event);
@@ -63,36 +55,33 @@ impl Session {
             return;
         }
 
-        let event = if self.tracing_enabled {
-            TraceEvent::RuleApplied {
-                source,
-                input: input.to_string(),
-                rule: rule.to_string(),
-                result: result.to_string(),
-            }
-        } else {
-            TraceEvent::RuleApplied {
-                source,
-                input: String::new(),
-                rule: String::new(),
-                result: String::new(),
-            }
+        let event = TraceEvent::RuleApplied {
+            source,
+            input: input.clone(),
+            rule: rule.clone(),
+            result: result.clone(),
         };
 
         self.push_trace(event);
     }
 
+    #[inline]
     pub(in crate::runtime) fn push_evaluation_pass_trace(&mut self, before: &Expr, after: &Expr) {
-        let event = if self.tracing_enabled {
-            TraceEvent::EvaluationPass {
-                before: before.to_string(),
-                after: after.to_string(),
-            }
-        } else {
-            TraceEvent::EvaluationPass {
-                before: String::new(),
-                after: String::new(),
-            }
+        if !self.tracing_enabled
+            && (self.monitor_scopes.is_empty() || !self.monitor_callbacks_enabled)
+        {
+            return;
+        }
+
+        self.push_evaluation_pass_trace_slow(before, after);
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn push_evaluation_pass_trace_slow(&mut self, before: &Expr, after: &Expr) {
+        let event = TraceEvent::EvaluationPass {
+            before: before.clone(),
+            after: after.clone(),
         };
 
         self.push_trace_transition(event);

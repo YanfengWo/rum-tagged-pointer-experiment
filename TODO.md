@@ -1109,6 +1109,28 @@ string-pattern surface. Batches, evidence-ranked:
   Test count unchanged (1662/0), `:help` and every non-`:trace` snapshot
   untouched. Cause was a gap in my brief ("print each leaf's text"), not
   in the execution.
+  SUBSTRATE DONE (briefs 285/286, 2026-07-20): `TraceEvent` now stores
+  `Expr` instead of `String`, removing a render→parse round trip
+  (capture did `to_string()` on every payload; `Trace[]` parsed each back
+  via `trace_expr_from_text`, with a silent `Expr::string` fallback).
+  `SharedExpr(Arc<Expr>)` makes an `Expr` clone a refcount bump, so the
+  round trip bought nothing in-kernel. Rendering moved to the host
+  boundary; `HostTraceEvent` keeps its `String` fields, which is what
+  left `rum-jupyter` and `rum-terminal` untouched. Corpus byte-identical
+  (the round trip turned out to BE the identity on everything tested).
+  Gate-reproduced A/B: tracing overhead 5.5-5.8× → 2.4× (traced −60.3%
+  / −58.4%); untraced moved bidirectionally (−9.15% / +1.45%) = noise,
+  no regression. 1662/0.
+  **Codex caught a flaw in my brief**: `push_evaluation_pass_trace` had
+  NO early-return guard, so my "populate unconditionally" instruction
+  would have paid two `Arc` clones per evaluation pass with tracing off
+  — a real default-path regression. It added the guard, with a
+  `#[cold] #[inline(never)]` slow-path split. Verified equivalent at the
+  gate: `handle_monitor_trace_event` opens with exactly the same
+  condition, so the new guard skips only work that was already a no-op.
+  brief-285 stop-lossed cleanly first (my 4th scope omission this line):
+  the six `push_definition_stored_trace` callers live in
+  `definition_tags.rs` / `definitions.rs`, unlisted.
   NEXT AXIS (documented, out of scope so far): design doc §1.5 records a
   second, host-level trace channel (`HostTraceEvent`, incl.
   `RuleApplied{source, input, rule, result}`) that can name WHICH RULE

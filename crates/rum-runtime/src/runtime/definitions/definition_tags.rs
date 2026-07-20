@@ -192,13 +192,13 @@ impl Session {
                     self.push_definition_stored_trace(
                         &symbol,
                         DefinitionKind::DelayedOwnValue,
-                        || rhs.to_string(),
+                        || rhs.clone(),
                     );
                 } else {
                     definition.own_value = Some(rhs.clone());
                     definition.delayed_own_value = None;
                     self.push_definition_stored_trace(&symbol, DefinitionKind::OwnValue, || {
-                        rhs.to_string()
+                        rhs.clone()
                     });
                 }
                 symbol
@@ -229,7 +229,10 @@ impl Session {
                 }
                 definition.refresh_down_value_shallow_signatures(&symbol);
                 self.push_definition_stored_trace(&symbol, DefinitionKind::DownValue, || {
-                    format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
+                    Expr::call(
+                        system_expr(if delayed { "SetDelayed" } else { "Set" }),
+                        vec![lhs.clone(), rhs.clone()],
+                    )
                 });
                 symbol
             }
@@ -250,7 +253,10 @@ impl Session {
                     },
                 );
                 self.push_definition_stored_trace(&symbol, DefinitionKind::SubValue, || {
-                    format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
+                    Expr::call(
+                        system_expr(if delayed { "SetDelayed" } else { "Set" }),
+                        vec![lhs.clone(), rhs.clone()],
+                    )
                 });
                 symbol
             }
@@ -272,7 +278,10 @@ impl Session {
                 );
                 self.has_up_value_definitions = true;
                 self.push_definition_stored_trace(&symbol, DefinitionKind::UpValue, || {
-                    format!("{} {} {}", lhs, if delayed { ":=" } else { "=" }, rhs)
+                    Expr::call(
+                        system_expr(if delayed { "SetDelayed" } else { "Set" }),
+                        vec![lhs.clone(), rhs.clone()],
+                    )
                 });
                 symbol
             }

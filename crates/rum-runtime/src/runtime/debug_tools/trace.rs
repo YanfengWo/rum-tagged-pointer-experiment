@@ -254,48 +254,38 @@ impl Session {
         for (event, raw_depth) in events.iter().zip(depths.iter().copied()) {
             match event {
                 TraceEvent::EvaluationPass { before, after } => {
-                    let before_expr = self.trace_expr_from_text(before);
-                    let after_expr = self.trace_expr_from_text(after);
-                    let depth =
-                        trace_expr_path_depth(&active_exprs, &before_expr).unwrap_or(raw_depth);
+                    let depth = trace_expr_path_depth(&active_exprs, before).unwrap_or(raw_depth);
                     active_exprs.truncate(depth + 1);
-                    builder.push_evaluation_pass(depth, before_expr, after_expr.clone());
+                    builder.push_evaluation_pass(depth, before.clone(), after.clone());
                     if active_exprs.len() <= depth {
                         active_exprs.resize(depth + 1, original.clone());
                     }
-                    active_exprs[depth] = after_expr;
+                    active_exprs[depth] = after.clone();
                 }
                 TraceEvent::DefinitionStored { value, .. } => {
                     let depth = raw_depth;
-                    builder.push_expr(depth, self.trace_expr_from_text(value));
+                    builder.push_expr(depth, value.clone());
                 }
                 TraceEvent::RuleApplied { input, result, .. } => {
-                    let input_expr = self.trace_expr_from_text(input);
-                    let result_expr = self.trace_expr_from_text(result);
                     let depth = raw_depth;
                     active_exprs.truncate(depth + 1);
                     if active_exprs.len() <= depth {
                         active_exprs.resize(depth + 1, original.clone());
                     }
-                    active_exprs[depth] = input_expr.clone();
-                    builder.push_expr(depth, input_expr);
-                    builder.push_expr(depth.saturating_add(1), result_expr.clone());
+                    active_exprs[depth] = input.clone();
+                    builder.push_expr(depth, input.clone());
+                    builder.push_expr(depth.saturating_add(1), result.clone());
                     if active_exprs.len() <= depth + 1 {
-                        active_exprs.push(result_expr);
+                        active_exprs.push(result.clone());
                     } else {
                         active_exprs.truncate(depth + 2);
-                        active_exprs[depth + 1] = result_expr;
+                        active_exprs[depth + 1] = result.clone();
                     }
                 }
             }
         }
 
         builder.finish()
-    }
-
-    fn trace_expr_from_text(&self, text: &str) -> Expr {
-        self.lower_text(text)
-            .unwrap_or_else(|_| Expr::string(text.to_string()))
     }
 
     fn filter_structured_trace_expr(
