@@ -52,14 +52,26 @@ Queue (user-approved plan items 1-4, 2026-07-20):
   noise-floor by the AGENTS.md unaffected-control rule, not a
   regression. Nested `c_. * b_^e_.` stays unmatched at the Power
   boundary — stated stop-loss, not chased.)
-- [ ] brief-276 — items 1+3+4: respec the two `#[ignore]` tests to
-  rum's OWN documented contract (candidate set = groupings ×
-  orderings × omissions, deduplicated; fewer-defaults candidates
-  first; bare-singleton before head-wrapped; rum's existing
-  enumeration order — explicitly NOT WK order conformance, recorded
-  WON'T-FIX) + implement the non-OneIdentity Flat singleton wrapped
-  candidates; contract doc + `assert_wk_cases` naming hygiene in that
-  test file.
+- [x] brief-276 Part A DONE — items 1+3: the two `#[ignore]` fossils
+  respecced to rum's OWN documented contract (un-ignored, re-pinned to
+  reproduced current truth), `assert_wk_cases` → `assert_rum_cases`
+  naming hygiene, WK-order test names de-WK-ified, contract doc
+  `docs/dev/matcher-flat-optional-contract.md` (enumeration-order
+  conformance recorded WON'T-FIX). Workspace 1653/0.
+- [ ] brief-277 — item 4 (brief-276 Part B, stop-lossed on my Scope
+  omission, not on the design): implement the non-OneIdentity `Flat`
+  singleton wrapped candidates. Codex correctly stopped before any
+  source edit — the `one_identity` threading I specified (from
+  `core.rs` down) reaches `sequence/entry.rs`,
+  `sequence/orderless/optional.rs` and
+  `kernel_data/rewrite_data/replace/list/matching.rs`, none of which
+  were in the MAY list. **Redesign that removes the ripple entirely**:
+  both `allow_flat_single = true` call sites of
+  `orderless_candidate_choices` (`orderless/entry.rs:51,112`) already
+  hold `flat_head` in scope, so compute `one_identity` LOCALLY there —
+  the same shape the brief already prescribed for the plain-`Flat`
+  path in `sequence.rs`. Zero signature threading; `core.rs` need not
+  be touched at all (brief-275's work stays untouched by construction).
 
 ## COMPLETE — row-workload pure line (DB-prep; user ruling 2026-07-20, closed same day, briefs 272-274)
 

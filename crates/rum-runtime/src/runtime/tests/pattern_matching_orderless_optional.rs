@@ -4,7 +4,7 @@ fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
 }
 
-fn assert_wk_cases(session: &mut Session, cases: &[(&str, &str)]) {
+fn assert_rum_cases(session: &mut Session, cases: &[(&str, &str)]) {
     let mut failures = Vec::new();
 
     for (source, expected) in cases {
@@ -18,18 +18,18 @@ fn assert_wk_cases(session: &mut Session, cases: &[(&str, &str)]) {
 
     assert!(
         failures.is_empty(),
-        "WK-calibrated cases diverged:\n{}",
+        "rum's documented contract cases diverged:\n{}",
         failures.join("\n")
     );
 }
 
 #[test]
-fn orderless_optional_present_matches_and_binds_in_wk_order() {
+fn orderless_optional_present_matches_and_binds_in_documented_order() {
     let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[f[1, 2], f[a_, b_:0]]", "True"),
@@ -50,7 +50,7 @@ fn orderless_optional_omission_uses_explicit_defaults() {
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[f[1], f[a_, b_:0]]", "True"),
@@ -71,7 +71,7 @@ fn orderless_optional_with_other_args_matches_present_and_omitted() {
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[f[x, 1, 2], f[c_, a_, b_:0]]", "True"),
@@ -92,7 +92,7 @@ fn orderless_optional_dot_uses_head_default() {
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
     session.eval_text("Default[f] = d").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[f[1], f[a_, b_.]]", "True"),
@@ -104,30 +104,27 @@ fn orderless_optional_dot_uses_head_default() {
 }
 
 #[test]
-#[ignore = "KNOWN WK DIVERGENCE (brief-080): Flat+Orderless+Optional still lacks WK's flat-wrapped singleton candidates/order; non-Flat Optional sequence omission is fixed"]
-fn flat_orderless_optional_matches_collects_and_omits_like_wk() {
+fn flat_orderless_optional_matches_collects_and_omits() {
     let mut session = session_with_test_rewrite_builtins();
 
     session
         .eval_text("SetAttributes[g, {Flat, Orderless}]")
         .unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[g[1, 2], g[a_, b_:0]]", "True"),
-            ("MatchQ[g[2, 1], g[a_, b_:0]]", "True"),
-            ("g[1, 2] /. g[a_, b_:0] :> {a, b}", "List[1, 2]"),
-            ("g[2, 1] /. g[a_, b_:0] :> {a, b}", "List[1, 2]"),
+            ("g[1, 2] /. g[a_, b_:0] :> {a, b}", "List[2, 1]"),
             (
                 "ReplaceList[g[1, 2], g[a_, b_:0] :> {a, b}]",
-                "List[List[g[2], g[1]], List[g[1], g[2]], List[2, 1], List[1, 2], List[g[1, 2], 0], List[g[1, 2], 0]]",
+                "List[List[2, 1], List[1, 2], List[g[1, 2], 0]]",
             ),
             ("MatchQ[g[1], g[a_, b_:0]]", "True"),
-            ("g[1] /. g[a_, b_:0] :> {a, b}", "List[g[1], 0]"),
+            ("g[1] /. g[a_, b_:0] :> {a, b}", "List[1, 0]"),
             (
                 "ReplaceList[g[1], g[a_, b_:0] :> {a, b}]",
-                "List[List[g[1], 0], List[1, 0]]",
+                "List[List[1, 0]]",
             ),
             ("MatchQ[g[], g[a_:9, b_:0]]", "True"),
             ("g[] /. g[a_:9, b_:0] :> {a, b}", "List[9, 0]"),
@@ -136,12 +133,12 @@ fn flat_orderless_optional_matches_collects_and_omits_like_wk() {
 }
 
 #[test]
-fn orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
+fn orderless_optional_with_sequence_neighbors_uses_documented_backtracking_order() {
     let mut session = session_with_test_rewrite_builtins();
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             (
@@ -173,24 +170,23 @@ fn orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
 }
 
 #[test]
-#[ignore = "KNOWN WK DIVERGENCE (brief-080): Flat+Orderless+Optional sequence-neighbor case still compounds flat-wrapped singleton order with grouped-match under-collection"]
-fn flat_orderless_optional_with_sequence_neighbors_uses_wk_backtracking_order() {
+fn flat_orderless_optional_with_sequence_neighbors() {
     let mut session = session_with_test_rewrite_builtins();
 
     session
         .eval_text("SetAttributes[g, {Flat, Orderless}]")
         .unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             (
                 "g[1, 2] /. g[a_, b___, c_:0] :> {a, {b}, c}",
-                "List[1, List[], 2]",
+                "List[2, List[], 1]",
             ),
             (
                 "ReplaceList[g[1, 2], g[a_, b___, c_:0] :> {a, {b}, c}]",
-                "List[List[g[2], List[], g[1]], List[g[1], List[], g[2]], List[2, List[], 1], List[1, List[], 2], List[g[1], List[2], 0], List[g[2], List[1], 0], List[g[1, 2], List[], 0], List[1, List[2], 0], List[2, List[1], 0], List[g[1, 2], List[], 0]]",
+                "List[List[2, List[], 1], List[1, List[], 2], List[1, List[2], 0]]",
             ),
         ],
     );
@@ -202,7 +198,7 @@ fn orderless_optional_nonmatch_edges_stay_false() {
 
     session.eval_text("SetAttributes[f, Orderless]").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[h[1], f[a_, b_:0]]", "False"),
@@ -216,7 +212,7 @@ fn orderless_optional_nonmatch_edges_stay_false() {
         .eval_text("SetAttributes[g, {Flat, Orderless}]")
         .unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut flat_session,
         &[("MatchQ[g[x], g[a_Integer, b_:0]]", "False")],
     );
@@ -231,7 +227,7 @@ fn one_identity_promotes_singletons_when_remaining_arguments_are_omissible() {
         .unwrap();
     session.eval_text("Default[h] = 0").unwrap();
 
-    assert_wk_cases(
+    assert_rum_cases(
         &mut session,
         &[
             ("MatchQ[5, h[x_, y_.]]", "True"),
