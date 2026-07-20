@@ -1074,7 +1074,7 @@ string-pattern surface. Batches, evidence-ranked:
   now requires updating the pinned text. That is the point (user ruling
   2026-07-20: freeze all of it), and the update cost is one test run plus
   reviewing the diff.
-- [ ] DECIDE (not debt — no work is pending, a ruling is): should evaluation
+- [x] DECIDE — RULED AND DELIVERED, line closed 2026-07-21. Was: should evaluation
   tracing be a first-class REPL view? The kernel ALREADY has the capability
   (`builtin_catalog/debug.rs`, `Diagnostic`-gated; `TracePrint[1+1]` works
   today and prints `Plus[1, 1]` then `2`). What is missing is a REPL
