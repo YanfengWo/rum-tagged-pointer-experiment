@@ -3,9 +3,54 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## COMPLETE — row-workload pure line (DB-prep; user ruling 2026-07-20, closed same day, briefs 272-274)
+## ACTIVE PLAN — matcher OneIdentity/Optional + Flat respec line (user ruling 2026-07-20)
 
-**No active plan — the next direction awaits a user decision.**
+Re-scoped from the Standing Engineering Debt matcher entry after
+re-probing (2026-07-20). The old target — reproduce WK's byte-exact
+Flat+Orderless+Optional enumeration (the two `#[ignore]` tests) — is a
+policy fossil: the expected strings are recorded third-party engine
+output (difftest era), include WK's own duplicate rows, and cannot be
+legally regenerated under the Testing Policy. The real content
+decomposes into a common-path semantic gap (never previously recorded)
+and a smaller-than-recorded exotic half (the wrapped-chunk enumeration
+machinery already exists — `ReplaceList[a+b+c, x_+y__]` produces
+`Plus[a,b]`-style candidates today).
+
+Grounding (probed + code-read 2026-07-20):
+
+- **OneIdentity promoted-singleton matching is missing** beyond the
+  single-arg case: `core.rs` `match_compiled_call_owned`'s non-Call arm
+  handles only `[single]` patterns (hard False for `h[x_, y_.]` vs an
+  atom), and the Call arm has no head-mismatch fallback (WL: ANY
+  expression matches `x_ + y_.` with y→0). This kills the WL
+  coefficient idioms (`x_ + y_.`, `c_. x_^n_.`).
+- **`Default[Plus]`/`Default[Times]` are unregistered** (dot-optionals
+  resolve via downvalues on the `Default` symbol —
+  `resolve_optional_implicit_default`; registration is data, no new
+  mechanism).
+- Flat singleton wrapping (`g[1]` candidates) and its Optional compound
+  are the remaining exotic half; brief-080's failure mode (order changes
+  regressing neighbors) demands the respec land first.
+
+Queue (user-approved plan items 1-4, 2026-07-20):
+
+- [ ] brief-275 — items 2: OneIdentity promoted-singleton matching
+  (atom arm generalized past `[single]`; Call-arm head-mismatch
+  fallback; both routed through the existing orderless/flat arg
+  dispatch with `vec![value]`) + register `Default[Plus] = 0`,
+  `Default[Times] = 1` at install. Deliberate WL-conformant behavior
+  change: `MatchQ[anything, x_ + y_.]` becomes True. Matcher = hot
+  path ⇒ microbench A/B.
+- [ ] brief-276 — items 1+3+4: respec the two `#[ignore]` tests to
+  rum's OWN documented contract (candidate set = groupings ×
+  orderings × omissions, deduplicated; fewer-defaults candidates
+  first; bare-singleton before head-wrapped; rum's existing
+  enumeration order — explicitly NOT WK order conformance, recorded
+  WON'T-FIX) + implement the non-OneIdentity Flat singleton wrapped
+  candidates; contract doc + `assert_wk_cases` naming hygiene in that
+  test file.
+
+## COMPLETE — row-workload pure line (DB-prep; user ruling 2026-07-20, closed same day, briefs 272-274)
 
 Pure-kernel preparation for future downstream database applications (SQL
 or NoSQL): make the "table = List of Associations" workload complete and
