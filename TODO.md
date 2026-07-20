@@ -330,9 +330,9 @@ Queue, in order; each item gates before the next starts:
    namespace.rs → variables/contexts/symbols; stdlib strings/structure/
    associations split by family; all now under threshold, reference
    byte-identical. `rules.rs` 17KB is warning-only, left.
-   `stdlib_attributes.rs` 28KB is ACCEPTED DEBT (user 2026-07-18;
-   binary_search_by over one sorted const, no family boundary — see
-   Standing Engineering Debt). **Catalog split work COMPLETE.**）.
+   `stdlib_attributes.rs` was ACCEPTED DEBT then (user 2026-07-18) and
+   its debt was CLEARED 2026-07-20 by brief-280 — see Standing
+   Engineering Debt. **Catalog split work COMPLETE.**）.
 2. [x] **`vm_rhs_template/` — DELETED (brief-244, ruled 2026-07-17).**
    Evidence: the ON path crashed the guard-adjacent recursion test
    (native stack overflow; OFF green, single-variable discriminator);
@@ -974,14 +974,32 @@ string-pattern surface. Batches, evidence-ranked:
 
 ## Standing Engineering Debt
 
-- [ ] `builtin_catalog/stdlib_attributes.rs` (~28KB, split-plan range) is
-  ACCEPTED DEBT (user ruling 2026-07-18), not scheduled to split. It is a
-  flat, alphabetically-SORTED attribute mirror (~459 `Spec::new` rows) whose
-  `default_stdlib_attribute_set_for_symbol` does a `binary_search_by(name)`
-  over the single const — so a split would force a lookup-mechanism change
-  (search multiple segments, or build+search a Vec) and there is no
-  responsibility boundary to cut on. Readability would not improve. Revisit
-  only if it approaches the 35KB architecture-debt line.
+- [x] `builtin_catalog/stdlib_attributes.rs` — DEBT CLEARED 2026-07-20
+  (brief-280). Accepted as debt on 2026-07-18 with a "revisit only if it
+  approaches the 35KB line" trigger; it grew 28k → 30,747 bytes, the user
+  called it, and the trigger fired as designed.
+  **The 2026-07-18 entry mispredicted the cost of splitting.** It reasoned
+  that a split "would force a lookup-mechanism change (search multiple
+  segments, or build+search a Vec)" — the delivered split does NEITHER: a
+  `const fn` dispatch on the name's FIRST BYTE selects exactly one of four
+  chunks, then does the same single `binary_search_by(name)` as before. No
+  OnceLock, allocation, or extra search on the matcher-hot
+  `default_stdlib_attribute_set_for_symbol` path.
+  The other premise — "no responsibility boundary to cut on" — was true and
+  was the KEY: a table whose only structure is its ASCII name order must be
+  split along that order, not forced into a family taxonomy. Chunks are
+  `<'F'` / `'F'..='M'` / `'N'..='R'` / `>='S'` (parent 8.8k; chunks
+  6.8/6.6/4.6/6.3k, all far under threshold, with room to grow).
+  Compile-time strength preserved rather than traded down: per-chunk strict
+  sortedness + per-chunk byte-range membership over disjoint, exhaustive
+  ranges is equivalent to the old single global assertion (disjoint ranges
+  make a cross-chunk duplicate impossible; concatenating chunks in range
+  order reproduces the original sorted array).
+  Gate: all 474 entries proven identical AND identically ordered by static
+  extraction from both trees; workspace 1654/0; both assertion kinds
+  negatively calibrated — including the failure mode the split newly
+  introduces (a correctly-sorted entry filed in the WRONG chunk), which
+  fails compilation.
 - [ ] Matcher: three known gaps in `Flat`+`Orderless`+`Optional` combinations
   (binding order for flat-wrapped singletons; `ReplaceList` under-collection
   of grouped flat matches; their compound). Low urgency, exotic corner. The
