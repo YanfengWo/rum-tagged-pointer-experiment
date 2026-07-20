@@ -1,5 +1,84 @@
 # Brief 275 — OneIdentity promoted-singleton matching + Plus/Times head defaults
 
+## REVISION 1 (2026-07-20) — read this first
+
+Round 1 stop-lossed correctly: eval-based seeding puts ordinary
+downvalues on `System``Default`, which the host user-definitions
+contract (`rum-host` test
+`host_session_introspection_enumerates_user_definitions_and_contexts`)
+rightly refuses to show as user state. The host contract STANDS — the
+fix is to classify the seeded rows as installed baseline, mirroring the
+existing `install_system_own_value` mechanism.
+
+**The working tree already contains round 1's work** (matcher seams,
+eval-based seeding in `install_core`, kernel + stdlib tests) — build on
+it, do not redo it. What changes in this revision:
+
+1. **New kernel classification (design ruled by Claude, supersedes the
+   round-1 "no new kernel API" fence):**
+   - New session state `installed_system_down_values: SymbolMap<Vec<(Expr, Expr)>>`
+     (lhs/rhs pairs per symbol), alongside
+     `installed_system_own_values` in BOTH `Session` and its
+     snapshot-state struct (`model/session.rs` ~line 59,
+     `session/session_state.rs` ~line 149), cloned/restored in
+     `session/session_helpers.rs` (~lines 55/86) exactly like the own
+     set.
+   - New `#[doc(hidden)] pub fn install_system_down_value(&mut self,
+     name: &str, lhs: Expr, rhs: Expr)` in `session/session_api.rs`
+     beside `install_system_own_value` (~line 191): appends a downvalue
+     to the symbol's definition through the same store the ordinary
+     assignment path uses (reuse the existing downvalue-insert helper —
+     find it from `Default[f] = d`'s path; do NOT hand-roll a second
+     insertion shape) and records the (lhs, rhs) pair in the new map.
+   - New conservative predicate
+     `is_installed_system_down_values_symbol(&self, symbol) -> bool`
+     beside `is_installed_protected_builtin_own_value_symbol`
+     (~line 369): true iff the symbol is system, is present in the new
+     map, has NO own/delayed-own/up/sub values, and its
+     `down_values` are CONTENT-EQUAL to exactly the recorded installed
+     pairs (same order, same lhs/rhs). Content comparison replaces
+     removal hooks: any user mutation (add, replace, Unset) makes the
+     predicate false and the WHOLE symbol surfaces — that is the
+     documented contract.
+   - OR the new predicate into the four existing filter sites:
+     `definition_summaries` (~line 217), `snapshot_definitions_source`
+     (~line 243), and the two `package_tools.rs` filters
+     (~lines 410/752).
+2. **`install_core` seeding switches** from `eval_text` to two
+   `install_system_down_value` calls (lhs `Default[Plus]` → rhs `0`,
+   lhs `Default[Times]` → rhs `1`), matching the lhs shape the
+   matcher's `resolve_optional_implicit_default` looks up (verify
+   against `default_value_lhs` — the round-1 eval seeding produced the
+   working shape; reproduce it exactly).
+3. **Documented boundary (add ONE kernel test pinning each):**
+   - A fresh session's `definition_summaries()` does NOT contain
+     `System``Default`; after a user `Default[g] = d`, it DOES surface,
+     with `down_value_count == 3` (2 installed + 1 user — the count is
+     over the surfaced symbol, deliberately).
+   - `Unset[Default[Plus]]` then snapshot then restore RESURRECTS the
+     installed default (snapshot renders no deletions; installed
+     baseline reappears at install). Pin it as documented behavior.
+4. The round-1 host test failure must be green again WITH THE HOST TEST
+   UNCHANGED.
+5. Then run the round-1 deferred verification: the candidate probes and
+   the microbench A/B (base binary `/tmp/brief275_base_rum-cli` already
+   exists from round 1 — REUSE it; state its sha256 in the report).
+
+Additional MAY-modify for this revision ONLY:
+`crates/rum-runtime/src/runtime/model/session.rs`,
+`crates/rum-runtime/src/runtime/session/session_state.rs`,
+`crates/rum-runtime/src/runtime/session/session_helpers.rs`,
+`crates/rum-runtime/src/runtime/session/session_api.rs`,
+`crates/rum-runtime/src/runtime/package_tools.rs` (filter sites only).
+Everything else from the round-1 Scope stands; `rum-host` remains
+UNTOUCHABLE.
+
+The remainder of the brief is the round-1 text; where it conflicts with
+this revision (the seeding mechanism, the "no new kernel API" fence),
+the revision wins.
+
+---
+
 Implementation brief. First package of the matcher OneIdentity/Optional
 line (TODO.md §ACTIVE PLAN, user-approved plan item 2): make the WL
 coefficient idioms (`x_ + y_.`, `c_. x_^n_.`) work. Two independent
