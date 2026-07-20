@@ -1,8 +1,14 @@
-use rum_host::{HostCompletionRequest, HostSession};
+use rum_host::{HostCompletionRequest, HostEvalOutcome, HostSession, HostTyped};
 use rum_syntax::{
-    FormatterOptions, format_parsed_source, parse_format_command, parse_with_diagnostics,
+    FormatterOptions, SyntaxExprKind, format_parsed_source, parse_format_command,
+    parse_with_diagnostics,
 };
-use rum_terminal::{render_host_failure, render_host_inspect, render_host_message_catalog};
+use rum_terminal::{
+    render_host_eval_response, render_host_failure, render_host_inspect,
+    render_host_message_catalog,
+};
+
+const DEFAULT_TRACE_LINE_LIMIT: usize = 40;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum ReplCommand {
@@ -17,6 +23,13 @@ pub(super) enum ReplCommand {
     },
     Lower {
         expr: Option<String>,
+    },
+    Trace {
+        expr: Option<String>,
+        form: Option<String>,
+        depth: Option<usize>,
+        full: bool,
+        form_was_rewritten: bool,
     },
     History {
         limit: Option<usize>,
@@ -56,6 +69,17 @@ pub(super) fn parse_repl_command(line: &str) -> Result<Option<ReplCommand>, Stri
         _ if line == ":lower" || line.starts_with(":lower ") => Ok(Some(ReplCommand::Lower {
             expr: parse_trailing_argument(line, ":lower"),
         })),
+        _ if line == ":trace" || line.starts_with(":trace ") => {
+            let input = line.trim_start_matches(":trace").trim();
+            let (expr, form, depth, full, form_was_rewritten) = parse_trace_command(input)?;
+            Ok(Some(ReplCommand::Trace {
+                expr,
+                form,
+                depth,
+                full,
+                form_was_rewritten,
+            }))
+        }
         _ if line == ":history" || line.starts_with(":history ") => {
             Ok(Some(ReplCommand::History {
                 limit: parse_history_limit(line)?,
@@ -112,6 +136,23 @@ pub(super) fn execute_repl_command(
                 Err(failure) => render_host_failure(&failure),
             })
         }
+        ReplCommand::Trace { expr: None, .. } => {
+            CommandExecution::Output("! :trace expects an expression".to_string())
+        }
+        ReplCommand::Trace {
+            expr: Some(expr),
+            form,
+            depth,
+            full,
+            form_was_rewritten,
+        } => CommandExecution::Output(execute_trace(
+            session,
+            &expr,
+            form.as_deref(),
+            depth,
+            full,
+            form_was_rewritten,
+        )),
         ReplCommand::History { limit } => CommandExecution::Output(render_history(history, limit)),
         ReplCommand::Complete { prefix: None } => {
             CommandExecution::Output("! :complete expects a prefix".to_string())
@@ -179,6 +220,216 @@ fn parse_history_limit(line: &str) -> Result<Option<usize>, String> {
     }
 }
 
+fn parse_trace_command(
+    input: &str,
+) -> Result<(Option<String>, Option<String>, Option<usize>, bool, bool), String> {
+    let mut remainder = input.trim();
+    let mut form = None;
+    let mut depth = None;
+    let mut full = false;
+    let mut form_was_rewritten = false;
+
+    while let Some((flag, rest)) = split_first_token(remainder) {
+        if flag == "--full" {
+            full = true;
+            remainder = rest;
+            continue;
+        }
+
+        if let Some(raw_form) = flag.strip_prefix("--form=") {
+            let (normalized, rewritten) = normalize_trace_form(raw_form)?;
+            form = Some(normalized);
+            form_was_rewritten = rewritten;
+            remainder = rest;
+            continue;
+        }
+
+        if flag == "--form" {
+            let Some((raw_form, next)) = split_first_token(rest) else {
+                return Err("--form expects a pattern".to_string());
+            };
+            if raw_form.starts_with("--") {
+                return Err("--form expects a pattern".to_string());
+            }
+            let (normalized, rewritten) = normalize_trace_form(raw_form)?;
+            form = Some(normalized);
+            form_was_rewritten = rewritten;
+            remainder = next;
+            continue;
+        }
+
+        if let Some(raw_depth) = flag.strip_prefix("--depth=") {
+            depth = Some(parse_trace_depth(raw_depth)?);
+            remainder = rest;
+            continue;
+        }
+
+        if flag == "--depth" {
+            let Some((raw_depth, next)) = split_first_token(rest) else {
+                return Err("--depth expects a non-negative integer".to_string());
+            };
+            depth = Some(parse_trace_depth(raw_depth)?);
+            remainder = next;
+            continue;
+        }
+
+        if flag.starts_with("--") {
+            return Err(format!("unknown flag `{flag}`"));
+        }
+
+        break;
+    }
+
+    let expr = (!remainder.is_empty()).then(|| remainder.to_string());
+    Ok((expr, form, depth, full, form_was_rewritten))
+}
+
+fn normalize_trace_form(raw: &str) -> Result<(String, bool), String> {
+    if raw.is_empty() {
+        return Err("--form expects a pattern".to_string());
+    }
+
+    let is_bare_symbol = parse_with_diagnostics(raw).ok().is_some_and(|parsed| {
+        matches!(parsed.syntax().kind, SyntaxExprKind::Symbol(_))
+            && parsed.syntax().span.start == 0
+            && parsed.syntax().span.end == raw.len()
+    });
+
+    if is_bare_symbol {
+        Ok((format!("_{raw}"), true))
+    } else {
+        Ok((raw.to_string(), false))
+    }
+}
+
+fn parse_trace_depth(raw: &str) -> Result<usize, String> {
+    raw.parse::<usize>()
+        .map_err(|_| "--depth expects a non-negative integer".to_string())
+}
+
+fn split_first_token(input: &str) -> Option<(&str, &str)> {
+    let trimmed = input.trim_start();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    match trimmed.find(char::is_whitespace) {
+        Some(index) => Some((&trimmed[..index], trimmed[index..].trim_start())),
+        None => Some((trimmed, "")),
+    }
+}
+
+fn execute_trace(
+    session: &mut HostSession,
+    expr: &str,
+    form: Option<&str>,
+    depth: Option<usize>,
+    full: bool,
+    form_was_rewritten: bool,
+) -> String {
+    let source = trace_source(expr, form, depth);
+
+    match session.eval(source.as_str()) {
+        HostEvalOutcome::Success(mut response) => {
+            let mut trace = render_trace_tree(&response.value.typed, full);
+            if form_was_rewritten {
+                let notice = format!(
+                    "filtering on {}",
+                    form.expect("a rewritten trace form is present")
+                );
+                trace = if trace.is_empty() {
+                    notice
+                } else {
+                    format!("{notice}\n{trace}")
+                };
+            }
+            response.value.text = trace;
+            render_host_eval_response(&response)
+        }
+        HostEvalOutcome::Failure(failure) => render_host_failure(&failure),
+        HostEvalOutcome::InputRequired(suspension) => super::render_input_suspension(&suspension),
+    }
+}
+
+fn trace_source(expr: &str, form: Option<&str>, depth: Option<usize>) -> String {
+    match (form, depth) {
+        (None, None) => format!("Trace[{expr}]"),
+        (Some(form), None) => format!("Trace[{expr}, {form}]"),
+        (form, Some(depth)) => format!("Trace[{expr}, {}, {depth}]", form.unwrap_or("_")),
+    }
+}
+
+fn render_trace_tree(value: &HostTyped, full: bool) -> String {
+    let mut lines = Vec::new();
+    match value {
+        HostTyped::List(items) => collect_trace_lines(items, 0, &mut lines),
+        other => lines.push(render_trace_leaf(other, 0)),
+    }
+
+    if !full && lines.len() > DEFAULT_TRACE_LINE_LIMIT {
+        let omitted = lines.len() - DEFAULT_TRACE_LINE_LIMIT;
+        lines.truncate(DEFAULT_TRACE_LINE_LIMIT);
+        lines.push(format!("… {omitted} more steps (:trace --full to see all)"));
+    }
+
+    lines.join("\n")
+}
+
+fn collect_trace_lines(items: &[HostTyped], depth: usize, lines: &mut Vec<String>) {
+    for item in items {
+        match item {
+            HostTyped::List(nested) => collect_trace_lines(nested, depth + 1, lines),
+            leaf => lines.push(render_trace_leaf(leaf, depth)),
+        }
+    }
+}
+
+fn render_trace_leaf(value: &HostTyped, depth: usize) -> String {
+    format!("{}{}", "  ".repeat(depth), render_typed_text(value))
+}
+
+fn render_typed_text(value: &HostTyped) -> String {
+    match value {
+        HostTyped::Integer(value) => value.to_string(),
+        HostTyped::BigInteger(value) | HostTyped::Symbol(value) => value.clone(),
+        HostTyped::Rational {
+            numerator,
+            denominator,
+        } => format!("Rational[{numerator}, {denominator}]"),
+        HostTyped::Bool(true) => "True".to_string(),
+        HostTyped::Bool(false) => "False".to_string(),
+        HostTyped::Str(value) => format!("{value:?}"),
+        HostTyped::List(items) => format!(
+            "List[{}]",
+            items
+                .iter()
+                .map(render_typed_text)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        HostTyped::Association(entries) => format!(
+            "Association[{}]",
+            entries
+                .iter()
+                .map(|(key, value)| format!(
+                    "Rule[{}, {}]",
+                    render_typed_text(key),
+                    render_typed_text(value)
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        HostTyped::Rule { lhs, rhs } => {
+            format!(
+                "Rule[{}, {}]",
+                render_typed_text(lhs),
+                render_typed_text(rhs)
+            )
+        }
+        HostTyped::Other { text, .. } => text.clone(),
+    }
+}
+
 fn render_history(history: &[String], limit: Option<usize>) -> String {
     if history.is_empty() {
         return "(no history)".to_string();
@@ -196,7 +447,7 @@ fn render_history(history: &[String], limit: Option<usize>) -> String {
 }
 
 fn help_text() -> &'static str {
-    ":help           Show REPL commands.\n:parse EXPR     Parse and print the syntax tree.\n:format [--line-width N] EXPR  Format syntax into the current canonical style.\n:lower EXPR     Lower syntax into core Expr form.\n:complete PREF  Show symbol and context completions.\n:history [N]    Show recent input history.\n:inspect NAME   Show basic symbol metadata.\n:messages [NAME]   Show message definitions globally or for a symbol/message.\n:quit           Exit the REPL."
+    ":help           Show REPL commands.\n:parse EXPR     Parse and print the syntax tree.\n:format [--line-width N] EXPR  Format syntax into the current canonical style.\n:lower EXPR     Lower syntax into core Expr form.\n:trace [--form=PAT] [--depth=N] [--full] EXPR  Trace evaluation as an indented tree.\n:complete PREF  Show symbol and context completions.\n:history [N]    Show recent input history.\n:inspect NAME   Show basic symbol metadata.\n:messages [NAME]   Show message definitions globally or for a symbol/message.\n:quit           Exit the REPL."
 }
 
 #[cfg(test)]

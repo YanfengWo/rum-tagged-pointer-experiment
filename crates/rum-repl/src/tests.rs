@@ -14,6 +14,17 @@ fn eval_text(session: &mut HostSession, source: &str) {
     }
 }
 
+fn repl_output(input: &str) -> String {
+    let input = Cursor::new(input);
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = HostSession::new();
+
+    repl.run(&mut session).unwrap();
+
+    String::from_utf8(output).unwrap()
+}
+
 fn temp_history_path(prefix: &str) -> PathBuf {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -38,6 +49,7 @@ fn repl_handles_help_and_quit() {
 :parse EXPR     Parse and print the syntax tree.
 :format [--line-width N] EXPR  Format syntax into the current canonical style.
 :lower EXPR     Lower syntax into core Expr form.
+:trace [--form=PAT] [--depth=N] [--full] EXPR  Trace evaluation as an indented tree.
 :complete PREF  Show symbol and context completions.
 :history [N]    Show recent input history.
 :inspect NAME   Show basic symbol metadata.
@@ -449,6 +461,192 @@ fn repl_lower_command_prints_canonical_core_expression() {
     assert_eq!(
         rendered,
         r#"rum> SetDelayed[Pattern[x, Blank[Integer]], f[x]]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_renders_a_small_tree() {
+    let rendered = repl_output(":trace 1+1\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> Hold[Plus[1, 1]]
+Hold[2]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_filters_with_a_pattern_form() {
+    let rendered = repl_output(":trace --form=_Plus (1+2)*3\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum>   Hold[Plus[1, 2]]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_rewrites_a_bare_symbol_filter() {
+    let rendered = repl_output(":trace --form=Plus (1+2)*3\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> filtering on _Plus
+  Hold[Plus[1, 2]]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_passes_a_numeric_depth_levelspec() {
+    let rendered = repl_output(":trace --depth=2 (1+2)*3\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> Hold[1]
+Hold[2]
+Hold[Plus[1, 2]]
+Hold[3]
+  Hold[1]
+  Hold[2]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_truncates_by_default_and_full_is_the_escape_hatch() {
+    let rendered =
+        repl_output(":trace Table[i^2, {i, 10}]\n:trace --full Table[i^2, {i, 10}]\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> Hold[Table[Power[i, 2], List[i, 10]]]
+  Hold[i]
+  Hold[1]
+Hold[Power[i, 2]]
+Hold[1]
+  Hold[i]
+  Hold[2]
+Hold[Power[i, 2]]
+Hold[4]
+  Hold[i]
+  Hold[3]
+Hold[Power[i, 2]]
+Hold[9]
+  Hold[i]
+  Hold[4]
+Hold[Power[i, 2]]
+Hold[16]
+  Hold[i]
+  Hold[5]
+Hold[Power[i, 2]]
+Hold[25]
+  Hold[i]
+  Hold[6]
+Hold[Power[i, 2]]
+Hold[36]
+  Hold[i]
+  Hold[7]
+Hold[Power[i, 2]]
+Hold[49]
+  Hold[i]
+  Hold[8]
+Hold[Power[i, 2]]
+Hold[64]
+  Hold[i]
+  Hold[9]
+Hold[Power[i, 2]]
+Hold[81]
+  Hold[i]
+  Hold[10]
+Hold[Power[i, 2]]
+… 2 more steps (:trace --full to see all)
+rum> Hold[Table[Power[i, 2], List[i, 10]]]
+  Hold[i]
+  Hold[1]
+Hold[Power[i, 2]]
+Hold[1]
+  Hold[i]
+  Hold[2]
+Hold[Power[i, 2]]
+Hold[4]
+  Hold[i]
+  Hold[3]
+Hold[Power[i, 2]]
+Hold[9]
+  Hold[i]
+  Hold[4]
+Hold[Power[i, 2]]
+Hold[16]
+  Hold[i]
+  Hold[5]
+Hold[Power[i, 2]]
+Hold[25]
+  Hold[i]
+  Hold[6]
+Hold[Power[i, 2]]
+Hold[36]
+  Hold[i]
+  Hold[7]
+Hold[Power[i, 2]]
+Hold[49]
+  Hold[i]
+  Hold[8]
+Hold[Power[i, 2]]
+Hold[64]
+  Hold[i]
+  Hold[9]
+Hold[Power[i, 2]]
+Hold[81]
+  Hold[i]
+  Hold[10]
+Hold[Power[i, 2]]
+Hold[100]
+Hold[List[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_bare_trace_command_shows_usage_instead_of_evaluating() {
+    let rendered = repl_output(":trace\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> ! :trace expects an expression
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_uses_the_host_failure_renderer_for_bad_input() {
+    let rendered = repl_output(":trace f[1,]\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> error: expected expression, found ] at bytes 10..11
+ --> 1:11
+  |
+1 | Trace[f[1,]]
+  |           ^
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_command_renders_messages_before_the_tree() {
+    let rendered = repl_output(":trace Message[General::stop]; 1\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> ! General::stop: message emitted
+Hold[CompoundExpression[Message[General::stop], 1]]
+Hold[Message[General::stop]]
+Hold[Null]
+Hold[1]
 rum> "#
     );
 }

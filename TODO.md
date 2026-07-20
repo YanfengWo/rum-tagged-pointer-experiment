@@ -1085,6 +1085,30 @@ string-pattern surface. Batches, evidence-ranked:
   convention. Not doing it means declaring the status quo final: users
   write `TracePrint[...]` in the expression themselves.
   User ruling 2026-07-20: DO design it, after the snapshot work above.
+  DESIGNED + RULED + BUILT 2026-07-20: design doc
+  `docs/dev/repl-trace-view-design.md`, user ruled Option A (thin
+  non-interactive view), delivered by brief-283 — `:trace [--form=PAT]
+  [--depth=N] [--full] EXPR`, rendered REPL-side from the structured
+  `Trace[]` value (never by calling `TracePrint`, since the REPL owns its
+  output stream), truncating at 40 lines. Bare-symbol `--form=f` is
+  rewritten to `_f` with a notice line, because the kernel filter treats a
+  bare symbol as a literal and silently returns `List[]`. 8 new snapshot
+  tests, 3 negative-calibrated; workspace 1662/0. Exactly one pre-existing
+  frozen snapshot changed (`:help`, one added line) — brief-282's
+  snapshots' first real outing, and they caught precisely the intended
+  change and nothing else.
+  FOLLOW-UP QUEUED (brief-284): leaves render as `Hold[Plus[1, 1]]`; the
+  `Hold` wrapper is a `Trace`-return artifact and is noise on every line.
+  The kernel's own `TracePrint` peels it, and `HostValue.text` already
+  establishes peeling a display-only hold wrapper at a rendering boundary.
+  My brief said "print each leaf's text" without accounting for it — my
+  error, not the execution's.
+  NEXT AXIS (documented, out of scope so far): design doc §1.5 records a
+  second, host-level trace channel (`HostTraceEvent`, incl.
+  `RuleApplied{source, input, rule, result}`) that can name WHICH RULE
+  fired — something `Trace[]` cannot do. Using it per-invocation needs
+  `rum-host` to forward the kernel's `Session::enable_tracing` toggle,
+  i.e. an embedding-API change.
   **Filed here rather than under Standing Engineering Debt on purpose** —
   that section is a record of known limitations, and mixing "unfinished
   work" with "undecided product question" is what let the previous
