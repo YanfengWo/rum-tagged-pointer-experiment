@@ -1283,3 +1283,25 @@ over-20KB: stdlib_attributes.rs (28KB) — a flat alphabetically-sorted
 attribute mirror with a binary_search_by consumer, so splitting is a
 lookup-mechanism change with no family boundary; surfaced to the user
 as split-with-adaptation vs. accept-as-debt.
+
+## 2026-07-20 — Sealed scoping line (d) COMPLETE (briefs 268-271)
+
+The lazy + sealed-scoping ACTIVE PLAN is fully closed. (d) landed in four
+steps: brief-268 grounding (REFUTED the design's original Module-gensym
+substrate — Module locals are name-mangled and source-reachable; the real
+seal = fresh bit-62 identities kept OUT of symbol_generations, resolver
+byte-untouched), brief-269 mechanism spine (DefinePackage three-tier
+registration, suspension-safe install, 12 reachability tests, reference
+637), brief-270 hidden-by-default introspection (one predicate + one
+Diagnostic-gated reveal across Names/Contexts/Definition/Information/
+catalogs/completion/Save-DumpSave; 17 dual-variant tests), brief-271
+snapshot-by-re-registration + re-link (RestoreSealedReferences restore-mode
+marker, orphan refusal, fallible snapshot_to_bytes, byte-parity for
+sealed-free sessions; reference 638). Close-out: guide §Sealed Packages,
+README divergence section (user ruling 2026-07-19: the dual dividend —
+real encapsulation + persistence in one mode, dissolving the strict/stable
+split — is publication-narrative material). Workspace 1630/0. Gate
+corrections this line: brief-271's undeclared process-global identity
+allocator reverted to session-scoped. A/B method note: the microsecond
+list-tier labels proved layout-lottery-sensitive (±60%, bidirectional,
+closed by brief-271's reversal of brief-269's movements).

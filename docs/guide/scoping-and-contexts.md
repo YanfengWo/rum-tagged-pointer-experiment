@@ -118,6 +118,58 @@ The explicit path avoids relying on package search paths.
 
 The final expression uses the fully qualified symbol `` GuidePkg`answer ``.
 
+## Sealed Packages
+
+`DefinePackage` registers a source unit with three symbol tiers.
+
+Declared `Public` symbols live in the package context. Declared
+`PackageScope` symbols live in a `PackageScope\`` subcontext. Both are
+ordinary name-resolvable symbols — honest conventions, reachable by fully
+qualified name.
+
+Everything else the unit binds is private, and private is a real boundary:
+each private symbol is minted with a fresh internal identity, the unit body
+is rewritten to reference it, and the name is never entered in the
+resolution tables. Code outside the unit that spells the name — directly,
+via `Symbol`, or via `ToExpression` — gets a distinct ordinary symbol and
+cannot reach the sealed binding.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'DefinePackage["Counter`", Public[{Bump, Peek}], PackageScope[{limit}], limit = 10; total = 0; Bump[n_] := If[total + n > limit, $Failed, total = total + n]; Peek[] := total]; {Counter`Bump[3], Counter`Bump[4], Counter`Peek[], Counter`PackageScope`limit}'
+List[3, 7, 7, 10]
+```
+
+Registration returns the package context string. A failing body form
+rolls the sealed installs back, reports `DefinePackage::failed`, and
+returns `$Failed`.
+
+Assigning to the spelled private name creates the caller's own symbol; the
+sealed state is untouched:
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'DefinePackage["Counter`", Public[{Bump, Peek}], PackageScope[{limit}], limit = 10; total = 0; Bump[n_] := If[total + n > limit, $Failed, total = total + n]; Peek[] := total]; Counter`Bump[3]; Counter`Private`total = 999; {Counter`Peek[], Counter`Private`total}'
+List[3, 999]
+```
+
+Introspection of sealed privates is capability-gated. A session whose
+policy allows `Diagnostic` — the trusted CLI default — sees them in
+`Names`, `Contexts`, `Definition`, and `Information` (the owner/debug
+view); a sandboxed policy without `Diagnostic` sees no trace of them, and
+`Save`/`DumpSave` refuse to write sealed definitions into files.
+
+```text
+$ cargo run -q -p rum-cli -- --eval 'DefinePackage["Counter`", Public[{Bump, Peek}], PackageScope[{limit}], limit = 10; total = 0; Bump[n_] := If[total + n > limit, $Failed, total = total + n]; Peek[] := total]; Names["Counter`Private`*"]'
+List["Counter`Private`total"]
+```
+
+Snapshots persist a sealed package as its registration form: restore
+re-runs `DefinePackage`, minting fresh identities, so the seal survives
+every round trip. Private state mutated after registration resets to its
+as-registered values; public and package-scope state persists as usual.
+Sealed values that leaked into ordinary variables re-link to the fresh
+identities on restore, and a snapshot fails loudly rather than write a
+sealed reference it cannot re-link.
+
 ## Context Variables
 
 `$Context` is the current context name.
@@ -164,6 +216,11 @@ They do not capture every session detail: attribute-only symbols, `$`
 variables, options, messages, the gensym counter, and unrelated context state
 are outside the current snapshot image.
 
+Sealed packages are captured as their `DefinePackage` registration forms
+(restore re-registers them; see Sealed Packages above), so `snapshot_to_bytes`
+is fallible: it refuses, with a descriptive failure, a session whose state
+holds a sealed reference that no current unit can re-link.
+
 ## Practical Guidance
 
 Use fully qualified names in package examples and saved-session tests.
@@ -173,6 +230,9 @@ Use `With` for lexical substitution.
 Use `Module` for fresh locals and closures.
 
 Use `Block` for temporary dynamic rebinding.
+
+Use `DefinePackage` when a package needs a genuinely private tier rather
+than a naming convention.
 
 Use `DumpSave` or host snapshots for persistence, depending on whether the
 caller wants filesystem I/O or an in-memory byte buffer.

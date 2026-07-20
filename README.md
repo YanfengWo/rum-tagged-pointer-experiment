@@ -61,6 +61,39 @@ Explicitly out of scope:
 - compatibility with, or implementation of, other vendors' products and
   protocols
 
+## Sealed Packages — real encapsulation, one mode
+
+Where `rum` diverges from its notation-family origins, it does so
+deliberately, for capabilities the convention cannot offer. The flagship
+example is `DefinePackage`, the sealed package form.
+
+In the notation family's convention, context-based privacy is a naming
+convention: a fully qualified name always resolves, so a "private" symbol
+stops accidents, not callers who spell the name. `rum` owns its kernel, so
+`DefinePackage` makes the private tier a real boundary: every undeclared
+symbol a source unit binds is minted with a fresh internal identity and the
+unit body is rewritten to reference it. The name is never entered in the
+resolution tables — spelling it from outside, directly or via `Symbol` /
+`ToExpression` / string concatenation, yields a distinct ordinary symbol
+with no path to the sealed binding. Introspection is capability-gated:
+sandboxed sessions see no trace that a private even exists, while trusted
+sessions keep a full debug view.
+
+Encapsulation this strong usually costs persistence — a boundary held by
+unforgeable identities cannot be written into a text image, so systems in
+this position historically split into a "strict" mode (real boundary, state
+that cannot be checkpointed) and a "stable" mode (checkpointable state,
+boundary demoted back to convention). `rum` refuses the split: a snapshot
+records each sealed package as its registration form and restore re-runs
+the registration, minting fresh identities; sealed values that leaked into
+ordinary variables are re-linked to those fresh identities by a
+restore-only marker, and a snapshot fails loudly rather than emit a sealed
+reference it cannot re-link. One mode carries both properties: a boundary
+stronger than the convention, and checkpoint/restore that keeps it sealed
+across every round trip.
+
+See the language guide's Sealed Packages section for the full contract.
+
 ## Workspace
 
 The repository is a Cargo workspace with these crates:

@@ -234,6 +234,16 @@ gensyms carry no identity, and the snapshot is text.)
    marks fail loudly. Discrimination is exact: only references that
    were genuinely identity-bearing at snapshot time are marked; stored
    decoys stay decoys.
+   *Implementation note (3a, brief-271): the epoch rule is enforced as
+   snapshot-time ORPHAN refusal — a snapshot is internally
+   self-consistent (unit forms and markers are written together), so
+   restore-side staleness cannot arise; an in-session value holding a
+   superseded registration's identity shows up at snapshot time as an
+   identity absent from every current `private_index` and refuses the
+   snapshot there. Markers carry unit contexts; epochs ride along as
+   diagnostics only. Sealed identities are session-scoped (numeric
+   reuse across independent sessions is permitted — nothing in-language
+   survives a reset), which is what makes fresh-mint-on-restore sound.*
 
 Why this and not an identity-preserving serde section: text stays text
 (single, auditable format), no identity number becomes persistent ABI,
@@ -275,7 +285,12 @@ readable private name marked private.
   identity numbers.
 - No `$ContextPath` auto-mutation in v1.
 
-## 9. Batch plan
+## 9. Batch plan — ALL LANDED (line complete 2026-07-20)
+
+Batch 1 = brief-269 (f2e1448); batch 2 = brief-270 (e9fb37c); batch 3a =
+brief-271 rev 1 (4489c28); batch 3b = director close-out (guide §Sealed
+Packages, README divergence section, this doc's final state). Original
+plan follows.
 
 1. **Mechanism (spine) — brief-269.** The `DefinePackage` registration
    chain (catalog + adapter + session method, `Public`/`PackageScope`

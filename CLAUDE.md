@@ -139,11 +139,12 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
-- **LAZY SEQUENCES + SEALED SCOPING LINE — (c) COMPLETE, (d) NEXT
-  (2026-07-18; user ruling; two WL15-survey outcomes, design-first, full
-  ambition; queue in TODO.md §ACTIVE PLAN; design docs
-  `docs/dev/lazy-sequences-design.md` + `sealed-scoping-design.md`;
-  memory `lazy-and-sealed-scoping-line.md`).** Sequencing: (c) first (low
+- **LAZY SEQUENCES + SEALED SCOPING LINE — COMPLETE (2026-07-18 →
+  07-20; user ruling; two WL15-survey outcomes, design-first, full
+  ambition; design docs `docs/dev/lazy-sequences-design.md` +
+  `sealed-scoping-design.md`; memory
+  `lazy-and-sealed-scoping-line.md`). NEXT DIRECTION = fresh user
+  decision; no active plan.** Sequencing: (c) first (low
   risk), then (d) (touches symbol resolution). **(c) LAZY PURE SEQUENCES
   — COMPLETE (briefs 262-267):** 12 lazy heads (`LazyList`/`LazyRange`/
   `LazyMap`/`LazySelect`/`LazyTake`/`LazyDrop`/`LazyTable`/`LazyNestList`/
@@ -159,26 +160,27 @@ rather than duplicating them.
   cursors) is CLOSED WON'T-DO in-kernel (downstream pkg only if pulled).
   Codex stop-lossed 3× on my brief scope/ripple omissions (Part
   cross-crate; `structure_ops/mod.rs` re-export) — clean each time,
-  revise+redispatch. **ACTIVE: (d) SEALED SCOPING** — private = real
-  encapsulation; hidden-by-default introspection (Diagnostic reveals);
-  full three-tier; wrapper `DefinePackage` form; loader half stays
-  rum-fs. **Grounding DONE (brief-268, e5c9e1c) and it REFUTED the
-  design's original substrate**: Module gensyms are name-mangled
-  (`x$NN`, `identity: None`, source-reachable — `allocate_fresh_symbol`
-  is NOT a seal). Corrected mechanism: NEW bit-62 identity allocator +
-  `substitute_lexical_bindings` rewrite + identity kept OUT of
-  `symbol_generations` (resolver byte-untouched; miss branch = the
-  boundary) + `mark_symbol_removed` exclusion (it inherits removed
-  identities). **Snapshot ruling (user 2026-07-19):
-  snapshot-by-re-registration** (held `DefinePackage` form = the unit's
-  snapshot representation; fresh identities on restore, observably
-  faithful; v1 private mutations don't persist) + leaked-sealed-ref
-  detection floor + **re-link as a first-class design part** (marker +
-  restore-mode rewrite + stale-epoch refusal; calibrated by the mma-hol
-  strict/stable thought experiment — one mode beats both halves; dual
-  dividend → README at batch-3 close-out, divergence-with-value
-  posture). Design doc updated 2026-07-19; batch 1 = brief-269
-  (mechanism spine).
+  revise+redispatch. **(d) SEALED SCOPING — COMPLETE (2026-07-19 → 07-20, briefs
+  268-271):** grounding 268 (REFUTED the original Module-gensym
+  substrate; the seal = fresh bit-62 identities kept OUT of
+  `symbol_generations`, resolver byte-untouched, miss branch = the
+  boundary; `mark_symbol_removed` exclusion) → spine 269
+  (`DefinePackage` three-tier, suspension-safe install, reference 637)
+  → introspection 270 (one bit-62 predicate + one Diagnostic-gated
+  reveal across the full Q5 surface; host APIs = trusted) → snapshot
+  271 (snapshot-by-re-registration; `RestoreSealedReferences`
+  restore-mode re-link marker; stale-epoch rule enforced as
+  snapshot-time orphan refusal; fallible `snapshot_to_bytes`;
+  Save/DumpSave sealedref refusal; reference 638) → 3b close-out
+  (guide §Sealed Packages, README divergence section per the
+  2026-07-19 ruling). Gate catches this line: brief-271's undeclared
+  process-global identity allocator reverted to session-scoped
+  (identities are session-scoped; numeric reuse across sessions is
+  sound — my own over-pinned cross-restore assert had provoked it).
+  A/B method closure: the microsecond list-tier labels are
+  layout-lottery-sensitive (±60% bidirectional; 269's movements
+  reversed wholesale by 271) — judge by direction-mix + adjacent-tier
+  flatness + structural argument, never magnitude alone.
 - **CLEANUP + MESSAGE-REGISTRY LINE — COMPLETE (2026-07-17 → 07-18;
   user ruling 2026-07-17; queue in TODO.md §ACTIVE PLAN). All five
   items closed:** (1) message-tag registry + docgen — briefs 243,

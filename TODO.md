@@ -3,7 +3,10 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## ACTIVE PLAN — lazy sequences + sealed scoping line (user ruling 2026-07-18)
+## COMPLETE — lazy sequences + sealed scoping line (user ruling 2026-07-18; both halves closed 2026-07-20)
+
+**No active plan — the next direction awaits a user decision in a fresh
+session.**
 
 Two parallel WL15-survey outcomes, both design-first, both taken to full
 ambition. Sequencing (user 2026-07-18): **(c) first** (new cold symbols,
@@ -17,7 +20,8 @@ Twelve lazy heads + the kernel `Part` re-dispatch seam + a folk eager
 `Permutations`; reference 621→634; guide `evaluation.md` §Lazy Sequences.
 Core asset = the per-element `PullStepper` (source/transformer arms,
 ceiling/cancel charged at the source, everything fails closed, never
-hangs). **NEXT: (d) sealed scoping.**
+hangs). **(d) SEALED SCOPING — COMPLETE (2026-07-20, briefs 268-271;
+batches below).**
 
 Design docs: [docs/dev/lazy-sequences-design.md](./docs/dev/lazy-sequences-design.md),
 [docs/dev/sealed-scoping-design.md](./docs/dev/sealed-scoping-design.md).
@@ -139,10 +143,27 @@ batch-3 close-out (divergence-with-value posture)**.
   17 dual-variant tests; workspace 1621/0; A/B clean (bidirectional
   layout scatter only; same-binary +17% cross-session drift observed on
   list-literal-small, confirming the batch-1 layout-lottery reading).
-- [ ] Batch 3 — snapshot: unit emission + owned-key skip +
-  leak-detection floor + re-link (marker, restore-mode rewrite, epoch
-  rule); `Definition` display; guide; reference regen; **README
-  divergence section (user ruling 2026-07-19)**; close-out.
+- [x] Batch 3 — DONE. **3a (brief-271 rev 1, 4489c28):** unit-first
+  snapshot emission + owned-key skip + sealed-keyed never emitted +
+  leaked-reference detection with orphan refusal (= the stale-epoch
+  rule, enforced at snapshot time) + `RestoreSealedReferences` re-link
+  marker (restore-mode-only, exception-safe flag; reference 638) +
+  fallible `snapshot_to_bytes` + Save/DumpSave sealedref refusal +
+  Diagnostic-only Information "SealedUnit" row; sealed-free snapshots
+  byte-identical. Gate correction: Codex's undeclared process-global
+  identity allocator reverted to the session-scoped counter (identities
+  are session-scoped; numeric reuse across sessions permitted — the
+  brief's cross-restore distinctness assert was the over-pin that
+  provoked it). Workspace 1630/0; marker-refusal CLI probe; 37 sealed
+  tests + host suites; A/B: 13/14 separated labels FASTER — batch 1's
+  layout-lottery labels snapped back to pre-269 levels (bidirectional
+  closure of that reading). **3b (director):** guide
+  scoping-and-contexts.md §Sealed Packages (three measured
+  transcripts) + Host Snapshots addendum; README "Sealed Packages —
+  real encapsulation, one mode" divergence section (user ruling
+  2026-07-19); design doc final state. **(d) SEALED SCOPING LINE
+  COMPLETE (2026-07-20). The lazy + sealed-scoping ACTIVE PLAN is
+  fully closed — next direction is a fresh user decision.**
 
 ## COMPLETE — cleanup + message-registry line (user ruling 2026-07-17)
 
