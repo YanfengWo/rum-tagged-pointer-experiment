@@ -1014,6 +1014,28 @@ string-pattern surface. Batches, evidence-ranked:
   current policy. The line was re-grounded on an independent, WK-free
   defect — `MatchQ[g[1,2], g[a_g, b_]]` was False though `g[g[1], 2]`
   flattens to `g[1,2]` — which is now True.
+- [x] `rum-host/src/tests.rs` — DEBT CLEARED 2026-07-20 (brief-281). At
+  68,639 bytes it was the workspace's ONLY file over the 35k
+  architecture-debt line, and it carried no documented exemption. Split
+  by responsibility (not by size or alphabet — unlike brief-280's lookup
+  table, this file had real boundaries mirroring the embedding line's own
+  increments): `tests/common.rs` (shared helpers) plus
+  `capability_profiles.rs` 26 tests / `typed_bridge.rs` 16 /
+  `session_lifecycle.rs` 13 / `eval_contract.rs` 12 /
+  `editor_surface.rs` 10. Parent `tests.rs` is now 118 bytes of `mod`
+  declarations; `lib.rs` needed no change since `mod tests;` resolves to
+  `tests/mod.rs` either way. Pure move — zero production code touched.
+  Gate: all 77 test names and all 18 helper names proven to be the SAME
+  SET before and after by static extraction, with nothing duplicated
+  across files; workspace 1654/0.
+  WATCH: `capability_profiles.rs` landed at 19,614 bytes — under the
+  20k split-plan line but with almost no headroom. Codex deliberately
+  left the single-child capability helpers in `common.rs` to keep it
+  under. If the sandbox/profile surface grows, split it again along the
+  boundary that is already visible inside it: dispatch-blocking
+  (`sandboxed_host_config_*`, 10) vs named-profile pins
+  (`*_profile_pins_*`) vs capability-policy composition
+  (`*_policy_*`, `default_host_config_*`, `trusted_*`).
 - [ ] Keep the suspension-safe helper boundary from regressing; continue
   moving helper payloads onto typed continuation values when a flow cannot be
   a `Result<Expr, EvalError>` plus one ordinary suspension frame. Monitor
