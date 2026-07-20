@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 639
+Builtin count: 641
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -3058,6 +3058,16 @@ Returns the peak session memory-proxy byte count high-water mark subset.
 - Attributes: `Protected`
 - Capability: `Diagnostic`
 
+### MaximalBy
+
+Returns all top-level elements attaining the maximum evaluated key, preserving input order, with an operator form.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - MaximalBy::argtu — expected between `1` and `2` argument(s), got `3`
+  - MaximalBy::normal — Nonatomic expression expected at position 1 in `1`.
+
 ### Md5
 
 Computes an MD5 digest over a string's UTF-8 bytes or a ByteArray, returning lowercase hex by default.
@@ -3216,6 +3226,16 @@ Returns the exact minimum and maximum for one scalar or list argument.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+
+### MinimalBy
+
+Returns all top-level elements attaining the minimum evaluated key, preserving input order, with an operator form.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - MinimalBy::argtu — expected between `1` and `2` argument(s), got `3`
+  - MinimalBy::normal — Nonatomic expression expected at position 1 in `1`.
 
 ### Minus
 
@@ -4775,7 +4795,7 @@ Sorts top-level elements using the current structural ordering subset.
 
 ### SortBy
 
-Sorts top-level elements by an evaluated key, optionally ordering keys with a binary predicate and preserving input order for predicate ties.
+Sorts top-level elements by an evaluated key or a lexicographic tuple from a list of key functions, optionally ordering keys with a binary predicate and preserving input order for ties.
 
 - Attributes: `Protected`
 - Capability: `Pure`

@@ -42,8 +42,11 @@ Brief queue (stdlib first, kernel last):
   right-wins collisions (matches `Join` on associations); unmatched rows
   carry only their own columns. Reference 638→639. DONE 2026-07-20
   (gate: workspace green, 14 probes reproduced).
-- [ ] brief-273 — `SortBy` multi-key tie-break form + `MaximalBy`/
-  `MinimalBy` (structure_ordering family). Reference 639→641.
+- [x] brief-273 — `SortBy` multi-key tie-break form + `MaximalBy`/
+  `MinimalBy` (structure_ordering family). Reference 639→641. DONE
+  2026-07-20 (gate: workspace green, 15 probes; gate fix = one
+  ASCII-sort violation in the attribute mirror insert — the table has
+  no sortedness assertion, candidate for a debt note).
 - [ ] brief-274 — kernel named-slot fill: `Slot[string]` fills from an
   Association first argument (Lookup semantics; absent key →
   `Missing["KeyAbsent", key]`; non-Association → loud message, inert).

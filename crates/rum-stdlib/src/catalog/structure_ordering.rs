@@ -81,7 +81,7 @@ pub(crate) const STRUCTURE_ORDERING_BUILTINS: &[BuiltinSpec] = &[
     ]).protected(),
     BuiltinSpec::ordinary(
         "SortBy",
-        "Sorts top-level elements by an evaluated key, optionally ordering keys with a binary predicate and preserving input order for predicate ties.",
+        "Sorts top-level elements by an evaluated key or a lexicographic tuple from a list of key functions, optionally ordering keys with a binary predicate and preserving input order for ties.",
         structure_ops::eval_sort_by,
     )
     .with_messages(&[
@@ -140,6 +140,18 @@ pub(crate) const STRUCTURE_ORDERING_BUILTINS: &[BuiltinSpec] = &[
         },
     ]).protected(),
     BuiltinSpec::ordinary(
+        "MaximalBy",
+        "Returns all top-level elements attaining the maximum evaluated key, preserving input order, with an operator form.",
+        structure_ops::eval_maximal_by,
+    )
+    .with_messages(&[
+        ARGTU,
+        BuiltinMessageSpec {
+            tag: "normal",
+            template: "Nonatomic expression expected at position 1 in `1`.",
+        },
+    ]).protected(),
+    BuiltinSpec::ordinary(
         "MinBy",
         "Returns the first top-level element attaining the minimum evaluated key, or the bottom n in increasing key order with input-order ties.",
         structure_ops::eval_min_by,
@@ -150,6 +162,18 @@ pub(crate) const STRUCTURE_ORDERING_BUILTINS: &[BuiltinSpec] = &[
             tag: "empty",
             template: "MinBy cannot select from an empty list.",
         },
+        BuiltinMessageSpec {
+            tag: "normal",
+            template: "Nonatomic expression expected at position 1 in `1`.",
+        },
+    ]).protected(),
+    BuiltinSpec::ordinary(
+        "MinimalBy",
+        "Returns all top-level elements attaining the minimum evaluated key, preserving input order, with an operator form.",
+        structure_ops::eval_minimal_by,
+    )
+    .with_messages(&[
+        ARGTU,
         BuiltinMessageSpec {
             tag: "normal",
             template: "Nonatomic expression expected at position 1 in `1`.",

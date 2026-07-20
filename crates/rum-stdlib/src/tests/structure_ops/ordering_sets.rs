@@ -73,6 +73,52 @@ fn sort_and_sortby_cover_current_top_level_subset() {
 }
 
 #[test]
+fn sort_by_supports_stable_multi_key_specs_and_tuple_ordering() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SortBy[{<|\"i\"->3,\"d\"->\"x\"|>, <|\"i\"->1,\"d\"->\"y\"|>, <|\"i\"->2,\"d\"->\"x\"|>}, {Key[\"d\"], Key[\"i\"]}]"
+        ),
+        "List[Association[Rule[\"i\", 2], Rule[\"d\", \"x\"]], Association[Rule[\"i\", 3], Rule[\"d\", \"x\"]], Association[Rule[\"i\", 1], Rule[\"d\", \"y\"]]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "SortBy[{{2, b}, {1, z}, {2, a}}, {First}]"),
+        "List[List[1, z], List[2, b], List[2, a]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SortBy[{{2, 1}, {1, 9}, {1, 5}}, {Last, First}, (Less[First[#1], First[#2]] &)]"
+        ),
+        "List[List[2, 1], List[1, 5], List[1, 9]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "SortBy[{{2, 1}, {1, 9}, {1, 5}}, {}]"),
+        "List[List[2, 1], List[1, 9], List[1, 5]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "SortBy[{{2, 1}, {1, 9}, {1, 5}}, First]"),
+        "List[List[1, 9], List[1, 5], List[2, 1]]"
+    );
+}
+
+#[test]
+fn sort_by_multi_key_evaluation_supports_user_downvalues() {
+    let mut session = core_session();
+    session.eval_text("sortPrimary[x_] := First[x]").unwrap();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "SortBy[{{2, 1}, {1, 9}, {1, 5}}, {sortPrimary, Last}]"
+        ),
+        "List[List[1, 5], List[1, 9], List[2, 1]]"
+    );
+}
+
+#[test]
 fn union_and_complement_cover_current_same_head_subset() {
     let mut session = core_session();
 

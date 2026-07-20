@@ -44,6 +44,7 @@ struct GatherByFunctionListState {
 #[derive(Clone, Copy)]
 enum DecoratedOperation {
     MaxBy { select_max: bool },
+    ExtremalElementsBy { select_max: bool },
     ExtremeByCount { largest: bool, count: usize },
     TakeBy { largest: bool, count: usize },
     ReverseSortBy,
@@ -174,6 +175,22 @@ pub(crate) fn eval_min_by(
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     eval_extreme_by(session, head, "MinBy", args, false)
+}
+
+pub(crate) fn eval_maximal_by(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    eval_extremal_elements_by(session, "MaximalBy", args, true)
+}
+
+pub(crate) fn eval_minimal_by(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    eval_extremal_elements_by(session, "MinimalBy", args, false)
 }
 
 pub(crate) fn eval_take_largest_by(
@@ -571,6 +588,35 @@ fn eval_extreme_by(
     )
 }
 
+fn eval_extremal_elements_by(
+    session: &mut Session,
+    symbol: &str,
+    args: &[Expr],
+    select_max: bool,
+) -> Result<Expr, EvalError> {
+    let (expr, function) = match args {
+        [function] => return Ok(extremal_elements_by_operator_form(symbol, function)),
+        [expr, function] => (expr, function),
+        _ => return Ok(session.invalid_call_with_arg_range(symbol, args, 1, 2)),
+    };
+
+    let Some((expr_head, items)) = normal_call_parts(expr) else {
+        return Ok(invalid_collection_normal_call(session, symbol, args));
+    };
+
+    resume_decorate_by_from_index(
+        session,
+        DecorateByState {
+            expr_head,
+            function: function.clone(),
+            items,
+            operation: DecoratedOperation::ExtremalElementsBy { select_max },
+        },
+        0,
+        Vec::new(),
+    )
+}
+
 fn eval_take_by(
     session: &mut Session,
     head: &Expr,
@@ -650,6 +696,10 @@ fn finish_decorated(state: DecorateByState, decorated: Vec<KeyedEntry>) -> Resul
     match state.operation {
         DecoratedOperation::MaxBy { select_max } => Ok(select_extreme_by(decorated, select_max)
             .unwrap_or_else(|| Expr::call(state.expr_head, Vec::new()))),
+        DecoratedOperation::ExtremalElementsBy { select_max } => Ok(Expr::call(
+            state.expr_head,
+            select_extremal_elements_by(decorated, select_max),
+        )),
         DecoratedOperation::ExtremeByCount { largest, count } => Ok(Expr::call(
             state.expr_head,
             take_by(decorated, largest, count),
@@ -687,6 +737,41 @@ fn select_extreme_by(decorated: Vec<KeyedEntry>, select_max: bool) -> Option<Exp
     }
 
     Some(best.item)
+}
+
+fn select_extremal_elements_by(decorated: Vec<KeyedEntry>, select_max: bool) -> Vec<Expr> {
+    let mut entries = decorated.into_iter();
+    let Some(first) = entries.next() else {
+        return Vec::new();
+    };
+    let mut best_key = first.key;
+    let mut selected = vec![first.item];
+
+    for entry in entries {
+        let ordering = compare_structural_order(&entry.key, &best_key);
+        if (select_max && ordering == Ordering::Greater)
+            || (!select_max && ordering == Ordering::Less)
+        {
+            best_key = entry.key;
+            selected.clear();
+            selected.push(entry.item);
+        } else if ordering == Ordering::Equal {
+            selected.push(entry.item);
+        }
+    }
+
+    selected
+}
+
+fn extremal_elements_by_operator_form(symbol: &str, function: &Expr) -> Expr {
+    let arg = Expr::symbol("rum$extremalByArg");
+    Expr::call(
+        system_expr("Function"),
+        vec![
+            arg.clone(),
+            Expr::call(system_expr(symbol), vec![arg, function.clone()]),
+        ],
+    )
 }
 
 fn take_by(mut decorated: Vec<KeyedEntry>, largest: bool, count: usize) -> Vec<Expr> {

@@ -578,7 +578,7 @@ fn resume_sort_by_from_index(
         ));
     };
 
-    let key_result = session.evaluate(Expr::call(function.clone(), vec![item.clone()]));
+    let key_result = session.evaluate(sort_by_key_expression(&function, &item));
     let suspended_call_args = call_args.clone();
     let suspended_expr_head = expr_head.clone();
     let suspended_function = function.clone();
@@ -646,7 +646,7 @@ fn resume_sort_by_ordering_from_index(
         );
     };
 
-    let key_result = session.evaluate(Expr::call(function.clone(), vec![item.clone()]));
+    let key_result = session.evaluate(sort_by_key_expression(&function, &item));
     let suspended_call_args = call_args.clone();
     let suspended_expr_head = expr_head.clone();
     let suspended_function = function.clone();
@@ -902,6 +902,20 @@ fn sort_by_operator_form(function: &Expr) -> Expr {
             arg.clone(),
             Expr::call(system_expr("SortBy"), vec![arg, function.clone()]),
         ],
+    )
+}
+
+fn sort_by_key_expression(function: &Expr, item: &Expr) -> Expr {
+    let Some(functions) = list_items(function) else {
+        return Expr::call(function.clone(), vec![item.clone()]);
+    };
+
+    Expr::call(
+        system_expr("List"),
+        functions
+            .iter()
+            .map(|function| Expr::call(function.clone(), vec![item.clone()]))
+            .collect(),
     )
 }
 

@@ -129,6 +129,66 @@ fn max_by_and_min_by_accept_top_counts() {
 }
 
 #[test]
+fn maximal_by_and_minimal_by_return_all_extrema_in_input_order() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut session, "MaximalBy[{{2, 1}, {1, 9}}, First]"),
+        "List[List[2, 1]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MinimalBy[{{2, 1}, {1, 9}}, First]"),
+        "List[List[1, 9]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MaximalBy[{{3, a}, {1, x}, {3, b}}, First]"),
+        "List[List[3, a], List[3, b]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MinimalBy[{{1, b}, {3, x}, {1, a}}, First]"),
+        "List[List[1, b], List[1, a]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MaximalBy[First][{{3, a}, {1, x}, {3, b}}]"),
+        "List[List[3, a], List[3, b]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MinimalBy[First][{{1, b}, {3, x}, {1, a}}]"),
+        "List[List[1, b], List[1, a]]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MaximalBy[{}, Identity]"),
+        "List[]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "MinimalBy[{}, Identity]"),
+        "List[]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[MaximalBy]"),
+        "List[Protected]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Attributes[MinimalBy]"),
+        "List[Protected]"
+    );
+}
+
+#[test]
+fn maximal_by_key_evaluation_supports_user_downvalues() {
+    let mut session = core_session();
+    session.eval_text("extremeKey[x_] := First[x]").unwrap();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "MaximalBy[{{3, a}, {1, x}, {3, b}}, extremeKey]"
+        ),
+        "List[List[3, a], List[3, b]]"
+    );
+}
+
+#[test]
 fn collection_operator_forms_rewrite_to_data_first_calls() {
     let mut session = core_session();
 
@@ -231,6 +291,38 @@ fn collection_stats_report_invalid_arity_and_empty_selection() {
             .iter()
             .any(|message| message.symbol == "Riffle" && message.tag == "seqs")
     );
+
+    for (symbol, source, expected, tag) in [
+        (
+            "MaximalBy",
+            "MaximalBy[7, First]",
+            "MaximalBy[7, First]",
+            "normal",
+        ),
+        (
+            "MinimalBy",
+            "MinimalBy[7, First]",
+            "MinimalBy[7, First]",
+            "normal",
+        ),
+        ("MaximalBy", "MaximalBy[]", "MaximalBy[]", "argtu"),
+        (
+            "MinimalBy",
+            "MinimalBy[{}, Identity, 1]",
+            "MinimalBy[List[], Identity, 1]",
+            "argtu",
+        ),
+    ] {
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected);
+        assert!(
+            outcome
+                .messages
+                .iter()
+                .any(|message| message.symbol == symbol && message.tag == tag),
+            "{symbol} should emit {tag}"
+        );
+    }
 }
 
 #[test]

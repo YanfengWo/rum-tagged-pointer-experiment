@@ -24,8 +24,9 @@ mod surface;
 
 pub(crate) use self::{
     collection_stats::{
-        eval_gather_by, eval_max_by, eval_min_by, eval_reverse_sort, eval_reverse_sort_by,
-        eval_riffle, eval_take_largest_by, eval_take_smallest_by, eval_tally,
+        eval_gather_by, eval_max_by, eval_maximal_by, eval_min_by, eval_minimal_by,
+        eval_reverse_sort, eval_reverse_sort_by, eval_riffle, eval_take_largest_by,
+        eval_take_smallest_by, eval_tally,
     },
     combinatorial_lists::{
         eval_partition, eval_permutations, eval_subsets, eval_tuples, next_permutation,
