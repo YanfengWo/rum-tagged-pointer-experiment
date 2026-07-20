@@ -82,7 +82,44 @@ A recursive definition at depth 6 already renders ~1.7 KB. Size control
 is not a nicety; without it the first realistic `:trace` fills the
 screen.
 
-### 1.5 The REPL side
+### 1.5 There is a SECOND trace mechanism (found after the Option-A ruling)
+
+Recorded so nobody rediscovers it. `HostEvalSuccess` already carries
+`pub trace: Vec<HostTraceEvent>` — "trace events collected when tracing
+is enabled" — a host-level channel entirely separate from the `Trace[]`
+builtin, with three event kinds (`model/outcome.rs:263`):
+
+- `EvaluationPass { before, after }`
+- `DefinitionStored { symbol, kind, value }`
+- `RuleApplied { source, input, rule, result }`
+
+| | `Trace[]` builtin | host trace channel |
+|---|---|---|
+| scope | per-expression | session-wide once enabled |
+| shape | nested tree (nesting = depth) | flat event stream |
+| content | expression before/after | **also which rule fired**, and definition stores |
+| REPL reach | works today, no new API | needs a new `rum-host` method |
+| filtering | `Trace[expr, form]` | none (would be REPL-side) |
+
+Its distinctive value is `RuleApplied`: it names the rule that fired,
+which is the first question when debugging "why did this evaluate to
+that", and which `Trace[]` cannot answer.
+
+Its cost is that it is enabled at session construction
+(`HostConfig::with_tracing`). The kernel does have a runtime toggle —
+`Session::enable_tracing(&mut self, bool)`
+(`session/session_api.rs:121`) — but **`rum-host` does not forward it**,
+and the REPL is a pure `rum-host` consumer with zero `rum-runtime`
+dependency (standing ruling from the embedding line). Using this channel
+per-invocation would therefore require adding a `HostSession` setter —
+an embedding-API change, not a REPL change.
+
+**This does not change the Option-A ruling** (Option A needs no new API
+and delivers the readable tree), but it is the natural next axis: a
+later `:trace --rules` could surface `RuleApplied` once the enable/
+disable seam exists. Deliberately out of scope for the first cut.
+
+### 1.6 The REPL side
 
 Current command set: `:help :parse :format :lower :complete :history
 :inspect :messages :quit`. There is no `:trace`. Commands live in
