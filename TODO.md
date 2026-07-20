@@ -1000,12 +1000,20 @@ string-pattern surface. Batches, evidence-ranked:
   negatively calibrated — including the failure mode the split newly
   introduces (a correctly-sorted entry filed in the WRONG chunk), which
   fails compilation.
-- [ ] Matcher: three known gaps in `Flat`+`Orderless`+`Optional` combinations
-  (binding order for flat-wrapped singletons; `ReplaceList` under-collection
-  of grouped flat matches; their compound). Low urgency, exotic corner. The
-  `#[ignore]`'d tests in `tests/pattern_matching_orderless_optional.rs` are
-  the target spec; a previous localized fix regressed neighboring behavior
-  and was reverted under stop-loss.
+- [x] Matcher `Flat`+`Orderless`+`Optional` — ALL THREE GAPS CLOSED
+  2026-07-20 (briefs 275-279). Re-probed at close: flat-wrapped singleton
+  candidates exist (`ReplaceList[g[1], g[a_, b_:0] :> {a, b}]` →
+  `{{1,0},{g[1],0}}`), the `ReplaceList` under-collection is fixed (the flat
+  collect-all omission arm was first-match-shaped — the fix also recovers
+  dropped rows for built-in `Plus`/`Times`), and the compound
+  sequence-neighbor case is pinned. Zero `#[ignore]` remain in
+  `tests/pattern_matching_orderless_optional.rs`.
+  **This entry's stated spec was itself repudiated**: the `#[ignore]`'d
+  tests were WK-derived expectations, retired as testing-policy fossils by
+  brief-276 Part A, so they were never a legitimate target spec under the
+  current policy. The line was re-grounded on an independent, WK-free
+  defect — `MatchQ[g[1,2], g[a_g, b_]]` was False though `g[g[1], 2]`
+  flattens to `g[1,2]` — which is now True.
 - [ ] Keep the suspension-safe helper boundary from regressing; continue
   moving helper payloads onto typed continuation values when a flow cannot be
   a `Result<Expr, EvalError>` plus one ordinary suspension frame. Monitor
