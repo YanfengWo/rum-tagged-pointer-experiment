@@ -148,6 +148,7 @@ mod rule_rhs_materialization;
 mod scoping_gensym_gc;
 mod scoping_unique;
 mod sealed_packages;
+mod sealed_snapshot;
 mod sealed_visibility;
 mod session_config;
 mod session_requests;

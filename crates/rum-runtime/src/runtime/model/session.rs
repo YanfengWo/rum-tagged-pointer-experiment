@@ -65,6 +65,8 @@ pub struct Session {
     pub(in crate::runtime) sealed_units: Vec<SourceUnit>,
     pub(in crate::runtime) next_sealed_symbol_id: u64,
     pub(in crate::runtime) next_source_unit_epoch: u64,
+    // Transient execution state; intentionally absent from loader/rollback snapshots.
+    pub(in crate::runtime) restoring_snapshot: bool,
     pub(in crate::runtime) resource_limits: ResourceLimits,
     pub(in crate::runtime) evaluation_depth: usize,
     pub(in crate::runtime) match_depth: usize,

@@ -256,10 +256,12 @@ fn save_excludes_sealed() {
     register_visibility_probe(&mut session);
 
     let expected_snapshot = concat!(
-        "SetDelayed[Pkg`f[Pattern[x, Blank[]]], Plus[Pkg`Private`helper[x], 1]]\n\n",
-        "SetDelayed[Pkg`Private`helper[Pattern[x, Blank[]]], Times[x, 2]]\n",
+        "DefinePackage[\"Pkg`\", Public[List[f]], CompoundExpression[SetDelayed[f[Pattern[x, Blank[]]], Plus[helper[x], 1]], SetDelayed[helper[Pattern[x, Blank[]]], Times[x, 2]]]]\n\n",
+        "RestoreSealedReferences[Rule[\"Pkg`\", 1], HoldComplete[SetDelayed[Pkg`f[Pattern[x, Blank[]]], Plus[Pkg`Private`helper[x], 1]]]]\n",
     );
-    let snapshot = session.snapshot_definitions_source();
+    let snapshot = session
+        .snapshot_definitions_source()
+        .expect("sealed snapshot should render");
     assert_eq!(snapshot, expected_snapshot);
 
     let save = session
@@ -279,7 +281,7 @@ fn save_excludes_sealed() {
         .unwrap();
     assert_eq!(dump.value.to_string(), "List[]");
     assert!(!fs::read_to_string(&dump_file).unwrap().contains("helper"));
-    assert_eq!(session.snapshot_definitions_source(), snapshot);
+    assert_eq!(session.snapshot_definitions_source().unwrap(), snapshot);
 
     session.set_capability_policy(CapabilityPolicy::allow([
         Capability::Pure,
@@ -292,13 +294,19 @@ fn save_excludes_sealed() {
             rum_path(&dump_file)
         ))
         .unwrap();
-    assert_eq!(revealed.value.to_string(), "List[\"Pkg`Private`helper\"]");
+    assert_eq!(revealed.value.to_string(), "$Failed");
     assert!(
-        fs::read_to_string(&dump_file)
+        revealed
+            .messages
+            .iter()
+            .any(|message| message.symbol == "DumpSave" && message.tag == "sealedref")
+    );
+    assert!(
+        !fs::read_to_string(&dump_file)
             .unwrap()
             .contains("Times[x, 2]")
     );
-    assert_eq!(session.snapshot_definitions_source(), snapshot);
+    assert_eq!(session.snapshot_definitions_source().unwrap(), snapshot);
 }
 
 #[test]

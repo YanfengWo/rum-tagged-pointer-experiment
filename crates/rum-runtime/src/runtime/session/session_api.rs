@@ -2,6 +2,16 @@ use super::super::*;
 use std::sync::{Arc, atomic::AtomicBool};
 use std::time::Duration;
 
+struct SnapshotRestoreMode<'a> {
+    session: &'a mut Session,
+}
+
+impl Drop for SnapshotRestoreMode<'_> {
+    fn drop(&mut self) {
+        self.session.restoring_snapshot = false;
+    }
+}
+
 impl Session {
     pub fn new() -> Self {
         Self::default()
@@ -11,6 +21,18 @@ impl Session {
         let mut session = Self::empty();
         session.apply_config(config);
         session
+    }
+
+    pub fn eval_snapshot_restore_request(
+        &mut self,
+        source: &str,
+    ) -> Result<SessionEvalResponse, SessionRequestFailure> {
+        debug_assert!(!self.restoring_snapshot);
+        self.restoring_snapshot = true;
+        let restore_mode = SnapshotRestoreMode { session: self };
+        let result = restore_mode.session.eval_script_request(source);
+        drop(restore_mode);
+        result
     }
 
     pub fn configuration(&self) -> SessionConfig {
@@ -214,7 +236,7 @@ impl Session {
     /// capture attribute-only symbols, `$` variables, options, messages, the
     /// gensym counter, PRNG state, or contexts beyond what the generated source
     /// re-establishes. This is a text image, not a binary `.mx` dump.
-    pub fn snapshot_definitions_source(&self) -> String {
+    pub fn snapshot_definitions_source(&self) -> Result<String, String> {
         let mut symbols = self
             .definitions
             .keys()
@@ -222,7 +244,126 @@ impl Session {
             .cloned()
             .collect::<Vec<_>>();
         symbols.sort();
-        self.render_saved_symbols(&symbols, true, true)
+
+        if self.sealed_units.is_empty()
+            && symbols
+                .iter()
+                .all(|symbol| !crate::runtime::scoping::packages::symbol_is_sealed_private(symbol))
+        {
+            for symbol in &symbols {
+                for statement in self.saved_symbol_statements(symbol, true) {
+                    if let Some(orphan) =
+                        crate::runtime::scoping::packages::sealed_symbols_in_expr(&statement)
+                            .into_iter()
+                            .next()
+                    {
+                        return Err(snapshot_orphan_error(&orphan));
+                    }
+                }
+            }
+            return Ok(self.render_saved_symbols(&symbols, true, true));
+        }
+
+        let persisted_symbols = symbols
+            .iter()
+            .copied()
+            .filter(|symbol| !crate::runtime::scoping::packages::symbol_is_sealed_private(symbol))
+            .collect::<Vec<_>>();
+        let persisted_set = persisted_symbols.iter().copied().collect::<BTreeSet<_>>();
+        let mut owned_units = BTreeMap::new();
+        for (unit_index, unit) in self.sealed_units.iter().enumerate() {
+            for symbol in unit.public.iter().chain(&unit.package_scope) {
+                owned_units.entry(*symbol).or_insert(unit_index);
+            }
+        }
+
+        let mut blocks = self
+            .sealed_units
+            .iter()
+            .map(|unit| unit.held_wrapper.to_string())
+            .collect::<Vec<_>>();
+        let mut emitted_owned = BTreeSet::new();
+        for (unit_index, unit) in self.sealed_units.iter().enumerate() {
+            for symbol in unit.public.iter().chain(&unit.package_scope) {
+                if !persisted_set.contains(symbol) || !emitted_owned.insert(*symbol) {
+                    continue;
+                }
+                for statement in self.saved_symbol_statements(symbol, true) {
+                    blocks.push(self.render_snapshot_statement(statement, Some(unit_index))?);
+                }
+            }
+        }
+
+        if let Some(preamble) = self.render_dump_save_package_restore(&persisted_symbols) {
+            blocks.push(preamble);
+        }
+        for symbol in persisted_symbols
+            .iter()
+            .filter(|symbol| !owned_units.contains_key(symbol))
+        {
+            for statement in self.saved_symbol_statements(symbol, true) {
+                blocks.push(self.render_snapshot_statement(statement, None)?);
+            }
+        }
+
+        if blocks.is_empty() {
+            Ok(String::new())
+        } else {
+            Ok(format!("{}\n", blocks.join("\n\n")))
+        }
+    }
+
+    fn render_snapshot_statement(
+        &self,
+        statement: Expr,
+        owning_unit: Option<usize>,
+    ) -> Result<String, String> {
+        let mut unit_indices = BTreeSet::new();
+        if let Some(index) = owning_unit {
+            unit_indices.insert(index);
+        }
+
+        for sealed in crate::runtime::scoping::packages::sealed_symbols_in_expr(&statement) {
+            let Some(index) = self.sealed_units.iter().position(|unit| {
+                unit.private_index
+                    .values()
+                    .any(|current| current == &sealed)
+            }) else {
+                return Err(snapshot_orphan_error(&sealed));
+            };
+            unit_indices.insert(index);
+        }
+
+        if unit_indices.is_empty() {
+            return Ok(statement.to_string());
+        }
+
+        let mut units = unit_indices
+            .into_iter()
+            .map(|index| {
+                let unit = &self.sealed_units[index];
+                Expr::call(
+                    system_expr("Rule"),
+                    vec![
+                        Expr::string(unit.package_context.clone()),
+                        Expr::integer(BigInt::from(unit.epoch)),
+                    ],
+                )
+            })
+            .collect::<Vec<_>>();
+        let units = if units.len() == 1 {
+            units.pop().expect("one re-link unit should be present")
+        } else {
+            Expr::call(system_expr("List"), units)
+        };
+        Ok(Expr::call(
+            system_expr("RestoreSealedReferences"),
+            vec![
+                units,
+                Expr::call(system_expr("HoldComplete"), vec![statement]),
+            ],
+        )
+        .to_string())
     }
 
     pub(in crate::runtime) fn is_installed_protected_builtin_own_value_symbol(
@@ -520,4 +661,15 @@ impl Session {
         self.context_path = prepend_context(&frame.opened_context, &frame.previous_context_path);
         Some(system_expr("Null"))
     }
+}
+
+fn snapshot_orphan_error(symbol: &Symbol) -> String {
+    let owner_key = symbol
+        .context()
+        .strip_suffix("Private`")
+        .unwrap_or(symbol.context());
+    format!(
+        "snapshot refused orphaned sealed symbol {} (owner key {owner_key})",
+        symbol.fully_qualified_name()
+    )
 }

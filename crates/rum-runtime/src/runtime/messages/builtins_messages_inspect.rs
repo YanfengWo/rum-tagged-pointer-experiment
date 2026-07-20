@@ -260,7 +260,7 @@ impl Session {
         include_symbol_state: bool,
     ) -> Expr {
         let empty_list = || Expr::call(system_expr("List"), Vec::new());
-        let entries = vec![
+        let mut entries = vec![
             information_rule("ObjectType", Expr::string("Symbol")),
             information_rule(
                 "Usage",
@@ -344,6 +344,16 @@ impl Session {
             ),
             information_rule("FullName", Expr::string(symbol.fully_qualified_name())),
         ];
+        if include_symbol_state
+            && crate::runtime::scoping::packages::symbol_is_sealed_private(symbol)
+        {
+            if let Some(unit) = self.sealed_source_unit_for_symbol(symbol) {
+                entries.push(information_rule(
+                    "SealedUnit",
+                    Expr::string(unit.package_context.clone()),
+                ));
+            }
+        }
 
         Expr::call(
             system_expr("InformationData"),

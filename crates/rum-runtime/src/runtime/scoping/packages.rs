@@ -8,6 +8,27 @@ pub(in crate::runtime) fn symbol_is_sealed_private(symbol: &Symbol) -> bool {
         .is_some_and(|identity| identity & SEALED_IDENTITY_MARKER != 0)
 }
 
+pub(in crate::runtime) fn sealed_symbols_in_expr(expr: &Expr) -> BTreeSet<Symbol> {
+    fn collect(expr: &Expr, sealed: &mut BTreeSet<Symbol>) {
+        match expr {
+            Expr::Atom(Atom::Symbol(symbol)) if symbol_is_sealed_private(symbol) => {
+                sealed.insert(*symbol);
+            }
+            Expr::Call { head, args } => {
+                collect(head, sealed);
+                for arg in args {
+                    collect(arg, sealed);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut sealed = BTreeSet::new();
+    collect(expr, &mut sealed);
+    sealed
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) struct SourceUnit {
     pub(in crate::runtime) package_context: String,
@@ -133,7 +154,93 @@ impl Session {
         )
     }
 
+    pub(in crate::runtime) fn eval_restore_sealed_references(
+        &mut self,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        if !self.restoring_snapshot {
+            self.push_message(
+                "RestoreSealedReferences",
+                "mode",
+                "RestoreSealedReferences is only valid inside a snapshot restore.",
+            );
+            return Ok(system_expr("$Failed"));
+        }
+
+        let [units_expr, held_expr] = args else {
+            return Ok(self.invalid_call_with_arg_form(
+                "RestoreSealedReferences",
+                args,
+                "expected a unit context or list of unit contexts and HoldComplete[form]",
+            ));
+        };
+        let Some(contexts) = restore_unit_contexts(units_expr) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "RestoreSealedReferences",
+                args,
+                "expected a unit context string, context rule, or list of them",
+            ));
+        };
+        let Expr::Call {
+            head: held_head,
+            args: held_args,
+        } = held_expr
+        else {
+            return Ok(self.invalid_call_with_arg_form(
+                "RestoreSealedReferences",
+                args,
+                "expected the second argument to be HoldComplete[form]",
+            ));
+        };
+        if !is_system_symbol_name(held_head, "HoldComplete") || held_args.len() != 1 {
+            return Ok(self.invalid_call_with_arg_form(
+                "RestoreSealedReferences",
+                args,
+                "expected the second argument to be HoldComplete[form]",
+            ));
+        }
+
+        let mut rewrites = SymbolExprMap::default();
+        for context in contexts {
+            let Some(unit) = self
+                .sealed_units
+                .iter()
+                .find(|unit| unit.package_context == context)
+            else {
+                self.push_message(
+                    "RestoreSealedReferences",
+                    "unit",
+                    format!("Snapshot restore could not find current sealed unit {context}."),
+                );
+                return Ok(system_expr("$Failed"));
+            };
+            let private_context = format!("{}Private`", unit.package_context);
+            for (name, sealed) in &unit.private_index {
+                rewrites.insert(
+                    Symbol::new(private_context.clone(), name),
+                    Expr::Atom(Atom::Symbol(*sealed)),
+                );
+            }
+        }
+
+        let rewritten = substitute_lexical_bindings(&held_args[0], &rewrites, &BTreeSet::new());
+        let result = self.evaluate(rewritten);
+        self.drive_evaluated_value(result, |_session, _value: Expr| Ok(system_expr("Null")))
+    }
+
+    pub(in crate::runtime) fn sealed_source_unit_for_symbol(
+        &self,
+        symbol: &Symbol,
+    ) -> Option<&SourceUnit> {
+        self.sealed_units
+            .iter()
+            .find(|unit| unit.private_index.values().any(|sealed| sealed == symbol))
+    }
+
     fn allocate_sealed_symbol(&mut self, private_context: &str, name: &str) -> Symbol {
+        // Session-scoped counter: identities must be distinct within one
+        // session's lifetime (nothing in-language survives a reset), so
+        // numeric reuse across independent sessions is permitted.
         self.next_sealed_symbol_id += 1;
         Symbol::with_identity(
             private_context,
@@ -221,6 +328,33 @@ impl Session {
         self.push_message("DefinePackage", "decl", detail);
         system_expr("$Failed")
     }
+}
+
+fn restore_unit_contexts(expr: &Expr) -> Option<Vec<String>> {
+    if let Expr::Call { head, args } = expr {
+        if is_system_symbol_name(head, "List") {
+            let contexts = args
+                .iter()
+                .map(restore_unit_context)
+                .collect::<Option<Vec<_>>>()?;
+            return (!contexts.is_empty()).then_some(contexts);
+        }
+    }
+
+    Some(vec![restore_unit_context(expr)?])
+}
+
+fn restore_unit_context(expr: &Expr) -> Option<String> {
+    if let Expr::Call { head, args } = expr {
+        if is_system_symbol_name(head, "Rule") {
+            let [context, _epoch] = args.as_slice() else {
+                return None;
+            };
+            return valid_package_context_expr(context);
+        }
+    }
+
+    valid_package_context_expr(expr)
 }
 
 fn valid_package_context_expr(expr: &Expr) -> Option<String> {

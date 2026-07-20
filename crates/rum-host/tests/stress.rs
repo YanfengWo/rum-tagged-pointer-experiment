@@ -172,7 +172,7 @@ fn snapshot_restore_preserves_20_generated_definitions_and_attributes() {
     assert_success_text(source.eval("snap17[25]"), "42");
     assert_success_text(source.eval("Attributes[snap17]"), "List[Orderless]");
 
-    let bytes = source.snapshot_to_bytes();
+    let bytes = source.snapshot_to_bytes().expect("snapshot should render");
     assert!(!bytes.is_empty());
 
     let mut restored = HostSession::new();
@@ -219,7 +219,7 @@ fn bug_snapshot_restore_500_generated_definitions_overflows_native_stack() {
         }
     );
 
-    let bytes = source.snapshot_to_bytes();
+    let bytes = source.snapshot_to_bytes().expect("snapshot should render");
     assert!(!bytes.is_empty());
 
     let mut restored = HostSession::new();

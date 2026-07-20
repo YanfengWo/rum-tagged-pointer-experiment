@@ -161,7 +161,7 @@ fn installer_snapshot_restore_round_trips_definitions_not_builtin_handlers() {
         .build();
     assert_success_text(source.eval("twice[x_] := DemoDouble[x]"), "Null");
     assert_success_text(source.eval("twice[5]"), "10");
-    let bytes = source.snapshot_to_bytes();
+    let bytes = source.snapshot_to_bytes().expect("snapshot should render");
 
     let mut restored_with_installer = HostSession::builder()
         .with_builtin_installer(install_demo_family)

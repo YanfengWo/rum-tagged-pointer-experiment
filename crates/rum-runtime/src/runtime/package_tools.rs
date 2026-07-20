@@ -250,6 +250,27 @@ impl Session {
         } else {
             true
         };
+        let sealed_reference = symbols.iter().find_map(|symbol| {
+            self.saved_symbol_statements(symbol, include_attributes)
+                .iter()
+                .find_map(|statement| {
+                    crate::runtime::scoping::packages::sealed_symbols_in_expr(statement)
+                        .into_iter()
+                        .next()
+                })
+        });
+        if let Some(sealed) = sealed_reference {
+            self.push_message(
+                operator,
+                "sealedref",
+                format!(
+                    "Cannot save a definition containing sealed reference {}.",
+                    sealed.fully_qualified_name()
+                ),
+            );
+            return Ok(system_expr("$Failed"));
+        }
+
         let rendered = self.render_saved_symbols(&symbols, overwrite, include_attributes);
         if let Err(source) = self.write_saved_content(&path, &rendered, overwrite) {
             self.push_message(
@@ -409,7 +430,7 @@ impl Session {
         }
     }
 
-    fn render_dump_save_package_restore(&self, symbols: &[Symbol]) -> Option<String> {
+    pub(super) fn render_dump_save_package_restore(&self, symbols: &[Symbol]) -> Option<String> {
         let contexts = self.dump_save_package_restore_contexts(symbols);
         if contexts.is_empty() {
             return None;
@@ -475,50 +496,53 @@ impl Session {
     }
 
     fn render_saved_symbol(&self, symbol: &Symbol, include_attributes: bool) -> String {
+        self.saved_symbol_statements(symbol, include_attributes)
+            .into_iter()
+            .map(|form| form.to_string())
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+
+    pub(super) fn saved_symbol_statements(
+        &self,
+        symbol: &Symbol,
+        include_attributes: bool,
+    ) -> Vec<Expr> {
         let symbol_expr = Expr::Atom(Atom::Symbol(symbol.clone()));
         let mut forms = Vec::new();
 
         if include_attributes && self.attributes.contains_key(symbol) {
             let attributes = self.attribute_set_for_symbol(symbol);
             if !attributes.is_empty() {
-                forms.push(
-                    Expr::call(
-                        system_expr("SetAttributes"),
-                        vec![symbol_expr.clone(), attributes.expr()],
-                    )
-                    .to_string(),
-                );
+                forms.push(Expr::call(
+                    system_expr("SetAttributes"),
+                    vec![symbol_expr.clone(), attributes.expr()],
+                ));
             }
         }
 
         for entry in self.definition_catalog_entries_for_symbol(symbol) {
-            forms.push(self.save_definition_expr(&entry).to_string());
+            forms.push(self.save_definition_expr(&entry));
         }
 
         if self.options.contains_key(symbol) {
-            forms.push(
-                Expr::call(
-                    system_expr("Set"),
-                    vec![
-                        Expr::call(system_expr("Options"), vec![symbol_expr.clone()]),
-                        self.options_for_symbol(symbol).expr(),
-                    ],
-                )
-                .to_string(),
-            );
+            forms.push(Expr::call(
+                system_expr("Set"),
+                vec![
+                    Expr::call(system_expr("Options"), vec![symbol_expr.clone()]),
+                    self.options_for_symbol(symbol).expr(),
+                ],
+            ));
         }
 
         if self.syntax_information.contains_key(symbol) {
-            forms.push(
-                Expr::call(
-                    system_expr("Set"),
-                    vec![
-                        Expr::call(system_expr("SyntaxInformation"), vec![symbol_expr.clone()]),
-                        self.syntax_information_for_symbol(symbol),
-                    ],
-                )
-                .to_string(),
-            );
+            forms.push(Expr::call(
+                system_expr("Set"),
+                vec![
+                    Expr::call(system_expr("SyntaxInformation"), vec![symbol_expr.clone()]),
+                    self.syntax_information_for_symbol(symbol),
+                ],
+            ));
         }
 
         for (key, definition) in self
@@ -527,11 +551,11 @@ impl Session {
             .filter(|(key, _)| key.symbol == *symbol)
         {
             if let Some(expr) = self.save_message_definition_expr(key, definition) {
-                forms.push(expr.to_string());
+                forms.push(expr);
             }
         }
 
-        forms.join("\n\n")
+        forms
     }
 
     fn save_definition_expr(&self, entry: &DefinitionCatalogEntry) -> Expr {

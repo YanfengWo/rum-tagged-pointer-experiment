@@ -1794,7 +1794,7 @@ fn host_session_snapshot_bytes_roundtrip_and_restore_replaces_user_state() {
     successful_eval(
         a.eval("a = 1; f[x_] := x; g[2] := 20; h[x_] := x; SetAttributes[h, Orderless]"),
     );
-    let bytes = a.snapshot_to_bytes();
+    let bytes = a.snapshot_to_bytes().expect("snapshot should render");
 
     let mut b = HostSession::new();
     successful_eval(b.eval("z = 99"));
@@ -1817,6 +1817,48 @@ fn host_session_snapshot_bytes_roundtrip_and_restore_replaces_user_state() {
 }
 
 #[test]
+fn host_session_snapshot_roundtrip_relinks_sealed_values() {
+    let package = "DefinePackage[\"ValuePkg`\", Public[{mk, accepts}], SetAttributes[tag, Protected]; mk[x_] := tag[x]; accepts[tag[_]] := True; accepts[_] := False]";
+    let mut source = HostSession::new();
+    assert_eq!(
+        successful_eval(source.eval(package)).value.text,
+        "\"ValuePkg`\""
+    );
+    assert_eq!(
+        successful_eval(source.eval("thm = ValuePkg`mk[7]"))
+            .value
+            .text,
+        "ValuePkg`Private`tag[7]"
+    );
+    let bytes = source
+        .snapshot_to_bytes()
+        .expect("sealed snapshot should render");
+
+    let mut restored = HostSession::new();
+    restored
+        .restore_from_bytes(&bytes)
+        .expect("sealed snapshot should restore");
+    assert_eq!(
+        successful_eval(restored.eval("ValuePkg`accepts[thm]"))
+            .value
+            .text,
+        "True"
+    );
+    assert_eq!(
+        successful_eval(restored.eval("ValuePkg`Private`tag = 99"))
+            .value
+            .text,
+        "99"
+    );
+    assert_eq!(
+        successful_eval(restored.eval("ValuePkg`accepts[thm]"))
+            .value
+            .text,
+        "True"
+    );
+}
+
+#[test]
 fn host_session_snapshot_roundtrip_rederives_lazy_list_identically() {
     let mut source = HostSession::new();
     assert_eq!(
@@ -1825,7 +1867,7 @@ fn host_session_snapshot_roundtrip_rederives_lazy_list_identically() {
             .text,
         "LazyList[LazyRange[3, 2]]"
     );
-    let bytes = source.snapshot_to_bytes();
+    let bytes = source.snapshot_to_bytes().expect("snapshot should render");
 
     let mut restored = HostSession::new();
     restored

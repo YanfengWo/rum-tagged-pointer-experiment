@@ -408,6 +408,7 @@ impl Session {
             sealed_units: Vec::new(),
             next_sealed_symbol_id: 0,
             next_source_unit_epoch: 0,
+            restoring_snapshot: false,
             resource_limits: ResourceLimits::default(),
             evaluation_depth: 0,
             match_depth: 0,

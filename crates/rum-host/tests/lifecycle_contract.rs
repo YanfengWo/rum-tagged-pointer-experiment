@@ -180,7 +180,7 @@ fn snapshot_restore_preserves_package_contexts_and_replaces_prior_state() {
     assert_success_text(source.eval("EndPackage[]"), "Null");
     assert_success_text(source.eval("Snap`public[4]"), "5");
 
-    let bytes = source.snapshot_to_bytes();
+    let bytes = source.snapshot_to_bytes().expect("snapshot should render");
     assert!(!bytes.is_empty());
 
     let mut restored = HostSession::new();

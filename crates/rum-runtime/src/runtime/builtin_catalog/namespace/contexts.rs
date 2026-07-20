@@ -290,6 +290,10 @@ pub(in super::super) const NAMESPACE_CONTEXT_BUILTINS: &[BuiltinSpec] = &[
             tag: "optx",
             template: "Unknown option `1` in `2`.",
         },
+        BuiltinMessageSpec {
+            tag: "sealedref",
+            template: "Cannot save a definition containing a sealed symbol reference.",
+        },
     ])
     .protected()
     .with_capability(Capability::FileWrite),
@@ -316,6 +320,10 @@ pub(in super::super) const NAMESPACE_CONTEXT_BUILTINS: &[BuiltinSpec] = &[
         BuiltinMessageSpec {
             tag: "optx",
             template: "Unknown option `1` in `2`.",
+        },
+        BuiltinMessageSpec {
+            tag: "sealedref",
+            template: "Cannot save a definition containing a sealed symbol reference.",
         },
     ])
     .protected()

@@ -51,6 +51,27 @@ pub(super) const SCOPING_BUILTINS: &[BuiltinSpec] = &[
         },
     ])
     .protected(),
+    BuiltinSpec::special_with_attributes(
+        "RestoreSealedReferences",
+        "Re-links sealed symbol references while evaluating trusted snapshot restore forms.",
+        AttributeSet::from_attribute(Attribute::HoldAllComplete),
+        builtin_restore_sealed_references,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "expected a unit context or list of unit contexts and HoldComplete[form]",
+        },
+        BuiltinMessageSpec {
+            tag: "mode",
+            template: "only valid inside a snapshot restore",
+        },
+        BuiltinMessageSpec {
+            tag: "unit",
+            template: "snapshot restore could not find a named current sealed unit",
+        },
+    ])
+    .protected(),
     BuiltinSpec::ordinary_with_hold(
         "Public",
         "Declares public symbols inside a held DefinePackage source unit.",

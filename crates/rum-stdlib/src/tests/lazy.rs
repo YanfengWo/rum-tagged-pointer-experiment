@@ -462,7 +462,9 @@ fn snapshot_roundtrip_rederives_composed_lazy_descriptor() {
         ),
         "LazyList[LazyTake[LazyMap[f, LazyRange[3, 2]], 4]]"
     );
-    let snapshot = source.snapshot_definitions_source();
+    let snapshot = source
+        .snapshot_definitions_source()
+        .expect("composed lazy-list snapshot should render");
 
     let mut restored = core_session();
     restored
@@ -483,7 +485,9 @@ fn snapshot_roundtrip_rederives_lazy_table_descriptor() {
         eval_text(&mut source, "lz = LazyTable[i^2, {i, 2, 6, 2}]"),
         "LazyList[LazyTake[LazyMap[Function[i, Power[i, 2]], LazyRange[2, 2]], 3]]"
     );
-    let snapshot = source.snapshot_definitions_source();
+    let snapshot = source
+        .snapshot_definitions_source()
+        .expect("lazy-table snapshot should render");
 
     let mut restored = core_session();
     restored
@@ -729,7 +733,9 @@ fn snapshot_roundtrip_rederives_lazy_nest_and_fold_descriptors() {
         ),
         "LazyList[LazyFoldList[combine, 10, LazyTake[LazyRange[1, 1], 3]]]"
     );
-    let snapshot = source.snapshot_definitions_source();
+    let snapshot = source
+        .snapshot_definitions_source()
+        .expect("lazy NestList and FoldList snapshot should render");
 
     let mut restored = core_session();
     restored
@@ -930,7 +936,9 @@ fn snapshot_roundtrip_rederives_lazy_combinatorial_descriptors() {
         ),
         "LazyList[LazyPermutations[List[b, a, a]]]"
     );
-    let snapshot = source.snapshot_definitions_source();
+    let snapshot = source
+        .snapshot_definitions_source()
+        .expect("lazy combinatorial snapshot should render");
 
     let mut restored = core_session();
     restored

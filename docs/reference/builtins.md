@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 637
+Builtin count: 638
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -1477,6 +1477,7 @@ Writes a textual first-pass dump of selected symbols to a file and returns the s
   - DumpSave::io — could not write `1`: `2`
   - DumpSave::optval — Unsupported value `1` for option CompressionLevel in DumpSave; only 1 is currently supported.
   - DumpSave::optx — Unknown option `1` in `2`.
+  - DumpSave::sealedref — Cannot save a definition containing a sealed symbol reference.
 
 ### DuplicateFreeQ
 
@@ -4358,6 +4359,17 @@ Returns an expression with its first structural element removed.
   - Rest::norest — Cannot take `1` of expression `2` with length zero.
   - Rest::normal — Nonatomic expression expected at position 1 in `1`.
 
+### RestoreSealedReferences
+
+Re-links sealed symbol references while evaluating trusted snapshot restore forms.
+
+- Attributes: `HoldAllComplete`, `Protected`
+- Capability: `Pure`
+- Messages:
+  - RestoreSealedReferences::argform — expected a unit context or list of unit contexts and HoldComplete[form]
+  - RestoreSealedReferences::mode — only valid inside a snapshot restore
+  - RestoreSealedReferences::unit — snapshot restore could not find a named current sealed unit
+
 ### Return
 
 Exits the current function-style evaluation with an optional result.
@@ -4516,6 +4528,7 @@ Appends a textual first-pass serialization of selected symbols to a file.
   - Save::argtu — expected between `1` and `2` argument(s), got `3`
   - Save::io — could not write `1`: `2`
   - Save::optx — Unknown option `1` in `2`.
+  - Save::sealedref — Cannot save a definition containing a sealed symbol reference.
 
 ### Scan
 

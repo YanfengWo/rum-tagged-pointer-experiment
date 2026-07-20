@@ -184,8 +184,11 @@ impl HostSession {
     /// installer-provided builtin handlers, the gensym counter, PRNG state, or
     /// contexts beyond what the generated source re-establishes. This is a text
     /// image, not a binary `.mx` dump.
-    pub fn snapshot_to_bytes(&self) -> Vec<u8> {
-        self.session.snapshot_definitions_source().into_bytes()
+    pub fn snapshot_to_bytes(&self) -> Result<Vec<u8>, HostFailure> {
+        self.session
+            .snapshot_definitions_source()
+            .map(String::into_bytes)
+            .map_err(snapshot_encode_failure)
     }
 
     /// Replaces this session's user state by restoring a text snapshot image.
@@ -205,7 +208,7 @@ impl HostSession {
         }
 
         self.guard(
-            |session| match session.session.eval_script_request(source) {
+            |session| match session.session.eval_snapshot_restore_request(source) {
                 Ok(_) => Ok(()),
                 Err(failure) => match eval_failure_from_runtime(failure) {
                     HostEvalOutcome::Failure(failure) => Err(failure),
@@ -689,6 +692,10 @@ fn snapshot_decode_failure(error: std::str::Utf8Error) -> HostFailure {
         HostFailureCode::Other,
         format!("snapshot bytes are not valid UTF-8: {error}"),
     )
+}
+
+fn snapshot_encode_failure(message: String) -> HostFailure {
+    synthesized_host_failure(HostFailureCode::Other, message)
 }
 
 fn snapshot_input_failure(suspension: HostInputSuspension) -> HostFailure {

@@ -340,6 +340,14 @@ pub(in crate::runtime) fn builtin_define_package(
     session.eval_define_package(args)
 }
 
+pub(in crate::runtime) fn builtin_restore_sealed_references(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    session.eval_restore_sealed_references(args)
+}
+
 pub(in crate::runtime) fn builtin_public(
     _session: &mut Session,
     head: &Expr,
