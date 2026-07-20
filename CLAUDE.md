@@ -204,7 +204,7 @@ rather than duplicating them.
   now under threshold, reference byte-identical.
   `stdlib_attributes.rs` (28KB) accepted as debt (user 2026-07-18;
   binary_search over one sorted const, no family boundary).
-  Reference now 621; workspace 1554/0. Dispatch sandbox defaults to
+  Reference at that close 621; workspace 1554/0. Dispatch sandbox defaults to
   workspace-write (67cbc88; loopback caveat + escalation in
   TEMPLATE.md). **Same 2026-07-17 ruling: the parked pools are CLOSED
   WON'T-DO** — stdlib parked candidates (ByteArray audit, compression,
@@ -213,8 +213,8 @@ rather than duplicating them.
   rollback API, lighter checkpoint). Standing Engineering Debt stays a
   record of known limitations, not a queue. fs/os/net stay deferred
   until after publication. **NEXT DIRECTION decided 2026-07-18: the lazy
-  sequences + sealed scoping line (top of this section) — (c) done, (d)
-  next.** Memory: `message-registry-cleanup-line.md`,
+  sequences + sealed scoping line (top of this section) — both halves
+  COMPLETE 2026-07-20.** Memory: `message-registry-cleanup-line.md`,
   `wl15-wfr-pass-line.md`.
 - **RELEASE TRANSFORMATION LINE — COMPLETE (2026-07-04 → 07-06).** `main`
   itself was transformed into release shape with full history kept (no

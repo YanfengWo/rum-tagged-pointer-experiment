@@ -408,9 +408,10 @@ syntax diagnostics, reset classification, streaming prints,
 script/file eval, queued input, lower_dump, message_catalog, and three
 named capability-pinned profiles. Canonical doc:
 docs/dev/embedding-api-line.md. Next direction DECIDED 2026-07-17: the
-ACTIVE PLAN at the top of this file (fs/os/net remain deferred until
-after publication per the 2026-07-15 ruling; the line doc's parked queue
-tail is closed WON'T-DO by the same 2026-07-17 ruling).
+cleanup + message-registry line, then the lazy + sealed-scoping line
+(both COMPLETE — see the top of this file; fs/os/net remain deferred
+until after publication per the 2026-07-15 ruling; the line doc's parked
+queue tail is closed WON'T-DO by the same 2026-07-17 ruling).
 
 - [x] brief-161 DONE: strings audit — 101 rows / 99 names, findings in
   `docs/dev/usability-pass/strings-findings.md`; triage + batch queue in
@@ -631,7 +632,7 @@ tail is closed WON'T-DO by the same 2026-07-17 ruling).
   host-embedding line (header above).
 - [x] rum-jupyter `signature.rs` hand-rolled `sha256_compress` (found by
   brief-163's sweep) — RESOLVED 2026-07-17 (brief-250): ported onto the
-  workspace `Hmac<Sha256>`; see ACTIVE PLAN item 3.
+  workspace `Hmac<Sha256>`; see the cleanup + message-registry line, item 3.
 
 ## Release Transformation — COMPLETE (2026-07-06)
 
@@ -753,16 +754,17 @@ string-pattern surface. Batches, evidence-ranked:
 - [x] CLOSED WON'T-DO (user ruling 2026-07-17; was "candidates parked"):
   `ByteArray` depth audit; compression codecs; unicode normalization;
   ipaddress folk; fuzzing; codec follow-ons.
-- [~] WL15 survey outcomes (2026-07-07, docs/dev/wl15-core-survey.md):
-  (a) `SubValuesHoldAll`-equivalent — **DONE** (brief-255, wl15/wfr
-  batch 2a). (b) Structured-exceptions line — **DONE** (brief-259,
-  wl15/wfr batch 3a). (c) Incremental/lazy collections — the PURE half
-  is the ACTIVE PLAN line above (user 2026-07-18); the STATEFUL half
-  (`IncrementalObject`/`NextValue` cursors) is CLOSED WON'T-DO in the
-  kernel (downstream package only if ever pulled). (d) Structured
-  Package Format: loader half = rum-fs territory (never kernel); the
-  scoping half is the ACTIVE PLAN line above (real-encapsulation
-  private, user 2026-07-18); relevant to dun plugins.
+- [x] WL15 survey outcomes (2026-07-07, docs/dev/wl15-core-survey.md) —
+  ALL FOUR CLOSED: (a) `SubValuesHoldAll`-equivalent — **DONE**
+  (brief-255, wl15/wfr batch 2a). (b) Structured-exceptions line —
+  **DONE** (brief-259, wl15/wfr batch 3a). (c) Incremental/lazy
+  collections — the PURE half **DONE** (lazy-sequences line, briefs
+  262-267); the STATEFUL half (`IncrementalObject`/`NextValue` cursors)
+  is CLOSED WON'T-DO in the kernel (downstream package only if ever
+  pulled). (d) Structured Package Format: loader half = rum-fs
+  territory (never kernel); the scoping half **DONE** (sealed-scoping
+  line, briefs 268-271; real-encapsulation private + re-link);
+  relevant to dun plugins.
 - [ ] WFR survey (2026-07-07, docs/dev/wfr-core-survey.md; idea-level
   absorption only, sources never read): unit-2 batch candidates
   `SelectPositions`/`Duplicates`/`BinarySearch`; unit-3 candidates
@@ -819,7 +821,8 @@ string-pattern surface. Batches, evidence-ranked:
   Cost — session 0.09 ms steady / eval 4.5 us / 6.5 MiB stripped delta /
   23 external crates.
 - [x] `vm_rhs_template/` fate — RESOLVED: DELETED (brief-244, 2026-07-17;
-  see ACTIVE PLAN item 2 for the ruling evidence). The
+  see the cleanup + message-registry line, item 2, for the ruling
+  evidence). The
   profiling/debug_tools fate is settled: they stay in the kernel,
   runtime-gated, hidden from restricted hosts via the Diagnostic
   capability.
