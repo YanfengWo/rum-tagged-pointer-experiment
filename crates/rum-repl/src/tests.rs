@@ -471,8 +471,8 @@ fn repl_trace_command_renders_a_small_tree() {
 
     assert_eq!(
         rendered,
-        r#"rum> Hold[Plus[1, 1]]
-Hold[2]
+        r#"rum> Plus[1, 1]
+2
 rum> "#
     );
 }
@@ -483,7 +483,7 @@ fn repl_trace_command_filters_with_a_pattern_form() {
 
     assert_eq!(
         rendered,
-        r#"rum>   Hold[Plus[1, 2]]
+        r#"rum>   Plus[1, 2]
 rum> "#
     );
 }
@@ -495,7 +495,7 @@ fn repl_trace_command_rewrites_a_bare_symbol_filter() {
     assert_eq!(
         rendered,
         r#"rum> filtering on _Plus
-  Hold[Plus[1, 2]]
+  Plus[1, 2]
 rum> "#
     );
 }
@@ -506,12 +506,12 @@ fn repl_trace_command_passes_a_numeric_depth_levelspec() {
 
     assert_eq!(
         rendered,
-        r#"rum> Hold[1]
-Hold[2]
-Hold[Plus[1, 2]]
-Hold[3]
-  Hold[1]
-  Hold[2]
+        r#"rum> 1
+2
+Plus[1, 2]
+3
+  1
+  2
 rum> "#
     );
 }
@@ -523,89 +523,89 @@ fn repl_trace_command_truncates_by_default_and_full_is_the_escape_hatch() {
 
     assert_eq!(
         rendered,
-        r#"rum> Hold[Table[Power[i, 2], List[i, 10]]]
-  Hold[i]
-  Hold[1]
-Hold[Power[i, 2]]
-Hold[1]
-  Hold[i]
-  Hold[2]
-Hold[Power[i, 2]]
-Hold[4]
-  Hold[i]
-  Hold[3]
-Hold[Power[i, 2]]
-Hold[9]
-  Hold[i]
-  Hold[4]
-Hold[Power[i, 2]]
-Hold[16]
-  Hold[i]
-  Hold[5]
-Hold[Power[i, 2]]
-Hold[25]
-  Hold[i]
-  Hold[6]
-Hold[Power[i, 2]]
-Hold[36]
-  Hold[i]
-  Hold[7]
-Hold[Power[i, 2]]
-Hold[49]
-  Hold[i]
-  Hold[8]
-Hold[Power[i, 2]]
-Hold[64]
-  Hold[i]
-  Hold[9]
-Hold[Power[i, 2]]
-Hold[81]
-  Hold[i]
-  Hold[10]
-Hold[Power[i, 2]]
+        r#"rum> Table[Power[i, 2], List[i, 10]]
+  i
+  1
+Power[i, 2]
+1
+  i
+  2
+Power[i, 2]
+4
+  i
+  3
+Power[i, 2]
+9
+  i
+  4
+Power[i, 2]
+16
+  i
+  5
+Power[i, 2]
+25
+  i
+  6
+Power[i, 2]
+36
+  i
+  7
+Power[i, 2]
+49
+  i
+  8
+Power[i, 2]
+64
+  i
+  9
+Power[i, 2]
+81
+  i
+  10
+Power[i, 2]
 … 2 more steps (:trace --full to see all)
-rum> Hold[Table[Power[i, 2], List[i, 10]]]
-  Hold[i]
-  Hold[1]
-Hold[Power[i, 2]]
-Hold[1]
-  Hold[i]
-  Hold[2]
-Hold[Power[i, 2]]
-Hold[4]
-  Hold[i]
-  Hold[3]
-Hold[Power[i, 2]]
-Hold[9]
-  Hold[i]
-  Hold[4]
-Hold[Power[i, 2]]
-Hold[16]
-  Hold[i]
-  Hold[5]
-Hold[Power[i, 2]]
-Hold[25]
-  Hold[i]
-  Hold[6]
-Hold[Power[i, 2]]
-Hold[36]
-  Hold[i]
-  Hold[7]
-Hold[Power[i, 2]]
-Hold[49]
-  Hold[i]
-  Hold[8]
-Hold[Power[i, 2]]
-Hold[64]
-  Hold[i]
-  Hold[9]
-Hold[Power[i, 2]]
-Hold[81]
-  Hold[i]
-  Hold[10]
-Hold[Power[i, 2]]
-Hold[100]
-Hold[List[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]]
+rum> Table[Power[i, 2], List[i, 10]]
+  i
+  1
+Power[i, 2]
+1
+  i
+  2
+Power[i, 2]
+4
+  i
+  3
+Power[i, 2]
+9
+  i
+  4
+Power[i, 2]
+16
+  i
+  5
+Power[i, 2]
+25
+  i
+  6
+Power[i, 2]
+36
+  i
+  7
+Power[i, 2]
+49
+  i
+  8
+Power[i, 2]
+64
+  i
+  9
+Power[i, 2]
+81
+  i
+  10
+Power[i, 2]
+100
+List[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
 rum> "#
     );
 }
@@ -643,10 +643,10 @@ fn repl_trace_command_renders_messages_before_the_tree() {
     assert_eq!(
         rendered,
         r#"rum> ! General::stop: message emitted
-Hold[CompoundExpression[Message[General::stop], 1]]
-Hold[Message[General::stop]]
-Hold[Null]
-Hold[1]
+CompoundExpression[Message[General::stop], 1]
+Message[General::stop]
+Null
+1
 rum> "#
     );
 }

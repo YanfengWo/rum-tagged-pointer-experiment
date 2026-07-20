@@ -1097,12 +1097,18 @@ string-pattern surface. Batches, evidence-ranked:
   frozen snapshot changed (`:help`, one added line) — brief-282's
   snapshots' first real outing, and they caught precisely the intended
   change and nothing else.
-  FOLLOW-UP QUEUED (brief-284): leaves render as `Hold[Plus[1, 1]]`; the
-  `Hold` wrapper is a `Trace`-return artifact and is noise on every line.
-  The kernel's own `TracePrint` peels it, and `HostValue.text` already
-  establishes peeling a display-only hold wrapper at a rendering boundary.
-  My brief said "print each leaf's text" without accounting for it — my
-  error, not the execution's.
+  FOLLOW-UP DONE (brief-284): leaves rendered as `Hold[Plus[1, 1]]`; the
+  `Hold` wrapper is a `Trace`-return artifact and was noise on every line.
+  Peeled exactly one level, in the trace-specific `render_trace_leaf` and
+  NOT in the shared `render_typed_text`, with a fallback that renders
+  unchanged if the text is not `Hold[…]`-shaped. `:trace (1+2)*3` now
+  reads exactly like the kernel's own `TracePrint`. Verified at the gate
+  that one-level peeling is the correct rule: `Trace[Hold[1+1]]` yields
+  `List[Hold[Hold[Plus[1, 1]]]]`, so the outer wrapper is the trace's and
+  the inner is the user's — peeling one keeps the user's own `Hold`.
+  Test count unchanged (1662/0), `:help` and every non-`:trace` snapshot
+  untouched. Cause was a gap in my brief ("print each leaf's text"), not
+  in the execution.
   NEXT AXIS (documented, out of scope so far): design doc §1.5 records a
   second, host-level trace channel (`HostTraceEvent`, incl.
   `RuleApplied{source, input, rule, result}`) that can name WHICH RULE

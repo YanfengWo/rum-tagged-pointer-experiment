@@ -385,7 +385,15 @@ fn collect_trace_lines(items: &[HostTyped], depth: usize, lines: &mut Vec<String
 }
 
 fn render_trace_leaf(value: &HostTyped, depth: usize) -> String {
-    format!("{}{}", "  ".repeat(depth), render_typed_text(value))
+    let text = match value {
+        HostTyped::Other { head, text } if head == "Hold" => text
+            .strip_prefix("Hold[")
+            .and_then(|contents| contents.strip_suffix(']'))
+            .unwrap_or(text)
+            .to_string(),
+        _ => render_typed_text(value),
+    };
+    format!("{}{text}", "  ".repeat(depth))
 }
 
 fn render_typed_text(value: &HostTyped) -> String {
