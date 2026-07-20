@@ -618,6 +618,63 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
 ];
 const STDLIB_EMPTY_ATTRIBUTE_NAMES: &[&str] = &["$AssertFunction", "Decrypt", "Encrypt"];
 
+// Both tables above are binary-searched by ASCII byte order (str::cmp), so an
+// out-of-place insert silently breaks lookups near it. Enforce strict ASCII
+// sortedness (which also forbids duplicates) at compile time. The allows are
+// needed because dead-code analysis does not root usage from the anonymous
+// `const _` assertions below.
+#[allow(dead_code)]
+const fn str_ascii_lt(lhs: &str, rhs: &str) -> bool {
+    let lhs = lhs.as_bytes();
+    let rhs = rhs.as_bytes();
+    let shorter = if lhs.len() < rhs.len() {
+        lhs.len()
+    } else {
+        rhs.len()
+    };
+    let mut index = 0;
+    while index < shorter {
+        if lhs[index] != rhs[index] {
+            return lhs[index] < rhs[index];
+        }
+        index += 1;
+    }
+    lhs.len() < rhs.len()
+}
+
+#[allow(dead_code)]
+const fn attribute_specs_strictly_sorted(specs: &[Spec]) -> bool {
+    let mut index = 1;
+    while index < specs.len() {
+        if !str_ascii_lt(specs[index - 1].name, specs[index].name) {
+            return false;
+        }
+        index += 1;
+    }
+    true
+}
+
+#[allow(dead_code)]
+const fn attribute_names_strictly_sorted(names: &[&str]) -> bool {
+    let mut index = 1;
+    while index < names.len() {
+        if !str_ascii_lt(names[index - 1], names[index]) {
+            return false;
+        }
+        index += 1;
+    }
+    true
+}
+
+const _: () = assert!(
+    attribute_specs_strictly_sorted(STDLIB_NON_EMPTY_ATTRIBUTE_SPECS),
+    "STDLIB_NON_EMPTY_ATTRIBUTE_SPECS must stay strictly ASCII-sorted (binary-searched)"
+);
+const _: () = assert!(
+    attribute_names_strictly_sorted(STDLIB_EMPTY_ATTRIBUTE_NAMES),
+    "STDLIB_EMPTY_ATTRIBUTE_NAMES must stay strictly ASCII-sorted (binary-searched)"
+);
+
 pub(super) fn stdlib_builtin_attribute_specs() -> &'static [BuiltinAttributeSpec] {
     static SPECS: OnceLock<Vec<BuiltinAttributeSpec>> = OnceLock::new();
 
