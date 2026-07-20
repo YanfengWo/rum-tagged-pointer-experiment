@@ -47,10 +47,13 @@ Brief queue (stdlib first, kernel last):
   2026-07-20 (gate: workspace green, 15 probes; gate fix = one
   ASCII-sort violation in the attribute mirror insert — the table has
   no sortedness assertion, candidate for a debt note).
-- [ ] brief-274 — kernel named-slot fill: `Slot[string]` fills from an
-  Association first argument (Lookup semantics; absent key →
-  `Missing["KeyAbsent", key]`; non-Association → loud message, inert).
-  Hot path (Function application) ⇒ microbench A/B gate.
+- [ ] brief-274 — kernel named-slot fill: `Slot[string]` fills from
+  `Association` arguments in the existing in-order rule scan (Lookup
+  semantics; absent key with an association present →
+  `Missing["KeyAbsent", key]`; no association at all → unchanged
+  silent-inert, since `substitute_slots` is session-less and a loud
+  message would require hot-path signature surgery — revisit only if
+  it bites). Hot path (Function application) ⇒ microbench A/B gate.
 
 ## COMPLETE — lazy sequences + sealed scoping line (user ruling 2026-07-18; both halves closed 2026-07-20)
 
