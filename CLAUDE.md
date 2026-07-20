@@ -139,6 +139,32 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
+- **PUBLICATION-PREP LINE — ACTIVE (opened 2026-07-21). User ruled
+  divergence is now SUFFICIENT and reversed the 2026-07-06
+  publication-deferral (see the updated bullet below).** Two rulings
+  set the shape: (1) release form = **source-available GitHub only**
+  (no crates.io ⇒ no per-crate `publish`/metadata/semver burden, just a
+  `repository` field); (2) the public tree is **fully transparent** —
+  `CLAUDE.md`, `docs/dev/` briefs+design docs, `PROGRESS.md`, the Codex
+  dispatch tooling all stay public (cleanup = accuracy pass, not
+  removal). Four buckets, security first: ① security audit
+  (capability-classification consistency + gate/limit coverage + the
+  three hard lines) ② doc completion (SECURITY.md, CONTRIBUTING,
+  CODE_OF_CONDUCT, CHANGELOG, rustdoc) ③ light cleanup/accuracy
+  (dead links, the 4 files leaking `/Users/fft` paths) ④ mechanism
+  handoff (repository field, v0.1.0 tag, bundle; the actual public repo
+  create+push is the user's account action). **Secrets scan: DONE
+  by me 2026-07-21, CLEAN** — current tree (git grep ~15 pattern
+  classes) AND all 1495 commits of preserved history (`git log --all -G`
+  / `--diff-filter=A`): no keys/tokens/PII, zero tracked `.json`, no
+  sensitive files ever added. Two non-secret notes → cleanup bucket
+  (the `/Users/fft` paths; a benign `token="rum-browser-smoke"` test
+  literal). First brief = **brief-289** = capability-classification &
+  limit-coverage consistency audit (diagnostic; written in an
+  engineering-hygiene register to clear the Codex cybersecurity filter —
+  see `codex-cybersecurity-filter.md`; the secrets scan is deliberately
+  kept a director step, NOT in the brief). Memory:
+  `publication-prep-line.md`.
 - **MATCHER + DEBT-CLEARING + REPL/TRACE LINES — ALL COMPLETE
   (2026-07-20 → 07-21, briefs 275-288). NEXT DIRECTION = fresh user
   decision; no active plan.** Memory: `matcher-oneidentity-flat-line.md`,
@@ -265,10 +291,16 @@ rather than duplicating them.
   archive `/Users/fft/Developments/Archive/rum-history/` (MANIFEST.md maps
   each item to its removal commit; recycling candidates flagged). Memory:
   `release-transformation-line.md`.
-- **PUBLICATION DEFERRED INDEFINITELY (user directive 2026-07-06) — do not
-  steer toward release.** rum publishes only after sufficient divergence.
-  Direction: embedded scripting + sandbox safety + rapid script development
-  (elisp/guile/lua/python family). The FS-purity line (briefs 132-134)
+- **PUBLICATION DEFERRAL — REVERSED 2026-07-21 (superseded; see the
+  PUBLICATION-PREP LINE bullet at the top of this section).** The
+  2026-07-06 directive was "publication deferred indefinitely, do not
+  steer toward release; rum publishes only after sufficient divergence."
+  On 2026-07-21 the user ruled divergence IS now sufficient and opened
+  the publication-prep line. Kept here as the historical record, not a
+  live directive. The stated direction that earned the divergence —
+  embedded scripting + sandbox safety + rapid script development
+  (elisp/guile/lua/python family) — still holds. The FS-purity line
+  (briefs 132-134)
   landed the three mechanical kernel hard lines: zero unsafe, zero std::fs
   (non-test), Pure = deterministic. The stdlib-expansion line (briefs
   135-156) is COMPLETE.

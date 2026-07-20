@@ -3,6 +3,62 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
+## ACTIVE PLAN — publication-prep line (opened 2026-07-21)
+
+User ruled divergence is now SUFFICIENT and reversed the 2026-07-06
+"publication deferred indefinitely" directive. Moving to pre-publication
+prep. Two shaping rulings (2026-07-21):
+
+- **Release form = source-available GitHub only** (no crates.io). ⇒ no
+  per-crate `publish` flags, no crates.io metadata/name/semver burden; the
+  only metadata add is a `repository` field once the URL exists.
+- **Public tree is fully transparent** — `CLAUDE.md`, `docs/dev/` (briefs +
+  design docs), `PROGRESS.md`, the Codex dispatch tooling all stay public.
+  So "cleanup" is an accuracy pass, not a removal pass.
+
+Four buckets, ordered by value + dependency (security first — the audit may
+surface fixes that the SECURITY.md threat model must reflect):
+
+1. **Security audit** (highest value; the product is "run untrusted scripts
+   safely"):
+   - [ ] **brief-289 — capability-classification & limit-coverage consistency
+     audit (diagnostic).** Does each builtin's declared `capability` match the
+     effect its implementation performs? Does the single dispatch gate
+     (`builtins_context_loader.rs:68`) sit upstream of every capability-bearing
+     effect? Do the session resource limits (recursion/iteration/parse-depth/
+     match-depth/eval-timeout/memory) each actually bound their resource? Plus
+     the three hard-line greps (zero `unsafe` in rum-core/rum-runtime; no direct
+     `std::fs`/`std::net` in non-test; `Pure` = deterministic). Findings-table
+     shape (like the kernel-a audit); written in an engineering-hygiene register
+     to clear the Codex cybersecurity filter. Fix briefs follow per finding.
+   - [ ] Dependency/supply-chain: `cargo audit` (RUSTSEC) + `cargo deny`
+     (licenses/sources) — director runs at the gate.
+   - [x] **Secrets/sensitive-info scan — DONE 2026-07-21 (director), CLEAN.**
+     Current tree (git grep ~15 pattern classes: private keys, AWS/GitHub/
+     OpenAI/Google/Slack prefixes, assignment-style secrets, auth headers,
+     sensitive file types, tracked `.json` [zero], emails/PII [none]) AND all
+     1495 commits of preserved history (`git log --all -G` / `--diff-filter=A`:
+     no private keys / cloud prefixes / jupyter keys / `.env`-style assignments,
+     no sensitive-extension file ever added). Two non-secret notes → cleanup
+     bucket: 4 files leak `/Users/fft` local paths (`CLAUDE.md` + 3 findings
+     docs); `scripts/rum-jupyter-browser-smoke.py` has a benign fixed test token
+     `rum-browser-smoke`. A tooled re-verify (gitleaks/trufflehog, `--log` over
+     history) at the mechanism-handoff gate as defense-in-depth.
+2. **Doc completion:** `SECURITY.md` (sandbox threat model + disclosure —
+   written AFTER the audit so it is honest), `CONTRIBUTING.md`,
+   `CODE_OF_CONDUCT.md`, `CHANGELOG.md` (0.1.0 initial entry); rustdoc
+   completeness (`cargo doc` clean, esp. `rum-host` public API); per-crate README.
+3. **Cleanup / accuracy (light):** dead intra-repo links, stale references,
+   the `/Users/fft` path leaks above, verify `.claude/hooks/guard-dispatch.py`
+   (the one tracked `.claude` file) is publish-safe (confirmed: no absolute
+   paths, no secrets), README/DISCLAIMER front-door read-through.
+4. **Mechanism / handoff (light):** add `repository` metadata, tag `v0.1.0`,
+   cold-backup bundle; the actual public GitHub repo create + `git push` is the
+   user's account action — director prepares the exact `git remote add` / push
+   steps and hands them over.
+
+Memory: `publication-prep-line.md`.
+
 ## COMPLETE — debt clearing + REPL/trace line (2026-07-20 → 07-21, briefs 280-288)
 
 Two user-directed sweeps, both closed.
