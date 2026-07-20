@@ -1056,5 +1056,36 @@ string-pattern surface. Batches, evidence-ranked:
 - [ ] Formatter internals: continue splitting planner/builder/render/test
   modules as the syntax surface grows; decide later whether the string
   subsystem earns a crate boundary (do not create one by default).
-- [ ] REPL/CLI polish: decide whether trace viewing belongs in the REPL;
-  snapshot-style regression coverage for help/inspection/message rendering.
+- [x] REPL rendering frozen with full-output snapshots — DONE 2026-07-20
+  (brief-282). The gap was assertion SHAPE, not coverage: the 23 tests in
+  `rum-repl/src/tests.rs` already exercised every command surface, but via
+  48 `contains(...)` calls against 1 `assert_eq!`, so a reordered command
+  list, a deleted help line, or changed indentation all passed. Now every
+  test pins its ENTIRE rendered output (`contains(` 48 → 0; 23 full-output
+  `assert_eq!`s, expected text captured from real runs, not hand-written).
+  No snapshot crate added — plain `assert_eq!`, this crate keeps its three
+  path deps. Zero production change, test count unchanged, workspace
+  1654/0. Negative-calibrated four ways: a deleted help line, a removed
+  indent space, a changed message prefix (Codex), and — the mode the old
+  assertions could never catch — REORDERING two help lines with their
+  content untouched (Claude, at the gate). No non-determinism carve-outs
+  were needed; the nanosecond-stamped history paths never reach the output.
+  Consequence to accept knowingly: any INTENDED wording or layout change
+  now requires updating the pinned text. That is the point (user ruling
+  2026-07-20: freeze all of it), and the update cost is one test run plus
+  reviewing the diff.
+- [ ] DECIDE (not debt — no work is pending, a ruling is): should evaluation
+  tracing be a first-class REPL view? The kernel ALREADY has the capability
+  (`builtin_catalog/debug.rs`, `Diagnostic`-gated; `TracePrint[1+1]` works
+  today and prints `Plus[1, 1]` then `2`). What is missing is a REPL
+  surface: the command set is `:help :parse :format :lower :complete
+  :history :inspect :messages`, with no `:trace`. Doing it means designing
+  an interaction (paging, folding, filtering by symbol, relationship to the
+  `Diagnostic` capability) — real feature work, design-first per project
+  convention. Not doing it means declaring the status quo final: users
+  write `TracePrint[...]` in the expression themselves.
+  User ruling 2026-07-20: DO design it, after the snapshot work above.
+  **Filed here rather than under Standing Engineering Debt on purpose** —
+  that section is a record of known limitations, and mixing "unfinished
+  work" with "undecided product question" is what let the previous
+  one-line entry mislead a later reader.
