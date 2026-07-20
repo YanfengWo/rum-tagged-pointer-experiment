@@ -224,6 +224,34 @@ fn lowers_slots_and_pure_functions() {
 }
 
 #[test]
+fn named_slots_fill_from_rules_and_association_arguments() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    for (source, expected) in [
+        ("(#dept &)[<|\"dept\" -> \"x\"|>]", "\"x\""),
+        ("(#dept &)[<|dept -> \"x\"|>]", "\"x\""),
+        ("(#dept &)[<|\"dept\" :> \"x\"|>]", "\"x\""),
+        (
+            "(#zzz &)[<|\"dept\" -> \"x\"|>]",
+            "Missing[\"KeyAbsent\", \"zzz\"]",
+        ),
+        ("(#dept &)[5]", "Slot[\"dept\"]"),
+        ("(#k &)[\"k\" -> 1]", "1"),
+        ("(#k &)[k -> 1]", "1"),
+        ("(#k &)[\"j\" -> 1, \"k\" -> 2]", "2"),
+        ("(#k &)[<|\"k\" -> 1|>, \"k\" -> 9]", "1"),
+        ("(#1 &)[5]", "5"),
+        ("(f[##] &)[1, 2]", "f[1, 2]"),
+    ] {
+        assert_eq!(
+            session.eval_text(source).unwrap().value.to_string(),
+            expected,
+            "unexpected named-slot result for {source}"
+        );
+    }
+}
+
+#[test]
 fn setdelayed_stores_and_applies_simple_downvalue() {
     let mut session = session_with_test_rewrite_builtins();
 

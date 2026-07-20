@@ -71,31 +71,60 @@ pub(in crate::runtime) fn substitute_single_slot(expr: &Expr, args: &[Expr]) -> 
 }
 
 pub(in crate::runtime) fn lookup_named_slot(args: &[Expr], name: &str) -> Option<Expr> {
+    let mut saw_association = false;
+
     for arg in args {
         let Expr::Call {
             head,
-            args: rule_args,
+            args: call_args,
         } = arg
         else {
             continue;
         };
 
-        if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
-            || rule_args.len() != 2
-        {
+        if is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed") {
+            if let Some(value) = lookup_named_slot_in_rule(head, call_args, name) {
+                return Some(value);
+            }
             continue;
         }
 
-        let matches_name = match &rule_args[0] {
-            Expr::Atom(Atom::Symbol(symbol)) => symbol.name() == name,
-            Expr::Atom(Atom::String(value)) => value == name,
-            _ => false,
-        };
+        if !is_system_symbol_name(head, "Association") {
+            continue;
+        }
 
-        if matches_name {
-            return Some(rule_args[1].clone());
+        saw_association = true;
+
+        for entry in call_args {
+            let Expr::Call {
+                head: rule_head,
+                args: rule_args,
+            } = entry
+            else {
+                continue;
+            };
+
+            if let Some(value) = lookup_named_slot_in_rule(rule_head, rule_args, name) {
+                return Some(value);
+            }
         }
     }
 
-    None
+    saw_association.then(|| missing_key_absent_expr(Expr::string(name)))
+}
+
+fn lookup_named_slot_in_rule(head: &Expr, rule_args: &[Expr], name: &str) -> Option<Expr> {
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || rule_args.len() != 2
+    {
+        return None;
+    }
+
+    let matches_name = match &rule_args[0] {
+        Expr::Atom(Atom::Symbol(symbol)) => symbol.name() == name,
+        Expr::Atom(Atom::String(value)) => value == name,
+        _ => false,
+    };
+
+    matches_name.then(|| rule_args[1].clone())
 }
