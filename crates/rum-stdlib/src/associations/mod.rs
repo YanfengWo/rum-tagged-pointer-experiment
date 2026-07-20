@@ -13,6 +13,7 @@ mod aggregate;
 mod basic;
 mod data;
 mod grouping;
+mod join_across;
 mod key_reshape;
 mod missing;
 mod mutation;
@@ -29,6 +30,7 @@ pub(crate) use self::{
         eval_lookup, eval_normal, eval_values,
     },
     grouping::eval_group_by,
+    join_across::eval_join_across,
     key_reshape::{
         eval_association_key_deflatten, eval_association_key_flatten, eval_key_group_by,
     },

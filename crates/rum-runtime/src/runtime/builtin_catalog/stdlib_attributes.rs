@@ -304,6 +304,7 @@ const STDLIB_NON_EMPTY_ATTRIBUTE_SPECS: &[Spec] = &[
         ATTR_FLAT_ONE_IDENTITY_PROTECTED_READ_PROTECTED,
     ),
     Spec::new("Join", ATTR_PROTECTED),
+    Spec::new("JoinAcross", ATTR_PROTECTED),
     Spec::new("Key", ATTR_PROTECTED),
     Spec::new("KeyComplement", ATTR_PROTECTED),
     Spec::new("KeyDrop", ATTR_PROTECTED),

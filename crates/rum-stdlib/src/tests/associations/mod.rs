@@ -22,3 +22,4 @@ mod associations_mutation_operator_forms;
 mod associations_mutation_surface;
 mod associations_part2;
 mod associations_set_lvalue;
+mod join_across;

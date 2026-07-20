@@ -37,10 +37,11 @@ Join concat/assoc-merge, AssociationThread, Missing propagation):
 
 Brief queue (stdlib first, kernel last):
 
-- [ ] brief-272 — `JoinAcross` (associations family): Inner/Left/Right/
+- [x] brief-272 — `JoinAcross` (associations family): Inner/Left/Right/
   Outer, key spec = key | Key[k] | rule | list thereof; hash-join;
   right-wins collisions (matches `Join` on associations); unmatched rows
-  carry only their own columns. Reference 638→639.
+  carry only their own columns. Reference 638→639. DONE 2026-07-20
+  (gate: workspace green, 14 probes reproduced).
 - [ ] brief-273 — `SortBy` multi-key tie-break form + `MaximalBy`/
   `MinimalBy` (structure_ordering family). Reference 639→641.
 - [ ] brief-274 — kernel named-slot fill: `Slot[string]` fills from an

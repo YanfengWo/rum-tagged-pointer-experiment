@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 638
+Builtin count: 639
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2448,6 +2448,18 @@ Concatenates same-head normal expressions and associations in the current top-le
   - Join::incpt — Incompatible elements in `1` cannot be joined.
   - Join::normal — Nonatomic expression expected at position 1 in `1`.
   - Join::normal1 — Expression `1` at position 1 is expected to have nonatomic subexpression at level `2`.
+
+### JoinAcross
+
+Joins two lists of associations by shared key values.
+
+- Attributes: `Protected`
+- Capability: `Pure`
+- Messages:
+  - JoinAcross::argb — JoinAcross called with `1` arguments; 3 or 4 arguments are expected.
+  - JoinAcross::lists — The argument at position `1` in `2` is not a valid list of Associations.
+  - JoinAcross::keys — The argument `1` is not a valid key specification: a key, a rule of keys, or a non-empty list of these.
+  - JoinAcross::jtype — The argument `1` is not a valid join type; "Inner", "Left", "Right", or "Outer" is expected.
 
 ### Key
 

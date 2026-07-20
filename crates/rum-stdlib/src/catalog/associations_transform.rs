@@ -209,6 +209,29 @@ pub(crate) const ASSOCIATION_TRANSFORM_BUILTINS: &[BuiltinSpec] = &[
         },
     ]).protected(),
     BuiltinSpec::ordinary(
+        "JoinAcross",
+        "Joins two lists of associations by shared key values.",
+        associations::eval_join_across,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argb",
+            template: "JoinAcross called with `1` arguments; 3 or 4 arguments are expected.",
+        },
+        BuiltinMessageSpec {
+            tag: "lists",
+            template: "The argument at position `1` in `2` is not a valid list of Associations.",
+        },
+        BuiltinMessageSpec {
+            tag: "keys",
+            template: "The argument `1` is not a valid key specification: a key, a rule of keys, or a non-empty list of these.",
+        },
+        BuiltinMessageSpec {
+            tag: "jtype",
+            template: "The argument `1` is not a valid join type; \"Inner\", \"Left\", \"Right\", or \"Outer\" is expected.",
+        },
+    ]).protected(),
+    BuiltinSpec::ordinary(
         "MergeNested",
         "Recursively merges nested associations by key using a combiner at leaves.",
         associations::eval_merge_nested,
