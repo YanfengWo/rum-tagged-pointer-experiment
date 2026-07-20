@@ -3,10 +3,52 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## COMPLETE — lazy sequences + sealed scoping line (user ruling 2026-07-18; both halves closed 2026-07-20)
+## ACTIVE PLAN — row-workload pure line (DB-prep; user ruling 2026-07-20)
 
-**No active plan — the next direction awaits a user decision in a fresh
-session.**
+Pure-kernel preparation for future downstream database applications (SQL
+or NoSQL): make the "table = List of Associations" workload complete and
+honest. Scope ruling: pure builtins only — no drivers, no handles, no
+Network capability, no symbolic SQL AST (those wait for a real downstream
+pull; capability u8 bitmask is full and widening it is its own decision).
+
+Audit (probes run 2026-07-20, raw outputs in session scratchpad;
+green surface: GroupBy incl. reducer form, Merge, `[[All,"key"]]` column
+extraction, Lookup column+default, KeyTake over rows, SelectFirst,
+TakeLargestBy, DeleteDuplicatesBy, CountsBy, GatherBy, PositionIndex,
+Join concat/assoc-merge, AssociationThread, Missing propagation):
+
+- **F1** `JoinAcross` absent (inert) — the one missing relational
+  primitive. → brief-272.
+- **F2** Named slots parse (`#dept` → `Slot["dept"]`) but do NOT fill
+  from an Association argument at apply time; `Select[rows, #dept=="x"&]`
+  silently returns `{}` (predicate never True). Kernel Function/Slot
+  seam. → brief-274 (last; hot path, microbench A/B gate).
+- **F3** `SortBy[rows, {f1, f2}]` multi-key tie-break form not
+  implemented — the list is applied as a function, producing inert keys
+  compared canonically; often coincidentally "right" (canonical order of
+  the whole row = key order), discriminating witness got id-order instead
+  of dept-then-id. Silent degradation. → brief-273.
+- **F4** `MaximalBy`/`MinimalBy` absent (family sibling TakeLargestBy
+  exists). → brief-273.
+- **F5** `Query` head absent — WL Dataset query subsystem, out of folk
+  scope; NOT pursued this line (future user ruling if ever).
+- Parked observation: `#1 &[x]` without parens fails to parse ("trailing
+  input"); `(#1 &)[x]` works. Parser precedence wrinkle, not row-critical.
+
+Brief queue (stdlib first, kernel last):
+
+- [ ] brief-272 — `JoinAcross` (associations family): Inner/Left/Right/
+  Outer, key spec = key | Key[k] | rule | list thereof; hash-join;
+  right-wins collisions (matches `Join` on associations); unmatched rows
+  carry only their own columns. Reference 638→639.
+- [ ] brief-273 — `SortBy` multi-key tie-break form + `MaximalBy`/
+  `MinimalBy` (structure_ordering family). Reference 639→641.
+- [ ] brief-274 — kernel named-slot fill: `Slot[string]` fills from an
+  Association first argument (Lookup semantics; absent key →
+  `Missing["KeyAbsent", key]`; non-Association → loud message, inert).
+  Hot path (Function application) ⇒ microbench A/B gate.
+
+## COMPLETE — lazy sequences + sealed scoping line (user ruling 2026-07-18; both halves closed 2026-07-20)
 
 Two parallel WL15-survey outcomes, both design-first, both taken to full
 ambition. Sequencing (user 2026-07-18): **(c) first** (new cold symbols,
