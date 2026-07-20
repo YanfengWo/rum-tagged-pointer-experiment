@@ -1305,3 +1305,20 @@ corrections this line: brief-271's undeclared process-global identity
 allocator reverted to session-scoped. A/B method note: the microsecond
 list-tier labels proved layout-lottery-sensitive (±60%, bidirectional,
 closed by brief-271's reversal of brief-269's movements).
+
+## 2026-07-20 — Row-workload pure line (DB-prep) COMPLETE (briefs 272-274)
+
+User ruling opened and closed the line in one day: pure builtins only,
+preparing the "table = List of Associations" workload for future
+downstream database applications. Audit (F1-F5) then three gated briefs:
+272 JoinAcross (hash-based Inner/Left/Right/Outer joins, key spec =
+key | Key | rule | list; right-wins collisions; unmatched rows bare;
+reference 638->639); 273 SortBy multi-key tie-break form (literal-List
+spec -> evaluated key tuple, lexicographic + stable) + MaximalBy/
+MinimalBy (reference 639->641; gate fix: ASCII-sort violation in the
+attribute-mirror insert, no sortedness assertion exists - debt note);
+274 kernel named-slot fill from Association arguments (Lookup-
+consistent Missing on absent key; microbench A/B noise-floor clean).
+Endstate: workspace 1644/0, reference 641, guide syntax.md documents
+named-slot fill. Not pursued: Query head (Dataset subsystem, out of
+folk scope); parser wrinkle "#1 &[x]" without parens parked.

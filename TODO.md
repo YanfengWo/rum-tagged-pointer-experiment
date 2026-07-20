@@ -3,13 +3,19 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## ACTIVE PLAN — row-workload pure line (DB-prep; user ruling 2026-07-20)
+## COMPLETE — row-workload pure line (DB-prep; user ruling 2026-07-20, closed same day, briefs 272-274)
+
+**No active plan — the next direction awaits a user decision.**
 
 Pure-kernel preparation for future downstream database applications (SQL
 or NoSQL): make the "table = List of Associations" workload complete and
 honest. Scope ruling: pure builtins only — no drivers, no handles, no
 Network capability, no symbolic SQL AST (those wait for a real downstream
 pull; capability u8 bitmask is full and widening it is its own decision).
+Endstate: reference 641, workspace 1644/0, guide syntax.md documents
+named-slot fill semantics. Debt note left standing: the
+`stdlib_attributes.rs` sorted tables have no sortedness assertion (the
+brief-273 gate caught a mis-sorted insert by hand-scan).
 
 Audit (probes run 2026-07-20, raw outputs in session scratchpad;
 green surface: GroupBy incl. reducer form, Merge, `[[All,"key"]]` column

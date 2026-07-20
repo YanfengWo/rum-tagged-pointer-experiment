@@ -190,7 +190,18 @@ The syntax:
 
 Slot sequence forms include `##` and `##2`.
 
-Named slots use strings, as in `#name`.
+Named slots use strings, as in `#name`, and lower to `Slot["name"]`.
+
+At application time a named slot fills from the function's arguments,
+scanned in order: a bare `Rule`/`RuleDelayed` argument whose left-hand
+side is the symbol or string `name`, or an entry with that key inside an
+`Association` argument — the first hit wins. If at least one
+`Association` argument is present but none carries the key, the slot
+fills with `Missing["KeyAbsent", "name"]` (consistent with `Lookup`).
+With no rule or association argument at all, the slot stays
+unsubstituted. This makes row predicates like
+`Select[rows, #dept == "x" &]` work directly over lists of
+associations.
 
 ## Assignment And Rewrite Sugar
 
