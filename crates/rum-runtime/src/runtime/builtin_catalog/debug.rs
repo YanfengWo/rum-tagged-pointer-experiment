@@ -17,6 +17,20 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     ])
     .protected(),
     BuiltinSpec::ordinary_with_hold(
+        "TraceDetail",
+        "Evaluates an expression and returns a lossless structured trace whose event associations preserve rule and definition details.",
+        HoldAttribute::HoldAll,
+        builtin_trace_detail,
+    )
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "argform",
+            template: "Reports an invalid level specification or Heads option for TraceDetail.",
+        },
+        ARGTU,
+    ])
+    .protected(),
+    BuiltinSpec::ordinary_with_hold(
         "TracePrint",
         "Evaluates an expression, emits its current first-pass structured trace through the print stream, and returns the result.",
         HoldAttribute::HoldAll,

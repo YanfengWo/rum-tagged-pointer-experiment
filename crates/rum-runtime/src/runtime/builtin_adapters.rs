@@ -20,6 +20,14 @@ pub(in crate::runtime) fn builtin_trace(
     session.eval_trace(args)
 }
 
+pub(in crate::runtime) fn builtin_trace_detail(
+    session: &mut Session,
+    _head: &Expr,
+    args: &[Expr],
+) -> Result<Expr, EvalError> {
+    session.eval_trace_detail(args)
+}
+
 pub(in crate::runtime) fn builtin_trace_print(
     session: &mut Session,
     _head: &Expr,

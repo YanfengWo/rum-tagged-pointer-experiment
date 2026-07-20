@@ -216,7 +216,7 @@ fn messages_builtin_lists_defined_message_names() {
         panic!("Messages[] should return a list")
     };
     let message_names = args.iter().map(ToString::to_string).collect::<Vec<_>>();
-    assert_eq!(message_names.len(), 329);
+    assert_eq!(message_names.len(), 331);
     for expected in [
         "f::argx",
         "f::usage",

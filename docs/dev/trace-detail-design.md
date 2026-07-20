@@ -30,7 +30,14 @@ So four fields, not two. `kind` is `DefinitionKind` (5 variants:
 Depth is not discarded — it is what builds the tree — so a lossless view
 keeps the tree AND the four fields.
 
-**The headline capability**: `rule` is the rule expression that fired.
+**The headline capability**: `rule` identifies the rule that fired.
+CORRECTED 2026-07-21 (this document originally illustrated it as a whole
+rule, `Hold[f[x_] :> x + 1]` — that was written from imagination, not
+measured): every emission site passes the rule's **left-hand side only**
+(`&lhs`, or `&rule.lhs` in `replace_all.rs`). The RHS template is never
+recorded — `result` holds the substituted outcome, not the template. The
+LHS is nonetheless a sufficient identifier, since two definitions cannot
+share one.
 With several overlapping `DownValue`s on one symbol, "which definition
 matched" is the actual debugging question, and no current view answers
 it.
@@ -46,7 +53,7 @@ The question is what a STEP looks like.
 TraceDetail[f[2]]
 → List[
     <|"Step" -> "RuleApplied", "Source" -> "DownValue",
-      "Input" -> Hold[f[2]], "Rule" -> Hold[f[x_] :> x + 1],
+      "Input" -> Hold[f[2]], "Rule" -> Hold[f[x_]],
       "Result" -> Hold[2 + 1]|>,
     List[ <|"Step" -> "EvaluationPass", "Before" -> Hold[2 + 1],
             "After" -> Hold[3]|> ],

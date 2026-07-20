@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 641
+Builtin count: 642
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -5742,6 +5742,16 @@ Evaluates an expression and returns a first-pass structured trace of current eva
 - Messages:
   - Trace::argform — Reports an invalid level specification or Heads option for Trace.
   - Trace::argtu — expected between `1` and `2` argument(s), got `3`
+
+### TraceDetail
+
+Evaluates an expression and returns a lossless structured trace whose event associations preserve rule and definition details.
+
+- Attributes: `HoldAll`, `Protected`
+- Capability: `Pure`
+- Messages:
+  - TraceDetail::argform — Reports an invalid level specification or Heads option for TraceDetail.
+  - TraceDetail::argtu — expected between `1` and `2` argument(s), got `3`
 
 ### TracePrint
 

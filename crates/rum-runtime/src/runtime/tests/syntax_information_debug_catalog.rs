@@ -22,6 +22,22 @@ fn syntax_information_covers_current_cl09_debugging_surface_subset() {
     );
     assert_eq!(
         session
+            .eval_text("SyntaxInformation[TraceDetail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[\"ArgumentsPattern\", List[Blank[], Optional[Blank[]]]], Rule[\"OptionNames\", List[\"Heads\"]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Options[TraceDetail]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Rule[Heads, False]]"
+    );
+    assert_eq!(
+        session
             .eval_text("SyntaxInformation[TracePrint]")
             .unwrap()
             .value

@@ -87,6 +87,122 @@ fn trace_uses_recorded_depths_to_keep_nested_branches_stable() {
 }
 
 #[test]
+fn trace_detail_returns_the_full_evaluation_pass_association_without_leaking_trace_state() {
+    let mut session = Session::new();
+
+    let traced = session.eval_text("TraceDetail[1 + 1]").unwrap();
+    assert_eq!(
+        traced.value.to_string(),
+        "List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Plus[1, 1]]], Rule[\"After\", Hold[2]]]]"
+    );
+    assert!(session.take_trace().is_empty());
+}
+
+#[test]
+fn trace_detail_identifies_the_downvalue_that_won_among_overlapping_definitions() {
+    let mut session = Session::new();
+    session.eval_text("f[x_] := general").unwrap();
+    session.eval_text("f[x_Integer] := integer").unwrap();
+    session.eval_text("f[2] := exact").unwrap();
+
+    let traced = session.eval_text("TraceDetail[f[2]]").unwrap();
+    assert_eq!(
+        traced.value.to_string(),
+        "List[Association[Rule[\"Step\", \"RuleApplied\"], Rule[\"Source\", \"DownValue\"], Rule[\"Input\", Hold[f[2]]], Rule[\"Rule\", Hold[f[2]]], Rule[\"Result\", Hold[exact]]], Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[f[2]]], Rule[\"After\", Hold[exact]]]]"
+    );
+}
+
+#[test]
+fn trace_detail_preserves_definition_symbol_kind_and_value() {
+    let mut session = Session::new();
+
+    let traced = session.eval_text("TraceDetail[g = 5]").unwrap();
+    assert_eq!(
+        traced.value.to_string(),
+        "List[Association[Rule[\"Step\", \"DefinitionStored\"], Rule[\"Symbol\", \"Global`g\"], Rule[\"Kind\", \"OwnValue\"], Rule[\"Value\", Hold[5]]], Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Set[g, 5]]], Rule[\"After\", Hold[5]]]]"
+    );
+}
+
+#[test]
+fn trace_detail_form_filter_matches_the_underlying_expression_not_the_association() {
+    let mut session = Session::new();
+
+    let filtered = session
+        .eval_text("TraceDetail[(1 + 2) * 3, _Plus]")
+        .unwrap();
+    assert_eq!(
+        filtered.value.to_string(),
+        "List[List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Plus[1, 2]]], Rule[\"After\", Hold[3]]]]]"
+    );
+
+    let result_side = session.eval_text("TraceDetail[1 + 1, _Integer]").unwrap();
+    assert_eq!(
+        result_side.value.to_string(),
+        "List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Plus[1, 1]]], Rule[\"After\", Hold[2]]]]"
+    );
+
+    let annotation_head = session
+        .eval_text("TraceDetail[(1 + 2) * 3, _Association]")
+        .unwrap();
+    assert_eq!(annotation_head.value.to_string(), "List[]");
+}
+
+#[test]
+fn trace_detail_supports_levelspec_and_heads_options() {
+    let mut session = Session::new();
+
+    let top_level_only = session
+        .eval_text("TraceDetail[(1 + 2) * 3, _Plus, 0]")
+        .unwrap();
+    assert_eq!(
+        top_level_only.value.to_string(),
+        "List[List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Plus[1, 2]]], Rule[\"After\", Hold[3]]]]]"
+    );
+
+    let first_level_only = session
+        .eval_text("TraceDetail[(1 + 2) * 3, _Plus, {1}]")
+        .unwrap();
+    assert_eq!(
+        first_level_only.value.to_string(),
+        "List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Times[Plus[1, 2], 3]]], Rule[\"After\", Hold[9]]]]"
+    );
+
+    let leaf_levels = session
+        .eval_text("TraceDetail[(1 + 2) * 3, _Integer, {-1}, {Heads -> False}]")
+        .unwrap();
+    assert_eq!(
+        leaf_levels.value.to_string(),
+        "List[List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Plus[1, 2]]], Rule[\"After\", Hold[3]]]], Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Times[Plus[1, 2], 3]]], Rule[\"After\", Hold[9]]]]"
+    );
+
+    let without_heads = session
+        .eval_text("TraceDetail[1 + 1, _Symbol, Heads -> False]")
+        .unwrap();
+    assert_eq!(without_heads.value.to_string(), "List[]");
+
+    let with_heads = session
+        .eval_text("TraceDetail[1 + 1, _Symbol, Heads -> True]")
+        .unwrap();
+    assert_eq!(
+        with_heads.value.to_string(),
+        "List[Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[Plus[1, 1]]], Rule[\"After\", Hold[2]]]]"
+    );
+}
+
+#[test]
+fn trace_detail_has_the_same_list_nesting_shape_as_trace() {
+    let mut session = Session::new();
+    session.eval_text("f[x_] := x + 1").unwrap();
+    session.eval_text("g[x_] := f[x] + 10").unwrap();
+
+    let trace = session.eval_text("Trace[g[1]]").unwrap().value;
+    let detail = session.eval_text("TraceDetail[g[1]]").unwrap().value;
+    let trace_shape = trace_list_nesting_shape(&trace);
+    assert_eq!(trace_shape, "[[[[]]]]");
+    assert_eq!(trace_list_nesting_shape(&detail), trace_shape);
+}
+
+#[test]
 fn trace_print_emits_trace_lines_and_returns_the_underlying_value() {
     let mut session = Session::new();
     session.eval_text("f[x_] := x + 1").unwrap();
@@ -243,4 +359,22 @@ fn on_and_off_gate_matching_messages_at_session_scope() {
             .iter()
             .any(|message| { message.symbol == "FindFile" && message.tag == "notfound" })
     );
+}
+
+fn trace_list_nesting_shape(expr: &Expr) -> String {
+    let Expr::Call { head, args } = expr else {
+        return String::new();
+    };
+    if !is_system_symbol_name(head, "List") {
+        return String::new();
+    }
+
+    let mut shape = String::from("[");
+    for item in args {
+        if matches!(item, Expr::Call { head, .. } if is_system_symbol_name(head, "List")) {
+            shape.push_str(&trace_list_nesting_shape(item));
+        }
+    }
+    shape.push(']');
+    shape
 }

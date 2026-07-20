@@ -150,7 +150,7 @@ fn default_system_syntax_information(symbol: &Symbol) -> Expr {
             blank_expr(),
             optional_blank_association_expr(),
         ])],
-        "Trace" | "TracePrint" => vec![
+        "Trace" | "TraceDetail" | "TracePrint" => vec![
             syntax_argument_pattern(vec![blank_expr(), optional_blank_expr()]),
             syntax_rule("OptionNames", string_list_expr(vec!["Heads".to_string()])),
         ],

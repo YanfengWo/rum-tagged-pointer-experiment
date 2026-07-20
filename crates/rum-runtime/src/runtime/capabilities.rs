@@ -229,6 +229,7 @@ mod tests {
         assert_eq!(capability("MemoryInUse"), Capability::Diagnostic);
         assert_eq!(capability("MaxMemoryUsed"), Capability::Diagnostic);
         assert_eq!(capability("Trace"), Capability::Pure);
+        assert_eq!(capability("TraceDetail"), Capability::Pure);
         assert_eq!(capability("TracePrint"), Capability::Pure);
         assert_eq!(capability("ByteCount"), Capability::Pure);
         assert_eq!(capability("TestCreate"), Capability::Pure);

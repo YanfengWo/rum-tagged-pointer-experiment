@@ -35,6 +35,17 @@ impl StructuredTraceBuilder {
         self.current_exprs[depth] = Some(expr);
     }
 
+    pub(super) fn push_item(&mut self, depth: usize, item: Expr) {
+        self.close_to_depth(depth);
+
+        while self.containers.len() <= depth {
+            self.containers.push(Vec::new());
+        }
+
+        self.containers[depth].push(item);
+        self.current_exprs.truncate(depth + 1);
+    }
+
     pub(super) fn push_evaluation_pass(&mut self, depth: usize, before: Expr, after: Expr) {
         self.close_to_depth(depth);
 

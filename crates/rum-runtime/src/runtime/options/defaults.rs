@@ -41,7 +41,9 @@ pub(in crate::runtime) fn default_system_options(symbol: &Symbol) -> SymbolOptio
         )],
         "Map" | "MapIndexed" | "MapAll" | "Scan" | "Apply" | "MapApply" | "Comap"
         | "ComapApply" => vec![system_rule_option("Heads", bool_option(false))],
-        "Trace" | "TracePrint" => vec![system_rule_option("Heads", bool_option(false))],
+        "Trace" | "TraceDetail" | "TracePrint" => {
+            vec![system_rule_option("Heads", bool_option(false))]
+        }
         "FreeQ" | "Position" => vec![system_rule_option("Heads", bool_option(true))],
         "CheckAbort" => vec![system_rule_option(
             "PropagateAborts",
