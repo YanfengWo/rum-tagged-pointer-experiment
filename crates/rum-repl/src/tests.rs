@@ -25,6 +25,18 @@ fn repl_output(input: &str) -> String {
     String::from_utf8(output).unwrap()
 }
 
+fn repl_output_after(setup: &str, input: &str) -> String {
+    let input = Cursor::new(input);
+    let mut output = Vec::new();
+    let mut repl = Repl::new(input, &mut output);
+    let mut session = HostSession::new();
+    eval_text(&mut session, setup);
+
+    repl.run(&mut session).unwrap();
+
+    String::from_utf8(output).unwrap()
+}
+
 fn temp_history_path(prefix: &str) -> PathBuf {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -49,7 +61,7 @@ fn repl_handles_help_and_quit() {
 :parse EXPR     Parse and print the syntax tree.
 :format [--line-width N] EXPR  Format syntax into the current canonical style.
 :lower EXPR     Lower syntax into core Expr form.
-:trace [--form=PAT] [--depth=N] [--full] EXPR  Trace evaluation as an indented tree.
+:trace [--rules] [--form=PAT] [--depth=N] [--full] EXPR  Trace evaluation as an indented tree.
 :complete PREF  Show symbol and context completions.
 :history [N]    Show recent input history.
 :inspect NAME   Show basic symbol metadata.
@@ -647,6 +659,171 @@ CompoundExpression[Message[General::stop], 1]
 Message[General::stop]
 Null
 1
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_rules_command_renders_a_small_step() {
+    let rendered = repl_output(":trace --rules 1+1\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> Plus[1, 1] → 2
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_rules_names_the_overlapping_definition_that_fired() {
+    let rendered = repl_output_after(
+        "f[x_] := general; f[x_Integer] := integer",
+        ":trace --rules f[2] + 1\n:quit\n",
+    );
+
+    assert_eq!(
+        rendered,
+        r#"rum>   f[2] → integer   [DownValue f[Pattern[x, Blank[Integer]]]]
+  f[2] → integer
+Plus[f[2], 1] → Plus[1, integer]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_rules_renders_a_definition_stored_step() {
+    let rendered = repl_output(":trace --rules g = 5\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> Global`g = 5   [OwnValue]
+Set[g, 5] → 5
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_rules_composes_with_form_rewrite_and_depth() {
+    let rendered = repl_output(
+        ":trace --rules --form=Plus (1+2)*3\n:trace --rules --depth=2 (1+2)*3\n:quit\n",
+    );
+
+    assert_eq!(
+        rendered,
+        r#"rum> filtering on _Plus
+  Plus[1, 2] → 3
+rum>   Plus[1, 2] → 3
+Times[Plus[1, 2], 3] → 9
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_rules_truncates_and_full_is_the_escape_hatch() {
+    let rendered = repl_output(
+        ":trace --rules Table[i^2, {i, 21}]\n:trace --rules --full Table[i^2, {i, 21}]\n:quit\n",
+    );
+
+    assert_eq!(
+        rendered,
+        r#"rum>   i → 1
+Power[i, 2] → 1
+  i → 2
+Power[i, 2] → 4
+  i → 3
+Power[i, 2] → 9
+  i → 4
+Power[i, 2] → 16
+  i → 5
+Power[i, 2] → 25
+  i → 6
+Power[i, 2] → 36
+  i → 7
+Power[i, 2] → 49
+  i → 8
+Power[i, 2] → 64
+  i → 9
+Power[i, 2] → 81
+  i → 10
+Power[i, 2] → 100
+  i → 11
+Power[i, 2] → 121
+  i → 12
+Power[i, 2] → 144
+  i → 13
+Power[i, 2] → 169
+  i → 14
+Power[i, 2] → 196
+  i → 15
+Power[i, 2] → 225
+  i → 16
+Power[i, 2] → 256
+  i → 17
+Power[i, 2] → 289
+  i → 18
+Power[i, 2] → 324
+  i → 19
+Power[i, 2] → 361
+  i → 20
+Power[i, 2] → 400
+… 3 more steps (:trace --full to see all)
+rum>   i → 1
+Power[i, 2] → 1
+  i → 2
+Power[i, 2] → 4
+  i → 3
+Power[i, 2] → 9
+  i → 4
+Power[i, 2] → 16
+  i → 5
+Power[i, 2] → 25
+  i → 6
+Power[i, 2] → 36
+  i → 7
+Power[i, 2] → 49
+  i → 8
+Power[i, 2] → 64
+  i → 9
+Power[i, 2] → 81
+  i → 10
+Power[i, 2] → 100
+  i → 11
+Power[i, 2] → 121
+  i → 12
+Power[i, 2] → 144
+  i → 13
+Power[i, 2] → 169
+  i → 14
+Power[i, 2] → 196
+  i → 15
+Power[i, 2] → 225
+  i → 16
+Power[i, 2] → 256
+  i → 17
+Power[i, 2] → 289
+  i → 18
+Power[i, 2] → 324
+  i → 19
+Power[i, 2] → 361
+  i → 20
+Power[i, 2] → 400
+  i → 21
+Power[i, 2] → 441
+Table[Power[i, 2], List[i, 21]] → List[1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400, 441]
+rum> "#
+    );
+}
+
+#[test]
+fn repl_trace_without_rules_is_byte_for_byte_unchanged() {
+    let rendered = repl_output(":trace (1+2)*3\n:quit\n");
+
+    assert_eq!(
+        rendered,
+        r#"rum> Times[Plus[1, 2], 3]
+  Plus[1, 2]
+  3
+9
 rum> "#
     );
 }

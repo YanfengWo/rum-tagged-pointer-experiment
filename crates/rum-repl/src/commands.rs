@@ -28,6 +28,7 @@ pub(super) enum ReplCommand {
         expr: Option<String>,
         form: Option<String>,
         depth: Option<usize>,
+        rules: bool,
         full: bool,
         form_was_rewritten: bool,
     },
@@ -71,11 +72,12 @@ pub(super) fn parse_repl_command(line: &str) -> Result<Option<ReplCommand>, Stri
         })),
         _ if line == ":trace" || line.starts_with(":trace ") => {
             let input = line.trim_start_matches(":trace").trim();
-            let (expr, form, depth, full, form_was_rewritten) = parse_trace_command(input)?;
+            let (expr, form, depth, rules, full, form_was_rewritten) = parse_trace_command(input)?;
             Ok(Some(ReplCommand::Trace {
                 expr,
                 form,
                 depth,
+                rules,
                 full,
                 form_was_rewritten,
             }))
@@ -143,6 +145,7 @@ pub(super) fn execute_repl_command(
             expr: Some(expr),
             form,
             depth,
+            rules,
             full,
             form_was_rewritten,
         } => CommandExecution::Output(execute_trace(
@@ -150,6 +153,7 @@ pub(super) fn execute_repl_command(
             &expr,
             form.as_deref(),
             depth,
+            rules,
             full,
             form_was_rewritten,
         )),
@@ -222,14 +226,31 @@ fn parse_history_limit(line: &str) -> Result<Option<usize>, String> {
 
 fn parse_trace_command(
     input: &str,
-) -> Result<(Option<String>, Option<String>, Option<usize>, bool, bool), String> {
+) -> Result<
+    (
+        Option<String>,
+        Option<String>,
+        Option<usize>,
+        bool,
+        bool,
+        bool,
+    ),
+    String,
+> {
     let mut remainder = input.trim();
     let mut form = None;
     let mut depth = None;
+    let mut rules = false;
     let mut full = false;
     let mut form_was_rewritten = false;
 
     while let Some((flag, rest)) = split_first_token(remainder) {
+        if flag == "--rules" {
+            rules = true;
+            remainder = rest;
+            continue;
+        }
+
         if flag == "--full" {
             full = true;
             remainder = rest;
@@ -281,7 +302,7 @@ fn parse_trace_command(
     }
 
     let expr = (!remainder.is_empty()).then(|| remainder.to_string());
-    Ok((expr, form, depth, full, form_was_rewritten))
+    Ok((expr, form, depth, rules, full, form_was_rewritten))
 }
 
 fn normalize_trace_form(raw: &str) -> Result<(String, bool), String> {
@@ -324,10 +345,11 @@ fn execute_trace(
     expr: &str,
     form: Option<&str>,
     depth: Option<usize>,
+    rules: bool,
     full: bool,
     form_was_rewritten: bool,
 ) -> String {
-    let source = trace_source(expr, form, depth);
+    let source = trace_source(expr, form, depth, rules);
 
     match session.eval(source.as_str()) {
         HostEvalOutcome::Success(mut response) => {
@@ -351,11 +373,12 @@ fn execute_trace(
     }
 }
 
-fn trace_source(expr: &str, form: Option<&str>, depth: Option<usize>) -> String {
+fn trace_source(expr: &str, form: Option<&str>, depth: Option<usize>, rules: bool) -> String {
+    let head = if rules { "TraceDetail" } else { "Trace" };
     match (form, depth) {
-        (None, None) => format!("Trace[{expr}]"),
-        (Some(form), None) => format!("Trace[{expr}, {form}]"),
-        (form, Some(depth)) => format!("Trace[{expr}, {}, {depth}]", form.unwrap_or("_")),
+        (None, None) => format!("{head}[{expr}]"),
+        (Some(form), None) => format!("{head}[{expr}, {form}]"),
+        (form, Some(depth)) => format!("{head}[{expr}, {}, {depth}]", form.unwrap_or("_")),
     }
 }
 
@@ -386,14 +409,149 @@ fn collect_trace_lines(items: &[HostTyped], depth: usize, lines: &mut Vec<String
 
 fn render_trace_leaf(value: &HostTyped, depth: usize) -> String {
     let text = match value {
-        HostTyped::Other { head, text } if head == "Hold" => text
-            .strip_prefix("Hold[")
-            .and_then(|contents| contents.strip_suffix(']'))
-            .unwrap_or(text)
-            .to_string(),
+        HostTyped::Association(entries) => render_trace_step(entries),
+        HostTyped::Other { head, text } if head == "Hold" => peel_trace_hold(text),
         _ => render_typed_text(value),
     };
     format!("{}{text}", "  ".repeat(depth))
+}
+
+fn render_trace_step(entries: &[(HostTyped, HostTyped)]) -> String {
+    match trace_text_field(entries, "Step").as_deref() {
+        Some("RuleApplied") => render_rule_applied_step(entries),
+        Some("EvaluationPass") => render_evaluation_pass_step(entries),
+        Some("DefinitionStored") => render_definition_stored_step(entries),
+        Some(step) => render_unknown_trace_step(Some(step), entries),
+        None => render_unknown_trace_step(None, entries),
+    }
+}
+
+fn render_rule_applied_step(entries: &[(HostTyped, HostTyped)]) -> String {
+    let mut line = render_trace_transition(
+        "RuleApplied",
+        "Input",
+        trace_expression_field(entries, "Input"),
+        "Result",
+        trace_expression_field(entries, "Result"),
+    );
+    let identity = [
+        trace_text_field(entries, "Source"),
+        trace_expression_field(entries, "RuleLeft"),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" ");
+
+    if !identity.is_empty() {
+        line.push_str(&format!("   [{identity}]"));
+    }
+    line
+}
+
+fn render_evaluation_pass_step(entries: &[(HostTyped, HostTyped)]) -> String {
+    render_trace_transition(
+        "EvaluationPass",
+        "Before",
+        trace_expression_field(entries, "Before"),
+        "After",
+        trace_expression_field(entries, "After"),
+    )
+}
+
+fn render_definition_stored_step(entries: &[(HostTyped, HostTyped)]) -> String {
+    let symbol = trace_text_field(entries, "Symbol");
+    let value = trace_expression_field(entries, "Value");
+    let mut line = match (symbol, value) {
+        (Some(symbol), Some(value)) => format!("{symbol} = {value}"),
+        (Some(symbol), None) => format!("Symbol: {symbol}"),
+        (None, Some(value)) => format!("Value: {value}"),
+        (None, None) => "DefinitionStored".to_string(),
+    };
+
+    if let Some(kind) = trace_text_field(entries, "Kind") {
+        line.push_str(&format!("   [{kind}]"));
+    }
+    line
+}
+
+fn render_trace_transition(
+    step: &str,
+    left_name: &str,
+    left: Option<String>,
+    right_name: &str,
+    right: Option<String>,
+) -> String {
+    match (left, right) {
+        (Some(left), Some(right)) => format!("{left} → {right}"),
+        (Some(left), None) => format!("{left_name}: {left}"),
+        (None, Some(right)) => format!("{right_name}: {right}"),
+        (None, None) => step.to_string(),
+    }
+}
+
+fn render_unknown_trace_step(step: Option<&str>, entries: &[(HostTyped, HostTyped)]) -> String {
+    let fields = entries
+        .iter()
+        .filter(|(key, _)| trace_key(key) != Some("Step"))
+        .map(|(key, value)| {
+            format!(
+                "{}: {}",
+                render_trace_metadata(key),
+                render_trace_expression(value)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let label = step.unwrap_or("TraceStep");
+
+    if fields.is_empty() {
+        label.to_string()
+    } else {
+        format!("{label}: {fields}")
+    }
+}
+
+fn trace_expression_field(entries: &[(HostTyped, HostTyped)], name: &str) -> Option<String> {
+    trace_field(entries, name).map(render_trace_expression)
+}
+
+fn trace_text_field(entries: &[(HostTyped, HostTyped)], name: &str) -> Option<String> {
+    trace_field(entries, name).map(render_trace_metadata)
+}
+
+fn trace_field<'a>(entries: &'a [(HostTyped, HostTyped)], name: &str) -> Option<&'a HostTyped> {
+    entries
+        .iter()
+        .find_map(|(key, value)| (trace_key(key) == Some(name)).then_some(value))
+}
+
+fn trace_key(value: &HostTyped) -> Option<&str> {
+    match value {
+        HostTyped::Str(value) | HostTyped::Symbol(value) => Some(value),
+        _ => None,
+    }
+}
+
+fn render_trace_expression(value: &HostTyped) -> String {
+    match value {
+        HostTyped::Other { head, text } if head == "Hold" => peel_trace_hold(text),
+        _ => render_typed_text(value),
+    }
+}
+
+fn render_trace_metadata(value: &HostTyped) -> String {
+    match value {
+        HostTyped::Str(value) | HostTyped::Symbol(value) => value.clone(),
+        _ => render_typed_text(value),
+    }
+}
+
+fn peel_trace_hold(text: &str) -> String {
+    text.strip_prefix("Hold[")
+        .and_then(|contents| contents.strip_suffix(']'))
+        .unwrap_or(text)
+        .to_string()
 }
 
 fn render_typed_text(value: &HostTyped) -> String {
@@ -455,7 +613,7 @@ fn render_history(history: &[String], limit: Option<usize>) -> String {
 }
 
 fn help_text() -> &'static str {
-    ":help           Show REPL commands.\n:parse EXPR     Parse and print the syntax tree.\n:format [--line-width N] EXPR  Format syntax into the current canonical style.\n:lower EXPR     Lower syntax into core Expr form.\n:trace [--form=PAT] [--depth=N] [--full] EXPR  Trace evaluation as an indented tree.\n:complete PREF  Show symbol and context completions.\n:history [N]    Show recent input history.\n:inspect NAME   Show basic symbol metadata.\n:messages [NAME]   Show message definitions globally or for a symbol/message.\n:quit           Exit the REPL."
+    ":help           Show REPL commands.\n:parse EXPR     Parse and print the syntax tree.\n:format [--line-width N] EXPR  Format syntax into the current canonical style.\n:lower EXPR     Lower syntax into core Expr form.\n:trace [--rules] [--form=PAT] [--depth=N] [--full] EXPR  Trace evaluation as an indented tree.\n:complete PREF  Show symbol and context completions.\n:history [N]    Show recent input history.\n:inspect NAME   Show basic symbol metadata.\n:messages [NAME]   Show message definitions globally or for a symbol/message.\n:quit           Exit the REPL."
 }
 
 #[cfg(test)]
@@ -498,5 +656,45 @@ mod tests {
 
         assert!(rendered.contains("   1: 1 + 2"));
         assert!(rendered.contains(r"   2: f[\n1\n]"));
+    }
+
+    #[test]
+    fn trace_step_renderer_degrades_for_missing_and_unknown_fields() {
+        let missing_result = HostTyped::Association(vec![
+            (
+                HostTyped::Str("Step".to_string()),
+                HostTyped::Str("RuleApplied".to_string()),
+            ),
+            (
+                HostTyped::Str("Input".to_string()),
+                HostTyped::Other {
+                    head: "Hold".to_string(),
+                    text: "Hold[Hold[x]]".to_string(),
+                },
+            ),
+        ]);
+        assert_eq!(render_trace_leaf(&missing_result, 1), "  Input: Hold[x]");
+
+        let future_step = HostTyped::Association(vec![
+            (
+                HostTyped::Str("Step".to_string()),
+                HostTyped::Str("FutureStep".to_string()),
+            ),
+            (
+                HostTyped::Str("Payload".to_string()),
+                HostTyped::Other {
+                    head: "Hold".to_string(),
+                    text: "Hold[Plus[1, 1]]".to_string(),
+                },
+            ),
+            (
+                HostTyped::Str("Detail".to_string()),
+                HostTyped::Str("kept".to_string()),
+            ),
+        ]);
+        assert_eq!(
+            render_trace_leaf(&future_step, 0),
+            "FutureStep: Payload: Plus[1, 1], Detail: \"kept\""
+        );
     }
 }

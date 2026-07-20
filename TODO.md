@@ -1131,6 +1131,17 @@ string-pattern surface. Batches, evidence-ranked:
   brief-285 stop-lossed cleanly first (my 4th scope omission this line):
   the six `push_definition_stored_trace` callers live in
   `definition_tags.rs` / `definitions.rs`, unlisted.
+  LAYER 1 + REPL DONE (briefs 287/288, 2026-07-21): `TraceDetail` keeps
+  all four fields `Trace` discards (`symbol`/`kind` from
+  `DefinitionStored`, `source`/`rule` from `RuleApplied`) plus the tree,
+  emitting an Association per step (design Option A). Key named
+  `RuleLeft`, not `Rule`: every emission site passes the rule's LHS only,
+  so `Rule` would promise a whole rule it never contained — renamed while
+  the surface had no consumers. `:trace --rules` surfaces it in the REPL,
+  composing with `--form`/`--depth`/`--full` for free since `TraceDetail`
+  mirrors `Trace`'s argument surface. Reference 642; workspace 1675/0.
+  The headline capability, pinned by test: with `f[x_]`, `f[x_Integer]`
+  and `f[2]` all defined, it names the one that actually fired.
   NEXT AXIS (documented, out of scope so far): design doc §1.5 records a
   second, host-level trace channel (`HostTraceEvent`, incl.
   `RuleApplied{source, input, rule, result}`) that can name WHICH RULE
