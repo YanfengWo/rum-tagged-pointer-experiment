@@ -13,9 +13,10 @@ honest. Scope ruling: pure builtins only — no drivers, no handles, no
 Network capability, no symbolic SQL AST (those wait for a real downstream
 pull; capability u8 bitmask is full and widening it is its own decision).
 Endstate: reference 641, workspace 1644/0, guide syntax.md documents
-named-slot fill semantics. Debt note left standing: the
-`stdlib_attributes.rs` sorted tables have no sortedness assertion (the
-brief-273 gate caught a mis-sorted insert by hand-scan).
+named-slot fill semantics. Debt CLEARED (user ruling, same day): both
+`stdlib_attributes.rs` binary-searched tables now carry compile-time
+strict-ASCII-sortedness assertions (negative-calibrated — the
+brief-273 mis-sorted insert now fails compilation).
 
 Audit (probes run 2026-07-20, raw outputs in session scratchpad;
 green surface: GroupBy incl. reducer form, Merge, `[[All,"key"]]` column
