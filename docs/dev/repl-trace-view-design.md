@@ -82,7 +82,44 @@ A recursive definition at depth 6 already renders ~1.7 KB. Size control
 is not a nicety; without it the first realistic `:trace` fills the
 screen.
 
-### 1.5 There is a SECOND trace mechanism (found after the Option-A ruling)
+### 1.5 CORRECTED 2026-07-20 — one stream, two lossy views
+
+**The section below was wrong twice and is superseded by this one.** It
+called the host channel a "second mechanism" and priced it at a
+`rum-host` API change. Reading `debug_tools/trace.rs` and
+`definitions/application/mod.rs` shows otherwise:
+
+**There is ONE event stream.** `push_trace_with_depth`
+(`definitions/application/mod.rs:101`) fills `trace_events` alongside a
+parallel `trace_event_depths`. Per rule application the kernel records
+`source` — a 9-variant `RuleApplicationSource` (`UpValue`, `DownValue`,
+`SubValue`, `Replace`, `ReplaceList`, `ReplaceAt`, `ReplaceAll`,
+`ReplaceAllUnheld`, `ReplaceRepeated`) — plus the rule expression
+itself, the input, and the result.
+
+**Two views consume it, each discarding what the other keeps:**
+
+| | keeps | discards |
+|---|---|---|
+| `Trace[]` builtin | depth (→ the tree) | **`source` and `rule`** — `trace.rs:272` destructures `RuleApplied { input, result, .. }` |
+| host `HostTraceEvent` | `source`, `rule` | **depth** — the host type has no depth field |
+
+So **nothing today shows both the tree shape and which rule fired**,
+even though the kernel records both.
+
+**And the cost is much lower than §1.5-superseded claimed.** `Trace[]`
+does its own scoped capture: it saves `tracing_enabled`, sets it true,
+captures, and restores (`trace.rs:154-156, 223`). A sibling builtin can
+do exactly the same and simply *not* discard `source`/`rule`. That means
+**no `rum-host` API change, no session config, no capability change** —
+it stays `Pure` and is reachable from the REPL exactly the way `:trace`
+reaches `Trace[]` today.
+
+The `rum-host` forwarding question is real but separate: it only matters
+for an *embedder* wanting always-on session tracing, not for a REPL
+view.
+
+### 1.5-superseded (kept for the record — DO NOT rely on this)
 
 Recorded so nobody rediscovers it. `HostEvalSuccess` already carries
 `pub trace: Vec<HostTraceEvent>` — "trace events collected when tracing
