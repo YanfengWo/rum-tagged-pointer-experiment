@@ -3,7 +3,49 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## ACTIVE PLAN — matcher OneIdentity/Optional + Flat respec line (user ruling 2026-07-20)
+## COMPLETE — debt clearing + REPL/trace line (2026-07-20 → 07-21, briefs 280-288)
+
+Two user-directed sweeps, both closed.
+
+**Debt clearing (briefs 280-281).** The workspace now has ZERO files over
+AGENTS.md's 35k architecture-debt line.
+- `builtin_catalog/stdlib_attributes.rs` 30,747 bytes → parent 8.8k plus
+  four first-byte chunks (6.8/6.6/4.6/6.3k). The 2026-07-18 "no family
+  boundary" ruling WAS the split axis: a table whose only structure is
+  its ASCII name order gets split along that order. Lookup stays
+  const-time — a `const fn` first-byte dispatch then ONE
+  `binary_search_by`, no `OnceLock` on the matcher-hot path. Compile-time
+  strength preserved, not traded down (per-chunk sortedness + per-chunk
+  disjoint byte-range membership ≡ the old single global assertion).
+  That entry had also mispredicted the cost: it claimed a split would
+  force "search multiple segments, or build+search a Vec" — neither
+  happened.
+- `rum-host/src/tests.rs` 68,639 bytes (2× the line, undocumented) → six
+  files by responsibility, mirroring the embedding line's own increments.
+  Pure move, proven by before/after set-equality of all 77 test names and
+  all 18 helper names. WATCH: `capability_profiles.rs` landed at 19,614
+  bytes with almost no headroom; its next boundary is already visible
+  (dispatch-blocking vs named-profile pins vs capability-policy
+  composition).
+
+**REPL/trace (briefs 282-288).** See the Standing Engineering Debt
+entries for detail. Headline: REPL rendering frozen with full-output
+snapshots (`contains` 48 → 0); `:trace`; `TraceEvent` switched from
+`String` to `Expr`, deleting a render→parse round trip and cutting
+tracing overhead from 5.5-5.8× to 2.4×; `TraceDetail`, the lossless
+symbol that names WHICH overlapping definition fired; and
+`:trace --rules`. Reference 641 → 642, workspace 1662 → 1675/0.
+
+Re-probed at close and deliberately NOT actioned: symbolic `Plus`/`Times`
+like-term detection is confirmed superlinear on distinct terms (collection
+cost 1.13 → 2.20 → 4.83 → 13.37 ms for n = 100/200/400/800, i.e. doubling
+ratios 1.94× → 2.20× → 2.77×, accelerating toward quadratic), visible from
+roughly n ≥ 400. Like terms stay linear via a fast path. **The entry's own
+revisit trigger — profiler evidence from a REAL symbolic-algebra workload —
+is still not met**; this was a synthetic worst case. Left as accepted
+tradeoff, now with numbers and an inflection point on record.
+
+## COMPLETE — matcher OneIdentity/Optional + Flat respec line (user ruling 2026-07-20, closed same day, briefs 275-279)
 
 Re-scoped from the Standing Engineering Debt matcher entry after
 re-probing (2026-07-20). The old target — reproduce WK's byte-exact

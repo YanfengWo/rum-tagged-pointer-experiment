@@ -1322,3 +1322,30 @@ consistent Missing on absent key; microbench A/B noise-floor clean).
 Endstate: workspace 1644/0, reference 641, guide syntax.md documents
 named-slot fill. Not pursued: Query head (Dataset subsystem, out of
 folk scope); parser wrinkle "#1 &[x]" without parens parked.
+
+## 2026-07-20 → 07-21 — matcher respec, debt clearing, REPL/trace (briefs 275-288)
+
+Endstate: workspace 1675/0, reference 642, zero files over the 35k
+architecture-debt line.
+
+- **Matcher OneIdentity/Optional + Flat respec (275-279).** WK-derived
+  `#[ignore]` tests retired as policy fossils and re-pinned to rum's own
+  measured behavior; non-`OneIdentity` `Flat` singleton wrapped candidates
+  implemented, closing a real gap (`MatchQ[g[1,2], g[a_g, b_]]` was False
+  though `g[g[1], 2]` flattens to `g[1,2]`). The `optional.rs` collect-all
+  omission arm was first-match-shaped and under-collected; fixing it is not
+  `OneIdentity`-gated, so built-in `Plus`/`Times` recovered dropped rows.
+  2^n candidate growth accepted per user ruling (no pruning).
+- **Debt clearing (280-281).** `stdlib_attributes.rs` split along its ASCII
+  name ordering into four first-byte chunks, lookup still const-time;
+  `rum-host/src/tests.rs` (68,639 bytes) split by responsibility into six
+  files, proven a pure move by name-set equality.
+- **REPL/trace (282-288).** REPL rendering frozen with full-output snapshots
+  (`contains` 48 → 0); `:trace`; `TraceEvent` switched from `String` to
+  `Expr`, deleting a render→parse round trip and cutting tracing overhead
+  from 5.5-5.8× to 2.4×; `TraceDetail` (lossless, names which overlapping
+  definition fired, key `RuleLeft`); `:trace --rules`.
+- Re-probed and deliberately not actioned: symbolic `Plus`/`Times` like-term
+  detection confirmed superlinear on distinct terms from roughly n ≥ 400,
+  but the entry's own revisit trigger (a real symbolic-algebra workload)
+  is still unmet.

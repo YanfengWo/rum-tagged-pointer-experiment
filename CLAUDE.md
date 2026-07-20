@@ -139,6 +139,44 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
+- **MATCHER + DEBT-CLEARING + REPL/TRACE LINES — ALL COMPLETE
+  (2026-07-20 → 07-21, briefs 275-288). NEXT DIRECTION = fresh user
+  decision; no active plan.** Memory: `matcher-oneidentity-flat-line.md`,
+  `repl-cli-polish-line.md`. Detail in `TODO.md`'s top two COMPLETE
+  sections. Endstate: workspace 1675/0, reference 642, **zero files over
+  the 35k architecture-debt line**.
+  Durable lessons from these lines, in order of how much they cost me:
+  - **A brief's MAY list failed FIVE times on this arc.** Every stop-loss
+    was Codex's correct call on my omission. The fix is not "list files
+    more carefully" — it is (a) trace an existing sibling's wiring to
+    enumerate a registration chain rather than recalling it, and
+    (b) write a GENERAL accept-vs-stop criterion into the brief so a
+    missed file still cannot admit a real regression (brief-279's
+    "collect-all row ADDITIONS on Flat-without-OneIdentity heads are
+    legitimate; any first-match change is a stop" is the model).
+  - **A line's motivation can be a fossil.** The matcher work traced back
+    to WK-derived tests that brief-276 had just retired as policy
+    fossils — i.e. it was chasing what it had just repudiated. Re-ground
+    it on an independent, measured defect before continuing
+    (`MatchQ[g[1,2], g[a_g, b_]]` was False though `g[g[1], 2]` flattens
+    to `g[1,2]`).
+  - **One change containing two mechanisms needs per-mechanism exposure
+    analysis.** "No built-in is affected" held for the wrapped-candidate
+    half but NOT for the `optional.rs` under-collection fix, which is not
+    `OneIdentity`-gated and so changed built-in `Plus`/`Times`. The tell
+    was an asymmetric baseline (`Orderless` collected `{a,{b},0}` but not
+    its mirror).
+  - **Capability classification must be read from the assertion, not
+    inferred from file location.** I told the user `Trace` was
+    `Diagnostic`-gated because it lives in `debug.rs`; it is
+    `Capability::Pure` (`capabilities.rs:231`).
+  - **Instruments lied repeatedly** — a timing probe that measured an
+    already-evaluated OwnValue (tell: time DECREASED as n grew), and
+    extraction regexes that undercounted twice (missed multi-line
+    entries; missed `pub(super) fn`). Cross-check every script-derived
+    count before believing it.
+  - Frozen snapshots passed their first real outing: adding `:trace` to
+    help changed exactly the `:help` snapshot and nothing else.
 - **LAZY SEQUENCES + SEALED SCOPING LINE — COMPLETE (2026-07-18 →
   07-20; user ruling; two WL15-survey outcomes, design-first, full
   ambition; design docs `docs/dev/lazy-sequences-design.md` +
