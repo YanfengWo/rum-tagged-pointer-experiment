@@ -326,7 +326,7 @@ fn flat_and_orderless_flat_heads_regroup_for_match_replace_and_replacelist() {
             .unwrap()
             .value
             .to_string(),
-        "List[List[a, f[b, c]], List[f[a, b], c]]"
+        "List[List[a, f[b, c]], List[f[a], f[b, c]], List[f[a, b], c], List[f[a, b], f[c]]]"
     );
     assert_eq!(
         session

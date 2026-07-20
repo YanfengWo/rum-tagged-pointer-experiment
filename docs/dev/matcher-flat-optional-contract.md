@@ -7,18 +7,13 @@ expectation retired as a testing-policy fossil by
 
 ## Status
 
-**The head-wrapped single-element candidate specified below is NOT
-implemented.** Only the bare form is tried today. The specification is
-recorded as the intended contract for a future attempt; Brief 276's
-implementation half stopped before any source edit (the signature
-threading reached beyond that brief's scope). Current behavior is pinned
-by `flat_orderless_optional_matches_collects_and_omits` and
+**The head-wrapped single-element candidate specified below is implemented
+as of Brief 279.** Current behavior is pinned by
+`flat_orderless_optional_matches_collects_and_omits` and
 `flat_orderless_optional_with_sequence_neighbors` in
-`crates/rum-runtime/src/runtime/tests/pattern_matching_orderless_optional.rs`
-— for example, `ReplaceList[g[1, 2], g[a_, b_:0] :> {a, b}]` yields
-`{{2, 1}, {1, 2}, {g[1, 2], 0}}`, with no wrapped rows.
+`crates/rum-runtime/src/runtime/tests/pattern_matching_orderless_optional.rs`.
 
-## Candidate contract (specification, not current behavior)
+## Candidate contract
 
 For a `Flat` pattern head without `OneIdentity`, a plain `Blank`-style
 pattern argument (`MatcherArg::Single`) matched against a grouped selection
@@ -38,6 +33,37 @@ candidate and the rest of the pattern win before the wrapped candidate is
 considered. For collect-all operations such as `ReplaceList`, successful
 bare and wrapped matches are distinct rows, with the wrapped row immediately
 following its bare row before the next consume length is tried.
+
+## Optional omission is collected in full (all `Flat` heads)
+
+Brief 279 also repaired a separate, pre-existing defect that the work above
+exposed: the `Flat` collect-all path's `Optional`-omission arm was
+first-match-shaped, so it kept at most ONE omission match and silently
+dropped the rest.
+
+Unlike the wrapped-candidate contract above, this repair is **not** gated on
+`OneIdentity` — it applies to every `Flat` head, **including the built-ins
+`Plus` and `Times`**, which therefore recover previously dropped rows:
+
+```
+ReplaceList[a + b, Plus[x_, y___, z_:0] :> {x, {y}, z}]
+  before:  {{b, {}, a}, {a, {}, b}, {a, {b}, 0}}
+  after:   … additionally {b, {a}, 0} and {Plus[a, b], {}, 0}
+```
+
+The tell that the old behavior was wrong: under `Orderless` it collected
+`{a, {b}, 0}` but not its mirror `{b, {a}, 0}`. No first-match (`MatchQ`,
+`/.`) result changes; rows are only ever added. Pinned by
+`flat_optional_omission_collects_every_match_for_builtin_heads`.
+
+## Candidate-set size is not pruned
+
+A pattern with n single-value slots offers a 2^n bare/wrapped cross product,
+so `ReplaceList` row counts grow accordingly on `Flat`-without-`OneIdentity`
+heads. This is accepted (user ruling, 2026-07-20): correctness on small
+examples is the requirement, efficiency is not a consideration, and WL itself
+applies no heuristic pruning here either. Do not add pruning to shrink these
+counts.
 
 ## Enumeration order
 

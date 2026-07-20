@@ -11,6 +11,7 @@ pub(super) fn orderless_candidate_choices(
     rest_patterns: &[MatcherArg],
     value_args: &[Expr],
     allow_flat_single: bool,
+    wrap_singleton: Option<&Expr>,
 ) -> Vec<OrderlessCandidateChoice> {
     match pattern {
         MatcherArg::Single(_) if allow_flat_single => {
@@ -22,7 +23,26 @@ pub(super) fn orderless_candidate_choices(
                 return Vec::new();
             }
 
-            orderless_partition_choices_by_lengths(value_args, 1..=max_len, false)
+            let choices = orderless_partition_choices_by_lengths(value_args, 1..=max_len, false);
+            let Some(head) = wrap_singleton else {
+                return choices;
+            };
+
+            let mut wrapped_choices = Vec::with_capacity(choices.len() + value_args.len());
+            for choice in choices {
+                let wrapped_choice = match choice.selected_values.as_slice() {
+                    [value] => Some(OrderlessCandidateChoice {
+                        selected_values: vec![Expr::call(head.clone(), vec![value.clone()])],
+                        rest_values: choice.rest_values.clone(),
+                    }),
+                    _ => None,
+                };
+                wrapped_choices.push(choice);
+                if let Some(wrapped_choice) = wrapped_choice {
+                    wrapped_choices.push(wrapped_choice);
+                }
+            }
+            wrapped_choices
         }
         MatcherArg::Single(_) => select_orderless_value_partitions(value_args, 1),
         MatcherArg::Sequence(spec) => {

@@ -138,18 +138,17 @@ impl Session {
         };
 
         self.drive_internal_value(present_result, move |session, mut present| {
-            let omission_result = session.match_compiled_orderless_flat_optional_omission_owned(
-                flat_head,
-                spec,
-                rest_patterns,
-                value_args,
-                bindings,
-            );
+            let omission_result = session
+                .collect_compiled_orderless_flat_optional_omission_matches_owned(
+                    flat_head,
+                    spec,
+                    rest_patterns,
+                    value_args,
+                    bindings,
+                );
 
-            session.drive_internal_value(omission_result, move |_, outcome| {
-                if outcome.matched {
-                    present.push(outcome.bindings);
-                }
+            session.drive_internal_value(omission_result, move |_, mut omitted| {
+                present.append(&mut omitted);
                 Ok(present)
             })
         })
@@ -216,6 +215,42 @@ impl Session {
                     rest_patterns,
                     value_args,
                     outcome.bindings,
+                )
+            })
+        })
+    }
+
+    fn collect_compiled_orderless_flat_optional_omission_matches_owned(
+        &mut self,
+        flat_head: Expr,
+        spec: CompiledOptionalPattern,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: SymbolExprMap,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        let default_result = self.resolve_optional_default_expr_owned(spec.default);
+        self.drive_internal_value(default_result, move |session, default_expr| {
+            let Some(default_expr) = default_expr else {
+                return Ok(Vec::new());
+            };
+
+            let default_result = session.match_compiled_orderless_flat_selected_values_owned(
+                flat_head.clone(),
+                *spec.inner,
+                optional_default_values(default_expr),
+                bindings,
+            );
+
+            session.drive_internal_value(default_result, move |session, outcome| {
+                if !outcome.matched {
+                    return Ok(Vec::new());
+                }
+
+                session.collect_compiled_orderless_arg_matches_with_flat_head_owned(
+                    rest_patterns,
+                    value_args,
+                    outcome.bindings,
+                    flat_head,
                 )
             })
         })

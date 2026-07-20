@@ -118,13 +118,13 @@ fn flat_orderless_optional_matches_collects_and_omits() {
             ("g[1, 2] /. g[a_, b_:0] :> {a, b}", "List[2, 1]"),
             (
                 "ReplaceList[g[1, 2], g[a_, b_:0] :> {a, b}]",
-                "List[List[2, 1], List[1, 2], List[g[1, 2], 0]]",
+                "List[List[2, 1], List[g[2], 1], List[2, g[1]], List[g[2], g[1]], List[1, 2], List[g[1], 2], List[1, g[2]], List[g[1], g[2]], List[g[1, 2], 0]]",
             ),
             ("MatchQ[g[1], g[a_, b_:0]]", "True"),
             ("g[1] /. g[a_, b_:0] :> {a, b}", "List[1, 0]"),
             (
                 "ReplaceList[g[1], g[a_, b_:0] :> {a, b}]",
-                "List[List[1, 0]]",
+                "List[List[1, 0], List[g[1], 0]]",
             ),
             ("MatchQ[g[], g[a_:9, b_:0]]", "True"),
             ("g[] /. g[a_:9, b_:0] :> {a, b}", "List[9, 0]"),
@@ -186,7 +186,7 @@ fn flat_orderless_optional_with_sequence_neighbors() {
             ),
             (
                 "ReplaceList[g[1, 2], g[a_, b___, c_:0] :> {a, {b}, c}]",
-                "List[List[2, List[], 1], List[1, List[], 2], List[1, List[2], 0]]",
+                "List[List[2, List[], 1], List[g[2], List[], 1], List[2, List[], g[1]], List[g[2], List[], g[1]], List[1, List[], 2], List[g[1], List[], 2], List[1, List[], g[2]], List[g[1], List[], g[2]], List[1, List[2], 0], List[g[1], List[2], 0], List[2, List[1], 0], List[g[2], List[1], 0], List[g[1, 2], List[], 0]]",
             ),
         ],
     );
@@ -237,6 +237,37 @@ fn one_identity_promotes_singletons_when_remaining_arguments_are_omissible() {
             ("MatchQ[5, h[x_, y_]]", "False"),
             ("MatchQ[5, h[x_., y_.]]", "True"),
             ("MatchQ[5, h[x_]]", "True"),
+        ],
+    );
+}
+
+/// The flat collect-all omission arm used to be first-match-shaped (it could
+/// pick bare or wrapped, never collect both), which silently dropped valid
+/// omission matches. Fixing it (brief-279) applies to every `Flat` head, not
+/// only the non-`OneIdentity` ones the wrapped-candidate work targets — so
+/// built-in `Plus`/`Times` recover dropped rows too. The tell that the old
+/// behavior was wrong: under `Orderless` it collected `{a, {b}, 0}` but not
+/// its mirror `{b, {a}, 0}`.
+#[test]
+fn flat_optional_omission_collects_every_match_for_builtin_heads() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    assert_rum_cases(
+        &mut session,
+        &[
+            (
+                "ReplaceList[a + b, Plus[x_, y___, z_:0] :> {x, {y}, z}]",
+                "List[List[b, List[], a], List[a, List[], b], List[a, List[b], 0], List[b, List[a], 0], List[Plus[a, b], List[], 0]]",
+            ),
+            (
+                "ReplaceList[a * b, Times[x_, y___, z_:1] :> {x, {y}, z}]",
+                "List[List[b, List[], a], List[a, List[], b], List[a, List[b], 1], List[b, List[a], 1], List[Times[a, b], List[], 1]]",
+            ),
+            // First-match results are unaffected by the omission fix.
+            // (`MatchQ[5, x_ + y_.]` is NOT pinned here: this session does not
+            // carry the installed `Default[Plus]` seeding, so it answers False
+            // in-session and True in a real one. Brief-275's own test covers it.)
+            ("a + b + c /. Plus[x_, y_] :> {x, y}", "List[a, Plus[b, c]]"),
         ],
     );
 }

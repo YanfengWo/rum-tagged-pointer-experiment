@@ -18,7 +18,7 @@ impl Session {
             ),
             other => {
                 let choices =
-                    orderless_candidate_choices(&other, &rest_patterns, &value_args, false);
+                    orderless_candidate_choices(&other, &rest_patterns, &value_args, false, None);
                 self.match_compiled_orderless_choices_owned(
                     other,
                     rest_patterns,
@@ -47,8 +47,15 @@ impl Session {
                 bindings,
             ),
             other => {
-                let choices =
-                    orderless_candidate_choices(&other, &rest_patterns, &value_args, true);
+                let one_identity = matches!(&flat_head, Expr::Atom(Atom::Symbol(s))
+                    if self.attribute_set_for_symbol(s).contains(Attribute::OneIdentity));
+                let choices = orderless_candidate_choices(
+                    &other,
+                    &rest_patterns,
+                    &value_args,
+                    true,
+                    (!one_identity).then_some(&flat_head),
+                );
                 self.match_compiled_orderless_flat_choices_owned(
                     flat_head,
                     other,
@@ -77,7 +84,7 @@ impl Session {
             ),
             other => {
                 let choices =
-                    orderless_candidate_choices(&other, &rest_patterns, &value_args, false);
+                    orderless_candidate_choices(&other, &rest_patterns, &value_args, false, None);
                 self.collect_compiled_orderless_choices_matches_owned(
                     other,
                     rest_patterns,
@@ -108,8 +115,15 @@ impl Session {
                     bindings,
                 ),
             other => {
-                let choices =
-                    orderless_candidate_choices(&other, &rest_patterns, &value_args, true);
+                let one_identity = matches!(&flat_head, Expr::Atom(Atom::Symbol(s))
+                    if self.attribute_set_for_symbol(s).contains(Attribute::OneIdentity));
+                let choices = orderless_candidate_choices(
+                    &other,
+                    &rest_patterns,
+                    &value_args,
+                    true,
+                    (!one_identity).then_some(&flat_head),
+                );
                 self.collect_compiled_orderless_flat_choices_matches_owned(
                     flat_head,
                     other,

@@ -109,8 +109,11 @@ impl Session {
                     return Ok(match_outcome(false, bindings));
                 }
 
+                let one_identity = matches!(&flat_head, Expr::Atom(Atom::Symbol(s))
+                    if self.attribute_set_for_symbol(s).contains(Attribute::OneIdentity));
                 self.match_compiled_flat_single_choices_owned(
                     flat_head,
+                    one_identity,
                     pattern,
                     rest_patterns,
                     value_args,
@@ -125,6 +128,7 @@ impl Session {
     fn match_compiled_flat_single_choices_owned(
         &mut self,
         flat_head: Expr,
+        one_identity: bool,
         pattern: MatcherNode,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
@@ -140,9 +144,22 @@ impl Session {
 
         self.drive_internal_value(pattern_result, move |session, outcome| {
             if !outcome.matched {
+                if consume == 1 && !one_identity {
+                    return session.match_compiled_flat_wrapped_single_choice_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        outcome.bindings,
+                        max_consume,
+                    );
+                }
+
                 return if consume < max_consume {
                     session.match_compiled_flat_single_choices_owned(
                         flat_head,
+                        one_identity,
                         pattern,
                         rest_patterns,
                         value_args,
@@ -164,14 +181,85 @@ impl Session {
             session.drive_internal_value(rest_result, move |session, rest_outcome| {
                 if rest_outcome.matched {
                     Ok(rest_outcome)
+                } else if consume == 1 && !one_identity {
+                    session.match_compiled_flat_wrapped_single_choice_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        bindings,
+                        max_consume,
+                    )
                 } else if consume < max_consume {
                     session.match_compiled_flat_single_choices_owned(
                         flat_head,
+                        one_identity,
                         pattern,
                         rest_patterns,
                         value_args,
                         bindings,
                         consume + 1,
+                        max_consume,
+                    )
+                } else {
+                    Ok(match_outcome(false, bindings))
+                }
+            })
+        })
+    }
+
+    fn match_compiled_flat_wrapped_single_choice_owned(
+        &mut self,
+        flat_head: Expr,
+        one_identity: bool,
+        pattern: MatcherNode,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: SymbolExprMap,
+        max_consume: usize,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let wrapped_value = Expr::call(flat_head.clone(), vec![value_args[0].clone()]);
+        let rest_values = value_args.iter().skip(1).cloned().collect::<Vec<_>>();
+        let pattern_result =
+            self.match_compiled_owned(pattern.clone(), wrapped_value, bindings.clone());
+
+        self.drive_internal_value(pattern_result, move |session, outcome| {
+            if !outcome.matched {
+                return if max_consume > 1 {
+                    session.match_compiled_flat_single_choices_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        outcome.bindings,
+                        2,
+                        max_consume,
+                    )
+                } else {
+                    Ok(match_outcome(false, outcome.bindings))
+                };
+            }
+
+            let rest_result = session.match_compiled_args_with_flat_head_owned(
+                rest_patterns.clone(),
+                rest_values,
+                outcome.bindings,
+                flat_head.clone(),
+            );
+            session.drive_internal_value(rest_result, move |session, rest_outcome| {
+                if rest_outcome.matched {
+                    Ok(rest_outcome)
+                } else if max_consume > 1 {
+                    session.match_compiled_flat_single_choices_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        bindings,
+                        2,
                         max_consume,
                     )
                 } else {
@@ -292,8 +380,11 @@ impl Session {
                     return Ok(Vec::new());
                 }
 
+                let one_identity = matches!(&flat_head, Expr::Atom(Atom::Symbol(s))
+                    if self.attribute_set_for_symbol(s).contains(Attribute::OneIdentity));
                 self.collect_compiled_flat_single_choice_matches_owned(
                     flat_head,
+                    one_identity,
                     pattern,
                     rest_patterns,
                     value_args,
@@ -309,6 +400,7 @@ impl Session {
     fn collect_compiled_flat_single_choice_matches_owned(
         &mut self,
         flat_head: Expr,
+        one_identity: bool,
         pattern: MatcherNode,
         rest_patterns: Vec<MatcherArg>,
         value_args: Vec<Expr>,
@@ -329,8 +421,22 @@ impl Session {
 
         self.drive_internal_value(pattern_result, move |session, outcome| {
             if !outcome.matched {
+                if consume == 1 && !one_identity {
+                    return session.collect_compiled_flat_wrapped_single_choice_matches_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        bindings,
+                        max_consume,
+                        collected,
+                    );
+                }
+
                 return session.collect_compiled_flat_single_choice_matches_owned(
                     flat_head,
+                    one_identity,
                     pattern,
                     rest_patterns,
                     value_args,
@@ -350,13 +456,82 @@ impl Session {
             session.drive_internal_value(rest_result, move |session, mut rest_matches| {
                 let mut collected = collected;
                 collected.append(&mut rest_matches);
-                session.collect_compiled_flat_single_choice_matches_owned(
+                if consume == 1 && !one_identity {
+                    session.collect_compiled_flat_wrapped_single_choice_matches_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        bindings,
+                        max_consume,
+                        collected,
+                    )
+                } else {
+                    session.collect_compiled_flat_single_choice_matches_owned(
+                        flat_head,
+                        one_identity,
+                        pattern,
+                        rest_patterns,
+                        value_args,
+                        bindings,
+                        consume + 1,
+                        max_consume,
+                        collected,
+                    )
+                }
+            })
+        })
+    }
+
+    fn collect_compiled_flat_wrapped_single_choice_matches_owned(
+        &mut self,
+        flat_head: Expr,
+        one_identity: bool,
+        pattern: MatcherNode,
+        rest_patterns: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        bindings: SymbolExprMap,
+        max_consume: usize,
+        collected: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        let wrapped_value = Expr::call(flat_head.clone(), vec![value_args[0].clone()]);
+        let rest_values = value_args.iter().skip(1).cloned().collect::<Vec<_>>();
+        let pattern_result =
+            self.match_compiled_owned(pattern.clone(), wrapped_value, bindings.clone());
+
+        self.drive_internal_value(pattern_result, move |session, outcome| {
+            if !outcome.matched {
+                return session.collect_compiled_flat_single_choice_matches_owned(
                     flat_head,
+                    one_identity,
                     pattern,
                     rest_patterns,
                     value_args,
                     bindings,
-                    consume + 1,
+                    2,
+                    max_consume,
+                    collected,
+                );
+            }
+
+            let rest_result = session.collect_compiled_args_matches_with_flat_head_owned(
+                rest_patterns.clone(),
+                rest_values,
+                outcome.bindings,
+                flat_head.clone(),
+            );
+            session.drive_internal_value(rest_result, move |session, mut rest_matches| {
+                let mut collected = collected;
+                collected.append(&mut rest_matches);
+                session.collect_compiled_flat_single_choice_matches_owned(
+                    flat_head,
+                    one_identity,
+                    pattern,
+                    rest_patterns,
+                    value_args,
+                    bindings,
+                    2,
                     max_consume,
                     collected,
                 )

@@ -58,20 +58,38 @@ Queue (user-approved plan items 1-4, 2026-07-20):
   naming hygiene, WK-order test names de-WK-ified, contract doc
   `docs/dev/matcher-flat-optional-contract.md` (enumeration-order
   conformance recorded WON'T-FIX). Workspace 1653/0.
-- [ ] brief-277 — item 4 (brief-276 Part B, stop-lossed on my Scope
-  omission, not on the design): implement the non-OneIdentity `Flat`
-  singleton wrapped candidates. Codex correctly stopped before any
-  source edit — the `one_identity` threading I specified (from
-  `core.rs` down) reaches `sequence/entry.rs`,
-  `sequence/orderless/optional.rs` and
-  `kernel_data/rewrite_data/replace/list/matching.rs`, none of which
-  were in the MAY list. **Redesign that removes the ripple entirely**:
-  both `allow_flat_single = true` call sites of
-  `orderless_candidate_choices` (`orderless/entry.rs:51,112`) already
-  hold `flat_head` in scope, so compute `one_identity` LOCALLY there —
-  the same shape the brief already prescribed for the plain-`Flat`
-  path in `sequence.rs`. Zero signature threading; `core.rs` need not
-  be touched at all (brief-275's work stays untouched by construction).
+- [x] brief-277/278/279 — item 4 DONE (2026-07-20): non-`OneIdentity`
+  `Flat` singleton wrapped candidates. Three dispatches, the first two
+  stop-lossed CLEANLY on my Scope omissions (277: the `one_identity`
+  threading I rooted in `core.rs` reaches `sequence/entry.rs`,
+  `orderless/optional.rs`, `replace/list/matching.rs`; 278: the new
+  contract legitimately adds rows to a `ReplaceList` assertion in
+  `definitions_and_rules_part3.rs`). Codex stopped before/rolled back
+  each time with a clean tree — correct calls, my briefs were wrong.
+  Final design threads nothing across a file boundary: both
+  `allow_flat_single` call sites already hold `flat_head`, so
+  `one_identity` is derived locally; the plain-`Flat` loop threads it
+  but all six call sites are inside `sequence.rs`. `core.rs` untouched,
+  so brief-275's work is safe by construction.
+  **Two findings beyond the stated contract:**
+  (a) the line's justification was re-grounded independently of the
+  retired WK fossil — `MatchQ[g[1,2], g[a_g, b_]]` was False though
+  `g[g[1], 2]` flattens to `g[1,2]`; that and `MatchQ[g[1], g[a_g]]`
+  became the acceptance criteria, both now True;
+  (b) the `optional.rs` repair (flat collect-all omission arm was
+  first-match-shaped, keeping at most ONE omission match) is NOT
+  `OneIdentity`-gated, so it fixes **built-in `Plus`/`Times`** too —
+  they recovered dropped rows, the tell being that `Orderless` used to
+  collect `{a,{b},0}` but not its mirror `{b,{a},0}`. My "zero built-in
+  exposure" grounding held only for the wrapped-candidate half. Pinned
+  at the gate by a new test
+  (`flat_optional_omission_collects_every_match_for_builtin_heads`) and
+  documented in the contract doc.
+  Gate: workspace 1654/0; my own A/B (same-path base/candidate builds)
+  = target matcher labels |delta| median 0.97%, max +1.29%, while
+  unaffected controls moved median 2.29% / max 15.34% — controls moved
+  MORE than targets, so noise floor by the AGENTS.md rule. 2^n
+  candidate growth accepted per user ruling (no pruning; WL does none).
 
 ## COMPLETE — row-workload pure line (DB-prep; user ruling 2026-07-20, closed same day, briefs 272-274)
 
