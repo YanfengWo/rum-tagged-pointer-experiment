@@ -647,7 +647,7 @@ fn trace_detail_rule_applied(
         ("Step", Expr::string("RuleApplied")),
         ("Source", Expr::string(rule_application_source_name(source))),
         ("Input", trace_detail_hold(input)),
-        ("Rule", trace_detail_hold(rule)),
+        ("RuleLeft", trace_detail_hold(rule)),
         ("Result", trace_detail_hold(result)),
     ])
 }

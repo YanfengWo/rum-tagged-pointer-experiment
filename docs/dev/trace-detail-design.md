@@ -37,7 +37,11 @@ measured): every emission site passes the rule's **left-hand side only**
 (`&lhs`, or `&rule.lhs` in `replace_all.rs`). The RHS template is never
 recorded — `result` holds the substituted outcome, not the template. The
 LHS is nonetheless a sufficient identifier, since two definitions cannot
-share one.
+share one. The key is therefore named **`RuleLeft`**, not `Rule` (user
+ruling 2026-07-21) — `Rule` would promise a whole rule, and `Lhs` is not
+this project's naming style (`PadLeft`, `StringPadRight`,
+`RightComposition` are the house vocabulary; `Lhs`/`LHS` appears nowhere
+in user-facing text).
 With several overlapping `DownValue`s on one symbol, "which definition
 matched" is the actual debugging question, and no current view answers
 it.
@@ -53,7 +57,7 @@ The question is what a STEP looks like.
 TraceDetail[f[2]]
 → List[
     <|"Step" -> "RuleApplied", "Source" -> "DownValue",
-      "Input" -> Hold[f[2]], "Rule" -> Hold[f[x_]],
+      "Input" -> Hold[f[2]], "RuleLeft" -> Hold[f[x_]],
       "Result" -> Hold[2 + 1]|>,
     List[ <|"Step" -> "EvaluationPass", "Before" -> Hold[2 + 1],
             "After" -> Hold[3]|> ],

@@ -108,7 +108,7 @@ fn trace_detail_identifies_the_downvalue_that_won_among_overlapping_definitions(
     let traced = session.eval_text("TraceDetail[f[2]]").unwrap();
     assert_eq!(
         traced.value.to_string(),
-        "List[Association[Rule[\"Step\", \"RuleApplied\"], Rule[\"Source\", \"DownValue\"], Rule[\"Input\", Hold[f[2]]], Rule[\"Rule\", Hold[f[2]]], Rule[\"Result\", Hold[exact]]], Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[f[2]]], Rule[\"After\", Hold[exact]]]]"
+        "List[Association[Rule[\"Step\", \"RuleApplied\"], Rule[\"Source\", \"DownValue\"], Rule[\"Input\", Hold[f[2]]], Rule[\"RuleLeft\", Hold[f[2]]], Rule[\"Result\", Hold[exact]]], Association[Rule[\"Step\", \"EvaluationPass\"], Rule[\"Before\", Hold[f[2]]], Rule[\"After\", Hold[exact]]]]"
     );
 }
 
