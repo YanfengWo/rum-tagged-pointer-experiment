@@ -221,3 +221,107 @@ fn orderless_optional_nonmatch_edges_stay_false() {
         &[("MatchQ[g[x], g[a_Integer, b_:0]]", "False")],
     );
 }
+
+#[test]
+fn one_identity_promotes_singletons_when_remaining_arguments_are_omissible() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    session
+        .eval_text("SetAttributes[h, {Flat, OneIdentity, Orderless}]")
+        .unwrap();
+    session.eval_text("Default[h] = 0").unwrap();
+
+    assert_wk_cases(
+        &mut session,
+        &[
+            ("MatchQ[5, h[x_, y_.]]", "True"),
+            ("5 /. h[x_, y_.] :> {x, y}", "List[5, 0]"),
+            ("MatchQ[f[a], h[x_, y_.]]", "True"),
+            ("f[a] /. h[x_, y_.] :> {x, y}", "List[f[a], 0]"),
+            ("MatchQ[5, h[x_, y_]]", "False"),
+            ("MatchQ[5, h[x_., y_.]]", "True"),
+            ("MatchQ[5, h[x_]]", "True"),
+        ],
+    );
+}
+
+#[test]
+fn installed_system_down_values_surface_as_a_whole_after_user_mutation() {
+    let mut session = Session::new();
+    session.install_system_down_value(
+        "Default",
+        Expr::call(system_expr("Default"), vec![system_expr("Plus")]),
+        Expr::small_integer(0),
+    );
+    session.install_system_down_value(
+        "Default",
+        Expr::call(system_expr("Default"), vec![system_expr("Times")]),
+        Expr::small_integer(1),
+    );
+
+    assert!(
+        session
+            .definition_summaries()
+            .iter()
+            .all(|summary| summary.name != "System`Default")
+    );
+
+    session.eval_text("Default[g] = d").unwrap();
+
+    let summary = session
+        .definition_summaries()
+        .into_iter()
+        .find(|summary| summary.name == "System`Default")
+        .expect("a user Default downvalue should surface the whole symbol");
+    assert_eq!(summary.down_value_count, 3);
+}
+
+#[test]
+fn snapshot_after_unset_resurrects_an_installed_system_down_value() {
+    let mut source = Session::new();
+    source.install_system_down_value(
+        "Default",
+        Expr::call(system_expr("Default"), vec![system_expr("Plus")]),
+        Expr::small_integer(0),
+    );
+    source.install_system_down_value(
+        "Default",
+        Expr::call(system_expr("Default"), vec![system_expr("Times")]),
+        Expr::small_integer(1),
+    );
+    source.eval_text("Unset[Default[Plus]]").unwrap();
+    assert_eq!(
+        source.eval_text("Default[Plus]").unwrap().value.to_string(),
+        "Default[Plus]"
+    );
+
+    let snapshot = source
+        .snapshot_definitions_source()
+        .expect("mutated installed defaults should render");
+    assert!(!snapshot.contains("Unset"));
+
+    let mut restored = Session::new();
+    restored.install_system_down_value(
+        "Default",
+        Expr::call(system_expr("Default"), vec![system_expr("Plus")]),
+        Expr::small_integer(0),
+    );
+    restored.install_system_down_value(
+        "Default",
+        Expr::call(system_expr("Default"), vec![system_expr("Times")]),
+        Expr::small_integer(1),
+    );
+    let outcome = restored
+        .eval_script(&snapshot)
+        .expect("rendered definitions should restore");
+    assert!(outcome.messages.is_empty(), "{:?}", outcome.messages);
+
+    assert_eq!(
+        restored
+            .eval_text("Default[Plus]")
+            .unwrap()
+            .value
+            .to_string(),
+        "0"
+    );
+}

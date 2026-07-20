@@ -1,9 +1,13 @@
 use super::*;
 use crate::runtime::scoping::packages::SourceUnit;
 
+use std::hash::BuildHasherDefault;
 use std::sync::{Arc, atomic::AtomicBool};
 
 use std::time::{Duration, Instant};
+
+pub(in crate::runtime) type SymbolMap<T> =
+    HashMap<Symbol, T, BuildHasherDefault<RuntimeCacheHasher>>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) struct ModuleActivation {
@@ -57,6 +61,7 @@ pub struct Session {
     pub(in crate::runtime) prng_state: PrngState,
     pub(in crate::runtime) definitions: DefinitionMap,
     pub(in crate::runtime) installed_system_own_values: SymbolSet,
+    pub(in crate::runtime) installed_system_down_values: SymbolMap<Vec<(Expr, Expr)>>,
     pub(in crate::runtime) has_up_value_definitions: bool,
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(in crate::runtime) exception_types: BTreeMap<String, Option<String>>,

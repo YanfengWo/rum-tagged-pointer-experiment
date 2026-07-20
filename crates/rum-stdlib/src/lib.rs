@@ -3,6 +3,7 @@
 //! This crate owns builtin family implementations and catalog specs, and
 //! installs the core builtin set into runtime sessions through [`install_core`].
 
+use rum_core::Expr;
 use rum_runtime::{Session, core_builtin_specs};
 
 mod arithmetic;
@@ -135,6 +136,23 @@ pub fn install_core(session: &mut Session) {
         session.register_builtin(*spec);
     }
     character_classes::install(session);
+
+    session.install_system_down_value(
+        "Default",
+        Expr::call(
+            Expr::system_symbol("Default"),
+            vec![Expr::system_symbol("Plus")],
+        ),
+        Expr::small_integer(0),
+    );
+    session.install_system_down_value(
+        "Default",
+        Expr::call(
+            Expr::system_symbol("Default"),
+            vec![Expr::system_symbol("Times")],
+        ),
+        Expr::small_integer(1),
+    );
 }
 
 #[cfg(test)]

@@ -1,6 +1,10 @@
 use super::super::*;
 use crate::runtime::scoping::packages::SourceUnit;
+use std::hash::BuildHasherDefault;
 use thiserror::Error;
+
+pub(in crate::runtime) type SymbolMap<T> =
+    HashMap<Symbol, T, BuildHasherDefault<RuntimeCacheHasher>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(in crate::runtime) enum ContextFrameKind {
@@ -147,6 +151,7 @@ pub(in crate::runtime) struct LoaderSnapshot {
     pub(in crate::runtime) loaded_packages: Vec<String>,
     pub(in crate::runtime) definitions: DefinitionMap,
     pub(in crate::runtime) installed_system_own_values: SymbolSet,
+    pub(in crate::runtime) installed_system_down_values: SymbolMap<Vec<(Expr, Expr)>>,
     pub(in crate::runtime) has_up_value_definitions: bool,
     pub(in crate::runtime) message_definitions: BTreeMap<MessageNameKey, MessageDefinition>,
     pub(in crate::runtime) exception_types: BTreeMap<String, Option<String>>,
@@ -400,6 +405,7 @@ impl Session {
             prng_state: PrngState::default(),
             definitions: DefinitionMap::default(),
             installed_system_own_values: SymbolSet::default(),
+            installed_system_down_values: SymbolMap::default(),
             has_up_value_definitions: false,
             message_definitions: BTreeMap::new(),
             exception_types: BTreeMap::new(),

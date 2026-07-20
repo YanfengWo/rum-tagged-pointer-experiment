@@ -198,6 +198,21 @@ impl Session {
     }
 
     #[doc(hidden)]
+    pub fn install_system_down_value(&mut self, name: &str, lhs: Expr, rhs: Expr) {
+        let symbol = Symbol::system(name);
+        self.store_definition_target(
+            TaggedDefinitionTarget::DownValue(symbol),
+            lhs.clone(),
+            rhs.clone(),
+            false,
+        );
+        self.installed_system_down_values
+            .entry(symbol)
+            .or_default()
+            .push((lhs, rhs));
+    }
+
+    #[doc(hidden)]
     pub fn registered_builtin_specs(&self) -> impl Iterator<Item = &BuiltinSpec> {
         self.builtins.values()
     }
@@ -214,7 +229,10 @@ impl Session {
         let mut summaries = self
             .definitions
             .iter()
-            .filter(|(symbol, _)| !self.is_installed_protected_builtin_own_value_symbol(symbol))
+            .filter(|(symbol, _)| {
+                !self.is_installed_protected_builtin_own_value_symbol(symbol)
+                    && !self.is_installed_system_down_values_symbol(symbol)
+            })
             .map(|(symbol, definition)| SessionDefinitionSummary {
                 name: symbol.fully_qualified_name(),
                 has_own_value: definition.own_value.is_some()
@@ -240,7 +258,10 @@ impl Session {
         let mut symbols = self
             .definitions
             .keys()
-            .filter(|symbol| !self.is_installed_protected_builtin_own_value_symbol(symbol))
+            .filter(|symbol| {
+                !self.is_installed_protected_builtin_own_value_symbol(symbol)
+                    && !self.is_installed_system_down_values_symbol(symbol)
+            })
             .cloned()
             .collect::<Vec<_>>();
         symbols.sort();
@@ -383,6 +404,32 @@ impl Session {
             && definition.up_values.is_empty()
             && definition.down_values.is_empty()
             && definition.sub_values.is_empty()
+    }
+
+    pub(in crate::runtime) fn is_installed_system_down_values_symbol(
+        &self,
+        symbol: &Symbol,
+    ) -> bool {
+        let Some(installed_down_values) = self.installed_system_down_values.get(symbol) else {
+            return false;
+        };
+        let Some(definition) = self.definitions.get(symbol) else {
+            return false;
+        };
+
+        symbol.is_system()
+            && definition.own_value.is_none()
+            && definition.delayed_own_value.is_none()
+            && definition.up_values.is_empty()
+            && definition.sub_values.is_empty()
+            && definition.down_values.len() == installed_down_values.len()
+            && definition
+                .down_values
+                .iter()
+                .zip(installed_down_values)
+                .all(|(down_value, (lhs, rhs))| {
+                    !down_value.delayed && &down_value.lhs == lhs && &down_value.rhs == rhs
+                })
     }
 
     pub fn context_names(&self) -> Vec<String> {

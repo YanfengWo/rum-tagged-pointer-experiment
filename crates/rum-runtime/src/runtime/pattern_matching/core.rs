@@ -194,7 +194,16 @@ impl Session {
         value: Expr,
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
+        let one_identity_head = match &head {
+            MatcherNode::Exact(Expr::Atom(Atom::Symbol(symbol)))
+                if self
+                    .attribute_set_for_symbol(symbol)
+                    .contains(Attribute::OneIdentity) =>
+            {
+                Some(*symbol)
+            }
+            _ => None,
+        };
         let orderless = matcher_head_has_attribute(&head, self, Attribute::Orderless);
         let flat = matcher_head_has_attribute(&head, self, Attribute::Flat);
 
@@ -209,7 +218,18 @@ impl Session {
                 let head_result = self.match_compiled_owned(head, value_head, bindings);
                 self.drive_internal_value(head_result, move |session, outcome| {
                     if !outcome.matched {
-                        return Ok(outcome);
+                        let Some(one_identity_head) = one_identity_head else {
+                            return Ok(outcome);
+                        };
+
+                        return session.match_compiled_promoted_singleton_owned(
+                            args,
+                            Expr::call(flat_head, value_args),
+                            outcome.bindings,
+                            orderless,
+                            flat,
+                            Expr::Atom(Atom::Symbol(one_identity_head)),
+                        );
                     }
 
                     if orderless {
@@ -239,16 +259,43 @@ impl Session {
                     }
                 })
             }
-            other if one_identity => match args.as_slice() {
-                [single] => self.match_compiled_arg_and_rest_owned(
-                    single.clone(),
-                    Vec::new(),
-                    vec![other],
-                    bindings,
-                ),
-                _ => Ok(match_outcome(false, bindings)),
-            },
+            other if one_identity_head.is_some() => self.match_compiled_promoted_singleton_owned(
+                args,
+                other,
+                bindings,
+                orderless,
+                flat,
+                Expr::Atom(Atom::Symbol(
+                    one_identity_head.expect("guarded OneIdentity head should be present"),
+                )),
+            ),
             _ => Ok(match_outcome(false, bindings)),
+        }
+    }
+
+    fn match_compiled_promoted_singleton_owned(
+        &mut self,
+        args: Vec<MatcherArg>,
+        value: Expr,
+        bindings: SymbolExprMap,
+        orderless: bool,
+        flat: bool,
+        flat_head: Expr,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let value_args = vec![value];
+
+        if orderless {
+            if flat {
+                self.match_compiled_orderless_args_with_flat_head_owned(
+                    args, value_args, bindings, flat_head,
+                )
+            } else {
+                self.match_compiled_orderless_args_owned(args, value_args, bindings)
+            }
+        } else if flat {
+            self.match_compiled_args_with_flat_head_owned(args, value_args, bindings, flat_head)
+        } else {
+            self.match_compiled_args_owned(args, value_args, bindings)
         }
     }
 

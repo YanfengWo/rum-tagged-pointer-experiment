@@ -34,13 +34,24 @@ Grounding (probed + code-read 2026-07-20):
 
 Queue (user-approved plan items 1-4, 2026-07-20):
 
-- [ ] brief-275 — items 2: OneIdentity promoted-singleton matching
+- [x] brief-275 — items 2: OneIdentity promoted-singleton matching
   (atom arm generalized past `[single]`; Call-arm head-mismatch
   fallback; both routed through the existing orderless/flat arg
   dispatch with `vec![value]`) + register `Default[Plus] = 0`,
   `Default[Times] = 1` at install. Deliberate WL-conformant behavior
   change: `MatchQ[anything, x_ + y_.]` becomes True. Matcher = hot
-  path ⇒ microbench A/B.
+  path ⇒ microbench A/B. DONE 2026-07-20 (revision 1: round 1
+  eval-seeded `Default` downvalues leaked into the host user-
+  definitions contract — new symmetric `installed_system_down_values`
+  kernel classification, content-equal conservative predicate, OR'd
+  into all four filter sites; host test unchanged and green. Gate:
+  workspace 1651/0; A/B 14 faster/18 slower/6 flat — named targets
+  (`matchq-*`, `downvalue-pattern-hit`, `replaceall-simple`) all flat-
+  to-favorable; the three worst movements are unrelated loop-control
+  labels that don't touch the matcher or Default lookup at all —
+  noise-floor by the AGENTS.md unaffected-control rule, not a
+  regression. Nested `c_. * b_^e_.` stays unmatched at the Power
+  boundary — stated stop-loss, not chased.)
 - [ ] brief-276 — items 1+3+4: respec the two `#[ignore]` tests to
   rum's OWN documented contract (candidate set = groupings ×
   orderings × omissions, deduplicated; fewer-defaults candidates

@@ -407,7 +407,10 @@ impl Session {
         let symbols = symbols
             .iter()
             .copied()
-            .filter(|symbol| !self.is_installed_protected_builtin_own_value_symbol(symbol))
+            .filter(|symbol| {
+                !self.is_installed_protected_builtin_own_value_symbol(symbol)
+                    && !self.is_installed_system_down_values_symbol(symbol)
+            })
             .collect::<Vec<_>>();
 
         if textual_dump {
@@ -749,7 +752,10 @@ impl Session {
         symbols
             .into_iter()
             .filter(|symbol| self.persist_context_is_included(symbol.context(), filters))
-            .filter(|symbol| !self.is_installed_protected_builtin_own_value_symbol(symbol))
+            .filter(|symbol| {
+                !self.is_installed_protected_builtin_own_value_symbol(symbol)
+                    && !self.is_installed_system_down_values_symbol(symbol)
+            })
             .collect()
     }
 
