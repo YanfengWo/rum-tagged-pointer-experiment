@@ -139,9 +139,12 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
-- **PUBLICATION-PREP LINE — ACTIVE (opened 2026-07-21). User ruled
-  divergence is now SUFFICIENT and reversed the 2026-07-06
-  publication-deferral (see the updated bullet below).** Two rulings
+- **PUBLICATION-PREP LINE — COMPLETE (2026-07-21). rum is PUBLISHED at
+  https://github.com/siqiliu-tsinghua/rum** (main `b854d3e` with full
+  unrewritten history + annotated tag `v0.1.0`; remote HEAD verified equal to
+  local). All four buckets closed. **User ruled divergence is now SUFFICIENT
+  and reversed the 2026-07-06 publication-deferral (see the updated bullet
+  below).** Two rulings
   set the shape: (1) release form = **source-available GitHub only**
   (no crates.io ⇒ no per-crate `publish`/metadata/semver burden, just a
   `repository` field); (2) the public tree is **fully transparent** —

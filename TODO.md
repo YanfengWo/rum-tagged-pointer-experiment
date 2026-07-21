@@ -3,11 +3,14 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
-## ACTIVE PLAN — publication-prep line (opened 2026-07-21)
+## COMPLETE — publication-prep line (2026-07-21) — PUBLISHED
+
+**`rum` is now public at https://github.com/siqiliu-tsinghua/rum** (pushed
+2026-07-21: `main` at `b854d3e` with full unrewritten history + annotated tag
+`v0.1.0`; remote HEAD verified equal to local HEAD). All four buckets closed.
 
 User ruled divergence is now SUFFICIENT and reversed the 2026-07-06
-"publication deferred indefinitely" directive. Moving to pre-publication
-prep. Two shaping rulings (2026-07-21):
+"publication deferred indefinitely" directive. Two shaping rulings (2026-07-21):
 
 - **Release form = source-available GitHub only** (no crates.io). ⇒ no
   per-crate `publish` flags, no crates.io metadata/name/semver burden; the
@@ -132,19 +135,18 @@ surface fixes that the SECURITY.md threat model must reflect):
      links validated zero-dead; DISCLAIMER legal posture reviewed, accurate).
 
    **Bucket 3 (cleanup / accuracy) CLOSED 2026-07-21.**
-4. **Mechanism / handoff (light):** waiting on the GitHub owner/repo name from
-   the user, then:
-   - [ ] add `repository = "https://github.com/<owner>/<repo>"` to `Cargo.toml`;
-   - [ ] replace the placeholder Jupyter `help_links` URL
-     `https://example.invalid/rum` in `crates/rum-jupyter/src/adapter/mod.rs`
-     with the real repository URL (surfaced during the `.rum`-extension review);
-   - [ ] tag `v0.1.0` (annotated);
-   - [ ] cold-backup bundle (per `cold-backup-bundle-procedure`, at the final
-     publishable state);
-   - [ ] hand the user the exact `git remote add origin <url>` /
-     `git push -u origin main` / `git push origin v0.1.0` steps. GitHub
-     empty-repo gotcha already reviewed with the user: create the repo with NO
-     README/.gitignore/license so the 1495-commit history pushes fast-forward.
+4. **Mechanism / handoff — CLOSED 2026-07-21 (PUBLISHED).**
+   - [x] `repository = "https://github.com/siqiliu-tsinghua/rum"` added to
+     `[workspace.package]`, inherited by all nine crates (`chore` commit
+     `b854d3e`).
+   - [x] Jupyter `help_links` URL replaced (`https://example.invalid/rum` →
+     the real repository URL) in `crates/rum-jupyter/src/adapter/mod.rs`.
+   - [x] annotated tag `v0.1.0` (`5a3b83e`) created and pushed.
+   - [x] cold-backup bundle created + verified (is okay / complete history /
+     bundle HEAD == repo HEAD) before the push.
+   - [x] pushed to the empty public repo (created with no README/.gitignore/
+     license, so `git push -u origin main` was a clean fast-forward);
+     `git push origin v0.1.0` pushed the tag. Remote refs verified.
 
    **`.rum` extension decision (DONE 2026-07-21, commit 3e71ee2):** `rum` adopts
    its own `.rum` script suffix. The runtime is extension-agnostic (runs any
