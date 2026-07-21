@@ -39,11 +39,12 @@ semantics** (see the language guide and builtin reference under `docs/`).
 Wolfram®, Mathematica®, Wolfram Language™, and related names and marks are
 trademarks or registered trademarks of Wolfram Research, Inc. They are used
 here **nominatively** only — to name the notation family that influenced
-`rum`'s syntax and to state non-affiliation — and imply no endorsement. A few
-third-party ecosystem identifiers are retained so that existing editors
-highlight `rum` code sensibly (a `codemirror_mode` of `mathematica`, the `mma`
-Pygments lexer name, the `.wl` file extension); they name those ecosystems'
-modes, not an affiliation.
+`rum`'s syntax and to state non-affiliation — and imply no endorsement. `rum`
+identifies itself with its own ecosystem identifiers — the language name `rum`,
+the `text/x-rum` MIME type, the `.rum` file extension, and generic `text` editor
+modes — not Wolfram identifiers. A user who wants richer highlighting for
+`rum`'s notation may point an editor at a Wolfram-family mode, but that is the
+user's choice and implies no affiliation.
 
 ## Development method and project history
 

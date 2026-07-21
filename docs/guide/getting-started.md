@@ -59,17 +59,17 @@ Use `--file` to evaluate a source file.
 The file is evaluated in one session, and the CLI prints the final result.
 
 ```text
-$ cat > /tmp/rum-guide-start.wl <<'EOF'
+$ cat > /tmp/rum-guide-start.rum <<'EOF'
 square[x_] := x * x
 square[6]
 EOF
-$ cargo run -q -p rum-cli -- --file /tmp/rum-guide-start.wl
+$ cargo run -q -p rum-cli -- --file /tmp/rum-guide-start.rum
 36
 ```
 
 A positional path works too:
 
-`cargo run -q -p rum-cli -- /tmp/rum-guide-start.wl`
+`cargo run -q -p rum-cli -- /tmp/rum-guide-start.rum`
 
 The guide examples use `--file` because it makes the command form explicit.
 
@@ -188,10 +188,15 @@ The evaluation chapter shows `Message`, `Quiet`, and `Check`.
 
 ## File Extensions
 
-The CLI accepts ordinary text files.
+The CLI accepts ordinary text files. The runtime does not inspect the file
+extension, so any suffix evaluates the same way.
 
-The examples use `.wl` because it is a common source-file suffix in this
-repository, not because the runtime requires that suffix.
+The examples use `.rum`, which is `rum`'s own source-file suffix. Because `rum`
+has diverged from the Wolfram Language in documented ways, prefer `.rum` over
+`.wl` for `rum` source: it names the file as `rum` code and avoids implying
+Wolfram-Language compatibility that `rum` does not claim. A `.wl` file still
+evaluates identically if you have one — the choice of suffix is a labelling
+convention, not a runtime requirement.
 
 `Get`, `Needs`, `Save`, and `DumpSave` also operate on text paths subject to the
 host capability policy.
