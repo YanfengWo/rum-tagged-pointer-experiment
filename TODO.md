@@ -21,16 +21,34 @@ surface fixes that the SECURITY.md threat model must reflect):
 
 1. **Security audit** (highest value; the product is "run untrusted scripts
    safely"):
-   - [ ] **brief-289 — capability-classification & limit-coverage consistency
-     audit (diagnostic).** Does each builtin's declared `capability` match the
-     effect its implementation performs? Does the single dispatch gate
-     (`builtins_context_loader.rs:68`) sit upstream of every capability-bearing
-     effect? Do the session resource limits (recursion/iteration/parse-depth/
-     match-depth/eval-timeout/memory) each actually bound their resource? Plus
-     the three hard-line greps (zero `unsafe` in rum-core/rum-runtime; no direct
-     `std::fs`/`std::net` in non-test; `Pure` = deterministic). Findings-table
-     shape (like the kernel-a audit); written in an engineering-hygiene register
-     to clear the Codex cybersecurity filter. Fix briefs follow per finding.
+   - [x] **brief-289 — capability-classification & limit-coverage consistency
+     audit (diagnostic). DONE 2026-07-21** (commit 3169cb4; findings
+     `docs/dev/publication-audit/capability-consistency-findings.md`).
+     Sections 1-2 by Codex (642-row classification table; gate-coverage all
+     covered), sections 3-4 + verdict director-completed (Codex hit the OpenAI
+     cybersecurity filter at the section-3 resource probes; live probing is
+     director-run — see `codex-cybersecurity-filter.md`). Codex corrected the
+     brief's stale checkpoint pointer: real enforcement is at
+     `eval_dispatch/mod.rs:135-138`, not `builtins_context_loader.rs:68`.
+     **Verdict: no sandbox bypass; the three hard lines hold** (zero kernel
+     `unsafe`; zero kernel `std::fs`; no `std::net`). Two findings:
+     - [ ] **Finding A (low, doc):** `BeginPackage`/`DeclarePackage` labeled
+       `Pure` but transitively `FileRead` via the dependency form. Verified
+       sound (gated by `eval_needs`). User ruled 2026-07-21: keep `Pure`, add a
+       transitive-`FileRead` note to the generated reference. → small
+       reference-note fix (director; pairs with the bucket-2 docs pass).
+     - [ ] **brief-290 — Finding B (medium, hardening): `Power`/big-integer
+       producers unbounded by `integer_work_limit`** (wired to `Factorial`
+       only). `2^(10^9)` runs unbounded. Fix = a pre-compute size estimate
+       guard in `eval_power` mirroring the `Factorial` guard, reusing
+       `IntegerWorkLimitExceeded`; budget = `integer_work_limit * 64` bits;
+       Power-only scope. Hot path ⇒ microbench A/B gate. Written + queued
+       2026-07-21.
+     - [ ] SECURITY.md (bucket 2) MUST state the operational requirement the
+       audit surfaced: untrusted evaluation requires the host to set the two
+       opt-in bounds (request memory ceiling + wall-clock timeout); the
+       always-on structural limits bound computation SHAPE, not the cost of a
+       single expensive value.
    - [ ] Dependency/supply-chain: `cargo audit` (RUSTSEC) + `cargo deny`
      (licenses/sources) — director runs at the gate.
    - [x] **Secrets/sensitive-info scan — DONE 2026-07-21 (director), CLEAN.**
