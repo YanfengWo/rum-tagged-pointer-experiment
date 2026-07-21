@@ -77,10 +77,11 @@ surface fixes that the SECURITY.md threat model must reflect):
      1495 commits of preserved history (`git log --all -G` / `--diff-filter=A`:
      no private keys / cloud prefixes / jupyter keys / `.env`-style assignments,
      no sensitive-extension file ever added). Two non-secret notes → cleanup
-     bucket: 4 files leak `/Users/fft` local paths (`CLAUDE.md` + 3 findings
-     docs); `scripts/rum-jupyter-browser-smoke.py` has a benign fixed test token
-     `rum-browser-smoke`. A tooled re-verify (gitleaks/trufflehog, `--log` over
-     history) at the mechanism-handoff gate as defense-in-depth.
+     bucket (both handled 2026-07-21): local absolute home paths in 4 docs were
+     genericized (relative path in `CLAUDE.md`, `~`-relative in the 3 findings
+     docs); `scripts/rum-jupyter-browser-smoke.py`'s `rum-browser-smoke` is a
+     benign fixed test token, left as-is. A tooled re-verify (gitleaks/trufflehog,
+     `--log` over history) at the mechanism-handoff gate as defense-in-depth.
 2. **Doc completion** (in progress):
    - [x] `SECURITY.md` — DONE 2026-07-21. Sandbox threat model from the audit
      (capabilities, always-on limits table, the untrusted-eval requirement to
@@ -120,11 +121,17 @@ surface fixes that the SECURITY.md threat model must reflect):
      they would churn history and break internal cross-links like AGENTS.md's
      reading path and the guide's contract-sources list); order is imposed by the
      index READMEs. New links validated (zero dead).
-   - [ ] The `/Users/fft` local-path leaks in 4 files (`CLAUDE.md` + 3 findings
-     docs) — genericize or relativize.
+   - [x] Local-path leaks — DONE 2026-07-21. Genericized the home-dir absolute
+     paths in 4 docs: `CLAUDE.md`'s archive reference is now relative
+     (`../Archive/rum-history/`), and the 3 findings/inventory docs' pasted
+     cargo/panic transcripts now use `~`-relative paths. The tracked tree has
+     zero `/Users/<name>` home paths.
    - [x] `.claude/hooks/guard-dispatch.py` (the one tracked `.claude` file)
      confirmed publish-safe (no absolute paths, no secrets).
-   - [ ] README/DISCLAIMER front-door read-through.
+   - [x] README/DISCLAIMER front-door read-through — DONE 2026-07-21 (README
+     links validated zero-dead; DISCLAIMER legal posture reviewed, accurate).
+
+   **Bucket 3 (cleanup / accuracy) CLOSED 2026-07-21.**
 4. **Mechanism / handoff (light):** add `repository` metadata, tag `v0.1.0`,
    cold-backup bundle; the actual public GitHub repo create + `git push` is the
    user's account action — director prepares the exact `git remote add` / push

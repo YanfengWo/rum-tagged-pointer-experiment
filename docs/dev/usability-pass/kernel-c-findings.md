@@ -723,7 +723,7 @@ The huge finite `Pause` was run once and not retried:
 ```text
 $ printf '' | scripts/run-bounded.py --timeout 120 -- target/debug/rum-cli --eval 'Pause[10^100]'
 
-thread 'main' panicked at /Users/fft/.rustup/toolchains/1.85.0-x86_64-apple-darwin/lib/rustlib/src/rust/library/core/src/time.rs:944:23:
+thread 'main' panicked at ~/.rustup/toolchains/1.85.0-x86_64-apple-darwin/lib/rustlib/src/rust/library/core/src/time.rs:944:23:
 cannot convert float seconds to Duration: value is either too big or NaN
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 exit=101

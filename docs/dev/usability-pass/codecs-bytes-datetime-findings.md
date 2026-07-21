@@ -239,7 +239,7 @@ List[DatePlus[List[1, "Days"]][0], $Failed[Association[Rule["a", 1]]], $Failed[A
 
 ```text
 $ scripts/run-bounded.py --timeout 120 -- cargo test -p rum-host sandboxed_host_config_blocks_datetime_current_readers_but_allows_pure_forms -- --nocapture
-   Compiling rum-host v0.1.0 (/Users/fft/Developments/rum/crates/rum-host)
+   Compiling rum-host v0.1.0 (~/Developments/rum/crates/rum-host)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 3.22s
      Running unittests src/lib.rs (target/debug/deps/rum_host-89d65d88c1633f3d)
 

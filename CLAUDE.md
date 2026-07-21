@@ -151,14 +151,14 @@ rather than duplicating them.
   (capability-classification consistency + gate/limit coverage + the
   three hard lines) ② doc completion (SECURITY.md, CONTRIBUTING,
   CODE_OF_CONDUCT, CHANGELOG, rustdoc) ③ light cleanup/accuracy
-  (dead links, the 4 files leaking `/Users/fft` paths) ④ mechanism
+  (dead links, local absolute paths in a few docs) ④ mechanism
   handoff (repository field, v0.1.0 tag, bundle; the actual public repo
   create+push is the user's account action). **Secrets scan: DONE
   by me 2026-07-21, CLEAN** — current tree (git grep ~15 pattern
   classes) AND all 1495 commits of preserved history (`git log --all -G`
   / `--diff-filter=A`): no keys/tokens/PII, zero tracked `.json`, no
   sensitive files ever added. Two non-secret notes → cleanup bucket
-  (the `/Users/fft` paths; a benign `token="rum-browser-smoke"` test
+  (local absolute paths in a few docs; a benign `token="rum-browser-smoke"` test
   literal). First brief = **brief-289** = capability-classification &
   limit-coverage consistency audit (diagnostic; written in an
   engineering-hygiene register to clear the Codex cybersecurity filter —
@@ -288,7 +288,7 @@ rather than duplicating them.
   policy rewritten, wording scan, generated builtin reference + drift test,
   nine-chapter guide, rustdoc + metadata, native stack guard +
   ReplaceRepeated limit-as-value. Removed material lives in the private
-  archive `/Users/fft/Developments/Archive/rum-history/` (MANIFEST.md maps
+  archive `../Archive/rum-history/` (MANIFEST.md maps
   each item to its removal commit; recycling candidates flagged). Memory:
   `release-transformation-line.md`.
 - **PUBLICATION DEFERRAL — REVERSED 2026-07-21 (superseded; see the

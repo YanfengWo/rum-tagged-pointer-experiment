@@ -1574,10 +1574,10 @@ warning: field `source_template` is never read
    = note: `#[warn(dead_code)]` on by default
 
 warning: `rum-runtime` (lib) generated 1 warning
-   Compiling rum-host v0.1.0 (/Users/fft/Developments/rum/crates/rum-host)
-   Compiling rum-terminal v0.1.0 (/Users/fft/Developments/rum/crates/rum-terminal)
-   Compiling rum-repl v0.1.0 (/Users/fft/Developments/rum/crates/rum-repl)
-   Compiling rum-cli v0.1.0 (/Users/fft/Developments/rum/crates/rum-cli)
+   Compiling rum-host v0.1.0 (~/Developments/rum/crates/rum-host)
+   Compiling rum-terminal v0.1.0 (~/Developments/rum/crates/rum-terminal)
+   Compiling rum-repl v0.1.0 (~/Developments/rum/crates/rum-repl)
+   Compiling rum-cli v0.1.0 (~/Developments/rum/crates/rum-cli)
     Finished `release` profile [optimized] target(s) in 2.41s
 ```
 
