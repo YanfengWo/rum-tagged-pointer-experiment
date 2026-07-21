@@ -132,10 +132,26 @@ surface fixes that the SECURITY.md threat model must reflect):
      links validated zero-dead; DISCLAIMER legal posture reviewed, accurate).
 
    **Bucket 3 (cleanup / accuracy) CLOSED 2026-07-21.**
-4. **Mechanism / handoff (light):** add `repository` metadata, tag `v0.1.0`,
-   cold-backup bundle; the actual public GitHub repo create + `git push` is the
-   user's account action — director prepares the exact `git remote add` / push
-   steps and hands them over.
+4. **Mechanism / handoff (light):** waiting on the GitHub owner/repo name from
+   the user, then:
+   - [ ] add `repository = "https://github.com/<owner>/<repo>"` to `Cargo.toml`;
+   - [ ] replace the placeholder Jupyter `help_links` URL
+     `https://example.invalid/rum` in `crates/rum-jupyter/src/adapter/mod.rs`
+     with the real repository URL (surfaced during the `.rum`-extension review);
+   - [ ] tag `v0.1.0` (annotated);
+   - [ ] cold-backup bundle (per `cold-backup-bundle-procedure`, at the final
+     publishable state);
+   - [ ] hand the user the exact `git remote add origin <url>` /
+     `git push -u origin main` / `git push origin v0.1.0` steps. GitHub
+     empty-repo gotcha already reviewed with the user: create the repo with NO
+     README/.gitignore/license so the 1495-commit history pushes fast-forward.
+
+   **`.rum` extension decision (DONE 2026-07-21, commit 3e71ee2):** `rum` adopts
+   its own `.rum` script suffix. The runtime is extension-agnostic (runs any
+   suffix; `Get`/`Needs` append nothing), and the Jupyter kernel already
+   advertised `.rum` + `text/x-rum`; the guide examples and DISCLAIMER were
+   updated to match (they had lagged at `.wl`). `.wl` still runs; `.rum` is the
+   preferred label to avoid implying Wolfram-Language compatibility.
 
 Memory: `publication-prep-line.md`.
 
