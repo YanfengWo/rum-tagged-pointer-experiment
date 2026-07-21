@@ -195,3 +195,13 @@ language guide / builtin reference documentation pass. A Python binding (via
 native Rust bindings layered on `rum-host`) and a plugin-sandbox showcase
 application are future directions, deliberately deferred until the kernel and
 host contract are stable.
+
+## Contributing, security, and license
+
+- Contributions are welcome under the terms in [CONTRIBUTING.md](./CONTRIBUTING.md);
+  participation is governed by the [Code of Conduct](./CODE_OF_CONDUCT.md).
+- To report a security issue, and for the sandbox threat model, see
+  [SECURITY.md](./SECURITY.md).
+- Release notes are in [CHANGELOG.md](./CHANGELOG.md).
+- `rum` is MIT-licensed ([LICENSE](./LICENSE)); scope, trademarks, and project
+  history are in [DISCLAIMER.md](./DISCLAIMER.md).

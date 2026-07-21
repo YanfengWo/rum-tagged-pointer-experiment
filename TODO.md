@@ -55,11 +55,11 @@ surface fixes that the SECURITY.md threat model must reflect):
        `exponent.magnitude().to_u128()` + u128 saturating compare — A/B'd
        0.1447s vs 0.1503s baseline on `Table[k^3,{k,1,90000}]`, i.e. within
        noise, no regression).
-     - [ ] SECURITY.md (bucket 2) MUST state the operational requirement the
-       audit surfaced: untrusted evaluation requires the host to set the two
-       opt-in bounds (request memory ceiling + wall-clock timeout); the
-       always-on structural limits bound computation SHAPE, not the cost of a
-       single expensive value.
+     - [x] SECURITY.md states the operational requirement the audit surfaced
+       (DONE 2026-07-21, in bucket 2): untrusted evaluation requires the host to
+       set the two opt-in bounds (request memory ceiling + wall-clock timeout);
+       the always-on structural limits bound computation SHAPE, not the cost of
+       a single expensive value.
    - [x] Dependency/supply-chain — DONE 2026-07-21 (manual review; tooled scan
      is a pre-publication local step). `cargo audit`/`cargo deny` are not
      installed here and need the network, so recorded in the findings file
@@ -81,10 +81,24 @@ surface fixes that the SECURITY.md threat model must reflect):
      docs); `scripts/rum-jupyter-browser-smoke.py` has a benign fixed test token
      `rum-browser-smoke`. A tooled re-verify (gitleaks/trufflehog, `--log` over
      history) at the mechanism-handoff gate as defense-in-depth.
-2. **Doc completion:** `SECURITY.md` (sandbox threat model + disclosure —
-   written AFTER the audit so it is honest), `CONTRIBUTING.md`,
-   `CODE_OF_CONDUCT.md`, `CHANGELOG.md` (0.1.0 initial entry); rustdoc
-   completeness (`cargo doc` clean, esp. `rum-host` public API); per-crate README.
+2. **Doc completion** (in progress):
+   - [x] `SECURITY.md` — DONE 2026-07-21. Sandbox threat model from the audit
+     (capabilities, always-on limits table, the untrusted-eval requirement to
+     set the opt-in memory ceiling + wall-clock timeout, `Protected` is not a
+     boundary, crash-only isolation) + private disclosure to
+     `liusq@tsinghua.edu.cn`.
+   - [x] `CONTRIBUTING.md` — DONE 2026-07-21. Encodes the permanent testing
+     policy (no external-engine differential testing), build/test commands,
+     safe-Rust + hot-path-A/B + file-size rules, reference-drift regeneration,
+     MIT contribution terms.
+   - [x] `CODE_OF_CONDUCT.md` — DONE 2026-07-21 (Contributor Covenant 2.1,
+     contact `liusq@tsinghua.edu.cn`).
+   - [x] `CHANGELOG.md` — DONE 2026-07-21 (0.1.0 initial entry; Keep a
+     Changelog format). README gained a "Contributing, security, and license"
+     section linking all of these.
+   - [ ] rustdoc completeness (`cargo doc` clean, esp. `rum-host` public API).
+   - [ ] per-crate README (or `#![doc]` crate-level docs) for the published
+     crates.
 3. **Cleanup / accuracy (light):** dead intra-repo links, stale references,
    the `/Users/fft` path leaks above, verify `.claude/hooks/guard-dispatch.py`
    (the one tracked `.claude` file) is publish-safe (confirmed: no absolute
