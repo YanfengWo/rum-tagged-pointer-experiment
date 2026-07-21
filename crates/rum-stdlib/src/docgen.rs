@@ -17,6 +17,14 @@ pub const LIMITS: &[(&str, &str)] = &[
         "the timestamp contract is exact rational seconds since the Unix epoch 1970-01-01T00:00:00Z.",
     ),
     (
+        "BeginPackage",
+        "the no-dependency form performs no I/O and stays Pure; the dependency-list form BeginPackage[ctx, {deps}] loads each dependency via Needs, which transitively requires Capability::FileRead and is denied (the load fails closed) under a policy that does not allow it.",
+    ),
+    (
+        "DeclarePackage",
+        "registering a stub context performs no I/O and stays Pure; it installs a deferred autoload, so evaluating a declared symbol later loads the package via Needs, which transitively requires Capability::FileRead and is denied (fails closed) under a policy that does not allow it.",
+    ),
+    (
         "Count",
         "supports the Wolfram Language-documented operator form Count[patt][expr], equivalent to Count[expr, patt].",
     ),

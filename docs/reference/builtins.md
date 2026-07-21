@@ -449,6 +449,7 @@ Starts a package context with a package-oriented context path.
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: the no-dependency form performs no I/O and stays Pure; the dependency-list form BeginPackage[ctx, {deps}] loads each dependency via Needs, which transitively requires Capability::FileRead and is denied (the load fails closed) under a policy that does not allow it.
 - Messages:
   - BeginPackage::argform — Reports an invalid package context or dependency list.
   - BeginPackage::argx — expected `1` argument(s), got `2`
@@ -1170,6 +1171,7 @@ Declares stub names for a package context and prepends that context to the searc
 
 - Attributes: `Protected`
 - Capability: `Pure`
+- Limits: registering a stub context performs no I/O and stays Pure; it installs a deferred autoload, so evaluating a declared symbol later loads the package via Needs, which transitively requires Capability::FileRead and is denied (fails closed) under a policy that does not allow it.
 - Messages:
   - DeclarePackage::argform — Reports an invalid package context or symbol-name list.
   - DeclarePackage::argx — expected exactly `1` argument(s), got `2`

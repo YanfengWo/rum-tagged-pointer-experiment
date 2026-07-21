@@ -776,3 +776,31 @@ Director-run greps, verbatim verdicts:
   and SECURITY.md must state the opt-in memory-ceiling + timeout requirement for
   untrusted use.
 - Everything else: consistent.
+
+**Resolution status (2026-07-21):** Finding A resolved — a transitive-`FileRead`
+`Limits` note was added to `BeginPackage`/`DeclarePackage` in `docgen.rs` and the
+reference regenerated (drift test green). Finding B resolved — brief-290 (`c76889e`)
+bounds `Power` by `integer_work_limit`.
+
+## 5. Dependency review (director, 2026-07-21)
+
+`cargo audit` / `cargo deny` are NOT installed in this environment and need the
+network (advisory DB) to run, so the authoritative RUSTSEC/license/bans scan is
+recorded as a **pre-publication step for the maintainer to run locally**:
+
+```
+cargo install cargo-audit cargo-deny
+cargo audit                 # RUSTSEC advisories against Cargo.lock
+cargo deny check            # advisories + licenses + bans (multiple-versions) + sources
+```
+
+Manual `cargo tree` review of the full graph (done): every external crate is a
+mainstream, actively-maintained dependency. The security-sensitive KERNEL deps are
+just the `num` ecosystem (`num-bigint`/`num-integer`/`num-traits`, exact arithmetic)
+and, behind the default `hash` feature, RustCrypto digests (`sha1`/`sha2`/`md-5`/
+`hmac`/`digest`/`crypto-common`/`subtle`), all well-vetted. The heavy async/transport
+stack (`tokio`, `zeromq`, `futures*`, `mio`, `parking_lot`, …) is pulled ONLY by
+`rum-jupyter`; the kernel + `rum-host` embedding path does not depend on it. No
+obscure, abandoned, or unexpected crate is present. Two non-security notes for the
+`cargo deny` run: `thiserror` v1 AND v2, and `getrandom` v0.3 AND v0.4, are present as
+transitive version skews (duplication, not vulnerabilities).

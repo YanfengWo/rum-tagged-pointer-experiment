@@ -19,8 +19,10 @@ prep. Two shaping rulings (2026-07-21):
 Four buckets, ordered by value + dependency (security first — the audit may
 surface fixes that the SECURITY.md threat model must reflect):
 
-1. **Security audit** (highest value; the product is "run untrusted scripts
-   safely"):
+1. **Security audit — CLOSED 2026-07-21** (highest value; the product is "run
+   untrusted scripts safely"). Endstate: no sandbox bypass, three hard lines
+   hold, both audit findings fixed, secrets + dependency review done. The one
+   carry-forward is the SECURITY.md write-up, which is a bucket-2 (docs) task.
    - [x] **brief-289 — capability-classification & limit-coverage consistency
      audit (diagnostic). DONE 2026-07-21** (commit 3169cb4; findings
      `docs/dev/publication-audit/capability-consistency-findings.md`).
@@ -32,11 +34,13 @@ surface fixes that the SECURITY.md threat model must reflect):
      `eval_dispatch/mod.rs:135-138`, not `builtins_context_loader.rs:68`.
      **Verdict: no sandbox bypass; the three hard lines hold** (zero kernel
      `unsafe`; zero kernel `std::fs`; no `std::net`). Two findings:
-     - [ ] **Finding A (low, doc):** `BeginPackage`/`DeclarePackage` labeled
-       `Pure` but transitively `FileRead` via the dependency form. Verified
-       sound (gated by `eval_needs`). User ruled 2026-07-21: keep `Pure`, add a
-       transitive-`FileRead` note to the generated reference. → small
-       reference-note fix (director; pairs with the bucket-2 docs pass).
+     - [x] **Finding A (low, doc) — DONE 2026-07-21.** Added a transitive-
+       `FileRead` `Limits` note to `BeginPackage`/`DeclarePackage` in
+       `docgen.rs` (the `LIMITS` table) and regenerated
+       `docs/reference/builtins.md` (drift test `builtin_reference_is_in_sync`
+       green). Capability label stays `Pure` per the user ruling; the reference
+       now documents that the dependency/autoload form transitively requires
+       `FileRead` and fails closed when denied.
      - [x] **brief-290 — Finding B (medium, hardening): `Power` now bounded by
        `integer_work_limit`. DONE 2026-07-21.** Pre-compute size estimate in
        `eval_power` (`|exponent| * (num_bits + den_bits)` vs
@@ -56,8 +60,16 @@ surface fixes that the SECURITY.md threat model must reflect):
        opt-in bounds (request memory ceiling + wall-clock timeout); the
        always-on structural limits bound computation SHAPE, not the cost of a
        single expensive value.
-   - [ ] Dependency/supply-chain: `cargo audit` (RUSTSEC) + `cargo deny`
-     (licenses/sources) — director runs at the gate.
+   - [x] Dependency/supply-chain — DONE 2026-07-21 (manual review; tooled scan
+     is a pre-publication local step). `cargo audit`/`cargo deny` are not
+     installed here and need the network, so recorded in the findings file
+     §5 as `cargo install cargo-audit cargo-deny; cargo audit; cargo deny
+     check` for the maintainer. Manual `cargo tree` review: all external crates
+     mainstream/maintained; security-sensitive kernel deps are just `num` +
+     RustCrypto digests (behind `hash`); the heavy `tokio`/`zeromq` stack is
+     `rum-jupyter`-only (kernel + `rum-host` embedding path is free of it).
+     Non-security notes for `cargo deny`: `thiserror` v1&v2, `getrandom`
+     v0.3&v0.4 version skews.
    - [x] **Secrets/sensitive-info scan — DONE 2026-07-21 (director), CLEAN.**
      Current tree (git grep ~15 pattern classes: private keys, AWS/GitHub/
      OpenAI/Google/Slack prefixes, assignment-style secrets, auth headers,
