@@ -19,7 +19,7 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/siqiliu-tsinghua/rum"
-keywords = ["symbolic", "term-rewriting", "sandbox", "scripting", "embedded"]
+keywords = ["symbolic-computation", "term-rewriting", "pattern-matching", "sandbox", "embeddable"]
 categories = ["mathematics", "compilers"]
 
 [workspace.dependencies]

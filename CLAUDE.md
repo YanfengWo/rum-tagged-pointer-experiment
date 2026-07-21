@@ -142,7 +142,12 @@ rather than duplicating them.
 - **PUBLICATION-PREP LINE — COMPLETE (2026-07-21). rum is PUBLISHED at
   https://github.com/siqiliu-tsinghua/rum** (main `b854d3e` with full
   unrewritten history + annotated tag `v0.1.0`; remote HEAD verified equal to
-  local). All four buckets closed. **User ruled divergence is now SUFFICIENT
+  local). All four buckets closed. GitHub topics set (12, wolfram/mathematica
+  deliberately avoided — user); `keywords` aligned. **PROJECT NOW PAUSED
+  post-publication (user 2026-07-21): this repo enters maintenance; downstream
+  capabilities (`rum-fs`/os/net/db, the Python binding) open in SEPARATE
+  workspaces/repos — NOT this folder — and the next active work is the `dun`
+  editor, its own project.** **User ruled divergence is now SUFFICIENT
   and reversed the 2026-07-06 publication-deferral (see the updated bullet
   below).** Two rulings
   set the shape: (1) release form = **source-available GitHub only**
