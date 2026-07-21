@@ -1,0 +1,38 @@
+# Scripts
+
+Helper scripts for developing and testing `rum`. Run them from the repository
+root. Each script also prints usage when run with `--help` or on a bad
+invocation.
+
+## Performance and profiling
+
+- `core-language-microbench.sh` — the `rum`-vs-`rum` language-performance A/B.
+  Runs a labeled workload and writes per-label `timings.tsv`; run it on two builds
+  and compare. Hot-path changes are expected to come with such an A/B.
+- `core-memory-microbench.sh` — the `rum`-vs-`rum` memory-baseline A/B.
+- `sample-self-time.py` — compute per-function self-time from macOS `sample`
+  call-graph output.
+- `sample-attribute-callers.py` — attribute a target leaf symbol's samples to its
+  nearest interesting callers.
+
+## Test and run safety
+
+- `run-bounded.py` — run a command under a wall-time bound, killing its whole
+  process group on timeout. Use it for anything that may run long or spawn
+  children.
+- `guarded-test-run.sh` — run a command under a resource (RSS) watchdog that kills
+  it before it can threaten the machine.
+
+## Jupyter adapter (optional)
+
+- `rum-jupyter-home.sh` — manage a local Jupyter home for the development kernel.
+- `write-rum-jupyter-kernelspec.sh` — write a kernelspec for the `rum` kernel.
+- `smoke-rum-jupyter.sh` — a quick end-to-end Jupyter smoke check.
+- `rum-jupyter-kernel-smoke.py` — `jupyter_client` smoke tests for the kernel.
+- `rum-jupyter-browser-smoke.py` — a headless JupyterLab browser smoke check.
+
+## Maintainer workflow
+
+- `dispatch-brief.sh` — dispatch a Codex task brief for execution (the internal
+  director/Codex workflow; see [`CLAUDE.md`](../CLAUDE.md) and
+  [`docs/dev/codex/`](../docs/dev/codex/)).

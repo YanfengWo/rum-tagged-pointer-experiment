@@ -171,20 +171,21 @@ Run the minimal Rust host embedding example:
 cargo run -p rum-host --example basic_embedding
 ```
 
+## Documentation
+
+- Full index: **[docs/README.md](./docs/README.md)**.
+- [Language guide](./docs/guide/) — learn the language and the embedding surface.
+- [Builtin reference](./docs/reference/builtins.md) — the generated per-builtin
+  contract.
+
 ## Development
 
-- The workspace targets Rust `1.85` (edition 2024) as declared in
-  `Cargo.toml`; use the local native toolchain (`cargo fmt --check`,
-  `cargo test --workspace`). `1.85` is deliberate: it is the edition-2024
-  floor and Debian stable's default rustc, so adopters and distro builds
-  carry no extra toolchain burden.
-- `scripts/core-language-microbench.sh` and
-  `scripts/core-memory-microbench.sh` are the rum-local performance and
-  memory baselines: run them on two builds and compare per-label TSVs for an
-  A/B. Hot-path changes are expected to come with such an A/B.
-- For long-running local commands that may spawn child processes, prefer
-  `scripts/run-bounded.py --timeout SECONDS -- <command> ...`.
-- Agent-facing operational notes live in [AGENTS.md](./AGENTS.md).
+- The workspace targets Rust `1.85` (edition 2024); build and test with
+  `cargo fmt --check` and `cargo test --workspace`.
+- The contribution workflow, the permanent testing policy, and the hot-path A/B
+  rule are in [CONTRIBUTING.md](./CONTRIBUTING.md). The helper scripts are
+  documented in [scripts/README.md](./scripts/README.md), and agent-facing
+  operational notes are in [AGENTS.md](./AGENTS.md).
 
 ## Direction
 

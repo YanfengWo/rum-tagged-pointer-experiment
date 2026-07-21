@@ -107,10 +107,24 @@ surface fixes that the SECURITY.md threat model must reflect):
      crates.io readme surface); crate-level `//!` docs are the valuable form.
 
    **Bucket 2 (doc completion) CLOSED 2026-07-21.**
-3. **Cleanup / accuracy (light):** dead intra-repo links, stale references,
-   the `/Users/fft` path leaks above, verify `.claude/hooks/guard-dispatch.py`
-   (the one tracked `.claude` file) is publish-safe (confirmed: no absolute
-   paths, no secrets), README/DISCLAIMER front-door read-through.
+3. **Cleanup / accuracy (light):**
+   - [x] Docs/scripts navigability — DONE 2026-07-21 (user-requested). Added
+     `docs/README.md` (documentation index categorizing the 10 top-level docs +
+     the guide/reference/dev subfolders), `docs/dev/README.md` (explains dev/ is
+     the transparent internal working record — codex briefs, design docs,
+     usability ledgers, audit findings — not needed to use rum), and
+     `scripts/README.md` (categorizes the 12 scripts: perf/profiling, run-safety,
+     jupyter, maintainer workflow). Slimmed the top-level README's Development
+     section to link out to CONTRIBUTING/scripts/docs instead of inlining detail,
+     and added a Documentation section. Folder layout kept as-is (no file moves —
+     they would churn history and break internal cross-links like AGENTS.md's
+     reading path and the guide's contract-sources list); order is imposed by the
+     index READMEs. New links validated (zero dead).
+   - [ ] The `/Users/fft` local-path leaks in 4 files (`CLAUDE.md` + 3 findings
+     docs) — genericize or relativize.
+   - [x] `.claude/hooks/guard-dispatch.py` (the one tracked `.claude` file)
+     confirmed publish-safe (no absolute paths, no secrets).
+   - [ ] README/DISCLAIMER front-door read-through.
 4. **Mechanism / handoff (light):** add `repository` metadata, tag `v0.1.0`,
    cold-backup bundle; the actual public GitHub repo create + `git push` is the
    user's account action — director prepares the exact `git remote add` / push
