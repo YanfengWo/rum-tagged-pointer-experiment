@@ -37,13 +37,20 @@ surface fixes that the SECURITY.md threat model must reflect):
        sound (gated by `eval_needs`). User ruled 2026-07-21: keep `Pure`, add a
        transitive-`FileRead` note to the generated reference. → small
        reference-note fix (director; pairs with the bucket-2 docs pass).
-     - [ ] **brief-290 — Finding B (medium, hardening): `Power`/big-integer
-       producers unbounded by `integer_work_limit`** (wired to `Factorial`
-       only). `2^(10^9)` runs unbounded. Fix = a pre-compute size estimate
-       guard in `eval_power` mirroring the `Factorial` guard, reusing
-       `IntegerWorkLimitExceeded`; budget = `integer_work_limit * 64` bits;
-       Power-only scope. Hot path ⇒ microbench A/B gate. Written + queued
-       2026-07-21.
+     - [x] **brief-290 — Finding B (medium, hardening): `Power` now bounded by
+       `integer_work_limit`. DONE 2026-07-21.** Pre-compute size estimate in
+       `eval_power` (`|exponent| * (num_bits + den_bits)` vs
+       `integer_work_limit * 64` bits), reusing `IntegerWorkLimitExceeded` so
+       the rendering is byte-identical to an oversized `Factorial`; trivial
+       bases 0/1/-1 skipped; `(1/2)^big` and `2^-big` guarded. `2^(10^9)` now
+       returns `TerminatedEvaluation["IntegerWorkLimit"]`. Power-only scope
+       (bit shifts etc. deliberately left). Gate: scope clean, workspace green
+       (0 failed), all Power behavior tests pass. **Director optimized the
+       guard to ZERO heap allocation at the gate** (Codex's BigInt-based version
+       measured +4-6% on Power; the zero-alloc version — `.bits()` +
+       `exponent.magnitude().to_u128()` + u128 saturating compare — A/B'd
+       0.1447s vs 0.1503s baseline on `Table[k^3,{k,1,90000}]`, i.e. within
+       noise, no regression).
      - [ ] SECURITY.md (bucket 2) MUST state the operational requirement the
        audit surfaced: untrusted evaluation requires the host to set the two
        opt-in bounds (request memory ceiling + wall-clock timeout); the

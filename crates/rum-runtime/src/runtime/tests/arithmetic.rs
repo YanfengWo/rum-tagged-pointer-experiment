@@ -243,6 +243,74 @@ fn factorial_respects_integer_work_limit() {
 }
 
 #[test]
+fn power_respects_integer_work_limit_for_large_positive_exponents() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let limited = session.eval_text("2^(10^9)").unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
+    );
+    assert!(
+        limited
+            .messages
+            .iter()
+            .any(|message| message.symbol == "General" && message.tag == "reslim")
+    );
+}
+
+#[test]
+fn power_integer_work_limit_allows_normal_and_trivial_results() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    let normal = session.eval_text("2^100000").unwrap();
+    assert!(matches!(&normal.value, Expr::Atom(Atom::Integer(_))));
+
+    for (source, expected) in [("1^(10^9)", "1"), ("0^(10^9)", "0"), ("(-1)^(10^9)", "1")] {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn power_integer_work_limit_guards_large_denominators() {
+    let mut session = session_with_test_rewrite_builtins();
+
+    for source in ["(1/2)^(10^9)", "2^(-10^9)"] {
+        let limited = session.eval_text(source).unwrap();
+        assert_eq!(
+            limited.value.to_string(),
+            "TerminatedEvaluation[\"IntegerWorkLimit\"]",
+            "{source}"
+        );
+        assert!(
+            limited
+                .messages
+                .iter()
+                .any(|message| message.symbol == "General" && message.tag == "reslim"),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn power_reads_the_live_integer_work_limit() {
+    let mut session = session_with_test_rewrite_builtins();
+    session.set_integer_work_limit(1);
+
+    let limited = session.eval_text("2^100").unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
+    );
+
+    session.set_integer_work_limit(100_000);
+    assert_eq!(
+        eval_to_string(&mut session, "2^100"),
+        "1267650600228229401496703205376"
+    );
+}
+
+#[test]
 fn exact_division_and_negative_integer_powers_produce_rationals() {
     let mut session = session_with_test_rewrite_builtins();
 

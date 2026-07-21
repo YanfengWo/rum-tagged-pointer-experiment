@@ -1,5 +1,6 @@
 use super::super::*;
 use super::exact::*;
+use num_traits::ToPrimitive;
 use std::borrow::Cow;
 
 impl Session {
@@ -28,6 +29,8 @@ impl Session {
             if exponent == BigInt::from(0_u8) && base.is_zero() {
                 return Ok(Expr::call(head.clone(), args.to_vec()));
             }
+
+            self.enforce_integer_work_limit_for_power(&base, &exponent)?;
 
             return Ok(base
                 .pow(&exponent)
@@ -90,6 +93,45 @@ impl Session {
         }
 
         Ok(Expr::call(head.clone(), args.to_vec()))
+    }
+
+    fn enforce_integer_work_limit_for_power(
+        &self,
+        base: &Rational,
+        exponent: &BigInt,
+    ) -> Result<(), EvalError> {
+        // Bound the size of the produced value BEFORE `base.pow(exponent)` builds
+        // it: the result's numerator/denominator bit-lengths are at most
+        // `|exponent| * (num_bits + den_bits)`. Everything below is O(1) on limb
+        // counts with no heap allocation, so the guard is negligible next to the
+        // exponentiation it protects (mirrors the Factorial pre-check).
+        let num_bits = base.numerator().bits();
+        let den_bits = base.denominator().bits();
+
+        // Base 0, 1, or -1: the result is bounded regardless of the exponent.
+        // (`den_bits <= 1` means denominator == 1; `num_bits <= 1` means
+        // |numerator| <= 1.) A small denominator like `(1/2)` is NOT trivial —
+        // its reciprocal power has an astronomical denominator — so it is not
+        // skipped here.
+        if den_bits <= 1 && num_bits <= 1 {
+            return Ok(());
+        }
+
+        let limit = self.resource_limits.integer_work_limit;
+        let budget_bits = (limit as u128).saturating_mul(64);
+        let per_unit = num_bits as u128 + den_bits as u128;
+
+        // If `|exponent|` does not fit in u128 the base magnitude is >= 2 here, so
+        // the result is astronomically large: fail closed.
+        let exceeds = match exponent.magnitude().to_u128() {
+            Some(magnitude) => magnitude.saturating_mul(per_unit) > budget_bits,
+            None => true,
+        };
+        if exceeds {
+            return Err(EvalError::IntegerWorkLimitExceeded { limit });
+        }
+
+        Ok(())
     }
 
     pub(super) fn eval_subtract(&mut self, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
