@@ -137,7 +137,7 @@ impl KernelAdapter {
             },
             help_links: vec![KernelHelpLink {
                 text: "rum repository".to_string(),
-                url: "https://example.invalid/rum".to_string(),
+                url: "https://github.com/siqiliu-tsinghua/rum".to_string(),
             }],
         }
     }

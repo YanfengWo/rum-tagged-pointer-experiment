@@ -18,6 +18,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
+repository = "https://github.com/siqiliu-tsinghua/rum"
 keywords = ["symbolic", "term-rewriting", "sandbox", "scripting", "embedded"]
 categories = ["mathematics", "compilers"]
 
