@@ -1,3 +1,10 @@
+//! Terminal rendering helpers for `rum`.
+//!
+//! This crate turns the structured outcomes produced by [`rum_host`] — messages,
+//! failures, and inspection responses — into plain terminal text. It is a pure
+//! `rum-host` consumer: it depends on the host contract types only, not on the
+//! kernel (`rum-runtime`) or the standard library (`rum-stdlib`).
+
 use std::fmt::Write;
 
 use rum_host::{

@@ -96,9 +96,17 @@ surface fixes that the SECURITY.md threat model must reflect):
    - [x] `CHANGELOG.md` — DONE 2026-07-21 (0.1.0 initial entry; Keep a
      Changelog format). README gained a "Contributing, security, and license"
      section linking all of these.
-   - [ ] rustdoc completeness (`cargo doc` clean, esp. `rum-host` public API).
-   - [ ] per-crate README (or `#![doc]` crate-level docs) for the published
-     crates.
+   - [x] rustdoc completeness — DONE 2026-07-21. `cargo doc --workspace
+     --no-deps` is warning-clean; the embedding API `rum-host` already carries
+     `#![warn(missing_docs)]` plus a 40-line crate doc, so the public surface is
+     fully documented.
+   - [x] Crate-level docs — DONE 2026-07-21. Added `//!` crate docs to the four
+     front-end crates that lacked them (`rum-terminal`/`rum-repl`/`rum-cli`/
+     `rum-jupyter`); the kernel crates already had them. Per-crate README files
+     were deemed unnecessary under source-available-only publication (no
+     crates.io readme surface); crate-level `//!` docs are the valuable form.
+
+   **Bucket 2 (doc completion) CLOSED 2026-07-21.**
 3. **Cleanup / accuracy (light):** dead intra-repo links, stale references,
    the `/Users/fft` path leaks above, verify `.claude/hooks/guard-dispatch.py`
    (the one tracked `.claude` file) is publish-safe (confirmed: no absolute

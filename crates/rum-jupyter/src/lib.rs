@@ -1,3 +1,10 @@
+//! Optional Jupyter adapter and transport layer for `rum`.
+//!
+//! Implements the Jupyter messaging protocol over ZeroMQ, bridging a
+//! [`rum_host`] session to Jupyter front ends (execute requests, completion,
+//! inspection, and result MIME bundles). This crate is optional and is the only
+//! front end that pulls in the async/transport stack (`tokio`, `zeromq`).
+
 mod adapter;
 mod bootstrap;
 mod connection;

@@ -1,3 +1,10 @@
+//! Command-line entry point for `rum`.
+//!
+//! The `rum` executable: evaluates expressions and scripts (from arguments,
+//! files, or stdin) and offers `--parse` / `--format` modes, all over a
+//! [`rum_host`] session. It is a pure `rum-host` consumer with no direct
+//! dependency on the kernel or standard library.
+
 use std::env;
 use std::io::{self, IsTerminal, Read, Write};
 use std::process::ExitCode;

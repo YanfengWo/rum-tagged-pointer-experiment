@@ -1,3 +1,11 @@
+//! Interactive shell (REPL) layer for `rum`.
+//!
+//! Drives a read-eval-print loop over a [`rum_host`] session, including the
+//! `:`-prefixed shell commands (`:help`, `:trace`, `:parse`, `:format`, and the
+//! rest) and resumable input. Like the other front ends, it is a pure
+//! `rum-host` consumer with no direct dependency on the kernel or standard
+//! library.
+
 use std::env;
 use std::fs;
 use std::io::{self, BufRead, Write};
