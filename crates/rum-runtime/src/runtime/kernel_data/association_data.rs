@@ -360,6 +360,29 @@ impl AssociationSetLValueTarget {
             Self::FunctionCall { selectors, .. } | Self::Part { selectors, .. } => selectors,
         }
     }
+
+    fn is_direct_single_key_shape(&self) -> bool {
+        match self {
+            Self::FunctionCall { selectors, .. } => selectors.len() == 1,
+            Self::Part { selectors, .. } => {
+                matches!(selectors.as_slice(), [selector] if explicit_association_key_selector(selector).is_some())
+            }
+        }
+    }
+
+    fn direct_single_key(&self, evaluated_selectors: &[Expr]) -> Option<Expr> {
+        let [selector] = evaluated_selectors else {
+            return None;
+        };
+
+        match self {
+            Self::FunctionCall { selectors, .. } if selectors.len() == 1 => Some(selector.clone()),
+            Self::Part { selectors, .. } if matches!(selectors.as_slice(), [raw] if explicit_association_key_selector(raw).is_some()) => {
+                explicit_association_key_selector(selector).cloned()
+            }
+            _ => None,
+        }
+    }
 }
 
 impl Session {
@@ -372,7 +395,9 @@ impl Session {
             return Ok(None);
         };
 
-        if self.association_lvalue_current(target.symbol()).is_none() {
+        let direct_preflight = target.is_direct_single_key_shape()
+            && self.association_lvalue_has_valid_direct_proof(target.symbol());
+        if !direct_preflight && self.association_lvalue_current(target.symbol()).is_none() {
             return Ok(None);
         }
 
@@ -461,6 +486,12 @@ impl Session {
         evaluated_selectors: Vec<Expr>,
         rhs: Expr,
     ) -> Result<Expr, EvalError> {
+        if let Some(key) = target.direct_single_key(&evaluated_selectors) {
+            if self.try_direct_association_rule_update(target.symbol(), key, &rhs)? {
+                return Ok(rhs);
+            }
+        }
+
         let Some(current) = self.association_lvalue_current(target.symbol()) else {
             return Ok(rhs);
         };
@@ -509,6 +540,15 @@ fn association_part_key_path(selectors: &[Expr]) -> Option<Vec<Expr>> {
         .iter()
         .map(association_part_key_selector)
         .collect()
+}
+
+fn explicit_association_key_selector(selector: &Expr) -> Option<&Expr> {
+    match selector {
+        Expr::Call { head, args } if is_system_symbol_name(head, "Key") && args.len() == 1 => {
+            Some(&args[0])
+        }
+        _ => None,
+    }
 }
 
 fn association_part_key_selector(selector: &Expr) -> Option<Expr> {

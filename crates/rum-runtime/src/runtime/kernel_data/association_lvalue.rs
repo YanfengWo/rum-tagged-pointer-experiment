@@ -1,0 +1,256 @@
+use super::super::*;
+
+#[cfg(test)]
+use std::cell::RefCell;
+
+impl Session {
+    pub(in crate::runtime) fn association_lvalue_has_valid_direct_proof(
+        &self,
+        symbol: &Symbol,
+    ) -> bool {
+        self.association_lvalue_call_cache_key(symbol)
+            .is_some_and(|key| self.has_valid_call_stability_proof_for_key(key))
+    }
+
+    fn association_lvalue_call_cache_key(&self, symbol: &Symbol) -> Option<CallStabilityCacheKey> {
+        let current = self
+            .definitions
+            .get(symbol)
+            .and_then(|definition| definition.own_value.as_ref())?;
+        let Expr::Call { head, args } = current else {
+            return None;
+        };
+        is_system_symbol_name(head, "Association").then(|| CallStabilityCacheKey::new(head, args))
+    }
+
+    pub(in crate::runtime) fn try_direct_association_rule_update(
+        &mut self,
+        target: &Symbol,
+        key: Expr,
+        rhs: &Expr,
+    ) -> Result<bool, EvalError> {
+        if !self.direct_association_update_environment_is_unobservable(target) {
+            return Ok(false);
+        }
+
+        let Some(plan) = self.direct_association_rule_plan(target, &key) else {
+            return Ok(false);
+        };
+
+        let updated_rule = Expr::call(system_expr("Rule"), vec![key, rhs.clone()]);
+        let (rule_is_stable, rule_bloom) = self.cached_expr_stability_with_bloom(&updated_rule);
+        if !rule_is_stable {
+            return Ok(false);
+        }
+
+        if self.interrupt_armed {
+            self.poll_host_interrupt_if_due()?;
+        }
+        if self.symbol_is_protected(target) {
+            return Ok(false);
+        }
+
+        let Some(mut proof) = self.take_call_stability_proof_for_key(plan.cache_key) else {
+            return Ok(false);
+        };
+
+        let (updated_head, updated_args) = {
+            let Some(definition) = self.definitions.get_mut(target) else {
+                return Ok(false);
+            };
+            let Some(Expr::Call { head, args }) = definition.own_value.as_mut() else {
+                return Ok(false);
+            };
+            if !is_system_symbol_name(head, "Association")
+                || CallStabilityCacheKey::new(head, args) != plan.cache_key
+            {
+                return Ok(false);
+            }
+
+            let entries = args.make_mut();
+            if plan.position.is_none() && entries.try_reserve(1).is_err() {
+                return Ok(false);
+            }
+            let Some(mutation_guard) =
+                AssociationRuleMutationRollback::apply(entries, plan.position, updated_rule)
+            else {
+                return Ok(false);
+            };
+            if take_direct_association_update_failure(target) {
+                return Err(EvalError::Cancelled);
+            }
+            mutation_guard.commit();
+
+            let updated_head = head.clone();
+            let updated_args = args.clone();
+            definition.delayed_own_value = None;
+            (updated_head, updated_args)
+        };
+
+        self.bump_evaluation_epoch_for_symbol(target);
+        proof.bloom.union_assign(rule_bloom);
+        self.reinsert_call_stability_proof(&updated_head, &updated_args, proof);
+        Ok(true)
+    }
+
+    fn direct_association_rule_plan(
+        &self,
+        target: &Symbol,
+        key: &Expr,
+    ) -> Option<DirectAssociationRulePlan> {
+        let current = self
+            .definitions
+            .get(target)
+            .and_then(|definition| definition.own_value.as_ref())?;
+        let Expr::Call { head, args } = current else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Association") {
+            return None;
+        }
+
+        let mut position = None;
+        for (index, entry) in args.iter().enumerate() {
+            let Expr::Call {
+                head: rule_head,
+                args: rule_args,
+            } = entry
+            else {
+                return None;
+            };
+            if !(is_system_symbol_name(rule_head, "Rule")
+                || is_system_symbol_name(rule_head, "RuleDelayed"))
+                || rule_args.len() != 2
+            {
+                return None;
+            }
+            if position.is_none() && rule_args[0] == *key {
+                position = Some(index);
+            }
+        }
+
+        Some(DirectAssociationRulePlan {
+            cache_key: CallStabilityCacheKey::new(head, args),
+            position,
+        })
+    }
+
+    fn direct_association_update_environment_is_unobservable(&self, target: &Symbol) -> bool {
+        !self.has_up_value_definitions
+            && !self.tracing_enabled
+            && self.monitor_scopes.is_empty()
+            && self.current_time_deadline.is_none()
+            && self.current_memory_limit.is_none()
+            && self.eval_deadline.is_none()
+            && self.pending_input_request.is_none()
+            && self.pending_eval_request.is_none()
+            && self.pending_suspension.is_none()
+            && !self
+                .dynamic_own_values
+                .iter()
+                .any(|frame| frame.symbol == *target)
+            && !self.removed_symbols.contains(target)
+            && !self.symbol_is_protected(target)
+    }
+
+    #[cfg(test)]
+    pub(in crate::runtime) fn fail_next_direct_association_update_after_mutation(
+        &mut self,
+        target: Symbol,
+    ) {
+        DIRECT_ASSOCIATION_UPDATE_FAILURE_TARGET.with(|pending| {
+            *pending.borrow_mut() = Some(target);
+        });
+    }
+}
+
+struct DirectAssociationRulePlan {
+    cache_key: CallStabilityCacheKey,
+    position: Option<usize>,
+}
+
+enum AssociationRuleMutationUndo {
+    Appended,
+    Replaced { index: usize, previous: Expr },
+}
+
+struct AssociationRuleMutationRollback<'a> {
+    entries: &'a mut Vec<Expr>,
+    undo: AssociationRuleMutationUndo,
+    committed: bool,
+}
+
+impl<'a> AssociationRuleMutationRollback<'a> {
+    fn apply(
+        entries: &'a mut Vec<Expr>,
+        position: Option<usize>,
+        updated_rule: Expr,
+    ) -> Option<Self> {
+        let undo = if let Some(index) = position {
+            let slot = entries.get_mut(index)?;
+            AssociationRuleMutationUndo::Replaced {
+                index,
+                previous: std::mem::replace(slot, updated_rule),
+            }
+        } else {
+            entries.push(updated_rule);
+            AssociationRuleMutationUndo::Appended
+        };
+
+        Some(Self {
+            entries,
+            undo,
+            committed: false,
+        })
+    }
+
+    fn commit(mut self) {
+        self.committed = true;
+    }
+}
+
+impl Drop for AssociationRuleMutationRollback<'_> {
+    fn drop(&mut self) {
+        if self.committed {
+            return;
+        }
+
+        match &mut self.undo {
+            AssociationRuleMutationUndo::Appended => {
+                let _ = self.entries.pop();
+            }
+            AssociationRuleMutationUndo::Replaced { index, previous } => {
+                std::mem::swap(&mut self.entries[*index], previous);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    static DIRECT_ASSOCIATION_UPDATE_FAILURE_TARGET: RefCell<Option<Symbol>> = const {
+        RefCell::new(None)
+    };
+}
+
+#[cfg(test)]
+fn take_direct_association_update_failure(target: &Symbol) -> bool {
+    DIRECT_ASSOCIATION_UPDATE_FAILURE_TARGET.with(|pending| {
+        let mut pending = pending.borrow_mut();
+        if pending
+            .as_ref()
+            .is_some_and(|candidate| candidate == target)
+        {
+            pending.take();
+            true
+        } else {
+            false
+        }
+    })
+}
+
+#[cfg(not(test))]
+#[inline]
+fn take_direct_association_update_failure(_target: &Symbol) -> bool {
+    false
+}

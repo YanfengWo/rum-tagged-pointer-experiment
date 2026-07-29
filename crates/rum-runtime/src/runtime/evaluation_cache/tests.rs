@@ -23,6 +23,50 @@ fn cache_stable_call(session: &mut Session, expr: &Expr) -> StabilityBloom {
     bloom
 }
 
+fn association_definition_cache_key(session: &Session, target: &Symbol) -> CallStabilityCacheKey {
+    let current = session
+        .definitions
+        .get(target)
+        .and_then(|definition| definition.own_value.as_ref())
+        .expect("the test target must have an Association own value");
+    let (head, args) = call_parts(current);
+    assert!(is_system_symbol_name(head, "Association"));
+    CallStabilityCacheKey::new(head, args)
+}
+
+fn association_definition_args_key(session: &Session, target: &Symbol) -> usize {
+    let current = session
+        .definitions
+        .get(target)
+        .and_then(|definition| definition.own_value.as_ref())
+        .expect("the test target must have an Association own value");
+    call_parts(current).1.ptr_key()
+}
+
+fn seed_association_stability_proof(session: &mut Session, target: &Symbol) {
+    let current = session
+        .definitions
+        .get(target)
+        .and_then(|definition| definition.own_value.clone())
+        .expect("the test target must have an Association own value");
+    assert!(session.cached_expr_is_evaluation_stable(&current));
+    drop(current);
+    let key = association_definition_cache_key(session, target);
+    assert!(session.has_valid_call_stability_proof_for_key(key));
+}
+
+fn association_function_lvalue(target: Symbol, key: Expr) -> Expr {
+    Expr::call(Expr::Atom(Atom::Symbol(target)), vec![key])
+}
+
+fn session_with_stable_association(name: &str) -> (Session, Symbol) {
+    let mut session = Session::default();
+    let target = Symbol::new(GLOBAL_CONTEXT, name);
+    session.eval_text(&format!("{name} = <|x -> 1|>")).unwrap();
+    seed_association_stability_proof(&mut session, &target);
+    (session, target)
+}
+
 #[test]
 fn append_to_args_become_exclusive_after_definition_take_and_cache_entry_removal() {
     let mut session = Session::default();
@@ -172,6 +216,25 @@ fn pointer_mismatched_entry_is_left_untouched() {
 }
 
 #[test]
+fn valid_call_stability_proof_preflight_is_non_consuming_and_reuses_validity() {
+    let mut session = Session::default();
+    let expr = Expr::call(system_expr("List"), vec![Expr::small_integer(1)]);
+    cache_stable_call(&mut session, &expr);
+    let (head, args) = call_parts(&expr);
+    let key = CallStabilityCacheKey::new(head, args);
+
+    assert!(session.has_valid_call_stability_proof_for_key(key));
+    assert!(session.call_stability_cache.contains_key(&key));
+
+    session.call_stability_generation += 1;
+    assert!(!session.has_valid_call_stability_proof_for_key(key));
+    assert!(
+        session.call_stability_cache.contains_key(&key),
+        "preflight must not remove a stale entry"
+    );
+}
+
+#[test]
 fn proof_reinsertion_uses_current_generation_dirty_snapshot_and_bloom() {
     let mut session = Session::default();
     let expr = Expr::call(system_expr("List"), vec![Expr::small_integer(1)]);
@@ -264,6 +327,287 @@ fn association_lvalue_update_preserves_an_aliased_value() {
         "List[Association[Rule[1, 2]], Association[Rule[1, 2], Rule[3, 4]]]"
     );
     assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof() {
+    let (mut session, target) = session_with_stable_association("directAssociation");
+    let before = association_definition_args_key(&session, &target);
+
+    let replaced = session.eval_text("directAssociation[x] = 2").unwrap();
+    assert_eq!(replaced.value.to_string(), "2");
+    assert_eq!(association_definition_args_key(&session, &target), before);
+    assert!(
+        session.has_valid_call_stability_proof_for_key(association_definition_cache_key(
+            &session, &target,
+        ))
+    );
+
+    let appended = session.eval_text("directAssociation[y] = 3").unwrap();
+    assert_eq!(appended.value.to_string(), "3");
+    assert_eq!(association_definition_args_key(&session, &target), before);
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref())
+            .unwrap()
+            .to_string(),
+        "Association[Rule[x, 2], Rule[y, 3]]"
+    );
+
+    let current = session
+        .definitions
+        .get(&target)
+        .and_then(|definition| definition.own_value.clone())
+        .unwrap();
+    let (stable, cached_bloom) = session.cached_expr_stability_with_bloom(&current);
+    assert!(stable);
+    let (head, args) = call_parts(&current);
+    let proof = session
+        .take_call_stability_proof(head, args)
+        .expect("the direct update must reinsert the exact Association proof");
+    assert_eq!(proof.bloom, cached_bloom);
+}
+
+#[test]
+fn association_lvalue_absent_stale_and_dirty_proofs_use_fallback() {
+    let (mut absent_session, absent_target) =
+        session_with_stable_association("absentProofAssociation");
+    absent_session.clear_evaluation_caches();
+    let absent_before = association_definition_args_key(&absent_session, &absent_target);
+    absent_session
+        .eval_text("absentProofAssociation[x] = 2")
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&absent_session, &absent_target),
+        absent_before
+    );
+
+    let (mut stale_session, stale_target) =
+        session_with_stable_association("staleProofAssociation");
+    stale_session.call_stability_generation += 1;
+    let stale_before = association_definition_args_key(&stale_session, &stale_target);
+    stale_session
+        .eval_text("staleProofAssociation[x] = 2")
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&stale_session, &stale_target),
+        stale_before
+    );
+
+    let (mut dirty_session, dirty_target) =
+        session_with_stable_association("dirtyProofAssociation");
+    dirty_session.bump_evaluation_epoch_for_symbol(&Symbol::new(GLOBAL_CONTEXT, "x"));
+    let dirty_before = association_definition_args_key(&dirty_session, &dirty_target);
+    dirty_session
+        .eval_text("dirtyProofAssociation[x] = 2")
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&dirty_session, &dirty_target),
+        dirty_before
+    );
+}
+
+#[test]
+fn association_lvalue_observable_or_constrained_environments_use_fallback() {
+    let (mut tracing_session, tracing_target) =
+        session_with_stable_association("tracedAssociation");
+    let tracing_before = association_definition_args_key(&tracing_session, &tracing_target);
+    tracing_session.tracing_enabled = true;
+    tracing_session
+        .try_set_association_lvalue(
+            association_function_lvalue(tracing_target, Expr::symbol("x")),
+            Expr::small_integer(2),
+        )
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&tracing_session, &tracing_target),
+        tracing_before
+    );
+
+    let (mut monitor_session, monitor_target) =
+        session_with_stable_association("monitoredAssociation");
+    let monitor_before = association_definition_args_key(&monitor_session, &monitor_target);
+    monitor_session.monitor_scopes.push(MonitorScope {
+        display_expr: system_expr("Null"),
+        evaluation_monitor: None,
+        step_monitor: None,
+        last_display: None,
+    });
+    monitor_session
+        .try_set_association_lvalue(
+            association_function_lvalue(monitor_target, Expr::symbol("x")),
+            Expr::small_integer(2),
+        )
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&monitor_session, &monitor_target),
+        monitor_before
+    );
+
+    let (mut time_session, time_target) =
+        session_with_stable_association("timeConstrainedAssociation");
+    let time_before = association_definition_args_key(&time_session, &time_target);
+    time_session.current_time_deadline =
+        Some(std::time::Instant::now() + std::time::Duration::from_secs(60));
+    time_session
+        .try_set_association_lvalue(
+            association_function_lvalue(time_target, Expr::symbol("x")),
+            Expr::small_integer(2),
+        )
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&time_session, &time_target),
+        time_before
+    );
+
+    let (mut memory_session, memory_target) =
+        session_with_stable_association("memoryConstrainedAssociation");
+    let memory_before = association_definition_args_key(&memory_session, &memory_target);
+    memory_session.current_memory_limit = Some(usize::MAX);
+    memory_session
+        .try_set_association_lvalue(
+            association_function_lvalue(memory_target, Expr::symbol("x")),
+            Expr::small_integer(2),
+        )
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&memory_session, &memory_target),
+        memory_before
+    );
+
+    let (mut up_value_session, up_value_target) =
+        session_with_stable_association("upValueAssociation");
+    let up_value_before = association_definition_args_key(&up_value_session, &up_value_target);
+    up_value_session.has_up_value_definitions = true;
+    up_value_session
+        .try_set_association_lvalue(
+            association_function_lvalue(up_value_target, Expr::symbol("x")),
+            Expr::small_integer(2),
+        )
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&up_value_session, &up_value_target),
+        up_value_before
+    );
+}
+
+#[test]
+fn association_lvalue_direct_update_polls_interrupt_before_mutation() {
+    let (mut session, target) = session_with_stable_association("interruptedAssociation");
+    let original = session
+        .definitions
+        .get(&target)
+        .and_then(|definition| definition.own_value.clone())
+        .unwrap();
+    session.interrupt_armed = true;
+    session.interrupt_poll_counter = 1023;
+    session
+        .interrupt_flag
+        .store(true, std::sync::atomic::Ordering::Relaxed);
+
+    let result = session.try_direct_association_rule_update(
+        &target,
+        Expr::symbol("x"),
+        &Expr::small_integer(2),
+    );
+
+    assert!(matches!(result, Err(EvalError::Cancelled)));
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref()),
+        Some(&original)
+    );
+    assert!(
+        session.has_valid_call_stability_proof_for_key(association_definition_cache_key(
+            &session, &target,
+        )),
+        "the interrupt poll must happen before the proof is taken"
+    );
+}
+
+#[test]
+fn association_lvalue_nested_multi_and_bare_part_targets_use_fallback() {
+    let mut nested_session = Session::default();
+    let nested_target = Symbol::new(GLOBAL_CONTEXT, "nestedAssociation");
+    nested_session
+        .eval_text("nestedAssociation = <|x -> <|y -> 1|>|>")
+        .unwrap();
+    seed_association_stability_proof(&mut nested_session, &nested_target);
+    let nested_before = association_definition_args_key(&nested_session, &nested_target);
+    nested_session
+        .eval_text("nestedAssociation[x, y] = 2")
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&nested_session, &nested_target),
+        nested_before
+    );
+
+    let mut bare_part_session = Session::default();
+    let bare_part_target = Symbol::new(GLOBAL_CONTEXT, "barePartAssociation");
+    bare_part_session
+        .eval_text("barePartAssociation = <|\"x\" -> 1|>")
+        .unwrap();
+    seed_association_stability_proof(&mut bare_part_session, &bare_part_target);
+    let bare_part_before = association_definition_args_key(&bare_part_session, &bare_part_target);
+    bare_part_session
+        .eval_text("barePartAssociation[[\"x\"]] = 2")
+        .unwrap();
+    assert_ne!(
+        association_definition_args_key(&bare_part_session, &bare_part_target),
+        bare_part_before
+    );
+    assert_eq!(
+        bare_part_session
+            .definitions
+            .get(&bare_part_target)
+            .and_then(|definition| definition.own_value.as_ref())
+            .unwrap()
+            .to_string(),
+        "Association[Rule[\"x\", 2]]"
+    );
+}
+
+#[test]
+fn association_lvalue_direct_update_rolls_back_append_and_replace() {
+    let (mut session, target) = session_with_stable_association("rollbackAssociation");
+    let original = session
+        .definitions
+        .get(&target)
+        .and_then(|definition| definition.own_value.clone())
+        .unwrap();
+
+    session.fail_next_direct_association_update_after_mutation(target);
+    let append_outcome = session.eval_text("rollbackAssociation[y] = 2").unwrap();
+    assert_eq!(
+        append_outcome.termination,
+        Some(EvalTerminationReason::Cancelled)
+    );
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref()),
+        Some(&original)
+    );
+
+    seed_association_stability_proof(&mut session, &target);
+    session.fail_next_direct_association_update_after_mutation(target);
+    let replace_outcome = session.eval_text("rollbackAssociation[x] = 3").unwrap();
+    assert_eq!(
+        replace_outcome.termination,
+        Some(EvalTerminationReason::Cancelled)
+    );
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref()),
+        Some(&original)
+    );
 }
 
 #[test]

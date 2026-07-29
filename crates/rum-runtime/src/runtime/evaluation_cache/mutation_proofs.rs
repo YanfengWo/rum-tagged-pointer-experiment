@@ -8,6 +8,19 @@ pub(in crate::runtime) struct CallStabilityProof {
 }
 
 impl Session {
+    pub(in crate::runtime) fn has_valid_call_stability_proof_for_key(
+        &self,
+        key: CallStabilityCacheKey,
+    ) -> bool {
+        let Some(entry) = self.call_stability_cache.get(&key) else {
+            return false;
+        };
+        CallStabilityCacheKey::new(&entry.head, &entry.args) == key
+            && self.call_stability_entry_outcome(entry, &entry.head, &entry.args)
+                == CallStabilityProfileOutcome::Hit
+            && entry.stable
+    }
+
     pub(in crate::runtime) fn take_call_stability_proof(
         &mut self,
         head: &SharedExpr,
