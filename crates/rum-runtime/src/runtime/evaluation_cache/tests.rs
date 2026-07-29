@@ -162,6 +162,7 @@ fn pointer_mismatched_entry_is_left_untouched() {
             .take_call_stability_proof(requested_head, requested_args)
             .is_none()
     );
+    assert!(session.take_call_stability_proof_for_key(key).is_none());
     let remaining = session
         .call_stability_cache
         .get(&key)

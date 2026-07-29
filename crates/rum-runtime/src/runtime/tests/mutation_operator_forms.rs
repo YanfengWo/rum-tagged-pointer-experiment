@@ -144,3 +144,229 @@ fn kernel_mutation_heads_advertise_subvalues_hold_all() {
     );
     assert!(outcome.messages.is_empty());
 }
+
+#[test]
+fn append_to_plain_list_preserves_alias_and_returned_value() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_text("x = {1, 2}; y = x; {AppendTo[y, 3], x, y}")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[1, 2, 3], List[1, 2], List[1, 2, 3]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_non_list_head_still_runs_matching_user_code() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_text(
+            "lst2 = f[]; f[z___] := (seen2 = \"RAN\"; g[z]); \
+             {AppendTo[lst2, 1], seen2, lst2}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[g[1], \"RAN\", g[1]]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_nothing_keeps_list_normalization_semantics() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_text("x = {1, 2}; {AppendTo[x, Nothing], x}")
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[List[1, 2], List[1, 2]]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_list_upvalue_still_observes_the_old_value_and_fires() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_text(
+            "x = {u}; u /: List[u, 1] := (seen = x; transformed); \
+             {AppendTo[x, 1], seen, x}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[transformed, List[u], transformed]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_list_downvalue_still_observes_the_old_value_and_fires() {
+    let mut session = session_with_test_control_builtins();
+    session.eval_text("x = {u}").unwrap();
+    session
+        .eval_text("List[u, 1] := (seen = x; transformed)")
+        .unwrap();
+
+    let appended = session.eval_text("AppendTo[x, 1]").unwrap();
+    let observed = session.eval_text("seen").unwrap();
+    let stored = session.eval_text("x").unwrap();
+
+    assert_eq!(appended.value.to_string(), "transformed");
+    assert_eq!(observed.value.to_string(), "List[u]");
+    assert_eq!(stored.value.to_string(), "transformed");
+    assert!(appended.messages.is_empty());
+}
+
+#[test]
+fn append_to_with_tracing_preserves_the_existing_trace() {
+    let mut session = Session::new();
+    session.eval_text("x = {}").unwrap();
+
+    let traced = session.eval_text("Trace[AppendTo[x, 1]]").unwrap();
+
+    assert_eq!(
+        traced.value.to_string(),
+        "List[Hold[AppendTo[x, 1]], Hold[List[1]]]"
+    );
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "List[1]");
+}
+
+#[test]
+fn append_to_with_monitor_preserves_old_and_new_display_observations() {
+    let mut session = Session::new();
+    session.eval_text("x = {}").unwrap();
+
+    let monitored = session.eval_text("Monitor[AppendTo[x, 1], x]").unwrap();
+
+    assert_eq!(monitored.value.to_string(), "List[1]");
+    assert_eq!(monitored.prints, vec!["List[]", "List[1]"]);
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "List[1]");
+}
+
+#[test]
+fn append_to_protected_list_target_preserves_value_and_message() {
+    let mut session = session_with_test_control_builtins();
+    session.eval_text("protectedList = {1, 2}").unwrap();
+    session.eval_text("Protect[protectedList]").unwrap();
+
+    let outcome = session.eval_text("AppendTo[protectedList, 3]").unwrap();
+
+    assert_eq!(outcome.value.to_string(), "AppendTo[protectedList, 3]");
+    assert_eq!(outcome.messages.len(), 1);
+    assert_eq!(outcome.messages[0].symbol, "AppendTo");
+    assert_eq!(outcome.messages[0].tag, "wrsym");
+    assert_eq!(
+        outcome.messages[0].text,
+        "Symbol protectedList is Protected."
+    );
+    assert_eq!(
+        session
+            .eval_text("protectedList")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+}
+
+#[test]
+fn append_to_rolls_back_if_fast_update_fails_after_definition_take() {
+    let mut session = Session::new();
+    let target = Symbol::new(GLOBAL_CONTEXT, "rollbackAppendTarget");
+    session.eval_text("rollbackAppendTarget = {1, 2}").unwrap();
+    drop(session.eval_text("rollbackAppendTarget").unwrap());
+    session.fail_next_incremental_append_after_value_take(target);
+
+    let outcome = session
+        .eval_text("AppendTo[rollbackAppendTarget, 3]")
+        .unwrap();
+
+    assert_eq!(outcome.termination, Some(EvalTerminationReason::Cancelled));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"Cancelled\"]"
+    );
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref())
+            .expect("rollback must restore the definition value")
+            .to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("rollbackAppendTarget")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 2]"
+    );
+}
+
+#[test]
+fn append_to_item_that_requires_target_evaluation_stays_on_evaluated_path() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_text("x = {1}; {AppendTo[x, Unevaluated[x]], x}")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[1, List[1]], List[1, List[1]]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_modified_list_attributes_stays_on_evaluated_path() {
+    let mut session = Session::new();
+    session.eval_text("x = {2}").unwrap();
+    session.eval_text("SetAttributes[List, Orderless]").unwrap();
+
+    let outcome = session.eval_text("AppendTo[x, 1]").unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[1, 2]");
+    assert_eq!(
+        session.eval_text("x").unwrap().value.to_string(),
+        "List[1, 2]"
+    );
+}
+
+#[test]
+fn append_to_resumes_item_input_without_losing_or_replaying_the_update() {
+    let mut session = session_with_test_control_builtins();
+    session.eval_text("inputList = {}").unwrap();
+
+    let failure = session
+        .eval_request("AppendTo[inputList, InputString[\"item: \"]]")
+        .expect_err("the item should suspend before AppendTo runs");
+    match failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "item: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(
+        session.eval_text("inputList").unwrap().value.to_string(),
+        "List[]"
+    );
+
+    let resumed = session
+        .resume_eval_request_with_input("value")
+        .expect("the suspended AppendTo should resume");
+
+    assert_eq!(resumed.value.to_string(), "List[\"value\"]");
+    assert_eq!(
+        session.eval_text("inputList").unwrap().value.to_string(),
+        "List[\"value\"]"
+    );
+}

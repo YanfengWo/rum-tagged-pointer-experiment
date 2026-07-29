@@ -33,6 +33,29 @@ impl Session {
         }
     }
 
+    pub(in crate::runtime) fn take_call_stability_proof_for_key(
+        &mut self,
+        key: CallStabilityCacheKey,
+    ) -> Option<CallStabilityProof> {
+        let outcome = {
+            let entry = self.call_stability_cache.get(&key)?;
+            if CallStabilityCacheKey::new(&entry.head, &entry.args) != key {
+                return None;
+            }
+            self.call_stability_entry_outcome(entry, &entry.head, &entry.args)
+        };
+
+        let entry = self
+            .call_stability_cache
+            .remove(&key)
+            .expect("the validated call-stability entry must still exist");
+        if outcome == CallStabilityProfileOutcome::Hit && entry.stable {
+            Some(CallStabilityProof { bloom: entry.bloom })
+        } else {
+            None
+        }
+    }
+
     pub(in crate::runtime) fn reinsert_call_stability_proof(
         &mut self,
         head: &SharedExpr,

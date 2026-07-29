@@ -81,7 +81,7 @@ impl Session {
 
     #[cold]
     #[inline(never)]
-    fn poll_host_interrupt_if_due(&mut self) -> Result<(), EvalError> {
+    pub(in crate::runtime) fn poll_host_interrupt_if_due(&mut self) -> Result<(), EvalError> {
         self.interrupt_poll_counter = self.interrupt_poll_counter.wrapping_add(1);
         if self.interrupt_poll_counter & INTERRUPT_POLL_MASK != 0 {
             return Ok(());

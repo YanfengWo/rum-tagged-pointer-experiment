@@ -126,6 +126,10 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("AppendTo", args, 2));
         };
 
+        if let Some(updated) = self.try_incremental_append_to_plain_list(target_expr, item)? {
+            return Ok(updated);
+        }
+
         let (target, current) = match self.current_held_update_value("AppendTo", target_expr, args)
         {
             HeldUpdateCurrent::Ready { target, current } => (target, current),
