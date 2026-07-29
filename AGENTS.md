@@ -131,6 +131,16 @@ branch paid on every call when the flag is off is a regression.
   tests own language semantics, `rum-host` tests own the embedding lifecycle,
   adapter/protocol behavior stays in the adapter crate.
 - Do not check in generated build artifacts or temporary probe files.
+- **`rum` source files use the `.rum` suffix — including generated and
+  throwaway ones.** Scripts that emit `rum` code to run (benchmark sources,
+  scratch probes under `/tmp`, fixtures) name it `*.rum`, never `.wls` or
+  `.wl`. The suffix is a labelling convention rather than a runtime
+  requirement — the interpreter ignores it — but `rum` has diverged from the
+  Wolfram Language in documented ways, so a Wolfram suffix on a file we
+  generate ourselves implies a compatibility claim the project does not make
+  (`docs/guide/getting-started.md` §suffix, `DISCLAIMER.md`). Referring to a
+  *third-party* file by its real name (e.g. an external suite's
+  `run_all.wls`) is correct and unaffected.
 - Preserve user changes in a dirty worktree. Never revert unrelated edits just
   to make a patch easier.
 - Prefer small, reviewable commits with messages that state the semantic or

@@ -18,7 +18,7 @@ Options:
   -h, --help           Show this help.
 
 Outputs:
-  core-language-microbench.wls  Generated benchmark source.
+  core-language-microbench.rum  Generated benchmark source.
   runs.tsv                      One row for the rum execution.
   measurements.tsv              Parsed rum timing rows.
   timings.tsv                   rum timing by label.
@@ -115,12 +115,12 @@ fi
 raw_dir="${output_dir}/raw"
 mkdir -p "${raw_dir}"
 
-bench_wls="${output_dir}/core-language-microbench.wls"
+bench_rum="${output_dir}/core-language-microbench.rum"
 runs_tsv="${output_dir}/runs.tsv"
 measurements_tsv="${output_dir}/measurements.tsv"
 timings_tsv="${output_dir}/timings.tsv"
 
-cat > "${bench_wls}" <<EOF
+cat > "${bench_rum}" <<EOF
 ClearAll[
   rumMicroBench,
   rumMicroOnce,
@@ -389,7 +389,7 @@ run_engine() {
   set +e
   env "${disable_profile_env[@]}" \
     "${bounded_runner}" --timeout "${timeout_seconds}" -- \
-    "${rum_cli_bin}" --file "${bench_wls}" \
+    "${rum_cli_bin}" --file "${bench_rum}" \
     >"${stdout_path}" 2>"${stderr_path}"
   exit_code=$?
   set -e
