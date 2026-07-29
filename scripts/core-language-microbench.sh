@@ -137,7 +137,11 @@ ClearAll[
   gMicroAppendPartOuter1000Large,
   gMicroAssociationSetKeySmall,
   gMicroAssociationSetKeyLarge,
-  gMicroAssociationSmallLiteralRepeat
+  gMicroAssociationSmallLiteralRepeat,
+  gMicroSetPartFixed100Len100,
+  gMicroSetPartFixed100Len800,
+  gMicroSetPartFillSmall,
+  gMicroSetPartFillLarge
 ];
 
 rumMicroScale = ${scale};
@@ -324,6 +328,31 @@ rumMicroOnce[
     <|a -> gMicroAssociationSmallLiteralRepeat, b -> 2|>,
     {gMicroAssociationSmallLiteralRepeat, 1, 500 * rumMicroScale}
   ]
+];
+
+gMicroSetPartFixed100Len100 = Table[0, {100}];
+rumMicroOnce[
+  "set-part-fixed100-len100",
+  100,
+  Do[gMicroSetPartFixed100Len100[[1]] = i, {i, 1, 100}]
+];
+gMicroSetPartFixed100Len800 = Table[0, {800}];
+rumMicroOnce[
+  "set-part-fixed100-len800",
+  100,
+  Do[gMicroSetPartFixed100Len800[[1]] = i, {i, 1, 100}]
+];
+gMicroSetPartFillSmall = Table[0, {200}];
+rumMicroOnce[
+  "set-part-fill-small",
+  200,
+  Do[gMicroSetPartFillSmall[[i]] = i, {i, 1, 200}]
+];
+gMicroSetPartFillLarge = Table[0, {400}];
+rumMicroOnce[
+  "set-part-fill-large",
+  400,
+  Do[gMicroSetPartFillLarge[[i]] = i, {i, 1, 400}]
 ];
 
 Print["RUM_CORE_MICRO_END"];
