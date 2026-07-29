@@ -370,3 +370,243 @@ fn append_to_resumes_item_input_without_losing_or_replaying_the_update() {
         "List[\"value\"]"
     );
 }
+
+#[test]
+fn append_to_exact_part_preserves_outer_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text("o = {{1}, {2}}; a = o; {AppendTo[o[[1]], 3], a, o}")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[1, 3], List[List[1], List[2]], List[List[1, 3], List[2]]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_exact_part_preserves_inner_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text("o = {{1}, {2}}; b = o[[1]]; {AppendTo[o[[1]], 3], b, o}")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[1, 3], List[1], List[List[1, 3], List[2]]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_deep_exact_part_preserves_middle_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "o = {{{{1}}}}; middle = o[[1, 1]]; \
+             {AppendTo[o[[1, 1, 1]], 2], middle, o}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[1, 2], List[List[1]], List[List[List[List[1, 2]]]]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_exact_part_copies_list_shared_at_two_positions() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text("i = {1}; o = {i, i}; {AppendTo[o[[1]], 2], o}")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[1, 2], List[List[1, 2], List[1]]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_complex_part_selectors_keep_generic_behavior() {
+    for (source, expected) in [
+        (
+            "o = {{1}, {2}}; {AppendTo[o[[All]], 3], o}",
+            "List[List[List[1], List[2], 3], List[List[List[1], List[2], 3], \
+             List[List[1], List[2], 3]]]",
+        ),
+        (
+            "o = {{1}, {2}}; {AppendTo[o[[{1, 1}]], 3], o}",
+            "List[List[List[1], List[1], 3], List[List[List[1], List[1], 3], List[2]]]",
+        ),
+        (
+            "o = {{1}, {2}}; {AppendTo[o[[{1, 2}]], 3], o}",
+            "List[List[List[1], List[2], 3], List[List[List[1], List[2], 3], \
+             List[List[1], List[2], 3]]]",
+        ),
+        (
+            "o = {{1}, {2}}; {AppendTo[o[[-1]], 3], o}",
+            "List[List[2, 3], List[List[1], List[2, 3]]]",
+        ),
+        (
+            "o = {{1}, {2}}; {AppendTo[o[[3]], 3], o}",
+            "List[AppendTo[Part[o, 3], 3], List[List[1], List[2]]]",
+        ),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "source: {source}");
+        assert!(outcome.messages.is_empty(), "source: {source}");
+    }
+}
+
+#[test]
+fn append_to_association_key_part_stays_on_generic_path() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text("a = <|x -> {1}|>; {AppendTo[a[[Key[x]]], 2], a}")
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[AppendTo[Part[a, Key[x]], 2], Association[Rule[x, List[1]]]]"
+    );
+    assert_eq!(outcome.messages.len(), 6);
+    assert!(outcome.messages.iter().all(|message| {
+        matches!(message.symbol.as_str(), "Part" | "Set")
+            && message.tag == "pkspec1"
+            && message.text == "The expression Key[x] cannot be used as a part specification."
+    }));
+}
+
+#[test]
+fn append_to_exact_part_non_list_leaf_still_runs_definitions() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "o = {f[]}; f[z___] := (seen = \"RAN\"; g[z]); \
+             {AppendTo[o[[1]], 1], seen, o}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[g[1], \"RAN\", List[g[1]]]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn append_to_exact_part_keeps_nothing_and_upvalue_behavior() {
+    let mut nothing_session = session_with_test_control_builtins();
+    let nothing = nothing_session
+        .eval_text("o = {{1, 2}}; {AppendTo[o[[1]], Nothing], o}")
+        .unwrap();
+    assert_eq!(
+        nothing.value.to_string(),
+        "List[List[1, 2], List[List[1, 2]]]"
+    );
+    assert!(nothing.messages.is_empty());
+
+    let mut upvalue_session = session_with_test_control_builtins();
+    let upvalue = upvalue_session
+        .eval_text(
+            "o = {{u}, {2}}; u /: List[u, 3] := (seen = o; transformed); \
+             {AppendTo[o[[1]], 3], seen, o}",
+        )
+        .unwrap();
+    assert_eq!(
+        upvalue.value.to_string(),
+        "List[transformed, List[List[u], List[2]], List[transformed, List[2]]]"
+    );
+    assert!(upvalue.messages.is_empty());
+}
+
+#[test]
+fn append_to_exact_part_with_tracing_preserves_existing_trace() {
+    let mut session = Session::new();
+    session.eval_text("o = {{1}, {2}}").unwrap();
+    let outcome = session.eval_text("Trace[AppendTo[o[[1]], 3]]").unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[Hold[AppendTo[Part[o, 1], 3]], Hold[List[1, 3]]]"
+    );
+    assert_eq!(
+        session.eval_text("o").unwrap().value.to_string(),
+        "List[List[1, 3], List[2]]"
+    );
+}
+
+#[test]
+fn append_to_exact_part_with_monitor_preserves_spine_observations() {
+    let mut session = Session::new();
+    session.eval_text("o = {{1}, {2}}").unwrap();
+    let outcome = session
+        .eval_text("Monitor[AppendTo[o[[1]], 3], o]")
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[1, 3]");
+    assert_eq!(
+        outcome.prints,
+        vec!["List[List[1], List[2]]", "List[List[1, 3], List[2]]"]
+    );
+}
+
+#[test]
+fn append_to_exact_part_protected_owner_still_refuses() {
+    let mut session = session_with_test_control_builtins();
+    session.eval_text("o = {{1}, {2}}; Protect[o]").unwrap();
+    let outcome = session.eval_text("AppendTo[o[[1]], 3]").unwrap();
+
+    assert_eq!(outcome.value.to_string(), "AppendTo[Part[o, 1], 3]");
+    assert!(!outcome.messages.is_empty());
+    assert!(
+        outcome
+            .messages
+            .iter()
+            .all(|message| message.symbol == "AppendTo" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session.eval_text("o").unwrap().value.to_string(),
+        "List[List[1], List[2]]"
+    );
+}
+
+#[test]
+fn append_to_exact_part_rolls_back_multilevel_spine() {
+    let mut session = Session::new();
+    let target = Symbol::new(GLOBAL_CONTEXT, "rollbackPartTarget");
+    session.eval_text("rollbackPartTarget = {{{{1}}}}").unwrap();
+    session
+        .eval_text("outerAlias = rollbackPartTarget")
+        .unwrap();
+    session
+        .eval_text("middleAlias = rollbackPartTarget[[1, 1]]")
+        .unwrap();
+    drop(session.eval_text("rollbackPartTarget[[1, 1, 1]]").unwrap());
+    session.fail_next_incremental_append_after_value_take(target);
+
+    let outcome = session
+        .eval_text("AppendTo[rollbackPartTarget[[1, 1, 1]], 2]")
+        .unwrap();
+
+    assert_eq!(outcome.termination, Some(EvalTerminationReason::Cancelled));
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref())
+            .expect("rollback must restore the whole definition spine")
+            .to_string(),
+        "List[List[List[List[1]]]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("{rollbackPartTarget, outerAlias, middleAlias}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[List[List[1]]]], List[List[List[List[1]]]], List[List[1]]]"
+    );
+}

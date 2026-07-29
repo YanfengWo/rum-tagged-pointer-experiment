@@ -231,6 +231,14 @@ fn path_eviction_removes_only_the_named_exact_call_nodes() {
     assert!(!session.call_stability_cache.contains_key(&middle_key));
     assert!(session.call_stability_cache.contains_key(&leaf_key));
     assert!(session.call_stability_cache.contains_key(&unrelated_key));
+
+    cache_stable_call(&mut session, &nested);
+    session.evict_call_stability_keys(&[outer_key, middle_key]);
+
+    assert!(!session.call_stability_cache.contains_key(&outer_key));
+    assert!(!session.call_stability_cache.contains_key(&middle_key));
+    assert!(session.call_stability_cache.contains_key(&leaf_key));
+    assert!(session.call_stability_cache.contains_key(&unrelated_key));
 }
 
 #[test]

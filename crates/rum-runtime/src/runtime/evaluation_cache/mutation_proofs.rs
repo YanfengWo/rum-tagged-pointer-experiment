@@ -97,6 +97,18 @@ impl Session {
             }
         }
     }
+
+    pub(in crate::runtime) fn evict_call_stability_keys(&mut self, keys: &[CallStabilityCacheKey]) {
+        for key in keys {
+            let pointer_matches = self
+                .call_stability_cache
+                .get(key)
+                .is_some_and(|entry| CallStabilityCacheKey::new(&entry.head, &entry.args) == *key);
+            if pointer_matches {
+                self.call_stability_cache.remove(key);
+            }
+        }
+    }
 }
 
 fn call_stability_entry_ptr_eq(
