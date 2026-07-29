@@ -9,11 +9,39 @@ rather than duplicating them.
 ## Role split (the working mode)
 
 - **I own**: overall direction, the diagnosis, picking the next target,
-  writing detailed Codex task briefs, the authoritative gate, and the git
-  commit. I do the *judgment*; the legwork I delegate.
-- **Codex owns**: executing exactly one brief, self-verifying to green, and
+  plan review, the authoritative gate, and the git commit. I do the
+  *judgment*; the legwork I delegate.
+- **Codex owns**: producing the plan (design-only briefs), then executing
+  exactly one implementation brief at a time, self-verifying to green, and
   reporting with verbatim evidence. It does not commit, branch, or push — it
   leaves changes in the working tree for me to gate.
+- **PLAN-FIRST IS THE DEFAULT (user ruling 2026-07-29; adapted from dun's
+  2026-07-22 rule, with one extra layer).** For any non-trivial or
+  cross-cutting task, do NOT hand-write a from-scratch implementation brief.
+  The sequence is:
+  1. **Design-only brief** — `Scope: NONE — no source change`. States the
+     problem and current state; asks Codex for a concrete step-by-step plan
+     (files/functions per step, how invariants stay intact, gate tests, a
+     call-site inventory, risks and open questions), everything backed by
+     `path:line` evidence. **Codex must also draft the follow-up
+     implementation briefs themselves** — not just step descriptions, but
+     usable brief drafts in `TEMPLATE.md` shape. Codex plans and writes no
+     code.
+  2. **I review the plan** — decide the open questions, correct what is
+     wrong, reject what is over-scoped. This is the judgment step and it
+     stays mine.
+  3. **I write my own brief from Codex's draft** — the draft is raw
+     material, not something I dispatch as-is. My version is what gets
+     committed and dispatched, one step at a time, each gated.
+
+  Rationale: it moves codebase spelunking and reach inventory onto Codex
+  (cutting my token burn), and a Codex-authored plan enumerates the ripple
+  up front, so a cross-cutting change is not silently under-scoped — the
+  exact failure that cost this project five MAY-list misses on the matcher
+  arc. It also puts two independent LLMs on the plan (Codex drafts, I
+  review and rewrite), so a single model's blind spot is less likely to
+  reach the code. Trivial mechanical jobs may still go straight to an
+  implementation brief.
 - The brief method lives in `docs/dev/codex/`: `TEMPLATE.md` is the format,
   `brief-NNN-<slug>.md` are the packages. Dispatch via the helper (commit the
   brief FIRST, as a separate step):

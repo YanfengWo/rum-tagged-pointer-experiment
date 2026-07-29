@@ -14,20 +14,35 @@ process attach (the macOS `sample` profiler) is dispatched with
 and **Hard rules** are the inner fence on top: "touch nothing outside this
 repo, no network, only the listed commands."
 
-Two brief shapes use this template:
+Three brief shapes use this template:
 
+- **Design-only brief** — `Scope: NONE — no source change`. Codex surveys the
+  code and returns a step-by-step *plan*: files/functions per step, how the
+  invariants stay intact, the gate tests per step, a call-site/ripple
+  inventory, and risks + open questions — every claim carrying `path:line`
+  evidence. It must also **draft the follow-up implementation briefs
+  themselves**, in this template's shape, not merely describe the steps.
+  Codex writes no code in this shape.
 - **Diagnostic brief** — profile/measure and report; no source change. The
   first brief in any performance lane is almost always this: Claude cannot
   prescribe a precise change before the profile exists.
 - **Implementation brief** — a precise, pre-diagnosed mechanical change with a
   test gate, plus a measured A/B gate when a hot path is touched.
 
+**Plan-first is the default (user ruling 2026-07-29).** Any non-trivial or
+cross-cutting task opens with a design-only brief; Claude then reviews the
+plan, settles the open questions, and **rewrites** Codex's drafts into his own
+implementation briefs before dispatching them one at a time. Codex's drafts
+are raw material, never dispatched as-is. Trivial mechanical jobs may still go
+straight to an implementation brief.
+
 ---
 
 ## Goal
 
 One paragraph. What must be true when you are done. For a diagnostic brief,
-the deliverable is evidence, not a code change.
+the deliverable is evidence, not a code change; for a design-only brief it is
+a reviewable plan plus the drafted follow-up briefs, still not a code change.
 
 ## Context pointers
 
