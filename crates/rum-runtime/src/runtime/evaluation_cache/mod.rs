@@ -1,5 +1,9 @@
 use super::*;
 
+// This brief deliberately lands these tested primitives one step before their
+// first production caller.
+#[cfg_attr(not(test), allow(dead_code))]
+mod mutation_proofs;
 mod profile;
 mod stability;
 

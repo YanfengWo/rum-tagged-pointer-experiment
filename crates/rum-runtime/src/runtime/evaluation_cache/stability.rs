@@ -226,31 +226,8 @@ impl Session {
         let key = CallStabilityCacheKey::new(head, args);
         let mut miss_outcome = CallStabilityProfileOutcome::MissAbsent;
         if let Some(entry) = self.call_stability_cache.get(&key) {
-            if entry.generation != self.call_stability_generation {
-                miss_outcome = CallStabilityProfileOutcome::MissGeneration;
-                record_evaluation_cache_counter(
-                    &CALL_STABILITY_MISS_GENERATION_COUNT,
-                    "call_stability_miss_generation",
-                );
-                record_call_stability_source_head_outcome(
-                    profile_key,
-                    CallStabilityProfileOutcome::MissGeneration,
-                );
-            } else if !SharedExpr::ptr_eq(&entry.head, head)
-                || !SharedArgs::ptr_eq(&entry.args, args)
-            {
-                miss_outcome = CallStabilityProfileOutcome::MissPointer;
-                record_evaluation_cache_counter(
-                    &CALL_STABILITY_MISS_POINTER_COUNT,
-                    "call_stability_miss_pointer",
-                );
-                record_call_stability_source_head_outcome(
-                    profile_key,
-                    CallStabilityProfileOutcome::MissPointer,
-                );
-            } else {
-                let dirty_delta = self.call_stability_entry_dirty_delta(entry);
-                if !entry.bloom.intersects(dirty_delta) {
+            match self.call_stability_entry_outcome(entry, head, args) {
+                CallStabilityProfileOutcome::Hit => {
                     record_evaluation_cache_counter(
                         &CALL_STABILITY_HIT_COUNT,
                         "call_stability_hits",
@@ -265,15 +242,42 @@ impl Session {
                     );
                     return (entry.stable, entry.bloom);
                 }
-                miss_outcome = CallStabilityProfileOutcome::MissDirty;
-                record_evaluation_cache_counter(
-                    &CALL_STABILITY_MISS_DIRTY_COUNT,
-                    "call_stability_miss_dirty",
-                );
-                record_call_stability_source_head_outcome(
-                    profile_key,
-                    CallStabilityProfileOutcome::MissDirty,
-                );
+                CallStabilityProfileOutcome::MissGeneration => {
+                    miss_outcome = CallStabilityProfileOutcome::MissGeneration;
+                    record_evaluation_cache_counter(
+                        &CALL_STABILITY_MISS_GENERATION_COUNT,
+                        "call_stability_miss_generation",
+                    );
+                    record_call_stability_source_head_outcome(
+                        profile_key,
+                        CallStabilityProfileOutcome::MissGeneration,
+                    );
+                }
+                CallStabilityProfileOutcome::MissPointer => {
+                    miss_outcome = CallStabilityProfileOutcome::MissPointer;
+                    record_evaluation_cache_counter(
+                        &CALL_STABILITY_MISS_POINTER_COUNT,
+                        "call_stability_miss_pointer",
+                    );
+                    record_call_stability_source_head_outcome(
+                        profile_key,
+                        CallStabilityProfileOutcome::MissPointer,
+                    );
+                }
+                CallStabilityProfileOutcome::MissDirty => {
+                    miss_outcome = CallStabilityProfileOutcome::MissDirty;
+                    record_evaluation_cache_counter(
+                        &CALL_STABILITY_MISS_DIRTY_COUNT,
+                        "call_stability_miss_dirty",
+                    );
+                    record_call_stability_source_head_outcome(
+                        profile_key,
+                        CallStabilityProfileOutcome::MissDirty,
+                    );
+                }
+                CallStabilityProfileOutcome::MissAbsent => {
+                    unreachable!("an existing call-stability entry cannot be absent")
+                }
             }
         } else {
             record_evaluation_cache_counter(
@@ -325,6 +329,26 @@ impl Session {
         (stable, bloom)
     }
 
+    pub(super) fn call_stability_entry_outcome(
+        &self,
+        entry: &CallStabilityCacheEntry,
+        head: &SharedExpr,
+        args: &SharedArgs,
+    ) -> CallStabilityProfileOutcome {
+        if entry.generation != self.call_stability_generation {
+            CallStabilityProfileOutcome::MissGeneration
+        } else if !SharedExpr::ptr_eq(&entry.head, head) || !SharedArgs::ptr_eq(&entry.args, args) {
+            CallStabilityProfileOutcome::MissPointer
+        } else if entry
+            .bloom
+            .intersects(self.call_stability_entry_dirty_delta(entry))
+        {
+            CallStabilityProfileOutcome::MissDirty
+        } else {
+            CallStabilityProfileOutcome::Hit
+        }
+    }
+
     fn call_stability_entry_dirty_delta(&self, entry: &CallStabilityCacheEntry) -> StabilityBloom {
         StabilityBloom {
             regular: (self.stability_dirty_bloom.regular & !entry.dirty_snapshot.regular)
@@ -334,7 +358,7 @@ impl Session {
         }
     }
 
-    fn clear_call_stability_cache_for_size_cap(&mut self) {
+    pub(super) fn clear_call_stability_cache_for_size_cap(&mut self) {
         record_evaluation_cache_counter(
             &CALL_STABILITY_SIZE_CAP_CLEAR_COUNT,
             "call_stability_size_cap_clears",
@@ -344,7 +368,7 @@ impl Session {
 }
 
 #[inline]
-fn call_stability_cache_max_entries() -> usize {
+pub(super) fn call_stability_cache_max_entries() -> usize {
     static MAX_ENTRIES: OnceLock<usize> = OnceLock::new();
     *MAX_ENTRIES.get_or_init(|| {
         std::env::var(CALL_STABILITY_CACHE_MAX_ENTRIES_ENV)

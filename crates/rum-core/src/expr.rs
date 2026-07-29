@@ -590,6 +590,19 @@ impl SharedArgs {
         }
     }
 
+    pub fn get_mut(&mut self) -> Option<&mut Vec<Expr>> {
+        Arc::get_mut(&mut self.0)
+    }
+
+    pub fn make_mut(&mut self) -> &mut Vec<Expr> {
+        let original = Arc::as_ptr(&self.0);
+        let args = Arc::make_mut(&mut self.0);
+        if !std::ptr::eq(original, args) {
+            record_shared_args_alloc();
+        }
+        args
+    }
+
     pub fn ptr_eq(lhs: &Self, rhs: &Self) -> bool {
         Arc::ptr_eq(&lhs.0, &rhs.0)
     }
