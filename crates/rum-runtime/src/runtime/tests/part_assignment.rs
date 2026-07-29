@@ -14,6 +14,72 @@ fn test_key_builtin(_session: &mut Session, head: &Expr, args: &[Expr]) -> Resul
     Ok(Expr::call(head.clone(), args.to_vec()))
 }
 
+fn definition_plain_list_path(
+    session: &Session,
+    target: &Symbol,
+    path: &[usize],
+) -> (Vec<CallStabilityCacheKey>, Vec<usize>) {
+    let mut selected = session
+        .definitions
+        .get(target)
+        .and_then(|definition| definition.own_value.as_ref())
+        .expect("the Part-assignment test target must have an own value");
+    let mut cache_keys = Vec::with_capacity(path.len());
+    let mut args_keys = Vec::with_capacity(path.len());
+    for &index in path {
+        let Expr::Call { head, args } = selected else {
+            panic!("the Part-assignment test path must contain only calls");
+        };
+        assert!(is_system_symbol_name(head, heads::structure::LIST));
+        cache_keys.push(CallStabilityCacheKey::new(head, args));
+        args_keys.push(args.ptr_key());
+        selected = args
+            .get(index)
+            .expect("the Part-assignment test path must exist");
+    }
+    (cache_keys, args_keys)
+}
+
+fn seed_plain_list_path_stability(
+    session: &mut Session,
+    target: &Symbol,
+    path: &[usize],
+) -> (Vec<CallStabilityCacheKey>, Vec<usize>) {
+    let current = session
+        .definitions
+        .get(target)
+        .and_then(|definition| definition.own_value.clone())
+        .expect("the Part-assignment test target must have an own value");
+    assert!(session.cached_expr_is_evaluation_stable(&current));
+    drop(current);
+
+    let (cache_keys, args_keys) = definition_plain_list_path(session, target, path);
+    assert!(
+        cache_keys
+            .iter()
+            .all(|key| session.has_valid_call_stability_proof_for_key(*key)),
+        "the direct-path precondition must retain every root-to-parent cache entry"
+    );
+    (cache_keys, args_keys)
+}
+
+fn assert_generic_part_assignment_replaces_root_args(session: &mut Session, target: Symbol) {
+    let (_, before) = seed_plain_list_path_stability(session, &target, &[0]);
+    let lhs = Expr::call(
+        system_expr("Part"),
+        vec![Expr::Atom(Atom::Symbol(target)), Expr::small_integer(1)],
+    );
+    let outcome = session
+        .try_set_positional_part_lvalue(lhs, Expr::small_integer(9))
+        .unwrap();
+    assert_eq!(outcome, Some(Expr::small_integer(9)));
+    let (_, after) = definition_plain_list_path(session, &target, &[0]);
+    assert_ne!(
+        after, before,
+        "an observable/constrained environment must use the generic rebuilding path"
+    );
+}
+
 #[test]
 fn set_positional_part_supports_flat_nested_and_value_semantics() {
     let mut session = session_with_test_control_builtins();
@@ -41,6 +107,130 @@ fn set_positional_part_supports_flat_nested_and_value_semantics() {
         "List[List[1, 2, 3], List[9, 2, 3]]"
     );
     assert!(aliased.messages.is_empty());
+}
+
+#[test]
+fn set_positional_part_direct_path_keeps_spine_identity_and_leaves_proofs_evicted() {
+    let mut session = Session::default();
+    let target = Symbol::new(GLOBAL_CONTEXT, "directPartOwner");
+    session
+        .eval_text("directPartOwner = {{1, 2}, {3, 4}}")
+        .unwrap();
+    let (cache_keys, before) = seed_plain_list_path_stability(&mut session, &target, &[0, 1]);
+
+    let first = session.eval_text("directPartOwner[[1, 2]] = 9").unwrap();
+    assert_eq!(first.value.to_string(), "9");
+    assert!(first.messages.is_empty());
+    let (_, after_first) = definition_plain_list_path(&session, &target, &[0, 1]);
+    assert_eq!(after_first, before);
+    assert!(
+        cache_keys
+            .iter()
+            .all(|key| !session.call_stability_cache.contains_key(key)),
+        "changed root-through-parent calls must remain evicted"
+    );
+
+    let second = session.eval_text("directPartOwner[[1, 1]] = 8").unwrap();
+    assert_eq!(second.value.to_string(), "8");
+    assert!(second.messages.is_empty());
+    let (_, after_second) = definition_plain_list_path(&session, &target, &[0, 1]);
+    assert_eq!(
+        after_second, before,
+        "a later held Set must remain direct even without reinserted proofs"
+    );
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref())
+            .unwrap()
+            .to_string(),
+        "List[List[8, 9], List[3, 4]]"
+    );
+}
+
+#[test]
+fn set_positional_part_cow_preserves_a_root_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "rootOwner = {{1}, {2}}; rootAlias = rootOwner; \
+             rootOwner[[1, 1]] = 9; {rootOwner, rootAlias}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[List[9], List[2]], List[List[1], List[2]]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn set_positional_part_cow_preserves_an_intermediate_list_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "intermediateOwner = {{{1}}, {{2}}}; \
+             intermediateAlias = intermediateOwner[[1, 1]]; \
+             intermediateOwner[[1, 1, 1]] = 9; \
+             {intermediateOwner, intermediateAlias}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[List[List[9]], List[List[2]]], List[1]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn set_positional_part_cow_preserves_the_selected_child_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "selectedOwner = {{1}, {2}}; selectedAlias = selectedOwner[[1]]; \
+             selectedOwner[[1, 1]] = 9; {selectedOwner, selectedAlias}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[List[9], List[2]], List[1]]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn set_positional_part_cow_preserves_a_shared_child_at_a_second_position() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "sharedItem = {1}; sharedOwner = {sharedItem, sharedItem}; \
+             sharedOwner[[1, 1]] = 9; sharedOwner",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[List[9], List[1]]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn set_positional_part_cow_preserves_a_three_level_middle_alias() {
+    let mut session = session_with_test_control_builtins();
+    let outcome = session
+        .eval_text(
+            "spineOwner = {{{1}}}; spineMiddle = spineOwner[[1]]; \
+             spineOwner[[1, 1, 1]] = 9; {spineOwner, spineMiddle}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[List[List[List[9]]], List[List[1]]]"
+    );
+    assert!(outcome.messages.is_empty());
 }
 
 #[test]
@@ -130,6 +320,138 @@ fn set_positional_part_rechecks_protection_after_rhs_and_selector_callbacks() {
             && message.text == "Symbol p is Protected."
     }));
     assert_no_false_part_protection(&selector_protected.messages);
+}
+
+#[test]
+fn set_positional_part_observable_constrained_and_dynamic_scopes_use_generic_path() {
+    let mut tracing_session = Session::default();
+    let tracing_target = Symbol::new(GLOBAL_CONTEXT, "tracedPartOwner");
+    tracing_session
+        .eval_text("tracedPartOwner = {1, 2}")
+        .unwrap();
+    tracing_session.tracing_enabled = true;
+    assert_generic_part_assignment_replaces_root_args(&mut tracing_session, tracing_target);
+
+    let mut monitor_session = Session::default();
+    let monitor_target = Symbol::new(GLOBAL_CONTEXT, "monitoredPartOwner");
+    monitor_session
+        .eval_text("monitoredPartOwner = {1, 2}")
+        .unwrap();
+    monitor_session.monitor_scopes.push(MonitorScope {
+        display_expr: system_expr("Null"),
+        evaluation_monitor: None,
+        step_monitor: None,
+        last_display: None,
+    });
+    assert_generic_part_assignment_replaces_root_args(&mut monitor_session, monitor_target);
+
+    let mut time_session = Session::default();
+    let time_target = Symbol::new(GLOBAL_CONTEXT, "timeConstrainedPartOwner");
+    time_session
+        .eval_text("timeConstrainedPartOwner = {1, 2}")
+        .unwrap();
+    time_session.current_time_deadline =
+        Some(std::time::Instant::now() + std::time::Duration::from_secs(60));
+    assert_generic_part_assignment_replaces_root_args(&mut time_session, time_target);
+
+    let mut memory_session = Session::default();
+    let memory_target = Symbol::new(GLOBAL_CONTEXT, "memoryConstrainedPartOwner");
+    memory_session
+        .eval_text("memoryConstrainedPartOwner = {1, 2}")
+        .unwrap();
+    memory_session.current_memory_limit = Some(usize::MAX);
+    assert_generic_part_assignment_replaces_root_args(&mut memory_session, memory_target);
+
+    let mut dynamic_session = Session::default();
+    let dynamic_target = Symbol::new(GLOBAL_CONTEXT, "dynamicPartOwner");
+    dynamic_session
+        .eval_text("dynamicPartOwner = {1, 2}")
+        .unwrap();
+    let dynamic_depth = dynamic_session.push_dynamic_own_value_binding(dynamic_target, None);
+    assert_generic_part_assignment_replaces_root_args(&mut dynamic_session, dynamic_target);
+    dynamic_session.truncate_dynamic_own_value_bindings(dynamic_depth);
+}
+
+#[test]
+fn set_positional_part_direct_path_polls_interrupt_before_cache_eviction_or_mutation() {
+    let mut session = Session::default();
+    let target = Symbol::new(GLOBAL_CONTEXT, "interruptedPartOwner");
+    session.eval_text("interruptedPartOwner = {1, 2}").unwrap();
+    let (cache_keys, _) = seed_plain_list_path_stability(&mut session, &target, &[0]);
+    let original = session
+        .definitions
+        .get(&target)
+        .and_then(|definition| definition.own_value.clone())
+        .unwrap();
+
+    session.interrupt_armed = true;
+    session.interrupt_poll_counter = 1023;
+    session
+        .interrupt_flag
+        .store(true, std::sync::atomic::Ordering::Relaxed);
+    let result =
+        session.try_direct_positional_part_assignment(&target, &[1], &Expr::small_integer(9));
+
+    assert!(matches!(result, Err(EvalError::Cancelled)));
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref()),
+        Some(&original)
+    );
+    assert!(
+        cache_keys
+            .iter()
+            .all(|key| session.has_valid_call_stability_proof_for_key(*key)),
+        "the interrupt poll must precede cache eviction"
+    );
+}
+
+#[test]
+fn set_positional_part_direct_path_rolls_back_slot_and_definition_after_replacement() {
+    let mut session = session_with_test_control_builtins();
+    let target = Symbol::new(GLOBAL_CONTEXT, "rollbackPartAssignmentOwner");
+    session
+        .eval_text(
+            "rollbackPartAssignmentOwner = {{{1}}}; \
+             rollbackRootAlias = rollbackPartAssignmentOwner; \
+             rollbackMiddleAlias = rollbackPartAssignmentOwner[[1]]",
+        )
+        .unwrap();
+    seed_plain_list_path_stability(&mut session, &target, &[0, 0, 0]);
+    let original = session
+        .definitions
+        .get(&target)
+        .and_then(|definition| definition.own_value.clone())
+        .unwrap();
+    session.fail_next_positional_part_assignment_after_slot_replacement(target);
+
+    let outcome = session
+        .eval_text("rollbackPartAssignmentOwner[[1, 1, 1]] = 9")
+        .unwrap();
+
+    assert_eq!(outcome.termination, Some(EvalTerminationReason::Cancelled));
+    assert_eq!(
+        outcome.value.to_string(),
+        "TerminatedEvaluation[\"Cancelled\"]"
+    );
+    assert_eq!(
+        session
+            .definitions
+            .get(&target)
+            .and_then(|definition| definition.own_value.as_ref()),
+        Some(&original),
+        "the slot and the whole definition must be restored"
+    );
+    assert_eq!(
+        session
+            .eval_text("{rollbackPartAssignmentOwner, rollbackRootAlias, rollbackMiddleAlias}",)
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[List[List[1]]], List[List[List[1]]], List[List[1]]]"
+    );
 }
 
 #[test]

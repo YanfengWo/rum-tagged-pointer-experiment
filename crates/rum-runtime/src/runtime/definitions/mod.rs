@@ -6,6 +6,7 @@ mod definition_tags;
 mod definition_updates;
 mod definitions;
 mod incremental_append;
+mod incremental_mutation;
 mod part_assignment;
 mod value_table_assignment;
 

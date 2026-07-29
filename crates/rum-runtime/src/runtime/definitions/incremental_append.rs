@@ -1,4 +1,5 @@
 use super::super::*;
+use super::incremental_mutation::DefinitionValueRollback;
 
 #[cfg(test)]
 use std::cell::RefCell;
@@ -153,19 +154,6 @@ impl Session {
         })
     }
 
-    fn incremental_append_environment_is_unobservable(&self, target: &Symbol) -> bool {
-        !self.has_up_value_definitions
-            && !self.tracing_enabled
-            && self.monitor_scopes.is_empty()
-            && self.current_time_deadline.is_none()
-            && self.current_memory_limit.is_none()
-            && self.eval_deadline.is_none()
-            && self.pending_input_request.is_none()
-            && self.pending_eval_request.is_none()
-            && self.pending_suspension.is_none()
-            && !self.incremental_append_has_dynamic_own_value(target)
-    }
-
     fn list_has_default_runtime_semantics(&self) -> bool {
         let list = Symbol::system(heads::structure::LIST);
         self.attribute_set_for_symbol(&list) == default_system_attribute_set(&list)
@@ -176,12 +164,6 @@ impl Session {
             && !self.incremental_append_has_dynamic_own_value(&list)
             && !self.removed_symbols.contains(&list)
             && !self.builtins.contains_key(&list)
-    }
-
-    fn incremental_append_has_dynamic_own_value(&self, symbol: &Symbol) -> bool {
-        self.dynamic_own_values
-            .iter()
-            .any(|frame| frame.symbol == *symbol)
     }
 
     #[cfg(test)]
@@ -239,39 +221,6 @@ fn exact_plain_list_leaf_mut<'a>(
         return None;
     };
     is_system_symbol_name(head, heads::structure::LIST).then_some((head, args))
-}
-
-struct DefinitionValueRollback<'a> {
-    slot: &'a mut Option<Expr>,
-    value: Option<Expr>,
-}
-
-impl<'a> DefinitionValueRollback<'a> {
-    fn take(slot: &'a mut Option<Expr>) -> Option<Self> {
-        let value = slot.take()?;
-        Some(Self {
-            slot,
-            value: Some(value),
-        })
-    }
-
-    fn value_mut(&mut self) -> &mut Expr {
-        self.value
-            .as_mut()
-            .expect("an active definition rollback guard owns its value")
-    }
-
-    fn commit(mut self) {
-        *self.slot = self.value.take();
-    }
-}
-
-impl Drop for DefinitionValueRollback<'_> {
-    fn drop(&mut self) {
-        if let Some(value) = self.value.take() {
-            *self.slot = Some(value);
-        }
-    }
 }
 
 struct AppendedItemRollback<'a> {
