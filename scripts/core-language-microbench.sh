@@ -148,7 +148,21 @@ rumMicroEmit[label_String, n_, seconds_] := Print[StringJoin[
   ToString[seconds]
 ]];
 
-(* Min-of-reps: the timed loop runs the bare expression (NO per-iteration
+(* Timing source is AbsoluteTiming, which reads the kernel's MONOTONIC clock
+   (Instant::now). Do NOT go back to differencing AbsoluteTime[], which reads
+   the wall clock (SystemTime::now). A wall clock tracks civil time, so it is
+   exposed to the outside world — NTP/time-daemon correction, manual clock
+   changes, and host clock-hardware behavior can all slew or step it during a
+   measurement window; a monotonic clock exists precisely to measure elapsed
+   intervals and is immune to those. Wall clocks are also coarser on some
+   platforms (microsecond resolution on macOS), which is real quantization
+   noise on the shortest labels here (tens of microseconds). Reading the
+   monotonic clock inside the kernel additionally drops the two per-rep
+   AbsoluteTime[] evaluations from the measured region. Note that timings.tsv
+   produced before this change is not directly comparable with timings.tsv
+   produced after it.
+
+   Min-of-reps: the timed loop runs the bare expression (NO per-iteration
    assignment — a per-iteration result-equals-expr injects one ownvalue Set
    plus cache invalidation per iteration, inflating rum time about 57 percent
    on cheap primitives. We time it
@@ -156,17 +170,17 @@ rumMicroEmit[label_String, n_, seconds_] := Print[StringJoin[
    spikes; sub-millisecond labels otherwise jitter 20-78 percent run-to-run.
    One untimed warm eval precedes the reps so the first timed rep is warm. *)
 rumMicroBench[label_String, nExpr_, expr_] := Module[
-  {start, i, k, n, seconds, best},
+  {i, k, n, seconds, best},
   n = nExpr;
   rumMicroSink = expr;
   best = -1;
   Do[
-    start = AbsoluteTime[];
-    Do[
-      expr,
-      {i, 1, n}
-    ];
-    seconds = AbsoluteTime[] - start;
+    seconds = First[AbsoluteTiming[
+      Do[
+        expr,
+        {i, 1, n}
+      ]
+    ]];
     If[best < 0 || seconds < best, best = seconds],
     {k, 1, rumMicroReps}
   ];
@@ -175,15 +189,13 @@ rumMicroBench[label_String, nExpr_, expr_] := Module[
 
 SetAttributes[rumMicroOnce, HoldAll];
 rumMicroOnce[label_String, nExpr_, expr_] := Module[
-  {start, k, n, result, seconds, best},
+  {k, n, result, seconds, best},
   n = nExpr;
   result = expr;
   rumMicroSink = result;
   best = -1;
   Do[
-    start = AbsoluteTime[];
-    result = expr;
-    seconds = AbsoluteTime[] - start;
+    seconds = First[AbsoluteTiming[result = expr]];
     If[best < 0 || seconds < best, best = seconds],
     {k, 1, rumMicroReps}
   ];
