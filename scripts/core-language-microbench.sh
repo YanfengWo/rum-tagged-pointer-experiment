@@ -130,7 +130,14 @@ ClearAll[
   fExact,
   fPattern,
   list10,
-  rulesSimple
+  rulesSimple,
+  gMicroAppendListSmall,
+  gMicroAppendListLarge,
+  gMicroAppendPartOuter1000Small,
+  gMicroAppendPartOuter1000Large,
+  gMicroAssociationSetKeySmall,
+  gMicroAssociationSetKeyLarge,
+  gMicroAssociationSmallLiteralRepeat
 ];
 
 rumMicroScale = ${scale};
@@ -255,6 +262,69 @@ rumMicroBench["replaceall-simple", rumMicroN[500], a /. rulesSimple];
 
 rumMicroBench["string-repeat-small", rumMicroN[500], StringRepeat["a", 3]];
 rumMicroBench["character-range-small", rumMicroN[200], CharacterRange["a", "z"]];
+
+rumMicroOnce[
+  "appendto-list-incremental-small",
+  rumMicroN[250],
+  (
+    gMicroAppendListSmall = {};
+    Do[AppendTo[gMicroAppendListSmall, i], {i, 1, 250 * rumMicroScale}]
+  )
+];
+rumMicroOnce[
+  "appendto-list-incremental-large",
+  rumMicroN[500],
+  (
+    gMicroAppendListLarge = {};
+    Do[AppendTo[gMicroAppendListLarge, i], {i, 1, 500 * rumMicroScale}]
+  )
+];
+rumMicroOnce[
+  "appendto-part-outer1000-small",
+  rumMicroN[100],
+  (
+    gMicroAppendPartOuter1000Small = Table[{}, {1000}];
+    Do[
+      AppendTo[gMicroAppendPartOuter1000Small[[1]], i],
+      {i, 1, 100 * rumMicroScale}
+    ]
+  )
+];
+rumMicroOnce[
+  "appendto-part-outer1000-large",
+  rumMicroN[200],
+  (
+    gMicroAppendPartOuter1000Large = Table[{}, {1000}];
+    Do[
+      AppendTo[gMicroAppendPartOuter1000Large[[1]], i],
+      {i, 1, 200 * rumMicroScale}
+    ]
+  )
+];
+rumMicroOnce[
+  "association-set-key-incremental-small",
+  rumMicroN[100],
+  (
+    gMicroAssociationSetKeySmall = <||>;
+    Do[gMicroAssociationSetKeySmall[i] = i, {i, 1, 100 * rumMicroScale}]
+  )
+];
+rumMicroOnce[
+  "association-set-key-incremental-large",
+  rumMicroN[200],
+  (
+    gMicroAssociationSetKeyLarge = <||>;
+    Do[gMicroAssociationSetKeyLarge[i] = i, {i, 1, 200 * rumMicroScale}]
+  )
+];
+rumMicroOnce[
+  "association-small-literal-repeat",
+  rumMicroN[500],
+  Do[
+    <|a -> gMicroAssociationSmallLiteralRepeat, b -> 2|>,
+    {gMicroAssociationSmallLiteralRepeat, 1, 500 * rumMicroScale}
+  ]
+];
 
 Print["RUM_CORE_MICRO_END"];
 EOF
