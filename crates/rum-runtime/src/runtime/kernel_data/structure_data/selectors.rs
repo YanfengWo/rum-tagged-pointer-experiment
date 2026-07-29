@@ -73,6 +73,26 @@ enum PartSelectionFailure {
 }
 
 impl Session {
+    pub(in crate::runtime) fn push_existing_part_selection_failure_messages(
+        &mut self,
+        target: &Expr,
+        selector_exprs: &[Expr],
+    ) -> bool {
+        let Some(selectors) = parse_part_selectors_for_part(selector_exprs) else {
+            return false;
+        };
+        let Some(failure) = diagnose_part_selection_failure(target, &selectors) else {
+            return false;
+        };
+
+        let mut args = Vec::with_capacity(selector_exprs.len() + 1);
+        args.push(target.clone());
+        args.extend_from_slice(selector_exprs);
+        let original = Expr::call(system_expr("Part"), args);
+        self.push_part_selection_failure("Part", failure, &original);
+        true
+    }
+
     pub(in crate::runtime) fn eval_part(
         &mut self,
         head: &Expr,

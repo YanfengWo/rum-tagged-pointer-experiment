@@ -336,6 +336,10 @@ impl Session {
             if let Some(value) = assoc_result? {
                 return Ok(value);
             }
+
+            if let Some(value) = self.try_set_positional_part_lvalue(lhs.clone(), rhs.clone())? {
+                return Ok(value);
+            }
         }
 
         let runtime_profile_normalize_lhs = runtime_path_timing_start("set.normalize_lhs_heads");

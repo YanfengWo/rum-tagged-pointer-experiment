@@ -141,6 +141,7 @@ mod namespace_names;
 mod nothing;
 mod options_and_protection;
 mod package_tools;
+mod part_assignment;
 mod pattern_matching_orderless_optional;
 mod registered_builtin_resolution;
 mod replace_all_unheld;
