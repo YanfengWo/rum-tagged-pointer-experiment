@@ -3,6 +3,47 @@
 This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log).
 
+## COMPLETE — incremental container update + Part assignment (2026-07-29/30)
+
+Maintenance-era work, opened by a real question rather than a search for
+things to optimize: a rum-hol feasibility check ("is log replay expensive?")
+led to measuring `assoc[k] = v` and finding it O(n^3). Two design-only briefs
+(291, 297) drove two arcs, plan-first throughout.
+
+**plan-291 — briefs 292-296.** Labels → COW/cache-proof primitives → flat
+`AppendTo` fast path → Part spine → Association direct canonical-Rule
+mutation.
+
+- `AppendTo` accumulation O(n^2) → amortized O(n) (6.4x)
+- `AppendTo` through a Part spine: 13.2x
+- Association key assignment: 25.1 → 0.43 ms (**57.9x**);
+  `shared_expr_alloc` 20322 → 222
+- Step 6 (bounded key index) deliberately **not done** — the linear scan it
+  targets is not dominant at these sizes, and it would reintroduce the
+  extra-strong-holder shape the arc spent three steps removing.
+
+**plan-297 — briefs 298-300.** The diagnosis found a feature gap, not a
+perf gap: **`lst[[i]] = v` never worked**, silently leaving the list unchanged
+and emitting a false `Set::wrsym: Symbol Part is Protected`. Missed for a year
+because the gap is oddly shaped — compound Part updates, Association Part
+assignment, Part reads and `ReplacePart` all worked, and no test covered plain
+`Set` into a List position.
+
+- `88625df` — implemented, semantics mirroring Association Set ordering
+  (rhs → selectors → re-fetch → re-check protection → mutate)
+- `885ec0f` — four labels pin the working baseline
+- `60c4ab4` — width-independent: length quotient 2.87 → 0.995
+
+Known candidate, **not scheduled**: `PrependTo` at 2.81x (head insertion moves
+all elements even when exclusive — it has a real floor).
+
+Measurement lessons from this arc are recorded in `CLAUDE.md` §Current
+direction; the short form is: counters beat timings, this suite has a per-run
+whole-run offset that makes direction splits meaningless, never normalize
+against the suite median in an optimization lane, cross-session comparison is
+unreliable, and **every perf probe needs an assertion that the work actually
+happened** (one here measured a failing path for several rounds).
+
 ## COMPLETE — publication-prep line (2026-07-21) — PUBLISHED
 
 **`rum` is now public at https://github.com/siqiliu-tsinghua/rum** (pushed

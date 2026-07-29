@@ -167,6 +167,62 @@ rather than duplicating them.
 
 ## Current direction (read these for state)
 
+- **INCREMENTAL CONTAINER UPDATE + PART ASSIGNMENT — BOTH COMPLETE
+  (2026-07-29/30, briefs 291-300). Maintenance-era work, triggered by a
+  real question, not by a hunt for things to optimize.** Origin: a rum-hol
+  feasibility question ("is log replay expensive?") led to measuring
+  `assoc[k] = v`, which was O(n^3). Two design-only briefs (291, 297) then
+  drove two implementation arcs, plan-first throughout.
+  - **plan-291 (briefs 292-296)**: microbench labels → COW + cache-proof
+    primitives → flat `AppendTo` fast path → Part spine → Association direct
+    canonical-Rule mutation. `AppendTo` O(n^2)→O(n) (6.4x), Part spine 13.2x,
+    Association 25.1→0.43 ms (**57.9x**), `shared_expr_alloc` 20322→222.
+    Step 6 (bounded key index) deliberately NOT done: the linear scan it
+    targets is not the dominant term at these sizes, and it would reintroduce
+    exactly the extra-strong-holder shape this arc spent three steps removing.
+  - **plan-297 (briefs 298-300)**: the diagnosis brief found something far
+    bigger than the perf question that prompted it — **`lst[[i]] = v` never
+    worked at all**, silently leaving the list unchanged and emitting a false
+    `Set::wrsym: Symbol Part is Protected`. A year of work missed it because
+    the gap is oddly shaped: compound Part updates worked, Association Part
+    assignment worked, Part reads worked, `ReplacePart` worked; only plain
+    `Set` into a List position was absent, and no test covered it. Fixed as a
+    feature first (`88625df`), then measured (`885ec0f`), then made
+    width-independent (`60c4ab4`, length quotient 2.87→0.995).
+  - **The measurement lessons are the durable part** — this suite lies in
+    four distinct ways, each caught the hard way:
+    1. **Counters beat timings.** Allocation counts are load-immune; when a
+       video call invalidated a whole timing pass, every "did the mechanism
+       fire" conclusion still stood. Brief rule since 294: report counters
+       first, and if they don't move, do not quote a time.
+    2. **Per-run whole-run offset.** Every run carries a scale factor moving
+       ALL labels together by a few percent. Two runs of the IDENTICAL script
+       read −4.07% with 7/38 up. **A lopsided direction split is not
+       evidence.** Alternating order does not cancel it.
+    3. **Never normalize against the suite median in an optimization lane.**
+       It drifts cumulatively: the small-Association sentinel read +21.9%
+       across steps 1/3/4/5 purely because the optimized labels dragged the
+       median down. Normalize against *named untouched labels*, or use
+       within-run quotients (immune by construction).
+    4. **Cross-session comparison is unreliable even with paired ratios** —
+       the same comparison read −4.96% across sessions and −0.16% within one.
+       Run base and candidate in one window.
+  - **My own worst error of the arc: a probe that measured a failing path.**
+    The `lst[[i]] = v` "performance" numbers were the cost of
+    rebuild-then-reject. The probe *contained* a calibration point
+    (`Print[qL[[200]]]`, printing 0 instead of 200) that I never read — I
+    grepped only the counter lines. And the scaling check this lane relies on
+    did NOT catch it: the failing path is genuinely O(m), so the number scaled
+    correctly while measuring the wrong thing. **Every perf probe needs an
+    assertion that the work actually happened**; brief-299 makes it a required
+    section.
+  - Remaining known candidate, NOT scheduled: `PrependTo` at 2.81x (head
+    insertion moves all elements even when exclusive, so it has a real floor).
+  - Workflow: **plan-first proved itself immediately.** Codex's design brief
+    refuted three of my five findings on 291 (the call-stability cache as the
+    hidden third owner; "only ApplyTo runs user code" false for all eleven
+    compound assignments; Association being O(n^3) not O(n^2)), all confirmed
+    at the gate — and on 297 it found the feature gap I had mis-diagnosed.
 - **PUBLICATION-PREP LINE — COMPLETE (2026-07-21). rum is PUBLISHED at
   https://github.com/siqiliu-tsinghua/rum** (main `b854d3e` with full
   unrewritten history + annotated tag `v0.1.0`; remote HEAD verified equal to

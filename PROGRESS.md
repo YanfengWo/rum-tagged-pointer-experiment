@@ -1349,3 +1349,47 @@ architecture-debt line.
   detection confirmed superlinear on distinct terms from roughly n ≥ 400,
   but the entry's own revisit trigger (a real symbolic-algebra workload)
   is still unmet.
+
+## 2026-07-29/30 — incremental container update + positional Part assignment (briefs 291-300)
+
+Two arcs, both opened by design-only briefs under the plan-first workflow.
+Origin was a rum-hol feasibility question about log-replay cost, which led to
+measuring `assoc[k] = v` and finding it O(n^3).
+
+plan-291 (briefs 292-296): microbench labels; SharedArgs COW + cache-proof
+primitives; flat AppendTo fast path; Part spine; Association direct
+canonical-Rule mutation. AppendTo O(n^2)->O(n) (6.4x), Part spine 13.2x,
+Association 25.1->0.43 ms (57.9x, shared_expr_alloc 20322->222). Step 6
+(bounded key index) deliberately not done.
+
+plan-297 (briefs 298-300): the diagnosis brief found that `lst[[i]] = v` never
+worked -- it left the list unchanged and emitted a false "Set::wrsym: Symbol
+Part is Protected". Fixed as a feature (88625df), measured (885ec0f), then made
+independent of container width (60c4ab4; length quotient 2.87 -> 0.995).
+
+Durable lessons, all learned the hard way in this arc:
+
+- Counters (allocation counts) are immune to machine load; timings are not. A
+  video call invalidated an entire timing pass while every "did the mechanism
+  fire" conclusion still stood. Since brief-294 the rule is: report counters
+  first, and if they do not move, do not quote a time.
+- This suite has a per-run whole-run offset moving all labels together by a few
+  percent. Two runs of the identical script read -4.07% with 7/38 up, so a
+  lopsided direction split is not evidence. Alternating order does not cancel
+  it.
+- Never normalize against the suite median in a lane of successive
+  optimizations: it drifts cumulatively (a sentinel read +21.9% across four
+  steps purely because optimized labels dragged the median down). Use named
+  untouched labels, or within-run quotients.
+- Cross-session label comparison is unreliable even with paired ratios: the
+  same comparison read -4.96% across sessions and -0.16% within one.
+- Every performance probe needs an assertion that the work actually happened.
+  The `lst[[i]] = v` numbers measured a failing rebuild-then-reject path for
+  several rounds. The probe contained a calibration point that was never read,
+  and the scaling check did not catch it because the failing path is genuinely
+  O(m) -- the number scaled correctly while measuring the wrong thing.
+- Plan-first paid off immediately: Codex's design brief refuted three of five
+  findings on 291 (the call-stability cache as hidden third owner; "only
+  ApplyTo runs user code" false for all eleven compound assignments;
+  Association O(n^3) not O(n^2)), all confirmed at the gate, and on 297 found
+  the feature gap that had been mis-diagnosed as a performance problem.
