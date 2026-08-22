@@ -768,7 +768,7 @@ fn resume_sort_by_key_comparator_from_pair(
     entries: Vec<SortByEntry>,
     mut lhs_index: usize,
     mut rhs_index: usize,
-    before: Vec<Vec<bool>>,
+    mut before: Vec<Vec<bool>>,
 ) -> Result<Expr, EvalError> {
     loop {
         if lhs_index >= entries.len() {
@@ -780,37 +780,34 @@ fn resume_sort_by_key_comparator_from_pair(
             continue;
         }
         if lhs_index != rhs_index {
-            break;
+            let comparison_result = eval_binary_predicate(
+                session,
+                &ordering,
+                &entries[lhs_index].key,
+                &entries[rhs_index].key,
+            );
+            let value = match comparison_result {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, value| {
+                            resume_sort_by_key_comparator_with_value(
+                                session, expr_head, ordering, entries, lhs_index, rhs_index,
+                                before, value,
+                            )
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+
+            if is_true_expr(&value) {
+                before[lhs_index][rhs_index] = true;
+            }
         }
         rhs_index += 1;
     }
-
-    let comparison_result = eval_binary_predicate(
-        session,
-        &ordering,
-        &entries[lhs_index].key,
-        &entries[rhs_index].key,
-    );
-    let suspended_expr_head = expr_head.clone();
-    let suspended_ordering = ordering.clone();
-    let suspended_entries = entries.clone();
-    let suspended_before = before.clone();
-    let value = session.suspend_with_frame(comparison_result, move |session, value| {
-        resume_sort_by_key_comparator_with_value(
-            session,
-            suspended_expr_head,
-            suspended_ordering,
-            suspended_entries,
-            lhs_index,
-            rhs_index,
-            suspended_before,
-            value,
-        )
-    })?;
-
-    resume_sort_by_key_comparator_with_value(
-        session, expr_head, ordering, entries, lhs_index, rhs_index, before, value,
-    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -847,7 +844,7 @@ fn resume_sort_comparator_from_pair(
     items: Vec<Expr>,
     mut lhs_index: usize,
     mut rhs_index: usize,
-    before: Vec<Vec<bool>>,
+    mut before: Vec<Vec<bool>>,
 ) -> Result<Expr, EvalError> {
     loop {
         if lhs_index >= items.len() {
@@ -859,37 +856,32 @@ fn resume_sort_comparator_from_pair(
             continue;
         }
         if lhs_index != rhs_index {
-            break;
+            let comparison_result = session.evaluate(Expr::call(
+                ordering.clone(),
+                vec![items[lhs_index].clone(), items[rhs_index].clone()],
+            ));
+            let value = match comparison_result {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, value| {
+                            resume_sort_comparator_with_value(
+                                session, call_args, expr_head, ordering, items, lhs_index,
+                                rhs_index, before, value,
+                            )
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+
+            if is_system_symbol_name(&value, "True") {
+                before[lhs_index][rhs_index] = true;
+            }
         }
         rhs_index += 1;
     }
-
-    let comparison_result = session.evaluate(Expr::call(
-        ordering.clone(),
-        vec![items[lhs_index].clone(), items[rhs_index].clone()],
-    ));
-    let suspended_call_args = call_args.clone();
-    let suspended_expr_head = expr_head.clone();
-    let suspended_ordering = ordering.clone();
-    let suspended_items = items.clone();
-    let suspended_before = before.clone();
-    let value = session.suspend_with_frame(comparison_result, move |session, value| {
-        resume_sort_comparator_with_value(
-            session,
-            suspended_call_args,
-            suspended_expr_head,
-            suspended_ordering,
-            suspended_items,
-            lhs_index,
-            rhs_index,
-            suspended_before,
-            value,
-        )
-    })?;
-
-    resume_sort_comparator_with_value(
-        session, call_args, expr_head, ordering, items, lhs_index, rhs_index, before, value,
-    )
 }
 
 #[allow(clippy::too_many_arguments)]

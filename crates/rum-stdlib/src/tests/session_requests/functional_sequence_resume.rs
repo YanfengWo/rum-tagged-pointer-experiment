@@ -77,6 +77,38 @@ fn resume_eval_request_with_input_can_finish_sortby_key_loop() {
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_custom_sort_comparator_loops() {
+    for (source, expected) in [
+        (
+            r#"calls = 0;
+               {Sort[{2, 1}, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["sort-compare: "], "yes"], Less[a, b]]]], calls}"#,
+            "List[List[1, 2], 2]",
+        ),
+        (
+            r#"calls = 0;
+               {SortBy[{2, 1}, Identity, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["sort-compare: "], "yes"], Less[a, b]]]], calls}"#,
+            "List[List[1, 2], 2]",
+        ),
+        (
+            r#"calls = 0;
+               {ReverseSort[{1, 2}, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["sort-compare: "], "yes"], Less[a, b]]]], calls}"#,
+            "List[List[2, 1], 2]",
+        ),
+    ] {
+        let mut session = core_session();
+        let failure = session
+            .eval_request(source)
+            .expect_err("custom comparator should suspend on its first comparison");
+        assert_input_prompt(&failure.error, "sort-compare: ");
+
+        let response = session
+            .resume_eval_request_with_input("no")
+            .expect("custom comparator should finish after resuming");
+        assert_eq!(response.value.to_string(), expected);
+    }
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_gatherby_function_list_key_loop() {
     let mut session = core_session();
 

@@ -73,6 +73,27 @@ fn sort_and_sortby_cover_current_top_level_subset() {
 }
 
 #[test]
+fn custom_sort_comparators_preserve_wide_pair_counts_without_growing_the_stack() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            r#"n = 120;
+               calls = 0;
+               ordering = Function[{a, b}, calls = calls + 1; Less[a, b]];
+               sorted = Sort[Reverse[Range[n]], ordering];
+               sortCalls = calls;
+               calls = 0;
+               sortedBy = SortBy[Reverse[Range[n]], Identity, ordering];
+               SameQ[{sorted, sortedBy, sortCalls, calls},
+                     {Range[n], Range[n], n (n - 1), n (n - 1)}]"#,
+        ),
+        "True"
+    );
+}
+
+#[test]
 fn sort_by_supports_stable_multi_key_specs_and_tuple_ordering() {
     let mut session = core_session();
 

@@ -90,6 +90,23 @@ fn by_extrema_take_and_reverse_sort_cover_ties_and_boundaries() {
 }
 
 #[test]
+fn custom_reverse_sort_comparator_preserves_wide_pair_count_without_growing_the_stack() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            r#"n = 120;
+               calls = 0;
+               ordering = Function[{a, b}, calls = calls + 1; Less[a, b]];
+               sorted = ReverseSort[Range[n], ordering];
+               SameQ[{sorted, calls}, {Reverse[Range[n]], n (n - 1)}]"#,
+        ),
+        "True"
+    );
+}
+
+#[test]
 fn gather_by_groups_in_first_key_order() {
     let mut session = core_session();
 
