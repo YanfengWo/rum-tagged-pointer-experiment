@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+
 use super::*;
+
+const INDEXED_PATH_COMPATIBILITY_THRESHOLD: usize = 32;
 
 enum MapThreadDispatch {
     Threaded(Expr),
@@ -28,6 +32,80 @@ enum SubsetMapPathFailure {
     Duplicate(Vec<isize>),
     Overlap(Vec<isize>, Vec<isize>),
     Missing(MissingExactPath),
+}
+
+#[derive(Default)]
+struct PathPrefixNode {
+    children: HashMap<isize, usize>,
+    terminal_min_index: Option<usize>,
+    subtree_min_index: Option<usize>,
+}
+
+struct PathPrefixIndex {
+    nodes: Vec<PathPrefixNode>,
+}
+
+impl PathPrefixIndex {
+    fn new() -> Self {
+        Self {
+            nodes: vec![PathPrefixNode::default()],
+        }
+    }
+
+    fn earliest_conflict(&self, path: &[isize]) -> Option<usize> {
+        let mut node_index = 0;
+        let mut earliest = None;
+
+        for component in path {
+            earliest = earlier_index(earliest, self.nodes[node_index].terminal_min_index);
+            let Some(child_index) = self.nodes[node_index].children.get(component).copied() else {
+                return earliest;
+            };
+            node_index = child_index;
+        }
+
+        let node = &self.nodes[node_index];
+        earliest = earlier_index(earliest, node.terminal_min_index);
+        earlier_index(earliest, node.subtree_min_index)
+    }
+
+    fn insert(&mut self, path: &[isize], index: usize) {
+        let mut node_index = 0;
+        if self.nodes[node_index].subtree_min_index.is_none() {
+            self.nodes[node_index].subtree_min_index = Some(index);
+        }
+
+        for component in path {
+            let child_index = if let Some(child_index) =
+                self.nodes[node_index].children.get(component).copied()
+            {
+                child_index
+            } else {
+                let child_index = self.nodes.len();
+                self.nodes.push(PathPrefixNode::default());
+                self.nodes[node_index]
+                    .children
+                    .insert(*component, child_index);
+                child_index
+            };
+            node_index = child_index;
+            if self.nodes[node_index].subtree_min_index.is_none() {
+                self.nodes[node_index].subtree_min_index = Some(index);
+            }
+        }
+
+        if self.nodes[node_index].terminal_min_index.is_none() {
+            self.nodes[node_index].terminal_min_index = Some(index);
+        }
+    }
+}
+
+fn earlier_index(lhs: Option<usize>, rhs: Option<usize>) -> Option<usize> {
+    match (lhs, rhs) {
+        (Some(lhs), Some(rhs)) => Some(lhs.min(rhs)),
+        (Some(index), None) | (None, Some(index)) => Some(index),
+        (None, None) => None,
+    }
 }
 
 pub(crate) fn eval_subset_map(
@@ -369,6 +447,10 @@ fn subset_map_path_failure(
 }
 
 fn subset_map_path_compatibility_failure(paths: &[Vec<isize>]) -> Option<SubsetMapPathFailure> {
+    if paths.len() > INDEXED_PATH_COMPATIBILITY_THRESHOLD {
+        return indexed_subset_map_path_compatibility_failure(paths);
+    }
+
     for (index, path) in paths.iter().enumerate() {
         for other in paths.iter().skip(index + 1) {
             if path == other {
@@ -382,6 +464,32 @@ fn subset_map_path_compatibility_failure(paths: &[Vec<isize>]) -> Option<SubsetM
     }
 
     None
+}
+
+fn indexed_subset_map_path_compatibility_failure(
+    paths: &[Vec<isize>],
+) -> Option<SubsetMapPathFailure> {
+    let mut prefix_index = PathPrefixIndex::new();
+    let mut first_conflict = None;
+
+    for (right_index, path) in paths.iter().enumerate() {
+        if let Some(left_index) = prefix_index.earliest_conflict(path) {
+            let conflict = (left_index, right_index);
+            if first_conflict.is_none_or(|first| conflict < first) {
+                first_conflict = Some(conflict);
+            }
+        }
+        prefix_index.insert(path, right_index);
+    }
+
+    let (left_index, right_index) = first_conflict?;
+    let left = &paths[left_index];
+    let right = &paths[right_index];
+    if left == right {
+        Some(SubsetMapPathFailure::Duplicate(left.clone()))
+    } else {
+        Some(SubsetMapPathFailure::Overlap(left.clone(), right.clone()))
+    }
 }
 
 fn subset_map_path_message(failure: &SubsetMapPathFailure) -> String {

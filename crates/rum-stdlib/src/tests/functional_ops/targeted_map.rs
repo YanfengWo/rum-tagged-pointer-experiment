@@ -62,6 +62,19 @@ fn map_at_evaluates_each_target_once_at_scale() {
 }
 
 #[test]
+fn subset_map_validates_wide_disjoint_paths_at_scale() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "count = 0; values = Range[5000]; paths = List /@ Range[5000]; mapped = SubsetMap[Function[(count = count + 1; Slot[1])], values, paths]; {Length[mapped], First[mapped], Last[mapped], count}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[5000, 1, 5000, 1]");
+}
+
+#[test]
 fn targeted_mapping_reports_only_explicit_missing_or_incompatible_paths() {
     let mut session = core_session();
 
@@ -116,6 +129,24 @@ fn targeted_mapping_reports_only_explicit_missing_or_incompatible_paths() {
         .unwrap();
     assert_eq!(successful_subset.value.to_string(), "List[c, b, a]");
     assert!(successful_subset.messages.is_empty());
+
+    let indexed_duplicate = session
+        .eval_text("SubsetMap[Reverse, Range[33], Join[List /@ Range[33], {{2}, {1}}]]")
+        .unwrap();
+    assert!(indexed_duplicate.messages.iter().any(|message| {
+        message.symbol == "SubsetMap"
+            && message.tag == "path"
+            && message.text == "Duplicate subset path List[1] is not allowed."
+    }));
+
+    let indexed_overlap = session
+        .eval_text("SubsetMap[Reverse, Range[33], Join[List /@ Range[33], {{2, 1}, {1, 1}}]]")
+        .unwrap();
+    assert!(indexed_overlap.messages.iter().any(|message| {
+        message.symbol == "SubsetMap"
+            && message.tag == "path"
+            && message.text == "Overlapping subset paths List[1] and List[1, 1] are not allowed."
+    }));
 }
 
 #[test]
