@@ -4,7 +4,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroU64;
 use std::ops::Deref;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 use num_bigint::BigInt;
 use serde::{Deserialize, Serialize};
@@ -609,6 +609,23 @@ impl SharedArgs {
 
     pub fn ptr_key(&self) -> usize {
         Arc::as_ptr(&self.0) as usize
+    }
+
+    pub fn downgrade(&self) -> WeakSharedArgs {
+        WeakSharedArgs(Arc::downgrade(&self.0))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct WeakSharedArgs(Weak<Vec<Expr>>);
+
+impl WeakSharedArgs {
+    pub fn ptr_eq(&self, args: &SharedArgs) -> bool {
+        std::ptr::eq(self.0.as_ptr(), Arc::as_ptr(&args.0))
+    }
+
+    pub fn is_alive(&self) -> bool {
+        self.0.strong_count() != 0
     }
 }
 

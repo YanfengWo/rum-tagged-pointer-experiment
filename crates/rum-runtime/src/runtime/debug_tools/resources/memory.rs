@@ -54,6 +54,7 @@ impl Session {
                 .len()
                 .saturating_mul(std::mem::size_of::<(Symbol, BuiltinSpec)>()),
         );
+        total = total.saturating_add(self.association_lookup_cache.memory_proxy_bytes());
 
         total = total.saturating_add(self.current_context.capacity());
         total = total.saturating_add(render_string_vec_memory_proxy_bytes(&self.context_path));

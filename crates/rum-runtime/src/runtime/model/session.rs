@@ -39,6 +39,7 @@ pub struct Session {
     pub(in crate::runtime) stable_symbol_cache: SymbolStabilityCache,
     pub(in crate::runtime) symbol_call_effect_cache: SymbolCallEffectCache,
     pub(in crate::runtime) call_stability_cache: CallStabilityCache,
+    pub(in crate::runtime) association_lookup_cache: AssociationLookupCache,
     pub(in crate::runtime) options: BTreeMap<Symbol, SymbolOptions>,
     pub(in crate::runtime) syntax_information: BTreeMap<Symbol, Expr>,
     pub(in crate::runtime) declared_stubs: SymbolSet,

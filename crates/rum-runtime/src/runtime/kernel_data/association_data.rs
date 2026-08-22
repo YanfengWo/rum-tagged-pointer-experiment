@@ -326,47 +326,137 @@ pub(in crate::runtime) fn invalid_association_message(expr: &Expr) -> String {
     format!("The argument {expr} is not a valid Association.")
 }
 
-pub(in crate::runtime) fn is_association_expr(expr: &Expr) -> bool {
-    association_entries_from_expr(expr).is_some()
+pub(in crate::runtime) fn has_association_head(expr: &Expr) -> bool {
+    matches!(expr, Expr::Call { head, .. } if is_system_symbol_name(head, "Association"))
 }
 
-pub(in crate::runtime) fn apply_association_to_args(head: &Expr, args: &[Expr]) -> Option<Expr> {
-    match args {
-        [] => association_entries_from_expr(head).map(|_| head.clone()),
-        [key] => lookup_association_key(head, key),
-        _ => apply_association_to_key_path(head, args),
+impl Session {
+    pub(in crate::runtime) fn apply_association_to_args(
+        &mut self,
+        head: &Expr,
+        args: &[Expr],
+    ) -> Option<Expr> {
+        match args {
+            [] => association_entries_from_expr(head).map(|_| head.clone()),
+            [key] => self.lookup_association_key(head, key),
+            _ => self.apply_association_to_key_path(head, args),
+        }
     }
-}
 
-fn lookup_association_key(expr: &Expr, key: &Expr) -> Option<Expr> {
-    let entries = association_entries_from_expr(expr)?;
-    Some(
-        entries
-            .iter()
-            .find(|(entry_key, _)| entry_key == key)
-            .map(|(_, value)| value.clone())
-            .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
-    )
-}
+    fn lookup_association_key(&mut self, expr: &Expr, key: &Expr) -> Option<Expr> {
+        if let Some(value) = self.lookup_flat_association_key(expr, key) {
+            return Some(value.unwrap_or_else(|| missing_key_absent_expr(key.clone())));
+        }
 
-fn apply_association_to_key_path(head: &Expr, keys: &[Expr]) -> Option<Expr> {
-    let mut current = head.clone();
-    for (index, key) in keys.iter().enumerate() {
-        let Some(value) = lookup_association_key(&current, key) else {
+        let entries = association_entries_from_expr(expr)?;
+        Some(
+            entries
+                .iter()
+                .find(|(entry_key, _)| entry_key == key)
+                .map(|(_, value)| value.clone())
+                .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+        )
+    }
+
+    fn lookup_flat_association_key(&mut self, expr: &Expr, key: &Expr) -> Option<Option<Expr>> {
+        let Expr::Call { head, args } = expr else {
             return None;
         };
-
-        if is_missing_expr(&value) || index + 1 == keys.len() {
-            return Some(value);
-        }
-
-        if !is_association_expr(&value) {
+        if !is_system_symbol_name(head, "Association") {
             return None;
         }
-        current = value;
+
+        match self.association_lookup_cache.probe(args, key) {
+            AssociationLookupCacheProbe::Indexed(position) => {
+                return match position {
+                    Some(position) => {
+                        let (_, value) = flat_association_rule_parts(&args[position])?;
+                        Some(Some(value.clone()))
+                    }
+                    None => Some(None),
+                };
+            }
+            AssociationLookupCacheProbe::Build => {
+                if !args
+                    .iter()
+                    .all(|item| flat_association_rule_parts(item).is_some())
+                {
+                    return None;
+                }
+                self.association_lookup_cache.insert_index(
+                    args,
+                    args.iter().map(|item| {
+                        flat_association_rule_parts(item)
+                            .expect("validated flat association rule")
+                            .0
+                    }),
+                );
+                let AssociationLookupCacheProbe::Indexed(position) =
+                    self.association_lookup_cache.probe(args, key)
+                else {
+                    unreachable!("a newly inserted association index must be reusable");
+                };
+                return match position {
+                    Some(position) => {
+                        let (_, value) = flat_association_rule_parts(&args[position])?;
+                        Some(Some(value.clone()))
+                    }
+                    None => Some(None),
+                };
+            }
+            AssociationLookupCacheProbe::Scan => {}
+        }
+
+        let mut value = None;
+        for item in args.iter().rev() {
+            let (entry_key, entry_value) = flat_association_rule_parts(item)?;
+            if value.is_none() {
+                self.association_lookup_cache.record_linear_comparison();
+                if entry_key == key {
+                    value = Some(entry_value.clone());
+                }
+            }
+        }
+
+        Some(value)
     }
 
-    Some(current)
+    fn apply_association_to_key_path(&mut self, head: &Expr, keys: &[Expr]) -> Option<Expr> {
+        let mut current = head.clone();
+        for (index, key) in keys.iter().enumerate() {
+            let Some(value) = self.lookup_association_key(&current, key) else {
+                return None;
+            };
+
+            if is_missing_expr(&value) || index + 1 == keys.len() {
+                return Some(value);
+            }
+
+            if !has_association_head(&value) {
+                return None;
+            }
+            current = value;
+        }
+
+        Some(current)
+    }
+
+    #[cfg(test)]
+    pub(in crate::runtime) fn association_lookup_work(&self) -> AssociationLookupWork {
+        self.association_lookup_cache.work()
+    }
+}
+
+fn flat_association_rule_parts(expr: &Expr) -> Option<(&Expr, &Expr)> {
+    let Expr::Call { head, args } = expr else {
+        return None;
+    };
+    if !(is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed"))
+        || args.len() != 2
+    {
+        return None;
+    }
+    Some((&args[0], &args[1]))
 }
 
 pub fn missing_key_absent_expr(key: Expr) -> Expr {

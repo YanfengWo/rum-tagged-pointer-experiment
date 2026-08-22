@@ -8,11 +8,14 @@ mod requests;
 mod session;
 mod traversal;
 
+#[cfg(test)]
+pub(super) use cache::AssociationLookupWork;
 pub(super) use cache::{
-    AttributeMap, AttributeSetCache, BuiltinDispatchSpecCache, BuiltinSpecMap,
-    CallEffectCacheEntry, CallStabilityCache, CallStabilityCacheEntry, CallStabilityCacheKey,
-    DefinitionMap, StabilityBloom, SymbolCallEffectCache, SymbolCallEffectKey, SymbolCountMap,
-    SymbolSet, SymbolStabilityCache, SymbolStabilityCacheEntry,
+    AssociationLookupCache, AssociationLookupCacheProbe, AttributeMap, AttributeSetCache,
+    BuiltinDispatchSpecCache, BuiltinSpecMap, CallEffectCacheEntry, CallStabilityCache,
+    CallStabilityCacheEntry, CallStabilityCacheKey, DefinitionMap, StabilityBloom,
+    SymbolCallEffectCache, SymbolCallEffectKey, SymbolCountMap, SymbolSet, SymbolStabilityCache,
+    SymbolStabilityCacheEntry,
 };
 pub use cache::{RuntimeCacheHasher, SymbolExprMap};
 pub use config::{ResourceLimits, SessionConfig};

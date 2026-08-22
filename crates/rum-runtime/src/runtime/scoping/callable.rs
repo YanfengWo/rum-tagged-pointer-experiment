@@ -31,7 +31,7 @@ impl Session {
             apply_composition_to_args(&composition, args)
         } else if let Some(status) = self.apply_status_object_to_args(head, args)? {
             status
-        } else if let Some(value) = apply_association_to_args(head, args) {
+        } else if let Some(value) = self.apply_association_to_args(head, args) {
             value
         } else if let Some(invalid_key_application) =
             self.invalid_callable_key_application(head, args)

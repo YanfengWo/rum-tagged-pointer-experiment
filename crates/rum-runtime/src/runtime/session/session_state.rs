@@ -383,6 +383,7 @@ impl Session {
             stable_symbol_cache: SymbolStabilityCache::default(),
             symbol_call_effect_cache: SymbolCallEffectCache::default(),
             call_stability_cache: CallStabilityCache::default(),
+            association_lookup_cache: AssociationLookupCache::default(),
             options: BTreeMap::new(),
             syntax_information: BTreeMap::new(),
             declared_stubs: SymbolSet::default(),
