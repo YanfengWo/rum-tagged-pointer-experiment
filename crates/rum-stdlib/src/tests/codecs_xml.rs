@@ -241,6 +241,19 @@ fn xml_round_trips_are_pinned() {
 }
 
 #[test]
+fn xml_wide_attribute_index_preserves_round_trip() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "names = Map[Function[StringJoin[\"k\", ToString[Slot[1]]]], Range[20]]; attrs = AssociationThread[names, Map[ToString, Range[20]]]; xml = XmlElement[\"r\", attrs, {}]; SameQ[FromXml[ToXml[xml]], xml]",
+        ),
+        "True"
+    );
+}
+
+#[test]
 fn xml_values_compose_with_json() {
     let mut session = core_session();
 

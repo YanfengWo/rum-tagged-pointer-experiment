@@ -94,21 +94,6 @@ pub(super) fn parse_key(raw: &str, offset: usize) -> Result<String, YamlParseErr
     }
 }
 
-pub(super) fn push_unique_entry(
-    entries: &mut Vec<(String, Expr)>,
-    entry: (String, Expr),
-    offset: usize,
-) -> Result<(), YamlParseError> {
-    if entries.iter().any(|(key, _)| key == &entry.0) {
-        return Err(YamlParseError::new(
-            offset,
-            format!("duplicate mapping key {:?}", entry.0),
-        ));
-    }
-    entries.push(entry);
-    Ok(())
-}
-
 pub(super) fn count_leading_spaces(text: &str) -> usize {
     text.bytes().take_while(|byte| *byte == b' ').count()
 }

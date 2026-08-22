@@ -100,6 +100,13 @@ fn csv_headers_tsv_ragged_rows_and_round_trips_are_pinned() {
         ),
         "List[Association[Rule[\"name\", \"apple\"], Rule[\"qty\", \"3\"]], Association[Rule[\"name\", \"kiwi\"], Rule[\"qty\", \"10\"]]]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "headers = Map[ToString, Range[20]]; Length[FromCsv[ToCsv[{headers, headers}], \"Headers\" -> True]]",
+        ),
+        "1"
+    );
 }
 
 #[test]
@@ -124,6 +131,19 @@ fn to_csv_encodes_lists_and_association_rows() {
         ),
         "name,qty\napple,3\nkiwi,10"
     );
+}
+
+#[test]
+fn to_csv_wide_association_rows_follow_header_order() {
+    let mut session = core_session();
+    let csv = eval_string_atom(
+        &mut session,
+        "headers = Map[ToString, Range[20]]; ToCsv[{AssociationThread[headers, headers], AssociationThread[Reverse[headers], Reverse[headers]]}]",
+    );
+    let lines = csv.lines().collect::<Vec<_>>();
+
+    assert_eq!(lines.len(), 3);
+    assert_eq!(lines[1], lines[2]);
 }
 
 #[test]
@@ -205,6 +225,26 @@ fn ini_to_ini_output_and_round_trips_are_pinned() {
             "FromIni[ToIni[<|\"\" -> <|\"top\" -> \"1\"|>, \"s\" -> <|\"k\" -> \"v\"|>|>]]"
         ),
         "Association[Rule[\"\", Association[Rule[\"top\", \"1\"]]], Rule[\"s\", Association[Rule[\"k\", \"v\"]]]]"
+    );
+}
+
+#[test]
+fn ini_wide_key_and_section_indexes_preserve_round_trips() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "names = Map[ToString, Range[20]]; data = Association[Rule[\"s\", AssociationThread[names, names]]]; SameQ[FromIni[ToIni[data]], data]",
+        ),
+        "True"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "names = Map[ToString, Range[20]]; data = AssociationThread[names, Map[Function[Association[Rule[\"k\", Slot[1]]]], names]]; SameQ[FromIni[ToIni[data]], data]",
+        ),
+        "True"
     );
 }
 

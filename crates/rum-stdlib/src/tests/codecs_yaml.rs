@@ -201,6 +201,19 @@ fn to_yaml_round_trips_adversarial_strings_and_empties() {
 }
 
 #[test]
+fn yaml_wide_mapping_index_preserves_round_trip() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "value = AssociationThread[Map[ToString, Range[20]], Range[20]]; SameQ[FromYaml[ToYaml[value]], value]",
+        ),
+        "True"
+    );
+}
+
+#[test]
 fn yaml_codecs_compose_with_json() {
     let mut session = core_session();
 

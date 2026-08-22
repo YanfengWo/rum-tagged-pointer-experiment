@@ -76,6 +76,24 @@ fn from_json_maps_nested_values_to_exact_rum_expressions() {
 }
 
 #[test]
+fn from_json_wide_object_key_index_preserves_all_members() {
+    let mut session = core_session();
+    let members = (0..20)
+        .map(|index| format!("\"k{index}\":{index}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let value = from_json_value(&mut session, &format!("{{{members}}}"));
+
+    assert_eq!(
+        session
+            .evaluate(Expr::call(system_expr("Length"), vec![value]))
+            .unwrap()
+            .to_string(),
+        "20"
+    );
+}
+
+#[test]
 fn to_json_encodes_supported_subset_compactly_and_pretty() {
     let mut session = core_session();
 

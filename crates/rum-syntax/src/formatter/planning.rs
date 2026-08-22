@@ -6,14 +6,61 @@ use super::{
     *,
 };
 
+const BREAK_INDEX_THRESHOLD: usize = 16;
+
+#[derive(Clone, Debug)]
+pub(super) enum BreakIndices {
+    Linear(Vec<usize>),
+    Sorted(Vec<usize>),
+    Dense { offset: usize, words: Vec<usize> },
+}
+
+impl BreakIndices {
+    fn new(indices: Vec<usize>) -> Self {
+        if indices.len() <= BREAK_INDEX_THRESHOLD {
+            return Self::Linear(indices);
+        }
+
+        let offset = indices[0];
+        let span = indices[indices.len() - 1] - offset + 1;
+        let word_count = span.div_ceil(usize::BITS as usize);
+        if word_count >= indices.len() {
+            return Self::Sorted(indices);
+        }
+
+        let mut words = vec![0; word_count];
+        for index in indices {
+            let relative = index - offset;
+            words[relative / usize::BITS as usize] |= 1usize << (relative % usize::BITS as usize);
+        }
+        Self::Dense { offset, words }
+    }
+
+    #[inline]
+    fn contains(&self, token_index: usize) -> bool {
+        match self {
+            Self::Linear(indices) => indices.contains(&token_index),
+            Self::Sorted(indices) => indices.binary_search(&token_index).is_ok(),
+            Self::Dense { offset, words } => token_index
+                .checked_sub(*offset)
+                .and_then(|relative| {
+                    words
+                        .get(relative / usize::BITS as usize)
+                        .map(|word| word & (1usize << (relative % usize::BITS as usize)) != 0)
+                })
+                .unwrap_or(false),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(super) enum GroupLayout {
     Container {
-        item_start_indices: Vec<usize>,
+        item_start_indices: BreakIndices,
         closing_index: usize,
     },
     BinaryChain {
-        rhs_start_indices: Vec<usize>,
+        rhs_start_indices: BreakIndices,
     },
 }
 
@@ -23,8 +70,8 @@ impl GroupLayout {
             Self::Container {
                 item_start_indices,
                 closing_index,
-            } => item_start_indices.contains(&token_index) || *closing_index == token_index,
-            Self::BinaryChain { rhs_start_indices } => rhs_start_indices.contains(&token_index),
+            } => item_start_indices.contains(token_index) || *closing_index == token_index,
+            Self::BinaryChain { rhs_start_indices } => rhs_start_indices.contains(token_index),
         }
     }
 }
@@ -259,7 +306,7 @@ fn maybe_collect_container_group_plan(
             start_index,
             end_index: closing_index,
             layout: GroupLayout::Container {
-                item_start_indices,
+                item_start_indices: BreakIndices::new(item_start_indices),
                 closing_index,
             },
             force_break,
@@ -414,7 +461,9 @@ fn maybe_collect_binary_group_plan(
         GroupPlan {
             start_index,
             end_index,
-            layout: GroupLayout::BinaryChain { rhs_start_indices },
+            layout: GroupLayout::BinaryChain {
+                rhs_start_indices: BreakIndices::new(rhs_start_indices),
+            },
             force_break,
         },
     );

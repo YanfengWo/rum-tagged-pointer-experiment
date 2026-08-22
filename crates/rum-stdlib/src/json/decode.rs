@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use super::*;
+use crate::adaptive_set::AdaptiveSet;
 
 const MAX_JSON_DEPTH: usize = 256;
 
@@ -139,7 +140,7 @@ impl<'a> Parser<'a> {
         self.expect_byte(b'{', "expected object start")?;
         self.skip_json_whitespace();
 
-        let mut seen_keys: Vec<String> = Vec::new();
+        let mut seen_keys = AdaptiveSet::new();
         let mut entries = Vec::new();
 
         if self.peek() == Some(b'}') {
@@ -157,14 +158,12 @@ impl<'a> Parser<'a> {
                 ));
             }
             let key = self.parse_string()?;
-            if seen_keys.iter().any(|seen| seen == &key) {
+            if !seen_keys.insert(key.clone()) {
                 return Err(JsonParseError::syntax(
                     key_offset,
                     format!("duplicate object key {key:?}"),
                 ));
             }
-            seen_keys.push(key.clone());
-
             self.skip_json_whitespace();
             self.expect_byte(b':', "expected ':' after object key")?;
             let value = self.parse_value(depth)?;

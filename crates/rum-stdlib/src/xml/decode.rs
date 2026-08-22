@@ -1,4 +1,5 @@
 use super::*;
+use crate::adaptive_set::AdaptiveSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct XmlParseError {
@@ -209,7 +210,7 @@ impl<'a> Parser<'a> {
             .parse_name()
             .ok_or_else(|| XmlParseError::syntax(tag_offset, "expected element name"))?;
 
-        let mut seen_attrs = Vec::new();
+        let mut seen_attrs = AdaptiveSet::new();
         let mut attrs = Vec::new();
         loop {
             self.skip_xml_whitespace();
@@ -232,14 +233,12 @@ impl<'a> Parser<'a> {
             let name = self.parse_name().ok_or_else(|| {
                 XmlParseError::syntax(self.pos, "expected attribute name or tag close")
             })?;
-            if seen_attrs.iter().any(|seen| seen == &name) {
+            if !seen_attrs.insert(name.clone()) {
                 return Err(XmlParseError::syntax(
                     attr_offset,
                     format!("duplicate attribute {name:?}"),
                 ));
             }
-            seen_attrs.push(name.clone());
-
             self.skip_xml_whitespace();
             self.expect_byte(b'=', "expected '=' after attribute name")?;
             self.skip_xml_whitespace();

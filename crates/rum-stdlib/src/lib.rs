@@ -6,6 +6,7 @@
 use rum_core::Expr;
 use rum_runtime::{Session, core_builtin_specs};
 
+mod adaptive_set;
 mod arithmetic;
 mod associations;
 mod bytes;

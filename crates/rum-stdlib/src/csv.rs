@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use rum_core::{Atom, Expr};
 use rum_runtime::kernel_api::{
     EvalError, Session, association_entries_from_expr, expr_as_string, expr_as_symbol,
@@ -450,16 +452,36 @@ fn rows_with_headers_expr(rows: &[CsvRow]) -> Result<Expr, CsvParseError> {
         return Ok(Expr::call(system_expr("List"), Vec::new()));
     };
 
-    let mut headers: Vec<String> = Vec::new();
-    for field in &header.fields {
-        if headers.iter().any(|seen| seen == &field.value) {
-            return Err(CsvParseError::new(
-                field.offset,
-                format!("duplicate header name {:?}", field.value),
-            ));
+    const HEADER_INDEX_THRESHOLD: usize = 16;
+
+    let headers = if header.fields.len() <= HEADER_INDEX_THRESHOLD {
+        let mut headers: Vec<String> = Vec::with_capacity(header.fields.len());
+        for field in &header.fields {
+            if headers.iter().any(|seen| seen == &field.value) {
+                return Err(CsvParseError::new(
+                    field.offset,
+                    format!("duplicate header name {:?}", field.value),
+                ));
+            }
+            headers.push(field.value.clone());
         }
-        headers.push(field.value.clone());
-    }
+        headers
+    } else {
+        let mut seen = HashSet::with_capacity(header.fields.len());
+        for field in &header.fields {
+            if !seen.insert(field.value.as_str()) {
+                return Err(CsvParseError::new(
+                    field.offset,
+                    format!("duplicate header name {:?}", field.value),
+                ));
+            }
+        }
+        header
+            .fields
+            .iter()
+            .map(|field| field.value.clone())
+            .collect()
+    };
 
     let mut records = Vec::new();
     for (index, row) in data_rows.iter().enumerate() {
@@ -568,27 +590,73 @@ fn association_rows_to_csv(
             )));
         }
 
-        let mut output_row = Vec::with_capacity(headers.len());
-        for (column_index, header) in headers.iter().enumerate() {
-            let Some((_, value)) = keyed.iter().find(|(key, _)| key == header) else {
-                return Err(CsvEncodeError::new(format!(
-                    "Association row {} is missing CSV header key {:?}.",
-                    row_index + 1,
-                    header
-                )));
-            };
-            output_row.push(value.clone().ok_or_else(|| {
-                CsvEncodeError::new(format!(
-                    "Non-String CSV field at row {}, column {}.",
-                    row_index + 1,
-                    column_index + 1
-                ))
-            })?);
-        }
+        let output_row = association_row_in_header_order(keyed, &headers, row_index + 1)?;
         output_rows.push(output_row);
     }
 
     Ok(write_csv_rows(&output_rows, delimiter))
+}
+
+fn association_row_in_header_order(
+    keyed: Vec<(String, Option<String>)>,
+    headers: &[String],
+    row_index: usize,
+) -> Result<Vec<String>, CsvEncodeError> {
+    const INDEX_THRESHOLD: usize = 16;
+
+    if keyed.iter().map(|(key, _)| key).eq(headers.iter()) {
+        return keyed
+            .into_iter()
+            .enumerate()
+            .map(|(column_index, (_, value))| csv_string_field(value, row_index, column_index))
+            .collect();
+    }
+
+    if headers.len() <= INDEX_THRESHOLD {
+        return headers
+            .iter()
+            .enumerate()
+            .map(|(column_index, header)| {
+                let Some((_, value)) = keyed.iter().find(|(key, _)| key == header) else {
+                    return Err(missing_csv_header_error(row_index, header));
+                };
+                csv_string_field(value.clone(), row_index, column_index)
+            })
+            .collect();
+    }
+
+    let mut keyed = keyed.into_iter().collect::<HashMap<_, _>>();
+    headers
+        .iter()
+        .enumerate()
+        .map(|(column_index, header)| {
+            let Some(value) = keyed.remove(header) else {
+                return Err(missing_csv_header_error(row_index, header));
+            };
+            csv_string_field(value, row_index, column_index)
+        })
+        .collect()
+}
+
+fn csv_string_field(
+    value: Option<String>,
+    row_index: usize,
+    column_index: usize,
+) -> Result<String, CsvEncodeError> {
+    value.ok_or_else(|| {
+        CsvEncodeError::new(format!(
+            "Non-String CSV field at row {}, column {}.",
+            row_index,
+            column_index + 1
+        ))
+    })
+}
+
+fn missing_csv_header_error(row_index: usize, header: &str) -> CsvEncodeError {
+    CsvEncodeError::new(format!(
+        "Association row {} is missing CSV header key {:?}.",
+        row_index, header
+    ))
 }
 
 fn association_header_strings(

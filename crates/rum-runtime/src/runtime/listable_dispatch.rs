@@ -1,5 +1,46 @@
 use super::*;
 
+enum ThreadArgSelection {
+    All,
+    Sparse(Vec<usize>),
+    Dense(Vec<bool>),
+}
+
+impl ThreadArgSelection {
+    const DENSE_THRESHOLD: usize = 16;
+
+    fn new(spec: &ThreadArgSpec, arg_count: usize) -> Option<Self> {
+        if arg_count == 0 {
+            return None;
+        }
+        if matches!(spec, ThreadArgSpec::All) {
+            return Some(Self::All);
+        }
+
+        let indices = resolve_thread_arg_indices(spec, arg_count);
+        if indices.is_empty() {
+            return None;
+        }
+        if indices.len() <= Self::DENSE_THRESHOLD {
+            return Some(Self::Sparse(indices));
+        }
+
+        let mut mask = vec![false; arg_count];
+        for index in indices {
+            mask[index] = true;
+        }
+        Some(Self::Dense(mask))
+    }
+
+    fn contains(&self, index: usize) -> bool {
+        match self {
+            Self::All => true,
+            Self::Sparse(indices) => indices.contains(&index),
+            Self::Dense(mask) => mask[index],
+        }
+    }
+}
+
 impl Session {
     pub(super) fn dispatch_listable_stage(
         &mut self,
@@ -29,17 +70,15 @@ impl Session {
         wrapper_head: &Expr,
         arg_spec: &ThreadArgSpec,
     ) -> Result<ThreadingDispatch, EvalError> {
-        let selected_indices = resolve_thread_arg_indices(arg_spec, args.len());
-
-        if selected_indices.is_empty() {
+        let Some(selected_args) = ThreadArgSelection::new(arg_spec, args.len()) else {
             return Ok(ThreadingDispatch::NotApplicable);
-        }
+        };
 
         let mut target_len = None;
         let mut thread_lengths = Vec::new();
 
         for (index, arg) in args.iter().enumerate() {
-            if !selected_indices.contains(&index) {
+            if !selected_args.contains(index) {
                 continue;
             }
 
@@ -71,7 +110,7 @@ impl Session {
                         .enumerate()
                         .map(
                             |(arg_index, arg)| match call_items_with_head(arg, thread_head) {
-                                Some(items) if selected_indices.contains(&arg_index) => {
+                                Some(items) if selected_args.contains(arg_index) => {
                                     items[index].clone()
                                 }
                                 None => arg.clone(),

@@ -3,6 +3,10 @@ use rum_runtime::kernel_api::{
     EvalError, Session, association_entries_from_expr, expr_as_string, system_expr,
 };
 
+use crate::adaptive_set::StringFingerprintIndex;
+
+const INI_INDEX_THRESHOLD: usize = 16;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct IniParseError {
     offset: usize,
@@ -42,10 +46,10 @@ impl IniEncodeError {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
 struct IniSection {
     name: String,
     entries: Vec<(String, String)>,
+    key_index: Option<Box<StringFingerprintIndex>>,
 }
 
 pub(crate) fn eval_from_ini(
@@ -102,6 +106,7 @@ struct IniParser<'a> {
     source: &'a str,
     pos: usize,
     sections: Vec<IniSection>,
+    section_index: Option<Box<StringFingerprintIndex>>,
     current_section: Option<usize>,
 }
 
@@ -111,6 +116,7 @@ impl<'a> IniParser<'a> {
             source,
             pos: 0,
             sections: Vec::new(),
+            section_index: None,
             current_section: None,
         }
     }
@@ -180,7 +186,26 @@ impl<'a> IniParser<'a> {
                 "characters after section header",
             ));
         }
-        if self.sections.iter().any(|section| section.name == name) {
+        let unique = if let Some(index) = self.section_index.as_mut() {
+            index.insert(
+                self.sections.iter().map(|section| section.name.as_str()),
+                name,
+            )
+        } else if self.sections.len() < INI_INDEX_THRESHOLD {
+            !self.sections.iter().any(|section| section.name == name)
+        } else {
+            let mut index = StringFingerprintIndex::from_values(
+                self.sections.len() + 1,
+                self.sections.iter().map(|section| section.name.as_str()),
+            );
+            let unique = index.insert(
+                self.sections.iter().map(|section| section.name.as_str()),
+                name,
+            );
+            self.section_index = Some(Box::new(index));
+            unique
+        };
+        if !unique {
             return Err(IniParseError::new(
                 offset,
                 format!("duplicate section name {name:?}"),
@@ -190,6 +215,7 @@ impl<'a> IniParser<'a> {
         self.sections.push(IniSection {
             name: name.to_string(),
             entries: Vec::new(),
+            key_index: None,
         });
         self.current_section = Some(self.sections.len() - 1);
         Ok(())
@@ -213,15 +239,31 @@ impl<'a> IniParser<'a> {
 
         let section_index = self.ensure_current_section();
         let section = &mut self.sections[section_index];
-        if section.entries.iter().any(|(seen, _)| seen == key) {
+        let IniSection {
+            name: section_name,
+            entries,
+            key_index,
+        } = section;
+        let unique = if let Some(index) = key_index.as_mut() {
+            index.insert(entries.iter().map(|(key, _)| key.as_str()), key)
+        } else if entries.len() < INI_INDEX_THRESHOLD {
+            !entries.iter().any(|(seen, _)| seen == key)
+        } else {
+            let mut index = StringFingerprintIndex::from_values(
+                entries.len() + 1,
+                entries.iter().map(|(key, _)| key.as_str()),
+            );
+            let unique = index.insert(entries.iter().map(|(key, _)| key.as_str()), key);
+            *key_index = Some(Box::new(index));
+            unique
+        };
+        if !unique {
             return Err(IniParseError::new(
                 key_offset,
-                format!("duplicate key {key:?} in section {:?}", section.name),
+                format!("duplicate key {key:?} in section {section_name:?}"),
             ));
         }
-        section
-            .entries
-            .push((key.to_string(), value_raw.trim().to_string()));
+        entries.push((key.to_string(), value_raw.trim().to_string()));
         Ok(())
     }
 
@@ -233,6 +275,7 @@ impl<'a> IniParser<'a> {
         self.sections.push(IniSection {
             name: String::new(),
             entries: Vec::new(),
+            key_index: None,
         });
         self.current_section = Some(self.sections.len() - 1);
         self.sections.len() - 1

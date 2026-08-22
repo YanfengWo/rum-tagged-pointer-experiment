@@ -1,6 +1,7 @@
 use rum_core::Expr;
 
 use super::{YamlParseError, association_expr, list_expr, symbol_value};
+use crate::adaptive_set::StringFingerprintIndex;
 
 mod lines;
 mod quoted;
@@ -9,8 +10,42 @@ mod scalars;
 use lines::{Line, scan_lines};
 use scalars::{
     Chomping, count_leading_spaces, find_mapping_colon, is_sequence_marker, parse_key,
-    parse_literal_header, parse_plain_scalar, parse_quoted_scalar, push_unique_entry,
+    parse_literal_header, parse_plain_scalar, parse_quoted_scalar,
 };
+
+const MAPPING_KEY_INDEX_THRESHOLD: usize = 16;
+
+enum MappingKeyIndex {
+    Linear,
+    Indexed(StringFingerprintIndex),
+}
+
+impl MappingKeyIndex {
+    fn new() -> Self {
+        Self::Linear
+    }
+
+    fn insert(&mut self, entries: &[(String, Expr)], key: &str) -> bool {
+        if matches!(self, Self::Linear) {
+            if entries.len() < MAPPING_KEY_INDEX_THRESHOLD {
+                return !entries.iter().any(|(existing, _)| existing == key);
+            }
+
+            let mut index = StringFingerprintIndex::from_values(
+                entries.len() + 1,
+                entries.iter().map(|(existing, _)| existing.as_str()),
+            );
+            let unique = index.insert(entries.iter().map(|(existing, _)| existing.as_str()), key);
+            *self = Self::Indexed(index);
+            return unique;
+        }
+
+        let Self::Indexed(index) = self else {
+            unreachable!();
+        };
+        index.insert(entries.iter().map(|(existing, _)| existing.as_str()), key)
+    }
+}
 
 pub(super) fn from_yaml(source: &str) -> Result<Expr, YamlParseError> {
     let lines = scan_lines(source)?;
@@ -77,6 +112,8 @@ impl<'a> Parser<'a> {
         indent: usize,
         mut entries: Vec<(String, Expr)>,
     ) -> Result<Vec<(String, Expr)>, YamlParseError> {
+        let mut seen_keys = MappingKeyIndex::new();
+
         loop {
             let Some(line) = self.peek_content() else {
                 break;
@@ -105,7 +142,13 @@ impl<'a> Parser<'a> {
             };
             self.index += 1;
             let entry = self.parse_mapping_pair(line.text, line.content_start, colon, indent)?;
-            push_unique_entry(&mut entries, entry, line.content_start)?;
+            if !seen_keys.insert(&entries, &entry.0) {
+                return Err(YamlParseError::new(
+                    line.content_start,
+                    format!("duplicate mapping key {:?}", entry.0),
+                ));
+            }
+            entries.push(entry);
         }
         Ok(entries)
     }

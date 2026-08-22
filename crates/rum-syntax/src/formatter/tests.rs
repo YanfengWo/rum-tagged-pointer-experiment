@@ -414,6 +414,20 @@ fn formatter_actively_expands_long_list_literals() {
 }
 
 #[test]
+fn formatter_indexed_break_points_preserve_every_wide_list_item() {
+    let items = (1..=20)
+        .map(|index| format!("x{index}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let source = format!("{{{items}}}");
+    let formatted = format_source(&source).unwrap();
+
+    assert_eq!(formatted.lines().count(), 22);
+    assert_eq!(formatted.matches("\n  x").count(), 20);
+    assert_eq!(format_source(&formatted).unwrap(), formatted);
+}
+
+#[test]
 fn formatter_handles_association_literals() {
     let formatted = format_source("<|a->1,b-><|c->3,d->4|>|>").unwrap();
     assert_eq!(formatted, "<|a -> 1, b -> <|c -> 3, d -> 4|>|>");

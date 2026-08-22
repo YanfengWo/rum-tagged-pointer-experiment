@@ -433,6 +433,50 @@ fn thread_builtin_supports_standard_sequence_spec_subset() {
 }
 
 #[test]
+fn thread_builtin_supports_wide_dense_argument_selection() {
+    let mut session = session_with_test_control_builtins();
+    let args = (1..=34)
+        .map(|index| {
+            if index % 2 == 0 {
+                format!("{{a{index}, b{index}}}")
+            } else {
+                format!("c{index}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let first = (1..=34)
+        .map(|index| {
+            if index % 2 == 0 {
+                format!("a{index}")
+            } else {
+                format!("c{index}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let second = (1..=34)
+        .map(|index| {
+            if index % 2 == 0 {
+                format!("b{index}")
+            } else {
+                format!("c{index}")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    assert_eq!(
+        session
+            .eval_text(&format!("Thread[f[{args}], List, {{2, 34, 2}}]"))
+            .unwrap()
+            .value
+            .to_string(),
+        format!("List[f[{first}], f[{second}]]")
+    );
+}
+
+#[test]
 fn thread_builtin_accepts_resolved_head_and_spec_values() {
     let mut session = session_with_test_control_builtins();
 
