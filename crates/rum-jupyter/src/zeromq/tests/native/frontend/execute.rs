@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn native_zeromq_backend_frontend_style_execute_preserves_headers_and_iopub_metadata() {
-    let bootstrap = loopback_connection();
+    let Some(bootstrap) = loopback_connection() else {
+        return;
+    };
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let iopub_endpoint = bootstrap.transport_layout().iopub.uri();

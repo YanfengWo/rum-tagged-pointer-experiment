@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn native_zeromq_backend_round_trips_signed_execute_and_signed_iopub_messages() {
-    let bootstrap = signed_loopback_connection();
+    let Some(bootstrap) = signed_loopback_connection() else {
+        return;
+    };
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
@@ -129,7 +131,9 @@ fn native_zeromq_backend_round_trips_signed_execute_and_signed_iopub_messages() 
 
 #[test]
 fn native_zeromq_backend_rejects_tampered_signed_requests_end_to_end() {
-    let bootstrap = signed_loopback_connection();
+    let Some(bootstrap) = signed_loopback_connection() else {
+        return;
+    };
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let runtime = test_runtime();

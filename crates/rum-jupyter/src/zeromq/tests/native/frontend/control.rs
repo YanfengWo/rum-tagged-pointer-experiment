@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn native_zeromq_backend_frontend_style_control_interrupt_round_trip() {
-    let bootstrap = loopback_connection();
+    let Some(bootstrap) = loopback_connection() else {
+        return;
+    };
     let codec = bootstrap.wire_codec();
     let control_endpoint = bootstrap.transport_layout().control.uri();
     let runtime = test_runtime();
@@ -81,7 +83,9 @@ fn native_zeromq_backend_frontend_style_control_interrupt_round_trip() {
 
 #[test]
 fn native_zeromq_backend_shutdown_stops_shell_work_and_reports_pending_shell_messages() {
-    let bootstrap = loopback_connection();
+    let Some(bootstrap) = loopback_connection() else {
+        return;
+    };
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let control_endpoint = bootstrap.transport_layout().control.uri();

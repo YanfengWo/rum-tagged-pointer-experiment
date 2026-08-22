@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_reply() {
-    let bootstrap = loopback_connection();
+    let Some(bootstrap) = loopback_connection() else {
+        return;
+    };
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let stdin_endpoint = bootstrap.transport_layout().stdin.uri();

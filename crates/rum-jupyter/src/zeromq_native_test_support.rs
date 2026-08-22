@@ -1,4 +1,5 @@
 use std::{
+    io::ErrorKind,
     net::TcpListener,
     thread,
     time::{Duration, Instant},
@@ -6,10 +7,21 @@ use std::{
 
 use super::*;
 
-pub(super) fn loopback_connection() -> KernelBootstrapConfig {
-    let listeners = (0..5)
-        .map(|_| TcpListener::bind("127.0.0.1:0").expect("ephemeral port should bind"))
-        .collect::<Vec<_>>();
+fn loopback_ports() -> Option<Vec<u16>> {
+    let mut listeners = Vec::with_capacity(5);
+    for _ in 0..5 {
+        match TcpListener::bind("127.0.0.1:0") {
+            Ok(listener) => listeners.push(listener),
+            Err(error) if error.kind() == ErrorKind::PermissionDenied => {
+                eprintln!(
+                    "skipping native ZeroMQ test: loopback socket binding is not permitted"
+                );
+                return None;
+            }
+            Err(error) => panic!("ephemeral port should bind: {error}"),
+        }
+    }
+
     let ports = listeners
         .iter()
         .map(|listener| {
@@ -20,39 +32,16 @@ pub(super) fn loopback_connection() -> KernelBootstrapConfig {
         })
         .collect::<Vec<_>>();
     drop(listeners);
-
-    KernelBootstrapConfig::from_connection_file(KernelConnectionFile {
-        transport: crate::KernelTransportKind::Tcp,
-        ip: "127.0.0.1".to_string(),
-        shell_port: ports[0],
-        iopub_port: ports[1],
-        stdin_port: ports[2],
-        control_port: ports[3],
-        hb_port: ports[4],
-        key: "".to_string(),
-        signature_scheme: crate::KernelSignatureScheme::None,
-        kernel_name: Some("rum".to_string()),
-    })
-    .with_username("rum-kernel")
-    .with_session_validation("frontend-session")
+    Some(ports)
 }
 
-pub(super) fn signed_loopback_connection() -> KernelBootstrapConfig {
-    let listeners = (0..5)
-        .map(|_| TcpListener::bind("127.0.0.1:0").expect("ephemeral port should bind"))
-        .collect::<Vec<_>>();
-    let ports = listeners
-        .iter()
-        .map(|listener| {
-            listener
-                .local_addr()
-                .expect("listener should expose a local address")
-                .port()
-        })
-        .collect::<Vec<_>>();
-    drop(listeners);
+fn loopback_connection_with_signature(
+    key: &str,
+    signature_scheme: crate::KernelSignatureScheme,
+) -> Option<KernelBootstrapConfig> {
+    let ports = loopback_ports()?;
 
-    KernelBootstrapConfig::from_connection_file(KernelConnectionFile {
+    Some(KernelBootstrapConfig::from_connection_file(KernelConnectionFile {
         transport: crate::KernelTransportKind::Tcp,
         ip: "127.0.0.1".to_string(),
         shell_port: ports[0],
@@ -60,12 +49,23 @@ pub(super) fn signed_loopback_connection() -> KernelBootstrapConfig {
         stdin_port: ports[2],
         control_port: ports[3],
         hb_port: ports[4],
-        key: "secret".to_string(),
-        signature_scheme: crate::KernelSignatureScheme::HmacSha256,
+        key: key.to_string(),
+        signature_scheme,
         kernel_name: Some("rum".to_string()),
     })
     .with_username("rum-kernel")
-    .with_session_validation("frontend-session")
+    .with_session_validation("frontend-session"))
+}
+
+pub(super) fn loopback_connection() -> Option<KernelBootstrapConfig> {
+    loopback_connection_with_signature("", crate::KernelSignatureScheme::None)
+}
+
+pub(super) fn signed_loopback_connection() -> Option<KernelBootstrapConfig> {
+    loopback_connection_with_signature(
+        "secret",
+        crate::KernelSignatureScheme::HmacSha256,
+    )
 }
 
 pub(super) fn test_runtime() -> tokio::runtime::Runtime {
