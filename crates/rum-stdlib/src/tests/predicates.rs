@@ -566,6 +566,22 @@ fn collection_same_test_pairs_run_once_each_without_native_stack_recursion() {
 }
 
 #[test]
+fn contains_exactly_custom_same_test_uses_polynomial_matching() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "n = 40; calls = 0; almost[x_, y_] := (calls = calls + 1; x < n); \
+             reassigned[a, x] = True; reassigned[a, y] = True; reassigned[b, x] = True; reassigned[_, _] = False; \
+             {ContainsExactly[Range[n], Range[n], SameTest -> almost], calls, \
+              ContainsExactly[{a, b}, {x, y}, SameTest -> reassigned]}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[False, 1600, True]");
+}
+
+#[test]
 fn predicate_operator_forms_are_inert_and_apply_to_data() {
     let mut session = core_session();
 

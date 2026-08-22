@@ -1,5 +1,7 @@
 use super::*;
 
+const STACK_MATCHING_THRESHOLD: usize = 16;
+
 #[derive(Clone, Copy)]
 enum SameTestRelationKind {
     Intersecting,
@@ -525,28 +527,188 @@ fn all_lhs_items_matched(matches: &[Vec<bool>]) -> bool {
 }
 
 fn has_perfect_same_test_matching(matches: &[Vec<bool>], rhs_len: usize) -> bool {
-    let mut used_rhs = vec![false; rhs_len];
-    perfect_same_test_matching_from(0, matches, &mut used_rhs)
-}
-
-fn perfect_same_test_matching_from(
-    lhs_index: usize,
-    matches: &[Vec<bool>],
-    used_rhs: &mut [bool],
-) -> bool {
-    if lhs_index >= matches.len() {
-        return true;
+    if matches.len() <= STACK_MATCHING_THRESHOLD && rhs_len <= STACK_MATCHING_THRESHOLD {
+        let mut used_rhs = [false; STACK_MATCHING_THRESHOLD];
+        if greedy_same_test_matching(matches, &mut used_rhs[..rhs_len]) {
+            return true;
+        }
+        let mut rhs_matches = [None; STACK_MATCHING_THRESHOLD];
+        let mut queue = [0; STACK_MATCHING_THRESHOLD];
+        let mut visited_lhs = [false; STACK_MATCHING_THRESHOLD];
+        let mut visited_rhs = [false; STACK_MATCHING_THRESHOLD];
+        let mut predecessor = [None; STACK_MATCHING_THRESHOLD];
+        return augmenting_same_test_matching_with_scratch(
+            matches,
+            &mut rhs_matches[..rhs_len],
+            &mut queue[..matches.len()],
+            &mut visited_lhs[..matches.len()],
+            &mut visited_rhs[..rhs_len],
+            &mut predecessor[..matches.len()],
+        );
     }
 
-    for rhs_index in 0..used_rhs.len() {
-        if matches[lhs_index][rhs_index] && !used_rhs[rhs_index] {
-            used_rhs[rhs_index] = true;
-            if perfect_same_test_matching_from(lhs_index + 1, matches, used_rhs) {
-                return true;
+    let mut used_rhs = vec![false; rhs_len];
+    if greedy_same_test_matching(matches, &mut used_rhs) {
+        return true;
+    }
+    drop(used_rhs);
+
+    let mut rhs_matches = vec![None; rhs_len];
+    let mut queue = vec![0; matches.len()];
+    let mut visited_lhs = vec![false; matches.len()];
+    let mut visited_rhs = vec![false; rhs_len];
+    let mut predecessor = vec![None; matches.len()];
+
+    augmenting_same_test_matching_with_scratch(
+        matches,
+        &mut rhs_matches,
+        &mut queue,
+        &mut visited_lhs,
+        &mut visited_rhs,
+        &mut predecessor,
+    )
+}
+
+fn augmenting_same_test_matching_with_scratch(
+    matches: &[Vec<bool>],
+    rhs_matches: &mut [Option<usize>],
+    queue: &mut [usize],
+    visited_lhs: &mut [bool],
+    visited_rhs: &mut [bool],
+    predecessor: &mut [Option<(usize, usize)>],
+) -> bool {
+    for lhs_index in 0..matches.len() {
+        if !augment_same_test_matching(
+            lhs_index,
+            matches,
+            rhs_matches,
+            queue,
+            visited_lhs,
+            visited_rhs,
+            predecessor,
+        ) {
+            return false;
+        }
+    }
+    true
+}
+
+fn greedy_same_test_matching(matches: &[Vec<bool>], used_rhs: &mut [bool]) -> bool {
+    for row in matches {
+        let mut available_rhs = None;
+        for rhs_index in 0..used_rhs.len() {
+            if row[rhs_index] && !used_rhs[rhs_index] {
+                available_rhs = Some(rhs_index);
+                break;
             }
-            used_rhs[rhs_index] = false;
+        }
+        let Some(rhs_index) = available_rhs else {
+            return false;
+        };
+        used_rhs[rhs_index] = true;
+    }
+    true
+}
+
+fn augment_same_test_matching(
+    root_lhs: usize,
+    matches: &[Vec<bool>],
+    rhs_matches: &mut [Option<usize>],
+    queue: &mut [usize],
+    visited_lhs: &mut [bool],
+    visited_rhs: &mut [bool],
+    predecessor: &mut [Option<(usize, usize)>],
+) -> bool {
+    visited_lhs.fill(false);
+    visited_rhs.fill(false);
+    predecessor.fill(None);
+    queue[0] = root_lhs;
+    let mut queue_index = 0;
+    let mut queue_len = 1;
+    visited_lhs[root_lhs] = true;
+
+    while queue_index < queue_len {
+        let lhs_index = queue[queue_index];
+        queue_index += 1;
+        for rhs_index in 0..rhs_matches.len() {
+            if !matches[lhs_index][rhs_index] || visited_rhs[rhs_index] {
+                continue;
+            }
+            visited_rhs[rhs_index] = true;
+
+            let Some(next_lhs) = rhs_matches[rhs_index] else {
+                install_same_test_augmenting_path(lhs_index, rhs_index, predecessor, rhs_matches);
+                return true;
+            };
+            if !visited_lhs[next_lhs] {
+                visited_lhs[next_lhs] = true;
+                predecessor[next_lhs] = Some((lhs_index, rhs_index));
+                queue[queue_len] = next_lhs;
+                queue_len += 1;
+            }
         }
     }
 
     false
+}
+
+fn install_same_test_augmenting_path(
+    mut lhs_index: usize,
+    mut rhs_index: usize,
+    predecessor: &[Option<(usize, usize)>],
+    rhs_matches: &mut [Option<usize>],
+) {
+    loop {
+        rhs_matches[rhs_index] = Some(lhs_index);
+        let Some((previous_lhs, previous_rhs)) = predecessor[lhs_index] else {
+            return;
+        };
+        lhs_index = previous_lhs;
+        rhs_index = previous_rhs;
+    }
+}
+
+#[cfg(test)]
+mod matching_tests {
+    use super::has_perfect_same_test_matching;
+
+    #[test]
+    fn augmenting_path_matching_agrees_with_exhaustive_small_graphs() {
+        for size in 0..=4 {
+            let edge_count = size * size;
+            for mask in 0..(1_usize << edge_count) {
+                let mut matches = vec![vec![false; size]; size];
+                for edge in 0..edge_count {
+                    matches[edge / size][edge % size] = mask & (1_usize << edge) != 0;
+                }
+
+                assert_eq!(
+                    has_perfect_same_test_matching(&matches, size),
+                    exhaustive_matching_from(0, &matches, &mut vec![false; size]),
+                    "matching disagreement for size {size}, mask {mask}"
+                );
+            }
+        }
+    }
+
+    fn exhaustive_matching_from(
+        lhs_index: usize,
+        matches: &[Vec<bool>],
+        used_rhs: &mut [bool],
+    ) -> bool {
+        if lhs_index == matches.len() {
+            return true;
+        }
+
+        for rhs_index in 0..used_rhs.len() {
+            if matches[lhs_index][rhs_index] && !used_rhs[rhs_index] {
+                used_rhs[rhs_index] = true;
+                if exhaustive_matching_from(lhs_index + 1, matches, used_rhs) {
+                    return true;
+                }
+                used_rhs[rhs_index] = false;
+            }
+        }
+        false
+    }
 }
