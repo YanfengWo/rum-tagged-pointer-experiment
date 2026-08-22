@@ -1,5 +1,6 @@
 use super::super::*;
 use super::exact::*;
+use super::group_index::{existing_group_index, group_index_worthwhile, record_group_index};
 use num_traits::ToPrimitive;
 use std::borrow::Cow;
 
@@ -187,20 +188,26 @@ impl Session {
             }
         } else if !combined.is_empty() {
             let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(combined.len());
+            let mut group_index = None;
+            let indexing_enabled = group_index_worthwhile(combined.len());
             let mut rebuild_combined = false;
             for term in &combined {
                 let (coefficient, kernel) = split_coeff_kernel(term);
-                if let Some((_, existing)) = grouped
-                    .iter_mut()
-                    .find(|(candidate, _)| candidate == kernel.as_ref())
-                {
-                    *existing = existing.add(&coefficient);
+                if let Some(position) = existing_group_index(
+                    &grouped,
+                    &mut group_index,
+                    kernel.as_ref(),
+                    indexing_enabled,
+                ) {
+                    grouped[position].1 = grouped[position].1.add(&coefficient);
                     rebuild_combined = true;
                 } else {
                     if split_coeff_kernel_requires_rebuild(term, &coefficient, kernel.as_ref()) {
                         rebuild_combined = true;
                     }
+                    let position = grouped.len();
                     grouped.push((kernel.into_owned(), coefficient));
+                    record_group_index(&grouped, &mut group_index, position);
                 }
             }
 
@@ -273,20 +280,26 @@ impl Session {
             }
         } else if !combined.is_empty() {
             let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(combined.len());
+            let mut group_index = None;
+            let indexing_enabled = group_index_worthwhile(combined.len());
             let mut rebuild_combined = false;
             for factor in &combined {
                 let (base, exponent) = split_base_exp(factor);
-                if let Some((_, existing)) = grouped
-                    .iter_mut()
-                    .find(|(candidate, _)| candidate == base.as_ref())
-                {
-                    *existing = existing.add(&exponent);
+                if let Some(position) = existing_group_index(
+                    &grouped,
+                    &mut group_index,
+                    base.as_ref(),
+                    indexing_enabled,
+                ) {
+                    grouped[position].1 = grouped[position].1.add(&exponent);
                     rebuild_combined = true;
                 } else {
                     if split_base_exp_requires_rebuild(factor, base.as_ref(), &exponent) {
                         rebuild_combined = true;
                     }
+                    let position = grouped.len();
                     grouped.push((base.into_owned(), exponent));
+                    record_group_index(&grouped, &mut group_index, position);
                 }
             }
 
@@ -387,17 +400,23 @@ fn combine_simple_multiplicative_factors(args: &[Expr]) -> Option<Option<Vec<Exp
     }
 
     let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(args.len());
+    let mut group_index = None;
+    let indexing_enabled = group_index_worthwhile(args.len());
     let mut rebuild_combined = false;
     for factor in args {
         let (base, exponent) = simple_base_exp(factor)?;
-        if let Some((_, existing)) = grouped.iter_mut().find(|(candidate, _)| candidate == base) {
-            *existing = existing.add(&exponent);
+        if let Some(position) =
+            existing_group_index(&grouped, &mut group_index, base, indexing_enabled)
+        {
+            grouped[position].1 = grouped[position].1.add(&exponent);
             rebuild_combined = true;
         } else {
             if split_base_exp_requires_rebuild(factor, base, &exponent) {
                 rebuild_combined = true;
             }
+            let position = grouped.len();
             grouped.push((base.clone(), exponent));
+            record_group_index(&grouped, &mut group_index, position);
         }
     }
 
@@ -496,20 +515,23 @@ fn combine_simple_additive_terms(args: &[Expr]) -> Option<Option<Vec<Expr>>> {
     }
 
     let mut grouped: Vec<(Expr, Rational)> = Vec::with_capacity(args.len());
+    let mut group_index = None;
+    let indexing_enabled = group_index_worthwhile(args.len());
     let mut rebuild_combined = false;
     for term in args {
         let (coefficient, kernel) = simple_coeff_kernel(term)?;
-        if let Some((_, existing)) = grouped
-            .iter_mut()
-            .find(|(candidate, _)| candidate == kernel)
+        if let Some(position) =
+            existing_group_index(&grouped, &mut group_index, kernel, indexing_enabled)
         {
-            *existing = existing.add(&coefficient);
+            grouped[position].1 = grouped[position].1.add(&coefficient);
             rebuild_combined = true;
         } else {
             if split_coeff_kernel_requires_rebuild(term, &coefficient, kernel) {
                 rebuild_combined = true;
             }
+            let position = grouped.len();
             grouped.push((kernel.clone(), coefficient));
+            record_group_index(&grouped, &mut group_index, position);
         }
     }
 

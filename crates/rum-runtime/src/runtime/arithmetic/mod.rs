@@ -4,6 +4,7 @@ mod canonical;
 mod exact;
 mod extremum;
 mod factorial;
+mod group_index;
 mod integer_ops;
 mod parts;
 mod rounding;

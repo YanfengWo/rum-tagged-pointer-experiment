@@ -353,6 +353,56 @@ fn plus_and_times_fold_numeric_parts_without_forcing_symbolic_algebra() {
 }
 
 #[test]
+fn wide_plus_and_times_group_late_symbolic_duplicates() {
+    let session = session_with_test_rewrite_builtins();
+    let function = Expr::symbol("f");
+    let terms = (1_u64..=5_000)
+        .map(|index| Expr::call(function.clone(), vec![Expr::integer(BigInt::from(index))]))
+        .collect::<Vec<_>>();
+    let duplicate = terms[4_998].clone();
+
+    let mut plus_terms = terms.clone();
+    plus_terms.push(duplicate.clone());
+    let plus = session
+        .combine_additive_args(&system_expr("Plus"), &plus_terms)
+        .unwrap();
+    let Expr::Call {
+        head: plus_head,
+        args: plus_args,
+    } = plus
+    else {
+        panic!("wide symbolic Plus should remain a call")
+    };
+    assert!(is_system_symbol_name(&plus_head, "Plus"));
+    assert_eq!(plus_args.len(), 5_000);
+    let doubled = Expr::call(
+        system_expr("Times"),
+        vec![Expr::integer(BigInt::from(2_u8)), duplicate.clone()],
+    );
+    assert_eq!(plus_args.iter().filter(|arg| **arg == doubled).count(), 1);
+
+    let mut times_terms = terms;
+    times_terms.push(duplicate.clone());
+    let times = session
+        .combine_multiplicative_args(&system_expr("Times"), &times_terms)
+        .unwrap();
+    let Expr::Call {
+        head: times_head,
+        args: times_args,
+    } = times
+    else {
+        panic!("wide symbolic Times should remain a call")
+    };
+    assert!(is_system_symbol_name(&times_head, "Times"));
+    assert_eq!(times_args.len(), 5_000);
+    let squared = Expr::call(
+        system_expr("Power"),
+        vec![duplicate, Expr::integer(BigInt::from(2_u8))],
+    );
+    assert_eq!(times_args.iter().filter(|arg| **arg == squared).count(), 1);
+}
+
+#[test]
 fn total_evaluates_documented_level_forms_and_leaves_invalid_specs_inert() {
     let mut session = session_with_test_rewrite_builtins();
 
