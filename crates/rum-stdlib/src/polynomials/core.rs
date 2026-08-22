@@ -5,6 +5,7 @@ use super::{
 
 mod construction;
 mod factors;
+mod intersection;
 mod term_order;
 mod variables;
 pub(super) use factors::parse_coefficient_list_monomials;
@@ -244,25 +245,28 @@ impl Polynomial {
     }
 
     pub(super) fn common_monomial_factor(&self) -> Monomial {
-        if self.is_zero() {
+        let Some((first, remaining)) = self.terms.split_first() else {
+            return Monomial::one();
+        };
+        if first.factors.is_empty() {
             return Monomial::one();
         }
 
-        let factors = self
-            .variables()
-            .into_iter()
-            .filter_map(|base| {
-                let exponent = self
-                    .terms
-                    .iter()
-                    .map(|term| term.exponent_for_factor(&base))
-                    .min()
-                    .unwrap_or(0);
-                (exponent > 0).then_some(Factor { base, exponent })
-            })
-            .collect();
+        let mut factors = first.factors.clone();
+        let mut intersection = Vec::new();
+        for term in remaining {
+            intersection::intersect_normalized_factors_into(
+                &factors,
+                &term.factors,
+                &mut intersection,
+            );
+            std::mem::swap(&mut factors, &mut intersection);
+            if factors.is_empty() {
+                return Monomial::one();
+            }
+        }
 
-        Monomial { factors }.normalized()
+        Monomial { factors }
     }
 
     pub(super) fn divide_by_monomial(&self, monomial: &Monomial) -> Option<Self> {
@@ -292,18 +296,18 @@ impl Polynomial {
         }
 
         let divisor_leading = divisor.leading_term()?.clone();
-        let mut quotient = Self::zero();
+        let mut quotient_terms = Vec::new();
         let mut remainder = self.clone();
         let max_steps = self.terms.len().saturating_mul(divisor.terms.len()).max(1) * 32;
 
         for _ in 0..max_steps {
             if remainder.is_zero() {
-                return Some(quotient);
+                return Some(Self::from_normalized_terms(quotient_terms));
             }
 
             let remainder_leading = remainder.leading_term()?.clone();
             let quotient_term = remainder_leading.divide_by_term(&divisor_leading)?;
-            quotient.push_term(quotient_term.clone());
+            quotient_terms.push(quotient_term.clone());
             remainder = remainder.subtract(&divisor.multiply_by_term(&quotient_term));
         }
 
@@ -370,27 +374,6 @@ impl Polynomial {
         }
 
         None
-    }
-
-    pub(super) fn push_term(&mut self, term: Term) {
-        let term = term.normalized();
-
-        if term.coefficient.is_zero() {
-            return;
-        }
-
-        if let Some(existing) = self
-            .terms
-            .iter_mut()
-            .find(|existing| existing.factors == term.factors)
-        {
-            existing.coefficient = existing.coefficient.add(&term.coefficient);
-        } else {
-            self.terms.push(term);
-        }
-
-        self.terms.retain(|term| !term.coefficient.is_zero());
-        self.terms.sort_by(Term::compare_order);
     }
 
     pub(super) fn is_zero(&self) -> bool {

@@ -151,6 +151,22 @@ fn wide_monomial_products_normalize_factors_once() {
 }
 
 #[test]
+fn wide_factor_common_monomial_and_exact_division_preserve_expansion() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "common = z*Apply[Plus, Table[x[i], {i, 1, 64}]]; \
+             dividend = (x - 1)*Apply[Plus, Table[(i + 1)*x^i, {i, 0, 48}]]; \
+             {SameQ[Expand[Factor[common]], Expand[common]], \
+              SameQ[Expand[Factor[dividend]], Expand[dividend]]}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[True, True]");
+}
+
+#[test]
 fn expand_preserves_non_polynomial_or_pattern_bearing_regions() {
     let mut session = core_session();
 
