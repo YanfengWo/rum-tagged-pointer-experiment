@@ -233,50 +233,44 @@ fn resume_group_by_nested_from_index(
     spec_index: usize,
     reducer: Option<Expr>,
     grouped: Vec<(Expr, Vec<Expr>)>,
-    index: usize,
-    nested: Vec<(Expr, Expr)>,
+    mut index: usize,
+    mut nested: Vec<(Expr, Expr)>,
 ) -> Result<Expr, EvalError> {
-    let Some((key, values)) = grouped.get(index).cloned() else {
-        return Ok(render_association(nested));
-    };
+    loop {
+        let Some((key, values)) = grouped.get(index).cloned() else {
+            return Ok(render_association(nested));
+        };
 
-    let value_result = resume_group_by_from_index(
-        session,
-        head.clone(),
-        call_args.clone(),
-        specs.clone(),
-        spec_index,
-        reducer.clone(),
-        values,
-        0,
-        Vec::new(),
-    );
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_specs = specs.clone();
-    let suspended_reducer = reducer.clone();
-    let suspended_grouped = grouped.clone();
-    let suspended_nested = nested.clone();
-    let suspended_key = key.clone();
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_group_by_nested_with_value(
+        let value_result = resume_group_by_from_index(
             session,
-            suspended_head,
-            suspended_call_args,
-            suspended_specs,
+            head.clone(),
+            call_args.clone(),
+            specs.clone(),
             spec_index,
-            suspended_reducer,
-            suspended_grouped,
-            index,
-            suspended_nested,
-            suspended_key,
-            value,
-        )
-    })?;
+            reducer.clone(),
+            values,
+            0,
+            Vec::new(),
+        );
+        let value = match value_result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_group_by_nested_with_value(
+                            session, head, call_args, specs, spec_index, reducer, grouped, index,
+                            nested, key, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_group_by_nested_with_value(
-        session, head, call_args, specs, spec_index, reducer, grouped, index, nested, key, value,
-    )
+        nested.push((key, value));
+        index += 1;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -313,40 +307,36 @@ fn resume_group_by_reduce_from_index(
     call_args: Vec<Expr>,
     reducer: Expr,
     grouped: Vec<(Expr, Vec<Expr>)>,
-    index: usize,
-    reduced: Vec<(Expr, Expr)>,
+    mut index: usize,
+    mut reduced: Vec<(Expr, Expr)>,
 ) -> Result<Expr, EvalError> {
-    let Some((key, values)) = grouped.get(index).cloned() else {
-        return Ok(render_association(reduced));
-    };
+    loop {
+        let Some((key, values)) = grouped.get(index).cloned() else {
+            return Ok(render_association(reduced));
+        };
 
-    let value_result = session.evaluate(Expr::call(
-        reducer.clone(),
-        vec![Expr::call(system_expr("List"), values)],
-    ));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_reducer = reducer.clone();
-    let suspended_grouped = grouped.clone();
-    let suspended_reduced = reduced.clone();
-    let suspended_key = key.clone();
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_group_by_reduce_with_value(
-            session,
-            suspended_head,
-            suspended_call_args,
-            suspended_reducer,
-            suspended_grouped,
-            index,
-            suspended_reduced,
-            suspended_key,
-            value,
-        )
-    })?;
+        let value_result = session.evaluate(Expr::call(
+            reducer.clone(),
+            vec![Expr::call(system_expr("List"), values)],
+        ));
+        let value = match value_result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_group_by_reduce_with_value(
+                            session, head, call_args, reducer, grouped, index, reduced, key, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_group_by_reduce_with_value(
-        session, head, call_args, reducer, grouped, index, reduced, key, value,
-    )
+        reduced.push((key, value));
+        index += 1;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

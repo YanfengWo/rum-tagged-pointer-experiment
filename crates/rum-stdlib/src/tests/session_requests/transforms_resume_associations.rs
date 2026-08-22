@@ -342,6 +342,43 @@ fn resume_eval_request_with_input_can_finish_nested_groupby_after_multiple_key_s
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_groupby_nested_and_reducer_group_loops() {
+    for (source, expected) in [
+        (
+            r#"calls = 0;
+               {GroupBy[{1, 2}, {Identity, Function[x, calls = calls + 1; If[calls == 1, InputString["group-stage: "], x]]}], calls}"#,
+            "List[Association[Rule[1, Association[Rule[\"one\", List[1]]]], Rule[2, Association[Rule[2, List[2]]]]], 2]",
+        ),
+        (
+            r#"calls = 0;
+               {GroupBy[{1, 2}, Identity, Function[{group}, calls = calls + 1; If[calls == 1, InputString["group-stage: "], First[group]]]], calls}"#,
+            "List[Association[Rule[1, \"one\"], Rule[2, 2]], 2]",
+        ),
+        (
+            r#"calls = 0;
+               {GroupBy[Association[a -> 1, b -> 2], {Identity, Function[x, calls = calls + 1; If[calls == 1, InputString["group-stage: "], x]]}], calls}"#,
+            "List[Association[Rule[1, Association[Rule[\"one\", Association[Rule[a, 1]]]]], Rule[2, Association[Rule[2, Association[Rule[b, 2]]]]]], 2]",
+        ),
+        (
+            r#"calls = 0;
+               {GroupBy[Association[a -> 1, b -> 2], Identity, Function[{group}, calls = calls + 1; If[calls == 1, InputString["group-stage: "], Last[group]]]], calls}"#,
+            "List[Association[Rule[1, \"one\"], Rule[2, 2]], 2]",
+        ),
+    ] {
+        let mut session = core_session();
+        let failure = session
+            .eval_request(source)
+            .expect_err("GroupBy phase should suspend on the first group");
+        assert_input_prompt(&failure.error, "group-stage: ");
+
+        let response = session
+            .resume_eval_request_with_input("one")
+            .expect("GroupBy phase should continue through the remaining group");
+        assert_eq!(response.value.to_string(), expected);
+    }
+}
+
+#[test]
 fn resume_eval_request_with_input_reports_catenate_invalid_value_after_suspension() {
     let mut session = core_session();
 

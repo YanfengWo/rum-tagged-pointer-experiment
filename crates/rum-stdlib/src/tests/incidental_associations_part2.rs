@@ -112,6 +112,43 @@ fn group_by_nested_specs_recurse_through_lists_and_associations() {
 }
 
 #[test]
+fn group_by_wide_list_nested_and_reducer_phases_preserve_order_and_call_counts() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(
+                r#"n = 200;
+                   keyCalls = 0;
+                   reducerCalls = 0;
+                   reduced = GroupBy[
+                       Range[n],
+                       Function[x, keyCalls = keyCalls + 1; x],
+                       Function[{group}, reducerCalls = reducerCalls + 1; group]
+                   ];
+                   outerCalls = 0;
+                   innerCalls = 0;
+                   nested = GroupBy[
+                       Range[n],
+                       {Function[x, outerCalls = outerCalls + 1; x],
+                        Function[x, innerCalls = innerCalls + 1; x]}
+                   ];
+                   SameQ[
+                       {Keys[reduced], First[Lookup[reduced, 1]], First[Lookup[reduced, n]],
+                        keyCalls, reducerCalls, Keys[nested],
+                        First[Lookup[Lookup[nested, 1], 1]],
+                        First[Lookup[Lookup[nested, n], n]], outerCalls, innerCalls},
+                       {Range[n], 1, n, n, n, Range[n], 1, n, n, n}
+                   ]"#,
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
 fn group_by_rule_specs_transform_group_values() {
     let mut session = core_session();
 
