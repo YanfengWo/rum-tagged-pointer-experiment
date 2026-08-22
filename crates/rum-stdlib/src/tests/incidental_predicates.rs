@@ -408,3 +408,25 @@ fn predicate_q_family_covers_current_exact_and_structural_subsets() {
         "False"
     );
 }
+
+#[test]
+fn unsame_q_wide_index_detects_late_duplicates() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Apply[UnsameQ, Range[20]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Apply[UnsameQ, Append[Range[20], 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}

@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Clone)]
 struct FoldEvalState {
     operator: Expr,
     items: Vec<Expr>,
@@ -10,26 +9,38 @@ struct FoldEvalState {
 fn resume_fold_from_index(
     session: &mut Session,
     state: FoldEvalState,
-    index: usize,
-    current: Expr,
-    history: Vec<Expr>,
+    mut index: usize,
+    mut current: Expr,
+    mut history: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index >= state.items.len() {
-        return Ok(finish_fold_result(state.collect_all, current, history));
+    loop {
+        if index >= state.items.len() {
+            return Ok(finish_fold_result(state.collect_all, current, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current, state.items[index].clone()],
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_fold_with_value(session, state, index, history, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if state.collect_all {
+            history.push(value.clone());
+        }
+        current = value;
+        index += 1;
     }
-
-    let call = Expr::call(
-        state.operator.clone(),
-        vec![current, state.items[index].clone()],
-    );
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_fold_with_value(session, suspended_state, index, suspended_history, value)
-    })?;
-
-    resume_fold_with_value(session, state, index, history, value)
 }
 
 fn resume_fold_with_value(

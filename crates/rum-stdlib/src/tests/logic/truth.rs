@@ -529,3 +529,27 @@ fn and_or_not_respect_current_short_circuit_and_identity_semantics() {
         "Not[Equal[a, b, c]]"
     );
 }
+
+#[test]
+fn wide_xor_and_equivalent_indexes_preserve_parity_and_uniqueness() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "SameQ[Apply[Xor, Join[Range[20], {1, 1}]], Apply[Xor, Join[Range[2, 20], {1}]]]"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Length[Apply[Equivalent, Join[Range[20], Range[20]]]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "20"
+    );
+}

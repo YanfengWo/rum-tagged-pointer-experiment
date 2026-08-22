@@ -1,7 +1,7 @@
 use super::*;
 use rum_runtime::kernel_api::RewriteDataBuiltin;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 struct ArrayLeafTestState {
     leaves: Vec<Expr>,
     test: Expr,
@@ -74,11 +74,16 @@ pub(crate) fn eval_array_q(
     let leaf_test = args
         .get(2)
         .map(|test| ArrayLeafTestState::new(&args[0], test));
-    let rank_result = rank_pattern_match_result(session, shape.len(), args[1].clone());
-    let suspended_leaf_test = leaf_test.clone();
-    let rank_value = session.suspend_with_frame(rank_result, move |session, value| {
-        finish_array_q_with_rank_value(session, suspended_leaf_test, value)
-    })?;
+    let rank_value = match rank_pattern_match_result(session, shape.len(), args[1].clone()) {
+        Ok(value) => value,
+        Err(EvalError::InputRequired { request }) => {
+            return session.suspend_with_frame(
+                Err(EvalError::InputRequired { request }),
+                move |session, value| finish_array_q_with_rank_value(session, leaf_test, value),
+            );
+        }
+        Err(error) => return Err(error),
+    };
 
     finish_array_q_with_rank_value(session, leaf_test, rank_value)
 }
@@ -125,25 +130,34 @@ fn finish_array_q_with_rank_value(
 
 fn resume_array_leaf_test_from_index(
     session: &mut Session,
-    state: ArrayLeafTestState,
+    mut state: ArrayLeafTestState,
 ) -> Result<Expr, EvalError> {
-    let Some(leaf) = state.leaves.get(state.index).cloned() else {
-        return Ok(predicate_bool_expr(true));
-    };
-    if state.index >= session.resource_limits().iteration_work_limit {
-        return Err(EvalError::IterationWorkLimitExceeded {
-            limit: session.resource_limits().iteration_work_limit,
-        });
+    while let Some(leaf) = state.leaves.get(state.index).cloned() {
+        if state.index >= session.resource_limits().iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: session.resource_limits().iteration_work_limit,
+            });
+        }
+
+        let call = Expr::call(state.test.clone(), vec![leaf]);
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| resume_array_leaf_test_with_value(session, state, value),
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&value) != Some(true) {
+            return Ok(predicate_bool_expr(false));
+        }
+        state.index += 1;
     }
 
-    let call = Expr::call(state.test.clone(), vec![leaf]);
-    let suspended_state = state.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_array_leaf_test_with_value(session, suspended_state, value)
-    })?;
-
-    resume_array_leaf_test_with_value(session, state, value)
+    Ok(predicate_bool_expr(true))
 }
 
 fn resume_array_leaf_test_with_value(

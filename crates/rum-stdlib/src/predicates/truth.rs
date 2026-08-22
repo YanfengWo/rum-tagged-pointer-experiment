@@ -123,44 +123,50 @@ fn resume_truth_aggregate_from_index(
     call_args: Vec<Expr>,
     parts: Vec<Expr>,
     criterion: Expr,
-    index: usize,
-    saw_unknown: bool,
+    mut index: usize,
+    mut saw_unknown: bool,
 ) -> Result<Expr, EvalError> {
-    let Some(part) = parts.get(index).cloned() else {
-        return Ok(finalize_truth_aggregate(kind, head, call_args, saw_unknown));
-    };
+    while let Some(part) = parts.get(index).cloned() {
+        let call = Expr::call(criterion.clone(), vec![part]);
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_truth_aggregate_with_value(
+                            session,
+                            kind,
+                            head,
+                            call_args,
+                            parts,
+                            criterion,
+                            index,
+                            saw_unknown,
+                            value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    let call = Expr::call(criterion.clone(), vec![part]);
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_parts = parts.clone();
-    let suspended_criterion = criterion.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_truth_aggregate_with_value(
-            session,
-            kind,
-            suspended_head,
-            suspended_call_args,
-            suspended_parts,
-            suspended_criterion,
-            index,
-            saw_unknown,
-            value,
-        )
-    })?;
+        match truthiness_symbol(&value) {
+            Some(true) => match kind {
+                TruthAggregateKind::All => {}
+                TruthAggregateKind::Any => return Ok(system_expr(heads::structure::TRUE)),
+                TruthAggregateKind::None => return Ok(system_expr(heads::structure::FALSE)),
+            },
+            Some(false) => match kind {
+                TruthAggregateKind::All => return Ok(system_expr(heads::structure::FALSE)),
+                TruthAggregateKind::Any | TruthAggregateKind::None => {}
+            },
+            None => saw_unknown = true,
+        }
+        index += 1;
+    }
 
-    resume_truth_aggregate_with_value(
-        session,
-        kind,
-        head,
-        call_args,
-        parts,
-        criterion,
-        index,
-        saw_unknown,
-        value,
-    )
+    Ok(finalize_truth_aggregate(kind, head, call_args, saw_unknown))
 }
 
 #[allow(clippy::too_many_arguments)]

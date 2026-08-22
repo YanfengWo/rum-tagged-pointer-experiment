@@ -1,6 +1,8 @@
 use super::shared::predicate_bool_expr;
 use rum_core::{Atom, Expr, Rational, heads};
 use rum_runtime::kernel_api::{EvalError, Session, system_expr, truthiness_symbol};
+use std::collections::HashSet;
+use std::hash::Hash;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ComparisonRelation {
@@ -12,13 +14,13 @@ enum ComparisonRelation {
     GreaterEqual,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum ComparableValue {
     Number(Rational),
     String(String),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum EqualityKnownValue {
     Comparable(ComparableValue),
     Boolean(bool),
@@ -142,7 +144,7 @@ fn eval_comparison_subset(
         if known_order_chain_contradiction(args, relation) {
             return predicate_bool_expr(false);
         }
-        if let Some(result) = reduce_order_chain(head, args, relation) {
+        if let Some(result) = reduce_order_chain(head, args) {
             return result;
         }
     }
@@ -245,71 +247,57 @@ fn known_equality_prefix_has_duplicate(args: &[Expr]) -> bool {
 }
 
 fn equality_values_have_duplicate(values: &[EqualityKnownValue]) -> bool {
-    values
-        .iter()
-        .enumerate()
-        .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs))
+    values_have_duplicate(values)
 }
 
-fn reduce_order_chain(head: &Expr, args: &[Expr], relation: ComparisonRelation) -> Option<Expr> {
+fn reduce_order_chain(head: &Expr, args: &[Expr]) -> Option<Expr> {
     if args.len() <= 2 {
         return None;
     }
 
-    let mut kept = Vec::new();
-    let mut had_known_true_pair = false;
-
-    for (index, pair) in args.windows(2).enumerate() {
-        let Some(ordering) = compare_numeric_expr_pair(&pair[0], &pair[1]) else {
-            push_unique_expr(&mut kept, pair[0].clone());
-            push_unique_expr(&mut kept, pair[1].clone());
-            continue;
-        };
-
-        if !ordering_satisfies_relation(ordering, relation) {
-            return Some(system_expr(heads::structure::FALSE));
-        }
-
-        had_known_true_pair = true;
-        if index > 0 && index + 1 < args.len() {
-            push_unique_expr(&mut kept, pair[0].clone());
-        }
+    let numeric_prefix_len = args
+        .iter()
+        .take_while(|arg| is_numeric_comparable_expr(arg))
+        .count();
+    if numeric_prefix_len == args.len() {
+        return Some(system_expr(heads::structure::TRUE));
     }
 
-    if !had_known_true_pair || kept.len() == args.len() {
+    let numeric_suffix_len = args
+        .iter()
+        .rev()
+        .take_while(|arg| is_numeric_comparable_expr(arg))
+        .count();
+    if numeric_prefix_len < 2 && numeric_suffix_len < 2 {
         return None;
     }
 
-    Some(match kept.len() {
-        0 | 1 => system_expr(heads::structure::TRUE),
-        _ => Expr::call(head.clone(), kept),
-    })
+    let start = numeric_prefix_len.saturating_sub(1);
+    let end = if numeric_suffix_len >= 2 {
+        args.len() - numeric_suffix_len + 1
+    } else {
+        args.len()
+    };
+    Some(Expr::call(head.clone(), args[start..end].to_vec()))
 }
 
 fn known_order_chain_contradiction(args: &[Expr], relation: ComparisonRelation) -> bool {
-    for (left_index, lhs) in args.iter().enumerate() {
-        let Some(lhs) = numeric_comparable_value_from_expr(lhs) else {
+    let mut previous = None;
+    for expr in args {
+        let Some(current) = numeric_comparable_value_from_expr(expr) else {
             continue;
         };
 
-        for rhs in args.iter().skip(left_index + 1) {
-            let Some(rhs) = numeric_comparable_value_from_expr(rhs) else {
-                continue;
-            };
-            let ordering = compare_rationals(&lhs, &rhs);
+        if let Some(previous) = &previous {
+            let ordering = compare_rationals(previous, &current);
             if !ordering_satisfies_relation(ordering, relation) {
                 return true;
             }
         }
+        previous = Some(current);
     }
 
     false
-}
-
-fn compare_numeric_expr_pair(lhs: &Expr, rhs: &Expr) -> Option<std::cmp::Ordering> {
-    let lhs = numeric_comparable_value_from_expr(lhs)?;
-    let rhs = numeric_comparable_value_from_expr(rhs)?;
-    Some(compare_rationals(&lhs, &rhs))
 }
 
 fn numeric_comparable_value_from_expr(expr: &Expr) -> Option<Rational> {
@@ -320,6 +308,10 @@ fn numeric_comparable_value_from_expr(expr: &Expr) -> Option<Rational> {
     }
 }
 
+fn is_numeric_comparable_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::Atom(Atom::Integer(_) | Atom::Rational(_)))
+}
+
 fn ordering_satisfies_relation(ordering: std::cmp::Ordering, relation: ComparisonRelation) -> bool {
     match relation {
         ComparisonRelation::Less => ordering == std::cmp::Ordering::Less,
@@ -327,12 +319,6 @@ fn ordering_satisfies_relation(ordering: std::cmp::Ordering, relation: Compariso
         ComparisonRelation::LessEqual => ordering != std::cmp::Ordering::Greater,
         ComparisonRelation::GreaterEqual => ordering != std::cmp::Ordering::Less,
         ComparisonRelation::Equal | ComparisonRelation::Unequal => false,
-    }
-}
-
-fn push_unique_expr(values: &mut Vec<Expr>, value: Expr) {
-    if values.last() != Some(&value) {
-        values.push(value);
     }
 }
 
@@ -375,10 +361,7 @@ fn equality_known_value_from_expr(expr: &Expr) -> Option<EqualityKnownValue> {
 fn compare_equality_values(values: &[ComparableValue], relation: ComparisonRelation) -> bool {
     match relation {
         ComparisonRelation::Equal => values.windows(2).all(|pair| pair[0] == pair[1]),
-        ComparisonRelation::Unequal => !values
-            .iter()
-            .enumerate()
-            .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs)),
+        ComparisonRelation::Unequal => !values_have_duplicate(values),
         ComparisonRelation::Less
         | ComparisonRelation::Greater
         | ComparisonRelation::LessEqual
@@ -386,6 +369,20 @@ fn compare_equality_values(values: &[ComparableValue], relation: ComparisonRelat
             unreachable!("order relations use numeric comparison")
         }
     }
+}
+
+fn values_have_duplicate<T: Eq + Hash>(values: &[T]) -> bool {
+    const INDEX_THRESHOLD: usize = 16;
+
+    if values.len() <= INDEX_THRESHOLD {
+        return values
+            .iter()
+            .enumerate()
+            .any(|(index, lhs)| values[index + 1..].iter().any(|rhs| lhs == rhs));
+    }
+
+    let mut seen = HashSet::with_capacity(values.len());
+    values.iter().any(|value| !seen.insert(value))
 }
 
 fn compare_numeric_values(values: &[Rational], relation: ComparisonRelation) -> bool {

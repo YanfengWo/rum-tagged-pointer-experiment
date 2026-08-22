@@ -33,6 +33,120 @@ fn resume_eval_request_with_input_can_finish_select_predicate() {
 }
 
 #[test]
+fn resume_eval_request_with_input_preserves_logical_sequence_state() {
+    for symbol in ["And", "Or", "Nand", "Nor"] {
+        let mut session = core_session();
+        let prompt = format!("{symbol}: ");
+        let failure = session
+            .eval_request(&format!("{symbol}[x, InputString[\"{prompt}\"], y]"))
+            .expect_err("logical sequence should suspend when it requests input");
+
+        match &failure.error {
+            SessionRequestError::InputRequired { request } => {
+                assert_eq!(request.prompt, prompt);
+            }
+            other => panic!("expected input-required failure, got {other:?}"),
+        }
+
+        let response = session
+            .resume_eval_request_with_input("ok")
+            .expect("logical sequence should resume from its preserved position");
+        assert_eq!(
+            response.value.to_string(),
+            format!("{symbol}[x, \"ok\", y]")
+        );
+    }
+}
+
+#[test]
+fn resume_eval_request_with_input_preserves_ordering_comparator_state() {
+    let mut ordered_session = core_session();
+    let ordered_failure = ordered_session
+        .eval_request(
+            "OrderedQ[{1, 2, 3}, Function[{a, b}, If[SameQ[a, 1], SameQ[InputString[\"ordered: \"], \"yes\"], Less[a, b]]]]",
+        )
+        .expect_err("OrderedQ comparator should suspend when it requests input");
+    match &ordered_failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "ordered: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(
+        ordered_session
+            .resume_eval_request_with_input("yes")
+            .expect("OrderedQ should resume from its preserved comparator position")
+            .value
+            .to_string(),
+        "True"
+    );
+
+    let mut lexicographic_session = core_session();
+    let lexicographic_failure = lexicographic_session
+        .eval_request(
+            "seen = False; LexicographicOrder[{1, 2}, {1, 3}, Function[{a, b}, If[Not[seen], seen = True; SameQ[InputString[\"lexicographic: \"], \"yes\"], Less[a, b]]]]",
+        )
+        .expect_err("LexicographicOrder comparator should suspend when it requests input");
+    match &lexicographic_failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lexicographic: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(
+        lexicographic_session
+            .resume_eval_request_with_input("no")
+            .expect("LexicographicOrder should resume from its preserved comparator position")
+            .value
+            .to_string(),
+        "1"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_preserves_predicate_traversal_state() {
+    let mut truth_session = core_session();
+    let truth_failure = truth_session
+        .eval_request(
+            "AllTrue[{1, 2, 3}, Function[x, If[SameQ[x, 2], SameQ[InputString[\"all: \"], \"yes\"], Positive[x]]]]",
+        )
+        .expect_err("AllTrue criterion should suspend when it requests input");
+    match &truth_failure.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "all: "),
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(
+        truth_session
+            .resume_eval_request_with_input("yes")
+            .expect("AllTrue should resume from its preserved traversal position")
+            .value
+            .to_string(),
+        "True"
+    );
+
+    let mut array_session = core_session();
+    let array_failure = array_session
+        .eval_request(
+            "VectorQ[{1, 2, 3}, Function[x, If[SameQ[x, 2], SameQ[InputString[\"vector: \"], \"yes\"], IntegerQ[x]]]]",
+        )
+        .expect_err("VectorQ leaf test should suspend when it requests input");
+    match &array_failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "vector: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+    assert_eq!(
+        array_session
+            .resume_eval_request_with_input("yes")
+            .expect("VectorQ should resume from its preserved leaf position")
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_preserves_do_iterator_scope_until_completion() {
     let mut session = core_session();
     session.eval_text("i = global").unwrap();
@@ -60,6 +174,38 @@ fn resume_eval_request_with_input_preserves_do_iterator_scope_until_completion()
         "List[List[2, \"ok\", 2], global]"
     );
     assert_eq!(session.eval_text("i").unwrap().value.to_string(), "global");
+}
+
+#[test]
+fn resume_eval_request_with_input_preserves_prepared_lookup_across_default_and_wrapper() {
+    let mut session = core_session();
+
+    let default_request = session
+        .eval_request(
+            "Lookup[Association[a -> 1], {a, b}, InputString[\"default: \"], If[SameQ[InputString[\"wrapper: \"], \"yes\"], Hold, Identity]]",
+        )
+        .expect_err("Lookup should suspend while evaluating a needed default");
+    match &default_request.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "default: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let wrapper_request = session
+        .resume_eval_request_with_input("fallback")
+        .expect_err("Lookup should then suspend while evaluating a needed wrapper");
+    match &wrapper_request.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "wrapper: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("yes")
+        .expect("Lookup should finish from its prepared result after both inputs");
+    assert_eq!(response.value.to_string(), "List[Hold[1], \"fallback\"]");
 }
 
 #[test]

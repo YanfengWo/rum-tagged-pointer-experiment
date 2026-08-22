@@ -451,6 +451,16 @@ fn list_relation_and_shape_predicates_cover_current_exact_subsets() {
             .to_string(),
         "False"
     );
+    assert_eq!(
+        session
+            .eval_text(
+                "calls = 0; {VectorQ[Range[25], Function[x, calls = calls + 1; IntegerQ[x]]], calls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, 25]"
+    );
 }
 
 #[test]
@@ -617,6 +627,26 @@ fn ordering_predicates_accept_custom_comparators() {
             .to_string(),
         "-1"
     );
+    assert_eq!(
+        session
+            .eval_text(
+                "calls = 0; {OrderedQ[Range[25], Function[{a, b}, calls = calls + 1; Less[a, b]]], calls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, 24]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "calls = 0; {LexicographicOrder[Range[25], Range[25], Function[{a, b}, calls = calls + 1; Less[a, b]]], calls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[0, 50]"
+    );
 }
 
 #[test]
@@ -662,6 +692,16 @@ fn truth_aggregates_and_coprime_q_cover_current_subsets() {
             .value
             .to_string(),
         "AllTrue[List[1], f]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "calls = 0; {AllTrue[Range[25], Function[x, calls = calls + 1; Positive[x]]], calls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, 25]"
     );
     assert_eq!(
         session

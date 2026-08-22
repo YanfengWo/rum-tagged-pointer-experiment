@@ -380,6 +380,50 @@ fn equal_and_unequal_leave_mixed_symbolic_chains_intact() {
 }
 
 #[test]
+fn unequal_wide_value_index_detects_late_duplicates() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Apply[Unequal, Range[20]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Apply[Unequal, Append[Range[20], 1]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "False"
+    );
+}
+
+#[test]
+fn wide_numeric_order_chains_reduce_in_one_pass() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text("Apply[Less, Range[400]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+    assert_eq!(
+        session
+            .eval_text("Apply[Less, Append[Range[20], u]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Less[20, u]"
+    );
+}
+
+#[test]
 fn comparison_operator_forms_apply_single_arguments_on_the_left() {
     let mut session = core_session();
 
