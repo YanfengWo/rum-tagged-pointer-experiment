@@ -223,14 +223,14 @@ pub(super) fn linear_polynomial_from_vector(
     variables: &[Expr],
     vector: &[BigInt],
 ) -> Option<Polynomial> {
-    let mut polynomial = Polynomial::zero();
+    let mut terms = Vec::with_capacity(variables.len() + 1);
 
     for (variable, coefficient) in variables.iter().zip(vector.iter()) {
         if coefficient == &BigInt::from(0_u8) {
             continue;
         }
 
-        polynomial.push_term(Term {
+        terms.push(Term {
             coefficient: Rational::from_integer(coefficient.clone()),
             factors: vec![Factor {
                 base: variable.clone(),
@@ -241,8 +241,9 @@ pub(super) fn linear_polynomial_from_vector(
 
     let constant = &vector[variables.len()];
     if constant != &BigInt::from(0_u8) {
-        polynomial.push_term(Term::constant(Rational::from_integer(constant.clone())));
+        terms.push(Term::constant(Rational::from_integer(constant.clone())));
     }
 
+    let polynomial = Polynomial::from_normalized_terms(terms);
     (!polynomial.is_zero()).then_some(polynomial)
 }

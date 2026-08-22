@@ -122,6 +122,21 @@ fn expand_supports_rational_coefficients_and_indexed_indeterminates() {
 }
 
 #[test]
+fn wide_expand_batches_sum_and_product_term_normalization() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "{LeafCount[Expand[Apply[Plus, Table[x[i], {i, 1, 128}]]]], \
+             LeafCount[Expand[Apply[Plus, Table[x[i], {i, 1, 32}]] * \
+                              Apply[Plus, Table[y[i], {i, 1, 32}]]]]}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[257, 5121]");
+}
+
+#[test]
 fn expand_preserves_non_polynomial_or_pattern_bearing_regions() {
     let mut session = core_session();
 

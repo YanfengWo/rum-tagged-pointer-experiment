@@ -3,6 +3,7 @@ use super::{
     expr_contains_pattern_language, parse_indeterminate_expr, *,
 };
 
+mod construction;
 mod factors;
 pub(super) use factors::parse_coefficient_list_monomials;
 
@@ -65,13 +66,13 @@ impl Polynomial {
 
         match expr {
             Expr::Call { head, args } if is_system_symbol_name(head, "Plus") => {
-                let mut polynomial = Self::zero();
+                let mut terms = Vec::new();
 
                 for arg in args {
-                    polynomial = polynomial.add(Self::from_expr(arg)?);
+                    terms.extend(Self::from_expr(arg)?.terms);
                 }
 
-                Some(polynomial)
+                Some(Self::from_normalized_terms(terms))
             }
             Expr::Call { head, args } if is_system_symbol_name(head, "Times") => {
                 let mut polynomial = Self::one();
@@ -96,11 +97,8 @@ impl Polynomial {
     }
 
     pub(super) fn add(mut self, rhs: Self) -> Self {
-        for term in rhs.terms {
-            self.push_term(term);
-        }
-
-        self
+        self.terms.extend(rhs.terms);
+        Self::from_normalized_terms(self.terms)
     }
 
     pub(super) fn multiply(&self, rhs: &Self) -> Self {
@@ -108,15 +106,15 @@ impl Polynomial {
             return Self::zero();
         }
 
-        let mut product = Self::zero();
+        let mut terms = Vec::with_capacity(self.terms.len().saturating_mul(rhs.terms.len()));
 
         for lhs_term in &self.terms {
             for rhs_term in &rhs.terms {
-                product.push_term(lhs_term.multiply(rhs_term));
+                terms.push(lhs_term.multiply(rhs_term));
             }
         }
 
-        product
+        Self::from_normalized_terms(terms)
     }
 
     pub(super) fn pow(&self, exponent: usize) -> Self {
@@ -400,19 +398,6 @@ impl Polynomial {
         self.terms.retain(|term| !term.coefficient.is_zero());
         let basis = VariableBasis::from_polynomials(&[self]);
         self.terms.sort_by(|lhs, rhs| basis.compare_terms(lhs, rhs));
-    }
-
-    /// Constructs a polynomial after applying the same monomial transform to
-    /// every selected term of an already-canonical polynomial.
-    ///
-    /// Uniform coefficient scaling, multiplication or division by one
-    /// monomial, and filtering by one exact monomial power preserve both term
-    /// uniqueness and graded-lexicographic order. Those paths can therefore
-    /// move the whole batch into place without rebuilding a variable basis and
-    /// sorting after every term.
-    fn from_order_preserving_terms(terms: Vec<Term>) -> Self {
-        debug_assert!(terms.iter().all(|term| !term.coefficient.is_zero()));
-        Self { terms }
     }
 
     pub(super) fn is_zero(&self) -> bool {
