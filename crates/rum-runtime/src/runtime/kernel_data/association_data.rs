@@ -1,4 +1,5 @@
 use super::super::*;
+use std::collections::HashMap;
 
 pub(in crate::runtime) const ASSOCIATION_INDEX_THRESHOLD: usize = 16;
 
@@ -148,16 +149,38 @@ pub fn list_items(expr: &Expr) -> Option<&[Expr]> {
 }
 
 fn canonicalize_association_entries(entries: Vec<(Expr, Expr)>) -> Vec<(Expr, Expr)> {
-    let mut canonical = Vec::new();
+    let mut canonical: Vec<(Expr, Expr)> = Vec::new();
+    let mut indexed_keys: Option<HashMap<Expr, usize>> = None;
+    let entry_count = entries.len();
 
     for (key, value) in entries {
-        if let Some((_, existing_value)) = canonical
-            .iter_mut()
-            .find(|(existing_key, _)| existing_key == &key)
+        if let Some(key_indices) = indexed_keys.as_mut() {
+            if let Some(&existing_index) = key_indices.get(&key) {
+                canonical[existing_index].1 = value;
+            } else {
+                key_indices.insert(key.clone(), canonical.len());
+                canonical.push((key, value));
+            }
+            continue;
+        }
+
+        if let Some(existing_index) = canonical
+            .iter()
+            .position(|(existing_key, _)| existing_key == &key)
         {
-            *existing_value = value;
+            canonical[existing_index].1 = value;
         } else {
             canonical.push((key, value));
+            if canonical.len() > ASSOCIATION_INDEX_THRESHOLD {
+                let mut key_indices = HashMap::with_capacity(entry_count);
+                key_indices.extend(
+                    canonical
+                        .iter()
+                        .enumerate()
+                        .map(|(index, (key, _))| (key.clone(), index)),
+                );
+                indexed_keys = Some(key_indices);
+            }
         }
     }
 
@@ -262,14 +285,37 @@ fn canonicalize_association_entry_forms(
     entries: Vec<AssociationEntryForm>,
 ) -> Vec<AssociationEntryForm> {
     let mut canonical: Vec<AssociationEntryForm> = Vec::new();
+    let mut indexed_keys: Option<HashMap<Expr, usize>> = None;
+    let entry_count = entries.len();
+
     for entry in entries {
-        if let Some(existing) = canonical
-            .iter_mut()
-            .find(|existing| existing.key == entry.key)
+        if let Some(key_indices) = indexed_keys.as_mut() {
+            if let Some(&existing_index) = key_indices.get(&entry.key) {
+                canonical[existing_index] = entry;
+            } else {
+                key_indices.insert(entry.key.clone(), canonical.len());
+                canonical.push(entry);
+            }
+            continue;
+        }
+
+        if let Some(existing_index) = canonical
+            .iter()
+            .position(|existing| existing.key == entry.key)
         {
-            *existing = entry;
+            canonical[existing_index] = entry;
         } else {
             canonical.push(entry);
+            if canonical.len() > ASSOCIATION_INDEX_THRESHOLD {
+                let mut key_indices = HashMap::with_capacity(entry_count);
+                key_indices.extend(
+                    canonical
+                        .iter()
+                        .enumerate()
+                        .map(|(index, entry)| (entry.key.clone(), index)),
+                );
+                indexed_keys = Some(key_indices);
+            }
         }
     }
 

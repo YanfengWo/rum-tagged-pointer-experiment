@@ -32,6 +32,63 @@ fn resume_eval_request_with_input_can_finish_associationmap_over_association_ent
 }
 
 #[test]
+fn resume_eval_request_with_input_preserves_associationmap_list_progress() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("AssociationMap[Function[InputString[\"map: \"]], {a, b}]")
+        .expect_err("AssociationMap should suspend on the first list key");
+    match &first.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "map: "),
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("AssociationMap should continue to the second list key");
+    match &second.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "map: "),
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("AssociationMap should retain the first mapped value");
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, \"one\"], Rule[b, \"two\"]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_preserves_keyselect_progress() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request(
+            "KeySelect[<|a -> 1, b -> 2|>, Function[SameQ[InputString[\"key: \"], \"yes\"]]]",
+        )
+        .expect_err("KeySelect should suspend on the first key");
+    match &first.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "key: "),
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let second = session
+        .resume_eval_request_with_input("yes")
+        .expect_err("KeySelect should continue to the second key");
+    match &second.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "key: "),
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("KeySelect should retain the first selected entry");
+    assert_eq!(response.value.to_string(), "Association[Rule[a, 1]]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer() {
     let mut session = core_session();
 

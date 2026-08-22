@@ -159,31 +159,37 @@ fn resume_while_sequence_from_index(
     session: &mut Session,
     sequence: SequenceLikeExpr,
     criterion: Expr,
-    index: usize,
+    mut index: usize,
     mode: WhileSequenceMode,
 ) -> Result<Expr, EvalError> {
-    if index >= sequence.len() {
-        return Ok(finish_while_sequence(sequence, index, mode));
+    loop {
+        if index >= sequence.len() {
+            return Ok(finish_while_sequence(sequence, index, mode));
+        }
+
+        let Some(item) = sequence.value_at(index) else {
+            return Ok(finish_while_sequence(sequence, index, mode));
+        };
+        let value = match session.evaluate(Expr::call(criterion.clone(), vec![item])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_while_sequence_with_value(
+                            session, sequence, criterion, index, mode, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&value) != Some(true) {
+            return Ok(finish_while_sequence(sequence, index, mode));
+        }
+        index += 1;
     }
-
-    let Some(item) = sequence.value_at(index) else {
-        return Ok(finish_while_sequence(sequence, index, mode));
-    };
-    let suspended_sequence = sequence.clone();
-    let suspended_criterion = criterion.clone();
-    let value_result = session.evaluate(Expr::call(criterion.clone(), vec![item]));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_while_sequence_with_value(
-            session,
-            suspended_sequence,
-            suspended_criterion,
-            index,
-            mode,
-            value,
-        )
-    })?;
-
-    resume_while_sequence_with_value(session, sequence, criterion, index, mode, value)
 }
 
 fn resume_while_sequence_with_value(
@@ -204,31 +210,35 @@ fn resume_while_sequence_with_value(
 fn resume_accumulate_from_index(
     session: &mut Session,
     sequence: SequenceLikeExpr,
-    index: usize,
-    current: Expr,
-    accumulated: Vec<Expr>,
+    mut index: usize,
+    mut current: Expr,
+    mut accumulated: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index >= sequence.len() {
-        return Ok(sequence.render_with_values(accumulated));
+    loop {
+        if index >= sequence.len() {
+            return Ok(sequence.render_with_values(accumulated));
+        }
+
+        let Some(item) = sequence.value_at(index) else {
+            return Ok(sequence.render_with_values(accumulated));
+        };
+        let value = match session.evaluate(Expr::call(system_expr("Plus"), vec![current, item])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_accumulate_with_value(session, sequence, index, accumulated, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        accumulated.push(value.clone());
+        current = value;
+        index += 1;
     }
-
-    let Some(item) = sequence.value_at(index) else {
-        return Ok(sequence.render_with_values(accumulated));
-    };
-    let suspended_sequence = sequence.clone();
-    let suspended_accumulated = accumulated.clone();
-    let value_result = session.evaluate(Expr::call(system_expr("Plus"), vec![current, item]));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_accumulate_with_value(
-            session,
-            suspended_sequence,
-            index,
-            suspended_accumulated,
-            value,
-        )
-    })?;
-
-    resume_accumulate_with_value(session, sequence, index, accumulated, value)
 }
 
 fn resume_accumulate_with_value(
@@ -245,25 +255,34 @@ fn resume_accumulate_with_value(
 fn resume_block_map_from_index(
     session: &mut Session,
     state: BlockMapEvalState,
-    index: usize,
-    results: Vec<Expr>,
+    mut index: usize,
+    mut results: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index + state.size > state.items.len() {
-        return Ok(Expr::call(system_expr("List"), results));
+    loop {
+        if index + state.size > state.items.len() {
+            return Ok(Expr::call(system_expr("List"), results));
+        }
+
+        let block = Expr::call(
+            state.block_head.clone(),
+            state.items[index..index + state.size].to_vec(),
+        );
+        let value = match session.evaluate(Expr::call(state.operator.clone(), vec![block])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_block_map_with_value(session, state, index, results, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        results.push(value);
+        index += state.offset;
     }
-
-    let block = Expr::call(
-        state.block_head.clone(),
-        state.items[index..index + state.size].to_vec(),
-    );
-    let suspended_state = state.clone();
-    let suspended_results = results.clone();
-    let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![block]));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_block_map_with_value(session, suspended_state, index, suspended_results, value)
-    })?;
-
-    resume_block_map_with_value(session, state, index, results, value)
 }
 
 fn resume_block_map_with_value(

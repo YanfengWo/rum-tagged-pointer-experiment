@@ -146,6 +146,8 @@ mod predicates;
 mod predicates_part2;
 #[path = "tests/random.rs"]
 mod random;
+#[path = "tests/resumable_traversal_regression.rs"]
+mod resumable_traversal_regression;
 #[path = "tests/schema.rs"]
 mod schema;
 #[path = "tests/schema_operator_forms.rs"]
