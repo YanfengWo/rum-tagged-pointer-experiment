@@ -54,12 +54,12 @@ impl<T> StableGroups<T> {
     }
 }
 
-pub(super) struct StableCounts {
+pub(crate) struct StableCounts {
     entries: Vec<(Expr, usize)>,
 }
 
 impl StableCounts {
-    pub(super) fn collect(items: impl IntoIterator<Item = Expr>) -> Self {
+    pub(crate) fn collect(items: impl IntoIterator<Item = Expr>) -> Self {
         let mut remaining = items.into_iter();
         let mut entries: Vec<(Expr, usize)> = Vec::new();
         for item in remaining.by_ref() {
@@ -99,7 +99,7 @@ impl StableCounts {
         Self { entries }
     }
 
-    pub(super) fn into_entries(self) -> Vec<(Expr, usize)> {
+    pub(crate) fn into_entries(self) -> Vec<(Expr, usize)> {
         self.entries
     }
 }

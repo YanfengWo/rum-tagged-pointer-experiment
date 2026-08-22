@@ -4,6 +4,10 @@ use rum_runtime::kernel_api::{
     expr_as_exact_integer, expr_as_exact_rational, system_expr,
 };
 
+use crate::structure_ops::stable_groups::StableCounts;
+
+const COMMONEST_INDEX_THRESHOLD: usize = 64;
+
 pub(crate) fn eval_median(
     session: &mut Session,
     head: &Expr,
@@ -50,14 +54,11 @@ pub(crate) fn eval_commonest(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
-    let mut counts: Vec<(Expr, usize)> = Vec::new();
-    for item in items {
-        if let Some((_, count)) = counts.iter_mut().find(|(existing, _)| existing == item) {
-            *count += 1;
-        } else {
-            counts.push((item.clone(), 1));
-        }
-    }
+    let mut counts = if items.len() >= COMMONEST_INDEX_THRESHOLD {
+        StableCounts::collect(items.iter().cloned()).into_entries()
+    } else {
+        linear_counts(items)
+    };
 
     if let Some(n_expr) = n_expr {
         let Some(n) = expr_as_exact_integer(n_expr) else {
@@ -92,6 +93,18 @@ pub(crate) fn eval_commonest(
             .filter_map(|(item, count)| (count == max_count).then_some(item))
             .collect(),
     ))
+}
+
+fn linear_counts(items: &[Expr]) -> Vec<(Expr, usize)> {
+    let mut counts = Vec::new();
+    for item in items {
+        if let Some((_, count)) = counts.iter_mut().find(|(existing, _)| existing == item) {
+            *count += 1;
+        } else {
+            counts.push((item.clone(), 1));
+        }
+    }
+    counts
 }
 
 pub(crate) fn eval_quantile(

@@ -20,7 +20,7 @@ mod ordering_sets;
 mod reordering;
 mod selectors;
 mod sequence;
-mod stable_groups;
+pub(crate) mod stable_groups;
 mod surface;
 
 pub(crate) use self::{

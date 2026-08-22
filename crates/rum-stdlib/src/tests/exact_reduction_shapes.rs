@@ -179,6 +179,19 @@ fn commonest_accepts_count_limit_form() {
 }
 
 #[test]
+fn commonest_preserves_wide_first_occurrence_order() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "distinct = Commonest[Range[5000]]; repeated = Commonest[Append[Range[5000], 4999]]; {Length[distinct], First[distinct], Last[distinct], repeated}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[5000, 1, 5000, List[4999]]");
+}
+
+#[test]
 fn quantile_accepts_parameter_lists_and_fails_closed() {
     let mut session = core_session();
 
