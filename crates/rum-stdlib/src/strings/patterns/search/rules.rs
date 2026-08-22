@@ -1,14 +1,16 @@
 use super::super::matcher::{
-    best_pattern_match_at_with_bindings, best_pattern_match_state, pattern_match_text,
+    best_pattern_match_at_with_bindings, best_pattern_match_state, linear_literal_match_ranges,
+    pattern_match_text,
 };
 use super::*;
 
-#[derive(Clone)]
 struct StringReplaceRuleEvalState {
     chars: Vec<char>,
     rules: Vec<ExactStringReplacementRule>,
     max_replacements: usize,
     config: StringPatternMatchConfig,
+    literal_matches: Option<Vec<(usize, usize)>>,
+    literal_match_index: usize,
 }
 
 #[derive(Clone)]
@@ -19,12 +21,13 @@ struct StringReplaceValuesEvalState {
     config: StringPatternMatchConfig,
 }
 
-#[derive(Clone)]
 struct StringCasesRuleEvalState {
     chars: Vec<char>,
     spec: ExactStringCaseSpec,
     max_matches: usize,
     config: StringCasesConfig,
+    literal_matches: Option<Vec<(usize, usize)>>,
+    literal_match_index: usize,
 }
 
 #[derive(Clone)]
@@ -46,13 +49,23 @@ pub(super) fn replace_string_value_with_rules(
         return Ok(value.to_string());
     }
 
+    let chars = value.chars().collect::<Vec<_>>();
+    let literal_matches = match rules {
+        [rule] => {
+            linear_literal_match_ranges(&chars, &rule.pattern, config, false, max_replacements)
+        }
+        _ => None,
+    };
+
     resume_replace_string_value_from_index(
         session,
         StringReplaceRuleEvalState {
-            chars: value.chars().collect(),
+            chars,
             rules: rules.to_vec(),
             max_replacements,
             config,
+            literal_matches,
+            literal_match_index: 0,
         },
         0,
         0,
@@ -92,13 +105,30 @@ pub(super) fn collect_string_cases_with_rule_evaluation(
         return Ok(Vec::new());
     }
 
+    let chars = value.chars().collect::<Vec<_>>();
+    let literal_matches = match spec {
+        ExactStringCaseSpec::Rules(rules) => match rules.as_slice() {
+            [rule] => linear_literal_match_ranges(
+                &chars,
+                &rule.pattern,
+                config.match_config,
+                matches!(config.overlaps, StringSearchOverlaps::Overlapping),
+                max_matches,
+            ),
+            _ => None,
+        },
+        ExactStringCaseSpec::Patterns(_) => None,
+    };
+
     resume_collect_string_cases_from_index(
         session,
         StringCasesRuleEvalState {
-            chars: value.chars().collect(),
+            chars,
             spec: spec.clone(),
             max_matches,
             config,
+            literal_matches,
+            literal_match_index: 0,
         },
         0,
         Vec::new(),
@@ -133,6 +163,16 @@ fn resume_replace_string_value_from_index(
     replacements: usize,
     mut output: String,
 ) -> Result<String, EvalError> {
+    if state.literal_matches.is_some() {
+        return resume_replace_literal_string_from_index(
+            session,
+            state,
+            index,
+            replacements,
+            output,
+        );
+    }
+
     while index <= state.chars.len() {
         if replacements >= state.max_replacements {
             output.extend(state.chars[index..].iter());
@@ -150,23 +190,16 @@ fn resume_replace_string_value_from_index(
                 },
             )
         }) {
-            let suspended_state = state.clone();
-            let suspended_output = output.clone();
             let rendered_result =
                 evaluate_string_rule_output_expr_result(session, &output_expr, &bindings);
-            return session.drive_evaluated_value::<Expr, String, _>(
+            return drive_replace_string_output_result(
+                session,
+                state,
+                index,
+                end,
+                replacements,
+                output,
                 rendered_result,
-                move |session, rendered_expr| {
-                    resume_replace_string_value_with_output(
-                        session,
-                        suspended_state,
-                        index,
-                        end,
-                        replacements,
-                        suspended_output,
-                        rendered_expr,
-                    )
-                },
             );
         }
 
@@ -178,6 +211,88 @@ fn resume_replace_string_value_from_index(
     }
 
     Ok(output)
+}
+
+fn resume_replace_literal_string_from_index(
+    session: &mut Session,
+    mut state: StringReplaceRuleEvalState,
+    index: usize,
+    replacements: usize,
+    mut output: String,
+) -> Result<String, EvalError> {
+    if replacements >= state.max_replacements {
+        output.extend(state.chars[index..].iter());
+        return Ok(output);
+    }
+
+    let next_match = state
+        .literal_matches
+        .as_ref()
+        .and_then(|matches| matches.get(state.literal_match_index))
+        .copied();
+    let Some((start, end)) = next_match else {
+        output.extend(state.chars[index..].iter());
+        return Ok(output);
+    };
+    debug_assert!(start >= index);
+    output.extend(state.chars[index..start].iter());
+    state.literal_match_index += 1;
+
+    let rule = state
+        .rules
+        .first()
+        .expect("literal replacement matching requires one rule");
+    let output_expr = match &rule.replacement {
+        ExactStringReplacementValue::Immediate(expr)
+        | ExactStringReplacementValue::Delayed(expr) => expr.clone(),
+    };
+    let rendered_result =
+        evaluate_string_rule_output_expr_result(session, &output_expr, &SymbolExprMap::default());
+    drive_replace_string_output_result(
+        session,
+        state,
+        start,
+        end,
+        replacements,
+        output,
+        rendered_result,
+    )
+}
+
+fn drive_replace_string_output_result(
+    session: &mut Session,
+    state: StringReplaceRuleEvalState,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    output: String,
+    rendered_result: Result<Expr, EvalError>,
+) -> Result<String, EvalError> {
+    match rendered_result {
+        Ok(rendered_expr) => resume_replace_string_value_with_output(
+            session,
+            state,
+            index,
+            end,
+            replacements,
+            output,
+            rendered_expr,
+        ),
+        Err(error) => session.drive_evaluated_value::<Expr, String, _>(
+            Err(error),
+            move |session, rendered_expr| {
+                resume_replace_string_value_with_output(
+                    session,
+                    state,
+                    index,
+                    end,
+                    replacements,
+                    output,
+                    rendered_expr,
+                )
+            },
+        ),
+    }
 }
 
 fn resume_replace_string_value_with_output(
@@ -254,6 +369,10 @@ fn resume_collect_string_cases_from_index(
     mut index: usize,
     mut matches: Vec<Expr>,
 ) -> Result<Vec<Expr>, EvalError> {
+    if state.literal_matches.is_some() {
+        return resume_collect_literal_string_cases(session, state, matches);
+    }
+
     while index <= state.chars.len() && matches.len() < state.max_matches {
         match &state.spec {
             ExactStringCaseSpec::Patterns(patterns) => {
@@ -298,22 +417,15 @@ fn resume_collect_string_cases_from_index(
                         (output_expr, match_state.end, match_state.bindings)
                     })
                 }) {
-                    let suspended_state = state.clone();
-                    let suspended_matches = matches.clone();
                     let output_result =
                         evaluate_string_rule_output_expr_result(session, &output_expr, &bindings);
-                    return session.drive_evaluated_value::<Expr, Vec<Expr>, _>(
+                    return drive_string_cases_output_result(
+                        session,
+                        state,
+                        index,
+                        end,
+                        matches,
                         output_result,
-                        move |session, output| {
-                            resume_collect_string_cases_with_output(
-                                session,
-                                suspended_state,
-                                index,
-                                end,
-                                suspended_matches,
-                                output,
-                            )
-                        },
                     );
                 }
 
@@ -326,6 +438,62 @@ fn resume_collect_string_cases_from_index(
     }
 
     Ok(matches)
+}
+
+fn resume_collect_literal_string_cases(
+    session: &mut Session,
+    mut state: StringCasesRuleEvalState,
+    matches: Vec<Expr>,
+) -> Result<Vec<Expr>, EvalError> {
+    if matches.len() >= state.max_matches {
+        return Ok(matches);
+    }
+
+    let next_match = state
+        .literal_matches
+        .as_ref()
+        .and_then(|ranges| ranges.get(state.literal_match_index))
+        .copied();
+    let Some((start, end)) = next_match else {
+        return Ok(matches);
+    };
+    state.literal_match_index += 1;
+
+    let ExactStringCaseSpec::Rules(rules) = &state.spec else {
+        unreachable!("literal rule matching requires a rule specification");
+    };
+    let rule = rules
+        .first()
+        .expect("literal case matching requires one rule");
+    let output_expr = match &rule.output {
+        ExactStringCaseOutput::Immediate(expr) | ExactStringCaseOutput::Delayed(expr) => {
+            expr.clone()
+        }
+    };
+    let output_result =
+        evaluate_string_rule_output_expr_result(session, &output_expr, &SymbolExprMap::default());
+    drive_string_cases_output_result(session, state, start, end, matches, output_result)
+}
+
+fn drive_string_cases_output_result(
+    session: &mut Session,
+    state: StringCasesRuleEvalState,
+    index: usize,
+    end: usize,
+    matches: Vec<Expr>,
+    output_result: Result<Expr, EvalError>,
+) -> Result<Vec<Expr>, EvalError> {
+    match output_result {
+        Ok(output) => {
+            resume_collect_string_cases_with_output(session, state, index, end, matches, output)
+        }
+        Err(error) => session.drive_evaluated_value::<Expr, Vec<Expr>, _>(
+            Err(error),
+            move |session, output| {
+                resume_collect_string_cases_with_output(session, state, index, end, matches, output)
+            },
+        ),
+    }
 }
 
 fn resume_collect_string_cases_with_output(

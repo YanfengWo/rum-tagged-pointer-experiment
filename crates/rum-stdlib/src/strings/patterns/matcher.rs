@@ -2,6 +2,7 @@ use super::*;
 
 mod api;
 mod engine;
+mod literal;
 mod split_trim;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -19,3 +20,4 @@ pub(super) use engine::{
     best_pattern_match_at_with_bindings, best_pattern_match_end, best_pattern_match_state,
     pattern_match_text,
 };
+pub(super) use literal::linear_literal_match_ranges;

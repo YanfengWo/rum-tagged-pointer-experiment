@@ -66,6 +66,33 @@ fn string_position_reports_overlapping_one_based_ranges() {
 }
 
 #[test]
+fn wide_literal_search_preserves_predicate_overlap_and_collection_semantics() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "text = StringRepeat[\"a\", 300]; needle = StringRepeat[\"a\", 16]; missing = StringJoin[needle, \"b\"]; {StringContainsQ[text, needle], StringFreeQ[text, missing], StringEndsQ[text, needle], StringCount[text, needle], StringCount[text, needle, Overlaps -> True], StringPosition[text, needle, 3], StringLength[StringDelete[text, needle]], Length[StringCases[text, needle]], StringLength[StringReplace[text, missing -> \"x\"]], Length[StringCases[text, missing -> \"x\"]]}"
+        ),
+        "List[True, True, True, 18, 285, List[List[1, 16], List[2, 17], List[3, 18]], 12, 18, 300, 0]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringLength[StringSplit[StringJoin[text, \"X\", text], StringJoin[needle, \"X\"]]], StringTrim[StringJoin[needle, needle, \"middle\", needle], needle]}"
+        ),
+        "List[List[284, 300], \"middle\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "delimiter = StringRepeat[\"x\", 64]; splitText = StringJoin[delimiter, \"a\", delimiter, delimiter, \"b\", delimiter]; {StringSplit[splitText, delimiter], StringSplit[splitText, delimiter, All]}"
+        ),
+        "List[List[\"a\", \"\", \"b\", \"\"], List[\"\", \"a\", \"\", \"b\", \"\"]]"
+    );
+}
+
+#[test]
 fn string_cases_and_position_honor_boolean_overlaps_options() {
     let mut session = core_session();
 

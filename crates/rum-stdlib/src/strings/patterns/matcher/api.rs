@@ -2,6 +2,10 @@ use super::engine::{
     best_pattern_match_at, best_pattern_match_at_with_bindings, best_pattern_match_end,
     best_pattern_match_state, pattern_can_match_through_end, pattern_match_text,
 };
+use super::literal::{
+    LiteralMatches, exact_literal_pattern, linear_literal_pattern,
+    linear_literal_search_worthwhile, single_linear_literal_pattern,
+};
 use super::split_trim::{
     split_by_string_patterns, split_by_whitespace, trim_string_patterns, trim_whitespace_chars,
 };
@@ -12,6 +16,21 @@ pub(in crate::strings::patterns) fn string_contains_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
+    if let Some(literal) = exact_literal_pattern(pattern, config) {
+        if linear_literal_search_worthwhile(haystack.len(), literal.len()) {
+            if haystack.starts_with(literal) {
+                return true;
+            }
+            return LiteralMatches::new(haystack, literal, false)
+                .next()
+                .is_some();
+        }
+        return literal.len() <= haystack.len()
+            && haystack
+                .windows(literal.len())
+                .any(|window| window == literal);
+    }
+
     (0..=haystack.len())
         .any(|start| best_pattern_match_state(pattern, haystack, start, config).is_some())
 }
@@ -21,6 +40,10 @@ pub(in crate::strings::patterns) fn string_starts_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
+    if let Some(literal) = exact_literal_pattern(pattern, config) {
+        return haystack.starts_with(literal);
+    }
+
     best_pattern_match_state(pattern, haystack, 0, config).is_some()
 }
 
@@ -29,6 +52,10 @@ pub(in crate::strings::patterns) fn string_ends_q(
     pattern: &StringPattern,
     config: StringPatternMatchConfig,
 ) -> bool {
+    if let Some(literal) = exact_literal_pattern(pattern, config) {
+        return haystack.ends_with(literal);
+    }
+
     (0..=haystack.len()).any(|start| {
         best_pattern_match_state(pattern, haystack, start, config)
             .is_some_and(|state| state.end == haystack.len())
@@ -40,9 +67,12 @@ pub(in crate::strings::patterns) fn string_match_q(
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
 ) -> bool {
-    patterns
-        .iter()
-        .any(|pattern| pattern_can_match_through_end(pattern, haystack, 0, haystack.len(), config))
+    patterns.iter().any(|pattern| {
+        if let Some(literal) = exact_literal_pattern(pattern, config) {
+            return haystack == literal;
+        }
+        pattern_can_match_through_end(pattern, haystack, 0, haystack.len(), config)
+    })
 }
 
 pub(in crate::strings::patterns) fn string_free_q(
@@ -50,6 +80,23 @@ pub(in crate::strings::patterns) fn string_free_q(
     patterns: &[StringPattern],
     config: StringPatternMatchConfig,
 ) -> bool {
+    if let [pattern] = patterns {
+        if let Some(literal) = exact_literal_pattern(pattern, config) {
+            if linear_literal_search_worthwhile(haystack.len(), literal.len()) {
+                if haystack.starts_with(literal) {
+                    return false;
+                }
+                return LiteralMatches::new(haystack, literal, false)
+                    .next()
+                    .is_none();
+            }
+            return literal.len() > haystack.len()
+                || !haystack
+                    .windows(literal.len())
+                    .any(|window| window == literal);
+        }
+    }
+
     (0..=haystack.len()).all(|start| {
         best_pattern_match_at_with_bindings(patterns, haystack, start, config).is_none()
     })
@@ -61,6 +108,21 @@ pub(in crate::strings::patterns) fn string_count_matches(
     config: StringCountConfig,
 ) -> usize {
     let chars = value.chars().collect::<Vec<_>>();
+    if let Some(literal) = single_linear_literal_pattern(
+        patterns,
+        StringPatternMatchConfig {
+            ignore_case: config.ignore_case,
+        },
+        chars.len(),
+    ) {
+        return LiteralMatches::new(
+            &chars,
+            literal,
+            matches!(config.overlaps, StringSearchOverlaps::Overlapping),
+        )
+        .count();
+    }
+
     let mut index = 0usize;
     let mut matches = 0usize;
     let match_config = StringPatternMatchConfig {
@@ -95,6 +157,23 @@ pub(in crate::strings::patterns) fn string_delete_matches(
     config: StringDeleteConfig,
 ) -> String {
     let chars = value.chars().collect::<Vec<_>>();
+    if let Some(literal) = single_linear_literal_pattern(
+        patterns,
+        StringPatternMatchConfig {
+            ignore_case: config.ignore_case,
+        },
+        chars.len(),
+    ) {
+        let mut output = String::with_capacity(value.len());
+        let mut copied_through = 0usize;
+        for (start, end) in LiteralMatches::new(&chars, literal, false) {
+            output.extend(chars[copied_through..start].iter());
+            copied_through = end;
+        }
+        output.extend(chars[copied_through..].iter());
+        return output;
+    }
+
     let mut output = String::new();
     let mut index = 0usize;
     let match_config = StringPatternMatchConfig {
@@ -157,6 +236,24 @@ pub(in crate::strings::patterns) fn collect_string_cases(
     }
 
     let chars = value.chars().collect::<Vec<_>>();
+    if let ExactStringCaseSpec::Patterns(patterns) = spec {
+        if let Some(literal) =
+            single_linear_literal_pattern(patterns, config.match_config, chars.len())
+        {
+            if max_matches == 1 && chars.starts_with(literal) {
+                return vec![Expr::string(pattern_match_text(literal))];
+            }
+            return LiteralMatches::new(
+                &chars,
+                literal,
+                matches!(config.overlaps, StringSearchOverlaps::Overlapping),
+            )
+            .take(max_matches)
+            .map(|(start, end)| Expr::string(pattern_match_text(&chars[start..end])))
+            .collect();
+        }
+    }
+
     let mut index = 0;
     let mut matches = Vec::new();
 
@@ -239,6 +336,21 @@ fn string_pattern_positions<'a>(
 
     if max_results == 0 {
         return Vec::new().into_iter();
+    }
+
+    if let Some(literal) = linear_literal_pattern(pattern, config.match_config, haystack.len()) {
+        if max_results == 1 && haystack.starts_with(literal) {
+            return vec![(1, literal.len())].into_iter();
+        }
+        return LiteralMatches::new(
+            haystack,
+            literal,
+            matches!(config.overlaps, StringSearchOverlaps::Overlapping),
+        )
+        .take(max_results)
+        .map(|(start, end)| (start + 1, end))
+        .collect::<Vec<_>>()
+        .into_iter();
     }
 
     let mut positions = Vec::new();

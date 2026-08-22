@@ -36,6 +36,26 @@ fn resume_eval_request_with_input_can_finish_delayed_string_rules() {
         .resume_eval_request_with_input("b")
         .expect("StringCases should finish after resumed delayed rules");
     assert_eq!(response.value.to_string(), "List[List[\"a\"], List[\"b\"]]");
+
+    let first = session
+        .eval_request(
+            "text = StringJoin[StringRepeat[\"z\", 300], StringRepeat[\"a\", 16]]; StringLength[StringReplace[text, StringRepeat[\"a\", 16] :> InputString[\"wide replace: \"]]]",
+        )
+        .expect_err("wide literal StringReplace should preserve suspension");
+    assert_input_prompt(&first.error, "wide replace: ");
+    let response = session
+        .resume_eval_request_with_input("x")
+        .expect("wide literal StringReplace should resume");
+    assert_eq!(response.value.to_string(), "301");
+
+    let first = session
+        .eval_request("StringCases[text, StringRepeat[\"a\", 16] :> InputString[\"wide case: \"]]")
+        .expect_err("wide literal StringCases should preserve suspension");
+    assert_input_prompt(&first.error, "wide case: ");
+    let response = session
+        .resume_eval_request_with_input("y")
+        .expect("wide literal StringCases should resume");
+    assert_eq!(response.value.to_string(), "List[\"y\"]");
 }
 
 // Moved from crates/rum-runtime/src/runtime/tests/session_requests/functional_tensor_string_resume.rs.
