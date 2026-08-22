@@ -1,8 +1,80 @@
 use super::*;
+use std::collections::{HashMap, HashSet};
+
+const KEY_COLLECTION_INDEX_THRESHOLD: usize = 16;
+
+fn key_collection_indices(
+    collections: &[Vec<AssociationEntryForm>],
+    lookup_count: usize,
+) -> Option<Vec<HashMap<Expr, usize>>> {
+    (lookup_count > KEY_COLLECTION_INDEX_THRESHOLD).then(|| {
+        collections
+            .iter()
+            .map(|entries| {
+                entries
+                    .iter()
+                    .enumerate()
+                    .map(|(index, entry)| (entry.key.clone(), index))
+                    .collect()
+            })
+            .collect()
+    })
+}
+
+fn key_collection_entry<'a>(
+    entries: &'a [AssociationEntryForm],
+    positions: Option<&HashMap<Expr, usize>>,
+    key: &Expr,
+) -> Option<&'a AssociationEntryForm> {
+    if let Some(positions) = positions {
+        return positions.get(key).map(|index| &entries[*index]);
+    }
+    entries.iter().find(|entry| entry.key == *key)
+}
+
+struct KeyUnionPlan {
+    collections: Vec<Vec<AssociationEntryForm>>,
+    indices: Option<Vec<HashMap<Expr, usize>>>,
+    union_entries: Vec<AssociationEntryForm>,
+}
+
+impl KeyUnionPlan {
+    fn new(collections: Vec<Vec<AssociationEntryForm>>) -> Self {
+        let union_entries = key_union_entries(&collections);
+        let indices = key_collection_indices(&collections, union_entries.len());
+        Self {
+            collections,
+            indices,
+            union_entries,
+        }
+    }
+
+    fn missing_keys(&self) -> Vec<Expr> {
+        self.union_entries
+            .iter()
+            .filter(|entry| {
+                self.collections
+                    .iter()
+                    .enumerate()
+                    .any(|(collection_index, entries)| {
+                        key_collection_entry(
+                            entries,
+                            self.indices
+                                .as_ref()
+                                .map(|indices| &indices[collection_index]),
+                            &entry.key,
+                        )
+                        .is_none()
+                    })
+            })
+            .map(|entry| entry.key.clone())
+            .collect()
+    }
+}
 
 pub(crate) fn eval_key_union(
     session: &mut Session,
-    head: &Expr,
+    _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     let (collections_expr, fill_function) = match args {
@@ -38,22 +110,21 @@ pub(crate) fn eval_key_union(
         }
     };
 
-    let union_entries = key_union_entries(&collections);
-    let missing_keys = key_union_missing_keys(&collections, &union_entries);
+    let plan = KeyUnionPlan::new(collections);
 
     match fill_function {
-        None => Ok(render_key_union_result(&collections, &union_entries, &[])),
-        Some(fill_function) => resume_key_union_missing_values_from_index(
-            session,
-            head.clone(),
-            args.to_vec(),
-            fill_function,
-            collections,
-            union_entries,
-            missing_keys,
-            0,
-            Vec::new(),
-        ),
+        None => Ok(render_key_union_result(&plan, &[])),
+        Some(fill_function) => {
+            let missing_keys = plan.missing_keys();
+            resume_key_union_missing_values_from_index(
+                session,
+                fill_function,
+                plan,
+                missing_keys,
+                0,
+                Vec::new(),
+            )
+        }
     }
 }
 
@@ -94,13 +165,22 @@ pub(crate) fn eval_key_intersection(
     let Some(first) = collections.first() else {
         return Ok(Expr::call(system_expr("List"), vec![]));
     };
+    let indices = key_collection_indices(&collections, first.len());
 
     let intersection_keys = first
         .iter()
         .filter(|entry| {
             collections[1..]
                 .iter()
-                .all(|entries| entries.iter().any(|candidate| candidate.key == entry.key))
+                .enumerate()
+                .all(|(rest_index, entries)| {
+                    key_collection_entry(
+                        entries,
+                        indices.as_ref().map(|indices| &indices[rest_index + 1]),
+                        &entry.key,
+                    )
+                    .is_some()
+                })
         })
         .map(|entry| entry.key.clone())
         .collect::<Vec<_>>();
@@ -108,18 +188,22 @@ pub(crate) fn eval_key_intersection(
     Ok(Expr::call(
         system_expr("List"),
         collections
-            .into_iter()
-            .map(|entries| {
+            .iter()
+            .enumerate()
+            .map(|(collection_index, entries)| {
                 render_association_entry_forms_preserving_heads(
                     intersection_keys
                         .iter()
                         .filter_map(|key| {
-                            entries.iter().find(|entry| entry.key == *key).map(|entry| {
-                                AssociationEntryForm {
-                                    key: key.clone(),
-                                    value: entry.value.clone(),
-                                    delayed: entry.delayed,
-                                }
+                            key_collection_entry(
+                                entries,
+                                indices.as_ref().map(|indices| &indices[collection_index]),
+                                key,
+                            )
+                            .map(|entry| AssociationEntryForm {
+                                key: key.clone(),
+                                value: entry.value.clone(),
+                                delayed: entry.delayed,
                             })
                         })
                         .collect(),
@@ -204,74 +288,51 @@ pub(crate) fn eval_key_complement(
     ))
 }
 
-#[allow(clippy::too_many_arguments)]
 fn resume_key_union_missing_values_from_index(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     fill_function: Expr,
-    collections: Vec<Vec<AssociationEntryForm>>,
-    union_entries: Vec<AssociationEntryForm>,
+    plan: KeyUnionPlan,
     missing_keys: Vec<Expr>,
-    index: usize,
-    fill_values: Vec<(Expr, Expr)>,
+    mut index: usize,
+    mut fill_values: Vec<(Expr, Expr)>,
 ) -> Result<Expr, EvalError> {
-    let Some(key) = missing_keys.get(index).cloned() else {
-        return Ok(render_key_union_result(
-            &collections,
-            &union_entries,
-            &fill_values,
-        ));
-    };
+    loop {
+        let Some(key) = missing_keys.get(index).cloned() else {
+            return Ok(render_key_union_result(&plan, &fill_values));
+        };
 
-    let fill_result = session.evaluate(Expr::call(fill_function.clone(), vec![key.clone()]));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_fill_function = fill_function.clone();
-    let suspended_collections = collections.clone();
-    let suspended_union_entries = union_entries.clone();
-    let suspended_missing_keys = missing_keys.clone();
-    let suspended_fill_values = fill_values.clone();
-    let suspended_key = key.clone();
-    let fill_value = session.suspend_with_frame(fill_result, move |session, fill_value| {
-        resume_key_union_missing_value(
-            session,
-            suspended_head,
-            suspended_call_args,
-            suspended_fill_function,
-            suspended_collections,
-            suspended_union_entries,
-            suspended_missing_keys,
-            index,
-            suspended_fill_values,
-            suspended_key,
-            fill_value,
-        )
-    })?;
+        let fill_value =
+            match session.evaluate(Expr::call(fill_function.clone(), vec![key.clone()])) {
+                Ok(fill_value) => fill_value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, fill_value| {
+                            resume_key_union_missing_value(
+                                session,
+                                fill_function,
+                                plan,
+                                missing_keys,
+                                index,
+                                fill_values,
+                                key,
+                                fill_value,
+                            )
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
 
-    resume_key_union_missing_value(
-        session,
-        head,
-        call_args,
-        fill_function,
-        collections,
-        union_entries,
-        missing_keys,
-        index,
-        fill_values,
-        key,
-        fill_value,
-    )
+        fill_values.push((key, fill_value));
+        index += 1;
+    }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn resume_key_union_missing_value(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     fill_function: Expr,
-    collections: Vec<Vec<AssociationEntryForm>>,
-    union_entries: Vec<AssociationEntryForm>,
+    plan: KeyUnionPlan,
     missing_keys: Vec<Expr>,
     index: usize,
     mut fill_values: Vec<(Expr, Expr)>,
@@ -281,11 +342,8 @@ fn resume_key_union_missing_value(
     fill_values.push((key, fill_value));
     resume_key_union_missing_values_from_index(
         session,
-        head,
-        call_args,
         fill_function,
-        collections,
-        union_entries,
+        plan,
         missing_keys,
         index + 1,
         fill_values,
@@ -293,71 +351,91 @@ fn resume_key_union_missing_value(
 }
 
 fn key_union_entries(collections: &[Vec<AssociationEntryForm>]) -> Vec<AssociationEntryForm> {
+    let mut remaining = collections.iter().flat_map(|entries| entries.iter());
     let mut union_entries = Vec::new();
-    for entries in collections {
-        for entry in entries {
-            if !union_entries
-                .iter()
-                .any(|existing: &AssociationEntryForm| existing.key == entry.key)
-            {
-                union_entries.push(entry.clone());
-            }
+    for entry in remaining.by_ref() {
+        if union_entries
+            .iter()
+            .any(|existing: &AssociationEntryForm| existing.key == entry.key)
+        {
+            continue;
+        }
+        union_entries.push(entry.clone());
+        if union_entries.len() > KEY_COLLECTION_INDEX_THRESHOLD {
+            return key_union_entries_indexed(union_entries, remaining);
         }
     }
     union_entries
 }
 
-fn key_union_missing_keys(
-    collections: &[Vec<AssociationEntryForm>],
-    union_entries: &[AssociationEntryForm],
-) -> Vec<Expr> {
-    union_entries
+#[inline(never)]
+fn key_union_entries_indexed<'a>(
+    mut union_entries: Vec<AssociationEntryForm>,
+    remaining: impl Iterator<Item = &'a AssociationEntryForm>,
+) -> Vec<AssociationEntryForm> {
+    let mut seen = union_entries
         .iter()
-        .filter(|entry| {
-            collections
-                .iter()
-                .any(|entries| !entries.iter().any(|candidate| candidate.key == entry.key))
-        })
         .map(|entry| entry.key.clone())
-        .collect()
+        .collect::<HashSet<_>>();
+    for entry in remaining {
+        if seen.insert(entry.key.clone()) {
+            union_entries.push(entry.clone());
+        }
+    }
+    union_entries
 }
 
-fn render_key_union_result(
-    collections: &[Vec<AssociationEntryForm>],
-    union_entries: &[AssociationEntryForm],
-    fill_values: &[(Expr, Expr)],
-) -> Expr {
+fn render_key_union_result(plan: &KeyUnionPlan, fill_values: &[(Expr, Expr)]) -> Expr {
+    let fill_positions = (fill_values.len() > KEY_COLLECTION_INDEX_THRESHOLD).then(|| {
+        fill_values
+            .iter()
+            .enumerate()
+            .map(|(index, (key, _))| (key, index))
+            .collect::<HashMap<_, _>>()
+    });
     Expr::call(
         system_expr("List"),
-        collections
+        plan.collections
             .iter()
-            .map(|entries| {
+            .enumerate()
+            .map(|(collection_index, entries)| {
                 render_association_entry_forms_preserving_heads(
-                    union_entries
+                    plan.union_entries
                         .iter()
                         .map(|union_entry| {
-                            entries
-                                .iter()
-                                .find(|entry| entry.key == union_entry.key)
-                                .cloned()
-                                .or_else(|| {
+                            key_collection_entry(
+                                entries,
+                                plan.indices
+                                    .as_ref()
+                                    .map(|indices| &indices[collection_index]),
+                                &union_entry.key,
+                            )
+                            .cloned()
+                            .or_else(|| {
+                                let fill_value = if let Some(positions) = &fill_positions {
+                                    positions
+                                        .get(&union_entry.key)
+                                        .map(|position| &fill_values[*position].1)
+                                } else {
                                     fill_values
                                         .iter()
                                         .find(|(fill_key, _)| fill_key == &union_entry.key)
-                                        .map(|(_, value)| AssociationEntryForm {
-                                            key: union_entry.key.clone(),
-                                            value: value.clone(),
-                                            delayed: union_entry.delayed,
-                                        })
-                                })
-                                .unwrap_or_else(|| AssociationEntryForm {
+                                        .map(|(_, value)| value)
+                                };
+                                fill_value.map(|value| AssociationEntryForm {
                                     key: union_entry.key.clone(),
-                                    value: Expr::call(
-                                        system_expr("Missing"),
-                                        vec![Expr::string("KeyAbsent"), union_entry.key.clone()],
-                                    ),
+                                    value: value.clone(),
                                     delayed: union_entry.delayed,
                                 })
+                            })
+                            .unwrap_or_else(|| AssociationEntryForm {
+                                key: union_entry.key.clone(),
+                                value: Expr::call(
+                                    system_expr("Missing"),
+                                    vec![Expr::string("KeyAbsent"), union_entry.key.clone()],
+                                ),
+                                delayed: union_entry.delayed,
+                            })
                         })
                         .collect(),
                 )

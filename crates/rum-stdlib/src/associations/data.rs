@@ -201,14 +201,6 @@ pub(crate) fn parse_keyed_entry_forms_list_expr_with_diagnostics(
         .collect()
 }
 
-pub(crate) fn increment_count(counts: &mut Vec<(Expr, usize)>, key: Expr) {
-    if let Some((_, count)) = counts.iter_mut().find(|(existing, _)| existing == &key) {
-        *count += 1;
-    } else {
-        counts.push((key, 1));
-    }
-}
-
 pub(crate) fn parse_association_entry(expr: &Expr) -> Option<(Expr, Expr)> {
     let Expr::Call { head, args } = expr else {
         return None;

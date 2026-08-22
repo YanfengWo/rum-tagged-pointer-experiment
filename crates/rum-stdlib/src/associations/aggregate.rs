@@ -1,4 +1,6 @@
+use super::grouping::IndexedGroups;
 use super::*;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum CatenateStep {
@@ -392,10 +394,42 @@ fn counts_spec_keys(spec: Option<&Expr>) -> Result<Option<Vec<Expr>>, Expr> {
         .ok_or_else(|| spec.clone())
 }
 
+const COUNT_INDEX_THRESHOLD: usize = 16;
+
 fn count_items(items: Vec<Expr>) -> Vec<(Expr, usize)> {
+    let mut remaining = items.into_iter();
     let mut counts = Vec::new();
-    for item in items {
-        increment_count(&mut counts, item);
+    while let Some(item) = remaining.next() {
+        if let Some((_, count)) = counts.iter_mut().find(|(existing, _)| existing == &item) {
+            *count += 1;
+        } else {
+            counts.push((item, 1));
+            if counts.len() > COUNT_INDEX_THRESHOLD {
+                return count_items_indexed(counts, remaining);
+            }
+        }
+    }
+    counts
+}
+
+#[inline(never)]
+fn count_items_indexed(
+    mut counts: Vec<(Expr, usize)>,
+    remaining: impl Iterator<Item = Expr>,
+) -> Vec<(Expr, usize)> {
+    let mut positions: HashMap<Expr, usize> = counts
+        .iter()
+        .enumerate()
+        .map(|(index, (key, _))| (key.clone(), index))
+        .collect();
+    for item in remaining {
+        if let Some(index) = positions.get(&item).copied() {
+            counts[index].1 += 1;
+        } else {
+            let index = counts.len();
+            positions.insert(item.clone(), index);
+            counts.push((item, 1));
+        }
     }
     counts
 }
@@ -415,14 +449,29 @@ fn render_count_association_for_spec(items: Vec<Expr>, spec_keys: Option<Vec<Exp
         return render_count_association(counts);
     };
 
+    let positions = (counts.len() > COUNT_INDEX_THRESHOLD).then(|| {
+        counts
+            .iter()
+            .enumerate()
+            .map(|(index, (key, _))| (key.clone(), index))
+            .collect::<HashMap<_, _>>()
+    });
+
     render_association(
         keys.into_iter()
             .map(|key| {
-                let count = counts
-                    .iter()
-                    .find(|(existing, _)| existing == &key)
-                    .map(|(_, count)| *count)
-                    .unwrap_or(0);
+                let count = if let Some(positions) = &positions {
+                    positions
+                        .get(&key)
+                        .map(|index| counts[*index].1)
+                        .unwrap_or(0)
+                } else {
+                    counts
+                        .iter()
+                        .find(|(existing, _)| existing == &key)
+                        .map(|(_, count)| *count)
+                        .unwrap_or(0)
+                };
                 (key, Expr::integer(BigInt::from(count)))
             })
             .collect(),
@@ -430,17 +479,11 @@ fn render_count_association_for_spec(items: Vec<Expr>, spec_keys: Option<Vec<Exp
 }
 
 fn render_position_index_entries(items: Vec<(Expr, Expr)>) -> Expr {
-    let mut grouped: Vec<(Expr, Vec<Expr>)> = Vec::new();
-    for (item, position) in items {
-        if let Some((_, positions)) = grouped.iter_mut().find(|(key, _)| key == &item) {
-            positions.push(position);
-        } else {
-            grouped.push((item, vec![position]));
-        }
-    }
+    let grouped = IndexedGroups::collect(items);
 
     render_association(
         grouped
+            .into_entries()
             .into_iter()
             .map(|(key, positions)| (key, Expr::call(system_expr("List"), positions)))
             .collect(),

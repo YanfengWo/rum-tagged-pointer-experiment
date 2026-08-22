@@ -56,6 +56,84 @@ fn resume_eval_request_with_input_can_finish_foldlist_callback_loop() {
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_sortby_key_loop() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("SortBy[{first, second}, Function[x, InputString[\"sort-key: \"]]]")
+        .expect_err("SortBy key evaluation should suspend on the first item");
+    assert_input_prompt(&first.error, "sort-key: ");
+
+    let second = session
+        .resume_eval_request_with_input("z")
+        .expect_err("SortBy should continue to the second key after resuming the first");
+    assert_input_prompt(&second.error, "sort-key: ");
+
+    let response = session
+        .resume_eval_request_with_input("a")
+        .expect("SortBy should preserve completed keys after resuming");
+
+    assert_eq!(response.value.to_string(), "List[second, first]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_gatherby_function_list_key_loop() {
+    let mut session = core_session();
+
+    let outer_first = session
+        .eval_request(
+            "GatherBy[{first, second}, {Function[x, InputString[\"outer: \"]], Function[x, InputString[\"inner: \"]]}]",
+        )
+        .expect_err("GatherBy should suspend on the first outer key");
+    assert_input_prompt(&outer_first.error, "outer: ");
+
+    let inner_first = session
+        .resume_eval_request_with_input("same")
+        .expect_err("GatherBy should continue to the first inner key");
+    assert_input_prompt(&inner_first.error, "inner: ");
+
+    let outer_second = session
+        .resume_eval_request_with_input("left")
+        .expect_err("GatherBy should continue to the second outer key");
+    assert_input_prompt(&outer_second.error, "outer: ");
+
+    let inner_second = session
+        .resume_eval_request_with_input("same")
+        .expect_err("GatherBy should continue to the second inner key");
+    assert_input_prompt(&inner_second.error, "inner: ");
+
+    let response = session
+        .resume_eval_request_with_input("right")
+        .expect("GatherBy should preserve all completed keys after resuming");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[List[first], List[second]]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_delete_duplicates_by_key_loop() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request(
+            "DeleteDuplicatesBy[{first, second}, Function[x, InputString[\"dedup-key: \"]]]",
+        )
+        .expect_err("DeleteDuplicatesBy should suspend on the first key");
+    assert_input_prompt(&first.error, "dedup-key: ");
+
+    let second = session
+        .resume_eval_request_with_input("same")
+        .expect_err("DeleteDuplicatesBy should continue to the second key");
+    assert_input_prompt(&second.error, "dedup-key: ");
+
+    let response = session
+        .resume_eval_request_with_input("same")
+        .expect("DeleteDuplicatesBy should retain its first representative after resuming");
+    assert_eq!(response.value.to_string(), "List[first]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_foldpair_operator_and_projector() {
     let mut session = core_session();
 

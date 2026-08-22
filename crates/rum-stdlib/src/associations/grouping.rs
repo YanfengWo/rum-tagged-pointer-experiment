@@ -1,9 +1,108 @@
+use std::collections::HashMap;
+
 use super::*;
 
 mod association;
 mod list;
 
 use self::{association::*, list::*};
+
+const GROUP_INDEX_THRESHOLD: usize = 16;
+
+pub(super) struct IndexedGroups<T> {
+    entries: Vec<(Expr, Vec<T>)>,
+    positions: Option<HashMap<Expr, usize>>,
+}
+
+impl<T> IndexedGroups<T> {
+    pub(super) fn from_entries(entries: Vec<(Expr, Vec<T>)>) -> Self {
+        let positions =
+            (entries.len() > GROUP_INDEX_THRESHOLD).then(|| Self::positions_from_entries(&entries));
+        Self { entries, positions }
+    }
+
+    pub(super) fn push(&mut self, key: Expr, value: T) {
+        if let Some(positions) = &mut self.positions {
+            if let Some(index) = positions.get(&key).copied() {
+                self.entries[index].1.push(value);
+                return;
+            }
+
+            let index = self.entries.len();
+            positions.insert(key.clone(), index);
+            self.entries.push((key, vec![value]));
+            return;
+        }
+
+        if let Some((_, values)) = self
+            .entries
+            .iter_mut()
+            .find(|(existing, _)| existing == &key)
+        {
+            values.push(value);
+            return;
+        }
+
+        self.entries.push((key, vec![value]));
+        if self.entries.len() > GROUP_INDEX_THRESHOLD {
+            self.positions = Some(Self::positions_from_entries(&self.entries));
+        }
+    }
+
+    pub(super) fn collect(pairs: impl IntoIterator<Item = (Expr, T)>) -> Self {
+        let mut remaining = pairs.into_iter();
+        let mut entries: Vec<(Expr, Vec<T>)> = Vec::new();
+        for (key, value) in remaining.by_ref() {
+            if let Some((_, values)) = entries.iter_mut().find(|(existing, _)| existing == &key) {
+                values.push(value);
+            } else {
+                entries.push((key, vec![value]));
+                if entries.len() > GROUP_INDEX_THRESHOLD {
+                    return Self::collect_indexed(entries, remaining);
+                }
+            }
+        }
+
+        Self {
+            entries,
+            positions: None,
+        }
+    }
+
+    pub(super) fn into_entries(self) -> Vec<(Expr, Vec<T>)> {
+        self.entries
+    }
+
+    fn positions_from_entries(entries: &[(Expr, Vec<T>)]) -> HashMap<Expr, usize> {
+        entries
+            .iter()
+            .enumerate()
+            .map(|(index, (key, _))| (key.clone(), index))
+            .collect()
+    }
+
+    #[inline(never)]
+    fn collect_indexed(
+        mut entries: Vec<(Expr, Vec<T>)>,
+        remaining: impl Iterator<Item = (Expr, T)>,
+    ) -> Self {
+        let mut positions = Self::positions_from_entries(&entries);
+        for (key, value) in remaining {
+            if let Some(index) = positions.get(&key).copied() {
+                entries[index].1.push(value);
+            } else {
+                let index = entries.len();
+                positions.insert(key.clone(), index);
+                entries.push((key, vec![value]));
+            }
+        }
+
+        Self {
+            entries,
+            positions: Some(positions),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct GroupBySpec {

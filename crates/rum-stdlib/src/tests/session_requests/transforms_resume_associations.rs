@@ -134,6 +134,61 @@ fn resume_eval_request_with_input_can_finish_counts_after_suspending_delayed_ass
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_countsby_after_multiple_key_suspensions() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("CountsBy[{a, b}, Function[x, InputString[\"key: \"]]]")
+        .expect_err("CountsBy should suspend while keying the first item");
+    assert_input_prompt(&first.error, "key: ");
+
+    let second = session
+        .resume_eval_request_with_input("same")
+        .expect_err("CountsBy should continue to the second item after resuming");
+    assert_input_prompt(&second.error, "key: ");
+
+    let response = session
+        .resume_eval_request_with_input("same")
+        .expect("CountsBy should preserve its accumulated count after resuming");
+    assert_eq!(response.value.to_string(), "Association[Rule[\"same\", 2]]");
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_keygroupby_key_and_reducer_loops() {
+    let mut session = core_session();
+
+    let first_key = session
+        .eval_request(
+            "KeyGroupBy[Association[a -> 1, b -> 2], Function[k, InputString[\"key: \"]], Function[g, InputString[\"reduce: \"]]]",
+        )
+        .expect_err("KeyGroupBy should suspend while evaluating the first key");
+    assert_input_prompt(&first_key.error, "key: ");
+
+    let second_key = session
+        .resume_eval_request_with_input("ka")
+        .expect_err("KeyGroupBy should continue to the second key");
+    assert_input_prompt(&second_key.error, "key: ");
+
+    let first_reducer = session
+        .resume_eval_request_with_input("kb")
+        .expect_err("KeyGroupBy should start reducing after all keys are ready");
+    assert_input_prompt(&first_reducer.error, "reduce: ");
+
+    let second_reducer = session
+        .resume_eval_request_with_input("va")
+        .expect_err("KeyGroupBy should continue to the second reducer");
+    assert_input_prompt(&second_reducer.error, "reduce: ");
+
+    let response = session
+        .resume_eval_request_with_input("vb")
+        .expect("KeyGroupBy should preserve grouping and reduced prefixes after resuming");
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[\"ka\", \"va\"], Rule[\"kb\", \"vb\"]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_groupby_after_suspending_delayed_association_value() {
     let mut session = core_session();
 
@@ -180,6 +235,42 @@ fn resume_eval_request_with_input_can_finish_groupby_after_suspending_value_tran
     assert_eq!(
         response.value.to_string(),
         "Association[Rule[key, Association[Rule[a, \"done\"]]]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_can_finish_groupby_list_key_and_value_loops() {
+    let mut session = core_session();
+
+    let key_a = session
+        .eval_request(
+            "GroupBy[{a, b}, Function[x, InputString[\"key: \"]] -> Function[x, InputString[\"value: \"]]]",
+        )
+        .expect_err("GroupBy should suspend while keying the first list item");
+    assert_input_prompt(&key_a.error, "key: ");
+
+    let value_a = session
+        .resume_eval_request_with_input("ka")
+        .expect_err("GroupBy should suspend while transforming the first list item");
+    assert_input_prompt(&value_a.error, "value: ");
+
+    let key_b = session
+        .resume_eval_request_with_input("va")
+        .expect_err("GroupBy should continue to the second list item");
+    assert_input_prompt(&key_b.error, "key: ");
+
+    let value_b = session
+        .resume_eval_request_with_input("kb")
+        .expect_err("GroupBy should transform the second list item after keying it");
+    assert_input_prompt(&value_b.error, "value: ");
+
+    let response = session
+        .resume_eval_request_with_input("vb")
+        .expect("GroupBy should preserve completed list groups after resuming");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[\"ka\", List[\"va\"]], Rule[\"kb\", List[\"vb\"]]]"
     );
 }
 
@@ -302,4 +393,13 @@ fn resume_eval_request_with_input_can_finish_nested_deletemissing_predicate() {
         response.value.to_string(),
         "Association[Rule[outer, Association[Rule[b, 2]]]]"
     );
+}
+
+fn assert_input_prompt(error: &SessionRequestError, expected: &str) {
+    match error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, expected);
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
 }

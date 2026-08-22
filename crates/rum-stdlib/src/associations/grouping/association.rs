@@ -8,46 +8,72 @@ pub(super) fn resume_association_group_by_from_index(
     spec_index: usize,
     reducer: Option<Expr>,
     entries: Vec<AssociationEntryForm>,
-    index: usize,
-    grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+    mut index: usize,
+    mut grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
 ) -> Result<Expr, EvalError> {
-    let Some(entry) = entries.get(index).cloned() else {
-        return finish_association_group_by_grouped(
-            session, head, call_args, specs, spec_index, reducer, grouped,
-        );
-    };
+    loop {
+        let Some(entry) = entries.get(index).cloned() else {
+            return finish_association_group_by_grouped(
+                session, head, call_args, specs, spec_index, reducer, grouped,
+            );
+        };
 
-    let spec = specs[spec_index].clone();
-    let key_result = session.evaluate(Expr::call(
-        spec.key_function.clone(),
-        vec![entry.value.clone()],
-    ));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_specs = specs.clone();
-    let suspended_reducer = reducer.clone();
-    let suspended_entries = entries.clone();
-    let suspended_grouped = grouped.clone();
-    let suspended_entry = entry.clone();
-    let key = session.suspend_with_frame(key_result, move |session, key| {
-        resume_association_group_by_with_key(
-            session,
-            suspended_head,
-            suspended_call_args,
-            suspended_specs,
-            spec_index,
-            suspended_reducer,
-            suspended_entries,
-            index,
-            suspended_grouped,
-            suspended_entry,
-            key,
-        )
-    })?;
+        let spec = specs[spec_index].clone();
+        let key = match session.evaluate(Expr::call(
+            spec.key_function.clone(),
+            vec![entry.value.clone()],
+        )) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, key| {
+                        resume_association_group_by_with_key(
+                            session, head, call_args, specs, spec_index, reducer, entries, index,
+                            grouped, entry, key,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_association_group_by_with_key(
-        session, head, call_args, specs, spec_index, reducer, entries, index, grouped, entry, key,
-    )
+        let grouped_entry = match spec.value_function {
+            None => entry,
+            Some(value_function) => {
+                let value =
+                    match session.evaluate(Expr::call(value_function, vec![entry.value.clone()])) {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            return session.suspend_with_frame(
+                                Err(EvalError::InputRequired { request }),
+                                move |session, value| {
+                                    let transformed_entry = AssociationEntryForm { value, ..entry };
+                                    resume_association_group_by_with_entry(
+                                        session,
+                                        head,
+                                        call_args,
+                                        specs,
+                                        spec_index,
+                                        reducer,
+                                        entries,
+                                        index,
+                                        grouped,
+                                        transformed_entry,
+                                        key,
+                                    )
+                                },
+                            );
+                        }
+                        Err(error) => return Err(error),
+                    };
+                AssociationEntryForm { value, ..entry }
+            }
+        };
+
+        push_association_group_by_entry(&mut grouped, key, grouped_entry);
+        index += 1;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -72,34 +98,31 @@ fn resume_association_group_by_with_key(
         );
     };
 
-    let value_result = session.evaluate(Expr::call(value_function, vec![entry.value.clone()]));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_specs = specs.clone();
-    let suspended_reducer = reducer.clone();
-    let suspended_entries = entries.clone();
-    let suspended_grouped = grouped.clone();
-    let suspended_entry = entry.clone();
-    let suspended_key = key.clone();
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        let transformed_entry = AssociationEntryForm {
-            value,
-            ..suspended_entry
-        };
-        resume_association_group_by_with_entry(
-            session,
-            suspended_head,
-            suspended_call_args,
-            suspended_specs,
-            spec_index,
-            suspended_reducer,
-            suspended_entries,
-            index,
-            suspended_grouped,
-            transformed_entry,
-            suspended_key,
-        )
-    })?;
+    let value = match session.evaluate(Expr::call(value_function, vec![entry.value.clone()])) {
+        Ok(value) => value,
+        Err(EvalError::InputRequired { request }) => {
+            return session.suspend_with_frame(
+                Err(EvalError::InputRequired { request }),
+                move |session, value| {
+                    let transformed_entry = AssociationEntryForm { value, ..entry };
+                    resume_association_group_by_with_entry(
+                        session,
+                        head,
+                        call_args,
+                        specs,
+                        spec_index,
+                        reducer,
+                        entries,
+                        index,
+                        grouped,
+                        transformed_entry,
+                        key,
+                    )
+                },
+            );
+        }
+        Err(error) => return Err(error),
+    };
 
     let transformed_entry = AssociationEntryForm { value, ..entry };
     resume_association_group_by_with_entry(
@@ -131,11 +154,7 @@ fn resume_association_group_by_with_entry(
     entry: AssociationEntryForm,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    if let Some((_, values)) = grouped.iter_mut().find(|(existing, _)| existing == &key) {
-        values.push(entry);
-    } else {
-        grouped.push((key, vec![entry]));
-    }
+    push_association_group_by_entry(&mut grouped, key, entry);
 
     resume_association_group_by_from_index(
         session,
@@ -148,6 +167,18 @@ fn resume_association_group_by_with_entry(
         index + 1,
         grouped,
     )
+}
+
+fn push_association_group_by_entry(
+    grouped: &mut Vec<(Expr, Vec<AssociationEntryForm>)>,
+    key: Expr,
+    entry: AssociationEntryForm,
+) {
+    if let Some((_, values)) = grouped.iter_mut().find(|(existing, _)| existing == &key) {
+        values.push(entry);
+    } else {
+        grouped.push((key, vec![entry]));
+    }
 }
 
 pub(super) fn finish_association_group_by_leaf(

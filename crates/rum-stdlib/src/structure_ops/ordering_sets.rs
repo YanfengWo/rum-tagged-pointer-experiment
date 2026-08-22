@@ -1,12 +1,57 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 use super::*;
+
+const SET_MEMBERSHIP_INDEX_THRESHOLD: usize = 16;
 
 #[derive(Clone, Debug)]
 struct SortByEntry {
     item: Expr,
     key: Expr,
     index: usize,
+}
+
+struct AdaptiveSetMembership<'a> {
+    values: &'a [Expr],
+    memo: [Option<(Expr, bool)>; SET_MEMBERSHIP_INDEX_THRESHOLD],
+    memo_len: usize,
+    index: Option<HashSet<&'a Expr>>,
+}
+
+impl<'a> AdaptiveSetMembership<'a> {
+    fn new(values: &'a [Expr]) -> Self {
+        Self {
+            values,
+            memo: std::array::from_fn(|_| None),
+            memo_len: 0,
+            index: None,
+        }
+    }
+
+    fn contains(&mut self, item: &Expr) -> bool {
+        if let Some(index) = &self.index {
+            return index.contains(item);
+        }
+        if let Some((_, present)) = self.memo[..self.memo_len]
+            .iter()
+            .flatten()
+            .find(|(cached, _)| cached == item)
+        {
+            return *present;
+        }
+        if self.memo_len == SET_MEMBERSHIP_INDEX_THRESHOLD {
+            let index = adaptive_membership_index(self.values);
+            let present = index.contains(item);
+            self.index = Some(index);
+            return present;
+        }
+
+        let present = self.values.iter().any(|candidate| candidate == item);
+        self.memo[self.memo_len] = Some((item.clone(), present));
+        self.memo_len += 1;
+        present
+    }
 }
 
 #[derive(Clone)]
@@ -77,7 +122,6 @@ pub(crate) fn eval_sort_by(
 
             resume_sort_by_from_index(
                 session,
-                args.to_vec(),
                 expr_head.as_ref().clone(),
                 function.clone(),
                 expr_args.to_vec(),
@@ -96,7 +140,6 @@ pub(crate) fn eval_sort_by(
 
             resume_sort_by_ordering_from_index(
                 session,
-                args.to_vec(),
                 expr_head.as_ref().clone(),
                 function.clone(),
                 ordering.clone(),
@@ -182,15 +225,27 @@ pub(crate) fn eval_intersection(
         );
     }
 
+    let first = sorted_unique_exprs(first);
+    let group_indices = groups
+        .iter()
+        .map(|group| {
+            (first.len() > SET_MEMBERSHIP_INDEX_THRESHOLD
+                && group.len() > SET_MEMBERSHIP_INDEX_THRESHOLD)
+                .then(|| adaptive_membership_index(group))
+        })
+        .collect::<Vec<_>>();
     let common = first
         .into_iter()
         .filter(|item| {
-            groups
-                .iter()
-                .all(|group| group.iter().any(|candidate| candidate == item))
+            groups.iter().zip(&group_indices).all(|(group, index)| {
+                index.as_ref().map_or_else(
+                    || group.iter().any(|candidate| candidate == item),
+                    |index| index.contains(item),
+                )
+            })
         })
         .collect::<Vec<_>>();
-    Ok(Expr::call(expr_head, sorted_unique_exprs(common)))
+    Ok(Expr::call(expr_head, common))
 }
 
 pub(crate) fn eval_complement(
@@ -232,9 +287,10 @@ pub(crate) fn eval_complement(
         );
     }
 
+    let mut excluded_membership = AdaptiveSetMembership::new(&excluded);
     let kept = first
         .into_iter()
-        .filter(|item| !excluded.iter().any(|excluded| excluded == item))
+        .filter(|item| !excluded_membership.contains(item))
         .collect::<Vec<_>>();
     Ok(Expr::call(expr_head, sorted_unique_exprs(kept)))
 }
@@ -291,6 +347,19 @@ fn same_head_argument_groups(
     }
 
     Ok((first_head.clone(), groups))
+}
+
+fn adaptive_membership_index(values: &[Expr]) -> HashSet<&Expr> {
+    let mut index = HashSet::with_capacity(SET_MEMBERSHIP_INDEX_THRESHOLD + 1);
+    let mut reserved_for_all = false;
+    for (position, value) in values.iter().enumerate() {
+        index.insert(value);
+        if !reserved_for_all && index.len() > SET_MEMBERSHIP_INDEX_THRESHOLD {
+            index.reserve(values.len().saturating_sub(position + 1));
+            reserved_for_all = true;
+        }
+    }
+    index
 }
 
 fn split_same_test_options(args: &[Expr]) -> (&[Expr], Vec<Expr>) {
@@ -560,54 +629,46 @@ fn resume_set_same_test_complement_with_value(
 
 fn resume_sort_by_from_index(
     session: &mut Session,
-    call_args: Vec<Expr>,
     expr_head: Expr,
     function: Expr,
     items: Vec<Expr>,
-    index: usize,
-    decorated: Vec<SortByEntry>,
+    mut index: usize,
+    mut decorated: Vec<SortByEntry>,
 ) -> Result<Expr, EvalError> {
-    let Some(item) = items.get(index).cloned() else {
-        let mut sorted = decorated;
-        sorted.sort_by(|lhs, rhs| {
-            compare_structural_order(&lhs.key, &rhs.key).then(lhs.index.cmp(&rhs.index))
-        });
-        return Ok(Expr::call(
-            expr_head,
-            sorted.into_iter().map(|entry| entry.item).collect(),
-        ));
-    };
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            let mut sorted = decorated;
+            sorted.sort_by(|lhs, rhs| {
+                compare_structural_order(&lhs.key, &rhs.key).then(lhs.index.cmp(&rhs.index))
+            });
+            return Ok(Expr::call(
+                expr_head,
+                sorted.into_iter().map(|entry| entry.item).collect(),
+            ));
+        };
 
-    let key_result = session.evaluate(sort_by_key_expression(&function, &item));
-    let suspended_call_args = call_args.clone();
-    let suspended_expr_head = expr_head.clone();
-    let suspended_function = function.clone();
-    let suspended_items = items.clone();
-    let suspended_decorated = decorated.clone();
-    let suspended_item = item.clone();
-    let key = session.suspend_with_frame(key_result, move |session, key| {
-        resume_sort_by_with_key(
-            session,
-            suspended_call_args,
-            suspended_expr_head,
-            suspended_function,
-            suspended_items,
-            index,
-            suspended_decorated,
-            suspended_item,
-            key,
-        )
-    })?;
+        let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, key| {
+                        resume_sort_by_with_key(
+                            session, expr_head, function, items, index, decorated, item, key,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_sort_by_with_key(
-        session, call_args, expr_head, function, items, index, decorated, item, key,
-    )
+        decorated.push(SortByEntry { item, key, index });
+        index += 1;
+    }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn resume_sort_by_with_key(
     session: &mut Session,
-    call_args: Vec<Expr>,
     expr_head: Expr,
     function: Expr,
     items: Vec<Expr>,
@@ -617,67 +678,51 @@ fn resume_sort_by_with_key(
     key: Expr,
 ) -> Result<Expr, EvalError> {
     decorated.push(SortByEntry { item, key, index });
-    resume_sort_by_from_index(
-        session,
-        call_args,
-        expr_head,
-        function,
-        items,
-        index + 1,
-        decorated,
-    )
+    resume_sort_by_from_index(session, expr_head, function, items, index + 1, decorated)
 }
 
 #[allow(clippy::too_many_arguments)]
 fn resume_sort_by_ordering_from_index(
     session: &mut Session,
-    call_args: Vec<Expr>,
     expr_head: Expr,
     function: Expr,
     ordering: Expr,
     items: Vec<Expr>,
-    index: usize,
-    decorated: Vec<SortByEntry>,
+    mut index: usize,
+    mut decorated: Vec<SortByEntry>,
 ) -> Result<Expr, EvalError> {
-    let Some(item) = items.get(index).cloned() else {
-        let before = vec![vec![false; decorated.len()]; decorated.len()];
-        return resume_sort_by_key_comparator_from_pair(
-            session, expr_head, ordering, decorated, 0, 0, before,
-        );
-    };
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            let before = vec![vec![false; decorated.len()]; decorated.len()];
+            return resume_sort_by_key_comparator_from_pair(
+                session, expr_head, ordering, decorated, 0, 0, before,
+            );
+        };
 
-    let key_result = session.evaluate(sort_by_key_expression(&function, &item));
-    let suspended_call_args = call_args.clone();
-    let suspended_expr_head = expr_head.clone();
-    let suspended_function = function.clone();
-    let suspended_ordering = ordering.clone();
-    let suspended_items = items.clone();
-    let suspended_decorated = decorated.clone();
-    let suspended_item = item.clone();
-    let key = session.suspend_with_frame(key_result, move |session, key| {
-        resume_sort_by_ordering_with_key(
-            session,
-            suspended_call_args,
-            suspended_expr_head,
-            suspended_function,
-            suspended_ordering,
-            suspended_items,
-            index,
-            suspended_decorated,
-            suspended_item,
-            key,
-        )
-    })?;
+        let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, key| {
+                        resume_sort_by_ordering_with_key(
+                            session, expr_head, function, ordering, items, index, decorated, item,
+                            key,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_sort_by_ordering_with_key(
-        session, call_args, expr_head, function, ordering, items, index, decorated, item, key,
-    )
+        decorated.push(SortByEntry { item, key, index });
+        index += 1;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
 fn resume_sort_by_ordering_with_key(
     session: &mut Session,
-    call_args: Vec<Expr>,
     expr_head: Expr,
     function: Expr,
     ordering: Expr,
@@ -690,7 +735,6 @@ fn resume_sort_by_ordering_with_key(
     decorated.push(SortByEntry { item, key, index });
     resume_sort_by_ordering_from_index(
         session,
-        call_args,
         expr_head,
         function,
         ordering,
@@ -928,14 +972,8 @@ fn call_head_and_args(expr: &Expr) -> Option<(&Expr, &[Expr])> {
 
 fn sorted_unique_exprs(mut items: Vec<Expr>) -> Vec<Expr> {
     items.sort_by(compare_structural_order);
-    let mut unique = Vec::new();
-    for item in items {
-        if unique.iter().any(|existing| existing == &item) {
-            continue;
-        }
-        unique.push(item);
-    }
-    unique
+    items.dedup();
+    items
 }
 
 fn sort_by_comparator_table(expr_head: Expr, items: Vec<Expr>, before: &[Vec<bool>]) -> Expr {

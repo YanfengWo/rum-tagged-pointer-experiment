@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use super::ordering_sets::compare_structural_order;
+use super::stable_groups::{StableCounts, StableGroups};
 use super::*;
 
 #[derive(Clone, Debug)]
@@ -78,14 +79,7 @@ pub(crate) fn eval_tally(
         );
     }
 
-    let mut counts = Vec::<(Expr, usize)>::new();
-    for item in items {
-        if let Some((_, count)) = counts.iter_mut().find(|(seen, _)| seen == &item) {
-            *count += 1;
-        } else {
-            counts.push((item, 1));
-        }
-    }
+    let counts = StableCounts::collect(items).into_entries();
 
     Ok(list_expr(
         counts
@@ -482,13 +476,21 @@ fn resume_gather_by_function_list_from_position(
 
         let item = state.items[state.item_index].clone();
         let function = state.functions[state.function_index].clone();
-        let key_result = session.evaluate(Expr::call(function, vec![item]));
-        let suspended_state = state.clone();
-        let key = session.suspend_with_frame(key_result, move |session, key| {
-            resume_gather_by_function_list_with_key(session, suspended_state, key)
-        })?;
+        let key = match session.evaluate(Expr::call(function, vec![item])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, key| {
+                        resume_gather_by_function_list_with_key(session, state, key)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-        return resume_gather_by_function_list_with_key(session, state, key);
+        state.keys[state.item_index].push(key);
+        state.function_index += 1;
     }
 }
 
@@ -521,20 +523,15 @@ fn hierarchical_gather_entries(
         return entries.into_iter().map(|entry| entry.item).collect();
     }
 
-    let mut groups = Vec::<(Expr, Vec<GatherPathEntry>)>::new();
-    for entry in entries {
-        let key = entry.keys[depth].clone();
-        if let Some((_, group)) = groups.iter_mut().find(|(seen, _)| seen == &key) {
-            group.push(entry);
-        } else {
-            groups.push((key, vec![entry]));
-        }
-    }
-
-    groups
-        .into_iter()
-        .map(|(_, group)| list_expr(hierarchical_gather_entries(group, depth + 1, key_count)))
-        .collect()
+    StableGroups::collect(
+        entries
+            .into_iter()
+            .map(|entry| (entry.keys[depth].clone(), entry)),
+    )
+    .into_entries()
+    .into_iter()
+    .map(|(_, group)| list_expr(hierarchical_gather_entries(group, depth + 1, key_count)))
+    .collect()
 }
 
 fn eval_extreme_by(
@@ -788,17 +785,8 @@ fn take_by(mut decorated: Vec<KeyedEntry>, largest: bool, count: usize) -> Vec<E
 }
 
 fn gather_by_key(decorated: Vec<KeyedEntry>) -> Vec<Expr> {
-    let mut groups = Vec::<(Expr, Vec<Expr>)>::new();
-
-    for entry in decorated {
-        if let Some((_, group)) = groups.iter_mut().find(|(key, _)| key == &entry.key) {
-            group.push(entry.item);
-        } else {
-            groups.push((entry.key, vec![entry.item]));
-        }
-    }
-
-    groups
+    StableGroups::collect(decorated.into_iter().map(|entry| (entry.key, entry.item)))
+        .into_entries()
         .into_iter()
         .map(|(_, group)| list_expr(group))
         .collect()

@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 use super::*;
 
@@ -85,19 +86,44 @@ pub(crate) fn eval_duplicates(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
+    const INDEX_THRESHOLD: usize = 16;
+
+    let mut remaining = items.iter();
     let mut seen = Vec::new();
     let mut duplicates = Vec::new();
-    for item in items {
+    for item in remaining.by_ref() {
         if seen.iter().any(|existing| existing == item) {
             if !duplicates.iter().any(|existing| existing == item) {
                 duplicates.push(item.clone());
             }
         } else {
             seen.push(item.clone());
+            if seen.len() > INDEX_THRESHOLD {
+                return Ok(Expr::call(
+                    system_expr("List"),
+                    collect_duplicates_indexed(seen, duplicates, remaining),
+                ));
+            }
         }
     }
 
     Ok(Expr::call(system_expr("List"), duplicates))
+}
+
+#[inline(never)]
+fn collect_duplicates_indexed<'a>(
+    seen: Vec<Expr>,
+    mut duplicates: Vec<Expr>,
+    remaining: impl Iterator<Item = &'a Expr>,
+) -> Vec<Expr> {
+    let mut seen = seen.into_iter().collect::<HashSet<_>>();
+    let mut emitted = duplicates.iter().cloned().collect::<HashSet<_>>();
+    for item in remaining {
+        if !seen.insert(item.clone()) && emitted.insert(item.clone()) {
+            duplicates.push(item.clone());
+        }
+    }
+    duplicates
 }
 
 pub(crate) fn eval_binary_search(

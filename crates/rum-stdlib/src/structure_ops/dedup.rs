@@ -1,4 +1,36 @@
 use super::*;
+use std::collections::HashSet;
+
+const DEDUP_INDEX_THRESHOLD: usize = 16;
+
+struct AdaptiveExprSet {
+    linear: Vec<Expr>,
+    indexed: Option<HashSet<Expr>>,
+}
+
+impl AdaptiveExprSet {
+    fn new() -> Self {
+        Self {
+            linear: Vec::new(),
+            indexed: None,
+        }
+    }
+
+    fn insert(&mut self, value: Expr) -> bool {
+        if let Some(indexed) = &mut self.indexed {
+            return indexed.insert(value);
+        }
+
+        if self.linear.iter().any(|existing| existing == &value) {
+            return false;
+        }
+        self.linear.push(value);
+        if self.linear.len() > DEDUP_INDEX_THRESHOLD {
+            self.indexed = Some(std::mem::take(&mut self.linear).into_iter().collect());
+        }
+        true
+    }
+}
 
 #[derive(Clone)]
 struct DeleteDuplicatesTestState {
@@ -100,78 +132,68 @@ pub(crate) fn eval_delete_duplicates_by(
 
     resume_delete_duplicates_by_from_index(
         session,
-        args.to_vec(),
         expr_head.as_ref().clone(),
         function.clone(),
         expr_args.to_vec(),
         0,
-        Vec::new(),
+        AdaptiveExprSet::new(),
         Vec::new(),
     )
 }
 
 fn resume_delete_duplicates_by_from_index(
     session: &mut Session,
-    call_args: Vec<Expr>,
     expr_head: Expr,
     function: Expr,
     items: Vec<Expr>,
-    index: usize,
-    keys: Vec<Expr>,
-    kept: Vec<Expr>,
+    mut index: usize,
+    mut keys: AdaptiveExprSet,
+    mut kept: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    let Some(item) = items.get(index).cloned() else {
-        return Ok(Expr::call(expr_head, kept));
-    };
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            return Ok(Expr::call(expr_head, kept));
+        };
 
-    let key_result = session.evaluate(Expr::call(function.clone(), vec![item.clone()]));
-    let suspended_call_args = call_args.clone();
-    let suspended_expr_head = expr_head.clone();
-    let suspended_function = function.clone();
-    let suspended_items = items.clone();
-    let suspended_keys = keys.clone();
-    let suspended_kept = kept.clone();
-    let suspended_item = item.clone();
-    let key = session.suspend_with_frame(key_result, move |session, key| {
-        resume_delete_duplicates_by_with_key(
-            session,
-            suspended_call_args,
-            suspended_expr_head,
-            suspended_function,
-            suspended_items,
-            index,
-            suspended_keys,
-            suspended_kept,
-            suspended_item,
-            key,
-        )
-    })?;
+        let key = match session.evaluate(Expr::call(function.clone(), vec![item.clone()])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, key| {
+                        resume_delete_duplicates_by_with_key(
+                            session, expr_head, function, items, index, keys, kept, item, key,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_delete_duplicates_by_with_key(
-        session, call_args, expr_head, function, items, index, keys, kept, item, key,
-    )
+        if keys.insert(key) {
+            kept.push(item);
+        }
+        index += 1;
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
 fn resume_delete_duplicates_by_with_key(
     session: &mut Session,
-    call_args: Vec<Expr>,
     expr_head: Expr,
     function: Expr,
     items: Vec<Expr>,
     index: usize,
-    mut keys: Vec<Expr>,
+    mut keys: AdaptiveExprSet,
     mut kept: Vec<Expr>,
     item: Expr,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    if !keys.iter().any(|existing| existing == &key) {
-        keys.push(key);
+    if keys.insert(key) {
         kept.push(item);
     }
     resume_delete_duplicates_by_from_index(
         session,
-        call_args,
         expr_head,
         function,
         items,
@@ -260,16 +282,30 @@ fn invalid_delete_duplicates_normal_call(
 }
 
 fn stable_unique_exprs(items: &[Expr]) -> Vec<Expr> {
-    let mut seen = Vec::new();
+    let mut remaining = items.iter();
     let mut kept = Vec::new();
-
-    for item in items {
-        if seen.iter().any(|existing| existing == item) {
+    for item in remaining.by_ref() {
+        if kept.iter().any(|existing| existing == item) {
             continue;
         }
-        seen.push(item.clone());
         kept.push(item.clone());
+        if kept.len() > DEDUP_INDEX_THRESHOLD {
+            return stable_unique_exprs_indexed(kept, remaining);
+        }
     }
+    kept
+}
 
+#[inline(never)]
+fn stable_unique_exprs_indexed<'a>(
+    mut kept: Vec<Expr>,
+    remaining: impl Iterator<Item = &'a Expr>,
+) -> Vec<Expr> {
+    let mut seen: HashSet<Expr> = kept.iter().cloned().collect();
+    for item in remaining {
+        if seen.insert(item.clone()) {
+            kept.push(item.clone());
+        }
+    }
     kept
 }

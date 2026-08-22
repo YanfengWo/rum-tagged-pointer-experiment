@@ -45,6 +45,22 @@ fn association_key_flatten_and_deflatten_transform_path_keys() {
 }
 
 #[test]
+fn association_key_deflatten_preserves_wide_branch_order_after_indexing() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "Keys[AssociationKeyDeflatten[AssociationThread[Table[{i}, {i, 1, 20}], Range[20]]]] === Range[20]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
 fn association_key_flatten_and_deflatten_round_trip_well_formed_inputs() {
     let mut session = core_session();
 
