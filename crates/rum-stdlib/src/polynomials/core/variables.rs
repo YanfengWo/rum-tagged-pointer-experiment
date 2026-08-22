@@ -10,40 +10,6 @@ impl Polynomial {
     }
 }
 
-impl VariableBasis {
-    pub(in crate::polynomials) fn from_polynomials(polynomials: &[&Polynomial]) -> Self {
-        Self {
-            variables: sorted_unique_variables(polynomials),
-        }
-    }
-
-    pub(in crate::polynomials) fn compare_terms(
-        &self,
-        lhs: &Term,
-        rhs: &Term,
-    ) -> std::cmp::Ordering {
-        let lhs_degree = lhs.total_degree();
-        let rhs_degree = rhs.total_degree();
-
-        match lhs_degree.cmp(&rhs_degree) {
-            std::cmp::Ordering::Equal => {
-                for variable in &self.variables {
-                    match lhs
-                        .exponent_for_factor(variable)
-                        .cmp(&rhs.exponent_for_factor(variable))
-                    {
-                        std::cmp::Ordering::Equal => {}
-                        ordering => return ordering,
-                    }
-                }
-
-                std::cmp::Ordering::Equal
-            }
-            ordering => ordering,
-        }
-    }
-}
-
 fn sorted_unique_variables(polynomials: &[&Polynomial]) -> Vec<Expr> {
     let mut variables = unique_variable_refs(polynomials)
         .into_iter()
@@ -98,20 +64,18 @@ mod tests {
         let lhs = polynomial_with_shared_variable("x", &shared, 40);
         let rhs = polynomial_with_shared_variable("y", &shared, 40);
 
-        let basis = VariableBasis::from_polynomials(&[&lhs, &rhs]);
+        let variables = sorted_unique_variables(&[&lhs, &rhs]);
 
-        assert_eq!(basis.variables.len(), 81);
+        assert_eq!(variables.len(), 81);
         assert_eq!(
-            basis
-                .variables
+            variables
                 .iter()
                 .filter(|variable| *variable == &shared)
                 .count(),
             1
         );
         assert!(
-            basis
-                .variables
+            variables
                 .windows(2)
                 .all(|pair| compare_expr_canonical(&pair[0], &pair[1]).is_lt())
         );

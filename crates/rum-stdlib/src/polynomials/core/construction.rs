@@ -16,10 +16,7 @@ impl Polynomial {
         let mut polynomial = Self { terms };
 
         if polynomial.terms.len() > 1 {
-            let basis = VariableBasis::from_polynomials(&[&polynomial]);
-            polynomial
-                .terms
-                .sort_by(|lhs, rhs| basis.compare_terms(lhs, rhs));
+            polynomial.terms.sort_by(Term::compare_order);
         }
 
         polynomial
@@ -117,12 +114,11 @@ mod tests {
                 .iter()
                 .all(|term| term.factors[0].base != system_expr("x3"))
         );
-        let basis = VariableBasis::from_polynomials(&[&polynomial]);
         assert!(
             polynomial
                 .terms
                 .windows(2)
-                .all(|pair| basis.compare_terms(&pair[0], &pair[1]).is_lt())
+                .all(|pair| pair[0].compare_order(&pair[1]).is_lt())
         );
     }
 }

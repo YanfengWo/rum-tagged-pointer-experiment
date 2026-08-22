@@ -5,6 +5,7 @@ use super::{
 
 mod construction;
 mod factors;
+mod term_order;
 mod variables;
 pub(super) use factors::parse_coefficient_list_monomials;
 
@@ -28,11 +29,6 @@ pub(super) struct Factor {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Monomial {
     pub(super) factors: Vec<Factor>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct VariableBasis {
-    pub(super) variables: Vec<Expr>,
 }
 
 impl Polynomial {
@@ -270,10 +266,8 @@ impl Polynomial {
         self.terms.iter().map(Term::total_degree).max().unwrap_or(0)
     }
 
-    pub(super) fn leading_term<'a>(&'a self, basis: &VariableBasis) -> Option<&'a Term> {
-        self.terms
-            .iter()
-            .max_by(|lhs, rhs| basis.compare_terms(lhs, rhs))
+    pub(super) fn leading_term(&self) -> Option<&Term> {
+        self.terms.iter().max_by(|lhs, rhs| lhs.compare_order(rhs))
     }
 
     pub(super) fn divide_exact_by(&self, divisor: &Self) -> Option<Self> {
@@ -281,8 +275,7 @@ impl Polynomial {
             return None;
         }
 
-        let basis = VariableBasis::from_polynomials(&[self, divisor]);
-        let divisor_leading = divisor.leading_term(&basis)?.clone();
+        let divisor_leading = divisor.leading_term()?.clone();
         let mut quotient = Self::zero();
         let mut remainder = self.clone();
         let max_steps = self.terms.len().saturating_mul(divisor.terms.len()).max(1) * 32;
@@ -292,7 +285,7 @@ impl Polynomial {
                 return Some(quotient);
             }
 
-            let remainder_leading = remainder.leading_term(&basis)?.clone();
+            let remainder_leading = remainder.leading_term()?.clone();
             let quotient_term = remainder_leading.divide_by_term(&divisor_leading)?;
             quotient.push_term(quotient_term.clone());
             remainder = remainder.subtract(&divisor.multiply_by_term(&quotient_term));
@@ -338,8 +331,7 @@ impl Polynomial {
         let common_monomial = primitive.common_monomial_factor();
         primitive = primitive.divide_by_monomial(&common_monomial)?;
 
-        let basis = VariableBasis::from_polynomials(&[&primitive]);
-        if let Some(leading) = primitive.leading_term(&basis) {
+        if let Some(leading) = primitive.leading_term() {
             if leading.coefficient.numerator() < &BigInt::from(0_u8) {
                 let minus_one = rational_from_i64(-1);
                 unit = unit.mul(&minus_one);
@@ -382,8 +374,7 @@ impl Polynomial {
         }
 
         self.terms.retain(|term| !term.coefficient.is_zero());
-        let basis = VariableBasis::from_polynomials(&[self]);
-        self.terms.sort_by(|lhs, rhs| basis.compare_terms(lhs, rhs));
+        self.terms.sort_by(Term::compare_order);
     }
 
     pub(super) fn is_zero(&self) -> bool {
