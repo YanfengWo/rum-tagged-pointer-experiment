@@ -116,3 +116,32 @@ fn resume_eval_request_with_input_can_finish_keysortby_after_suspending_sort_key
         "Association[Rule[a, 1], Rule[bb, 2]]"
     );
 }
+
+#[test]
+fn resume_eval_request_with_input_can_finish_keysortby_after_each_sort_key_suspends() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("KeySortBy[{c -> 3, a -> 1, b -> 2}, Function[InputString[\"key: \"]]]")
+        .expect_err("KeySortBy should suspend on the first transformed sort key");
+    assert_input_prompt(&first.error, "key: ");
+
+    let second = session
+        .resume_eval_request_with_input("3")
+        .expect_err("KeySortBy should continue to the second transformed sort key");
+    assert_input_prompt(&second.error, "key: ");
+
+    let third = session
+        .resume_eval_request_with_input("1")
+        .expect_err("KeySortBy should continue to the third transformed sort key");
+    assert_input_prompt(&third.error, "key: ");
+
+    let response = session
+        .resume_eval_request_with_input("2")
+        .expect("KeySortBy should finish after all transformed sort keys resume");
+
+    assert_eq!(
+        response.value.to_string(),
+        "Association[Rule[a, 1], Rule[b, 2], Rule[c, 3]]"
+    );
+}

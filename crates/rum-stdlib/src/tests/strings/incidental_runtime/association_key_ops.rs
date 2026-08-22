@@ -390,3 +390,16 @@ fn key_predicates_take_drop_map_and_sort_cover_first_pass_subset() {
         2
     );
 }
+
+#[test]
+fn key_sort_by_evaluates_each_key_once_at_scale() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "count = 0; association = AssociationThread[Reverse[Range[5000]], Range[5000]]; sorted = KeySortBy[association, Function[(count = count + 1; Slot[1])]]; {Length[sorted], First[Keys[sorted]], Last[Keys[sorted]], count}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[5000, 1, 5000, 5000]");
+}

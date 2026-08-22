@@ -32,15 +32,8 @@ pub(crate) fn eval_key_sort_by(
                 ));
             };
 
-            resume_key_sort_by_from_index(
-                session,
-                head.clone(),
-                args.to_vec(),
-                function.clone(),
-                entries,
-                0,
-                Vec::new(),
-            )
+            let decorated = Vec::with_capacity(entries.len());
+            resume_key_sort_by_from_index(session, function.clone(), entries, 0, decorated)
         }
         [expr, function, ordering] => {
             let Some(entries) = keyed_entry_forms_from_expr(expr) else {
@@ -199,51 +192,42 @@ fn resume_key_sort_with_ordering_after_compare(
 
 fn resume_key_sort_by_from_index(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     function: Expr,
     entries: Vec<AssociationEntryForm>,
-    index: usize,
+    mut index: usize,
     mut decorated: Vec<(AssociationEntryForm, Expr)>,
 ) -> Result<Expr, EvalError> {
-    let Some(entry) = entries.get(index).cloned() else {
-        decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.1, &rhs.1));
-        return Ok(render_association_entry_forms_preserving_heads(
-            decorated.into_iter().map(|(entry, _)| entry).collect(),
-        ));
-    };
+    loop {
+        let Some(entry) = entries.get(index).cloned() else {
+            decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.1, &rhs.1));
+            return Ok(render_association_entry_forms_preserving_heads(
+                decorated.into_iter().map(|(entry, _)| entry).collect(),
+            ));
+        };
 
-    let sort_key_result = session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()]));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_function = function.clone();
-    let suspended_entries = entries.clone();
-    let suspended_decorated = decorated.clone();
-    let suspended_entry = entry.clone();
-    let sort_key = session.suspend_with_frame(sort_key_result, move |session, sort_key| {
-        resume_key_sort_by_with_value(
-            session,
-            suspended_head,
-            suspended_call_args,
-            suspended_function,
-            suspended_entries,
-            index,
-            suspended_decorated,
-            suspended_entry,
-            sort_key,
-        )
-    })?;
+        let sort_key = match session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()]))
+        {
+            Ok(sort_key) => sort_key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, sort_key| {
+                        resume_key_sort_by_with_value(
+                            session, function, entries, index, decorated, entry, sort_key,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_key_sort_by_with_value(
-        session, head, call_args, function, entries, index, decorated, entry, sort_key,
-    )
+        decorated.push((entry, sort_key));
+        index += 1;
+    }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn resume_key_sort_by_with_value(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     function: Expr,
     entries: Vec<AssociationEntryForm>,
     index: usize,
@@ -252,15 +236,7 @@ fn resume_key_sort_by_with_value(
     sort_key: Expr,
 ) -> Result<Expr, EvalError> {
     decorated.push((entry, sort_key));
-    resume_key_sort_by_from_index(
-        session,
-        head,
-        call_args,
-        function,
-        entries,
-        index + 1,
-        decorated,
-    )
+    resume_key_sort_by_from_index(session, function, entries, index + 1, decorated)
 }
 
 #[allow(clippy::too_many_arguments)]
