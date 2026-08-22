@@ -1,5 +1,25 @@
 use super::*;
 
+#[cfg(test)]
+std::thread_local! {
+    static HTML_UNESCAPE_SCAN_STEPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+fn record_html_unescape_scan_step() {
+    HTML_UNESCAPE_SCAN_STEPS.set(HTML_UNESCAPE_SCAN_STEPS.get() + 1);
+}
+
+#[cfg(test)]
+fn reset_html_unescape_scan_steps() {
+    HTML_UNESCAPE_SCAN_STEPS.set(0);
+}
+
+#[cfg(test)]
+fn html_unescape_scan_steps() -> usize {
+    HTML_UNESCAPE_SCAN_STEPS.get()
+}
+
 pub(crate) fn eval_html_escape(
     session: &mut Session,
     head: &Expr,
@@ -72,10 +92,13 @@ fn html_unescape(text: &str) -> String {
             continue;
         }
 
-        let Some(end_offset) = chars[index + 1..].iter().position(|ch| *ch == ';') else {
-            output.push(chars[index]);
-            index += 1;
-            continue;
+        let Some(end_offset) = chars[index + 1..].iter().position(|ch| {
+            #[cfg(test)]
+            record_html_unescape_scan_step();
+            *ch == ';'
+        }) else {
+            output.extend(chars[index..].iter());
+            break;
         };
         let end = index + 1 + end_offset;
         let entity = chars[index + 1..end].iter().collect::<String>();
@@ -153,4 +176,24 @@ fn decode_entity(entity: &str) -> Option<char> {
         numeric.parse::<u32>().ok()?
     };
     char::from_u32(value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unterminated_entity_scan_work_probe() {
+        let width = 256;
+        let input = "&".repeat(width);
+
+        reset_html_unescape_scan_steps();
+        assert_eq!(html_unescape(&input), input);
+        assert_eq!(
+            html_unescape_scan_steps(),
+            width - 1,
+            "an unterminated suffix should be searched only once"
+        );
+        assert_eq!(html_unescape("prefix &&é"), "prefix &&é");
+    }
 }
