@@ -465,6 +465,21 @@ fn wide_factor_collections_preserve_polynomial_shapes() {
 }
 
 #[test]
+fn wide_order_preserving_polynomial_transforms_keep_canonical_shapes() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "{LeafCount[Factor[2*Apply[Plus, Table[x[i], {i, 1, 128}]]]], \
+             SameQ[Coefficient[Apply[Plus, Table[x*y[i], {i, 1, 128}]], x], \
+                   Apply[Plus, Table[y[i], {i, 1, 128}]]]}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[259, True]");
+}
+
+#[test]
 fn together_now_cancels_common_polynomial_factors_after_combining() {
     let mut session = core_session();
 

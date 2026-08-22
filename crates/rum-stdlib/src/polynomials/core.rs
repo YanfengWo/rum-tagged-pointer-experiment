@@ -148,28 +148,24 @@ impl Polynomial {
             return Self::zero();
         }
 
-        let mut scaled = Self::zero();
-
-        for term in &self.terms {
-            scaled.push_term(Term {
-                coefficient: term.coefficient.mul(scalar),
-                factors: term.factors.clone(),
-            });
-        }
-
-        scaled
+        Self::from_order_preserving_terms(
+            self.terms
+                .iter()
+                .map(|term| Term {
+                    coefficient: term.coefficient.mul(scalar),
+                    factors: term.factors.clone(),
+                })
+                .collect(),
+        )
     }
 
     pub(super) fn coefficient_for_monomial_power(&self, target: &Monomial, power: usize) -> Self {
-        let mut coefficient = Self::zero();
-
-        for term in &self.terms {
-            if let Some(remainder) = term.coefficient_after_exact_monomial_power(target, power) {
-                coefficient.push_term(remainder);
-            }
-        }
-
-        coefficient
+        Self::from_order_preserving_terms(
+            self.terms
+                .iter()
+                .filter_map(|term| term.coefficient_after_exact_monomial_power(target, power))
+                .collect(),
+        )
     }
 
     pub(super) fn max_exact_power_for_monomial(&self, target: &Monomial) -> usize {
@@ -224,13 +220,12 @@ impl Polynomial {
     }
 
     pub(super) fn multiply_by_term(&self, term: &Term) -> Self {
-        let mut product = Self::zero();
-
-        for existing in &self.terms {
-            product.push_term(existing.multiply(term));
-        }
-
-        product
+        Self::from_order_preserving_terms(
+            self.terms
+                .iter()
+                .map(|existing| existing.multiply(term))
+                .collect(),
+        )
     }
 
     pub(super) fn divide_by_scalar(&self, scalar: &Rational) -> Option<Self> {
@@ -264,13 +259,12 @@ impl Polynomial {
             return Some(self.clone());
         }
 
-        let mut quotient = Self::zero();
-
-        for term in &self.terms {
-            quotient.push_term(term.divide_by_monomial(monomial)?);
-        }
-
-        Some(quotient)
+        let terms = self
+            .terms
+            .iter()
+            .map(|term| term.divide_by_monomial(monomial))
+            .collect::<Option<Vec<_>>>()?;
+        Some(Self::from_order_preserving_terms(terms))
     }
 
     pub(super) fn variables(&self) -> Vec<Expr> {
@@ -406,6 +400,19 @@ impl Polynomial {
         self.terms.retain(|term| !term.coefficient.is_zero());
         let basis = VariableBasis::from_polynomials(&[self]);
         self.terms.sort_by(|lhs, rhs| basis.compare_terms(lhs, rhs));
+    }
+
+    /// Constructs a polynomial after applying the same monomial transform to
+    /// every selected term of an already-canonical polynomial.
+    ///
+    /// Uniform coefficient scaling, multiplication or division by one
+    /// monomial, and filtering by one exact monomial power preserve both term
+    /// uniqueness and graded-lexicographic order. Those paths can therefore
+    /// move the whole batch into place without rebuilding a variable basis and
+    /// sorting after every term.
+    fn from_order_preserving_terms(terms: Vec<Term>) -> Self {
+        debug_assert!(terms.iter().all(|term| !term.coefficient.is_zero()));
+        Self { terms }
     }
 
     pub(super) fn is_zero(&self) -> bool {
