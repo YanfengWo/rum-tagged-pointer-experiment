@@ -133,6 +133,73 @@ fn nest_and_fixed_point_families_cover_current_iteration_subset() {
 }
 
 #[test]
+fn iteration_lists_preserve_wide_lengths_and_callback_counts() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "fixedCalls = 0; result = FixedPointList[Function[x, CompoundExpression[Increment[fixedCalls], x + 1]], 0, 128]; {Length[result], Last[result], fixedCalls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[129, 128, 128]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "stepCalls = 0; testCalls = 0; result = NestWhileList[Function[x, CompoundExpression[Increment[stepCalls], x + 1]], 0, Function[x, CompoundExpression[Increment[testCalls], x < 128]], 1, 128]; {Length[result], Last[result], stepCalls, testCalls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[129, 128, 128, 129]"
+    );
+    assert_eq!(
+        session
+            .eval_text(
+                "nestCalls = 0; result = NestList[Function[x, CompoundExpression[Increment[nestCalls], x + 1]], 0, 128]; {Length[result], Last[result], nestCalls}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[129, 128, 128]"
+    );
+}
+
+#[test]
+fn fixed_point_cycle_tracking_covers_value_and_list_results() {
+    let mut session = core_session();
+
+    for head in ["FixedPoint", "FixedPointList"] {
+        let outcome = session
+            .eval_text(&format!("{head}[Function[x, 1 - x], 0]"))
+            .unwrap();
+        assert_eq!(
+            outcome.value.to_string(),
+            "TerminatedEvaluation[\"IterationLimit\"]"
+        );
+        assert!(outcome.messages.iter().any(|message| {
+            message.symbol == "General"
+                && message.tag == "passlim"
+                && message.text.contains("evaluation cycle detected")
+        }));
+    }
+
+    assert_eq!(
+        session
+            .eval_text(
+                "{FixedPoint[Function[x, 1 - x], 0, 3], FixedPointList[Function[x, 1 - x], 0, 3]}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, List[0, 1, 0, 1]]"
+    );
+}
+
+#[test]
 fn iteration_builtins_report_current_argument_forms() {
     let mut session = core_session();
 

@@ -6,14 +6,12 @@ struct NestWhileConfig {
     max_iterations: Option<usize>,
 }
 
-#[derive(Clone)]
 struct NestEvalState {
     operator: Expr,
     count: usize,
     collect_all: bool,
 }
 
-#[derive(Clone)]
 struct FixedPointEvalState {
     operator: Expr,
     max_iterations: Option<usize>,
@@ -21,7 +19,6 @@ struct FixedPointEvalState {
     collect_all: bool,
 }
 
-#[derive(Clone)]
 struct NestWhileEvalState {
     operator: Expr,
     test: Expr,
@@ -255,14 +252,13 @@ fn resume_nest_from_iteration(
         return Err(EvalError::EvaluationPassLimitExceeded { limit });
     }
 
-    let suspended_state = state.clone();
-    let suspended_items = items.clone();
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_nest_with_value(session, suspended_state, iteration, suspended_items, value)
-    })?;
-
-    resume_nest_with_value(session, state, iteration, items, value)
+    match value_result {
+        Ok(value) => resume_nest_with_value(session, state, iteration, items, value),
+        Err(error) => session.suspend_with_frame(Err(error), move |session, value| {
+            resume_nest_with_value(session, state, iteration, items, value)
+        }),
+    }
 }
 
 fn resume_nest_with_value(
@@ -291,24 +287,15 @@ fn resume_fixed_point_from_iteration(
         return finish_fixed_point_at_limit(state, current, items);
     }
 
-    let suspended_state = state.clone();
-    let suspended_current = current.clone();
-    let suspended_seen = seen.clone();
-    let suspended_items = items.clone();
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current.clone()]));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_fixed_point_with_value(
-            session,
-            suspended_state,
-            iteration,
-            suspended_current,
-            suspended_seen,
-            suspended_items,
-            value,
-        )
-    })?;
-
-    resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
+    match value_result {
+        Ok(value) => {
+            resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
+        }
+        Err(error) => session.suspend_with_frame(Err(error), move |session, value| {
+            resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
+        }),
+    }
 }
 
 fn resume_fixed_point_with_value(
@@ -320,21 +307,27 @@ fn resume_fixed_point_with_value(
     mut items: Vec<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    if state.collect_all {
-        items.push(value.clone());
-    }
-
     if value == current {
+        if state.collect_all {
+            items.push(value.clone());
+        }
         return finish_fixed_point_value(state, value, items);
     }
 
-    if state.max_iterations.is_none() && seen.iter().any(|previous| previous == &value) {
-        return Err(EvalError::EvaluationCycleDetected {
-            expr: value.to_string(),
-        });
+    if state.max_iterations.is_none() {
+        let previous_values = if state.collect_all { &items } else { &seen };
+        if previous_values.iter().any(|previous| previous == &value) {
+            return Err(EvalError::EvaluationCycleDetected {
+                expr: value.to_string(),
+            });
+        }
     }
 
-    seen.push(value.clone());
+    if state.collect_all {
+        items.push(value.clone());
+    } else if state.max_iterations.is_none() {
+        seen.push(value.clone());
+    }
     let next_iteration = iteration + 1;
     resume_fixed_point_from_iteration(session, state, next_iteration, value, seen, items)
 }
@@ -346,20 +339,15 @@ fn resume_nest_while_test_from_iteration(
     history: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
     let test_args = nest_while_test_args(&history, state.config.test_arity);
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
     let value_result = session.evaluate(Expr::call(state.test.clone(), test_args));
-    let test_value = session.suspend_with_frame(value_result, move |session, test_value| {
-        resume_nest_while_with_test_value(
-            session,
-            suspended_state,
-            iteration,
-            suspended_history,
-            test_value,
-        )
-    })?;
-
-    resume_nest_while_with_test_value(session, state, iteration, history, test_value)
+    match value_result {
+        Ok(test_value) => {
+            resume_nest_while_with_test_value(session, state, iteration, history, test_value)
+        }
+        Err(error) => session.suspend_with_frame(Err(error), move |session, test_value| {
+            resume_nest_while_with_test_value(session, state, iteration, history, test_value)
+        }),
+    }
 }
 
 fn resume_nest_while_with_test_value(
@@ -385,20 +373,13 @@ fn resume_nest_while_with_test_value(
         .last()
         .cloned()
         .expect("NestWhile history always starts with the initial expression");
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_nest_while_with_step_value(
-            session,
-            suspended_state,
-            iteration,
-            suspended_history,
-            value,
-        )
-    })?;
-
-    resume_nest_while_with_step_value(session, state, iteration, history, value)
+    match value_result {
+        Ok(value) => resume_nest_while_with_step_value(session, state, iteration, history, value),
+        Err(error) => session.suspend_with_frame(Err(error), move |session, value| {
+            resume_nest_while_with_step_value(session, state, iteration, history, value)
+        }),
+    }
 }
 
 fn resume_nest_while_with_step_value(
@@ -479,6 +460,11 @@ fn apply_fixed_point(
     max_iterations: Option<usize>,
 ) -> Result<Expr, EvalError> {
     let limit = max_iterations.unwrap_or(session.resource_limits().evaluation_pass_limit);
+    let seen = if max_iterations.is_none() {
+        vec![expr.clone()]
+    } else {
+        Vec::new()
+    };
     resume_fixed_point_from_iteration(
         session,
         FixedPointEvalState {
@@ -489,7 +475,7 @@ fn apply_fixed_point(
         },
         0,
         expr.clone(),
-        vec![expr.clone()],
+        seen,
         Vec::new(),
     )
 }
@@ -511,7 +497,7 @@ fn apply_fixed_point_list(
         },
         0,
         expr.clone(),
-        vec![expr.clone()],
+        Vec::new(),
         vec![expr.clone()],
     )
 }
