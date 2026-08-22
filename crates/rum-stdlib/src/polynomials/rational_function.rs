@@ -1,4 +1,7 @@
-use super::{core::Polynomial, factorization::PolynomialFactorization, *};
+use super::{
+    core::Polynomial, factor_collections::cancel_common_factor_multisets,
+    factorization::PolynomialFactorization, *,
+};
 pub(super) struct RationalFunction {
     numerator: Polynomial,
     denominator: Polynomial,
@@ -140,21 +143,8 @@ impl RationalFunction {
     pub(super) fn cancel_common_factors(self) -> Option<Self> {
         let numerator_factors = PolynomialFactorization::from_polynomial(self.numerator);
         let denominator_factors = PolynomialFactorization::from_polynomial(self.denominator);
-        let mut remaining_numerator = numerator_factors.factors;
-        let mut remaining_denominator = denominator_factors.factors;
-
-        let mut index = 0;
-        while index < remaining_numerator.len() {
-            if let Some(position) = remaining_denominator
-                .iter()
-                .position(|factor| factor == &remaining_numerator[index])
-            {
-                remaining_numerator.remove(index);
-                remaining_denominator.remove(position);
-            } else {
-                index += 1;
-            }
-        }
+        let (remaining_numerator, remaining_denominator) =
+            cancel_common_factor_multisets(numerator_factors.factors, denominator_factors.factors);
 
         let unit = numerator_factors.unit.div(&denominator_factors.unit)?;
 

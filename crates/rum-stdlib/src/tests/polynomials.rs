@@ -450,6 +450,21 @@ fn factor_handles_symmetric_multivariate_cubic_example() {
 }
 
 #[test]
+fn wide_factor_collections_preserve_polynomial_shapes() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "{LeafCount[Factor[Apply[Times, Table[x[i], {i, 1, 128}]]]], \
+             LeafCount[Together[Apply[Times, Table[x[i], {i, 1, 32}]] / \
+                                Apply[Times, Table[y[i], {i, 1, 32}]]]]}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[257, 193]");
+}
+
+#[test]
 fn together_now_cancels_common_polynomial_factors_after_combining() {
     let mut session = core_session();
 

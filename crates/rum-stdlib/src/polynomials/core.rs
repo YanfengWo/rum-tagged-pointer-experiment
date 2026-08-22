@@ -6,18 +6,18 @@ use super::{
 mod factors;
 pub(super) use factors::parse_coefficient_list_monomials;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) struct Polynomial {
     pub(super) terms: Vec<Term>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) struct Term {
     pub(super) coefficient: Rational,
     pub(super) factors: Vec<Factor>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(super) struct Factor {
     pub(super) base: Expr,
     pub(super) exponent: usize,

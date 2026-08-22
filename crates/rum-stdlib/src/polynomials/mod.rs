@@ -8,6 +8,7 @@ use rum_runtime::kernel_api::{
 
 mod candidates;
 mod core;
+mod factor_collections;
 mod factorization;
 mod rational_function;
 

@@ -1,4 +1,4 @@
-use super::{core::Polynomial, *};
+use super::{core::Polynomial, factor_collections::stable_factor_counts, *};
 pub(super) struct PolynomialFactorization {
     pub(super) unit: Rational,
     pub(super) factors: Vec<Polynomial>,
@@ -68,16 +68,7 @@ impl PolynomialFactorization {
             items.push(Expr::rational(self.unit.clone()));
         }
 
-        let mut grouped: Vec<(Polynomial, usize)> = Vec::new();
-        for factor in &self.factors {
-            if let Some((_, count)) = grouped.iter_mut().find(|(existing, _)| existing == factor) {
-                *count += 1;
-            } else {
-                grouped.push((factor.clone(), 1));
-            }
-        }
-
-        for (factor, count) in grouped {
+        for (factor, count) in stable_factor_counts(&self.factors) {
             let factor_expr = factor.to_expr(session)?;
             if count == 1 {
                 items.push(factor_expr);
