@@ -202,6 +202,22 @@ fn schema_errors_are_capped_with_summary() {
 }
 
 #[test]
+fn conform_schema_wide_association_preserves_value_order() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            r#"keys = Map[Function[i, StringJoin["k", ToString[i]]], Range[40]];
+               value = AssociationThread[Reverse[keys], Range[40]];
+               schema = AssociationThread[keys, ConstantArray[Blank[Integer], 40]];
+               SameQ[With[{s = schema}, ConformSchema[value, s]], value]"#
+        ),
+        "True"
+    );
+}
+
+#[test]
 fn schema_validation_composes_with_codecs_and_error_data_serializes() {
     let mut session = core_session();
 

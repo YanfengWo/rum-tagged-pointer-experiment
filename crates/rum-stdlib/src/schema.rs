@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rum_core::Expr;
 use rum_runtime::kernel_api::{
     EvalError, Session, association_entries_from_expr, expr_as_string, expr_as_symbol,
@@ -5,6 +7,7 @@ use rum_runtime::kernel_api::{
 };
 
 const ERROR_LIMIT: usize = 64;
+const ASSOCIATION_SCHEMA_INDEX_THRESHOLD: usize = 16;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct SchemaOptions {
@@ -188,15 +191,27 @@ impl<'a> SchemaValidator<'a> {
         let mut matched = vec![false; value_entries.len()];
         let mut conformed_by_index = vec![None; value_entries.len()];
         let mut default_entries = Vec::new();
+        let value_positions = (schema_entries.len() > ASSOCIATION_SCHEMA_INDEX_THRESHOLD
+            && value_entries.len() > ASSOCIATION_SCHEMA_INDEX_THRESHOLD)
+            .then(|| {
+                value_entries
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, (key, _))| expr_as_string(key).map(|key| (key, index)))
+                    .collect::<HashMap<_, _>>()
+            });
 
         for schema_entry in &schema_entries {
             let child_path = path.key(&schema_entry.key);
             let entry_spec = parse_entry_spec(&schema_entry.spec, &child_path)?;
 
-            if let Some(index) = value_entries
-                .iter()
-                .position(|(key, _)| expr_as_string(key) == Some(schema_entry.key.as_str()))
-            {
+            let value_index = match &value_positions {
+                Some(positions) => positions.get(schema_entry.key.as_str()).copied(),
+                None => value_entries
+                    .iter()
+                    .position(|(key, _)| expr_as_string(key) == Some(schema_entry.key.as_str())),
+            };
+            if let Some(index) = value_index {
                 matched[index] = true;
                 let value = &value_entries[index].1;
                 let spec = entry_spec.validation_spec();
@@ -232,6 +247,7 @@ impl<'a> SchemaValidator<'a> {
                 );
             }
         }
+        drop(value_positions);
 
         let mut output_entries = Vec::new();
         for (index, (key, value)) in value_entries.into_iter().enumerate() {
