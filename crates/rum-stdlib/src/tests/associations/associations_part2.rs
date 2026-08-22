@@ -90,3 +90,19 @@ fn group_by_nested_specs_rekey_delayed_association_values_per_level() {
         "List[Association[Rule[1, Association[Rule[3, Association[RuleDelayed[a, Set[x, Plus[x, 1]]]]]]], Rule[2, Association[Rule[4, Association[RuleDelayed[b, Set[x, Plus[x, 1]]]]]]]], 4]"
     );
 }
+
+#[test]
+fn group_by_wide_association_preserves_group_and_entry_order() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "values = Join[Range[17], {1, 17, 1}]; grouped = GroupBy[AssociationThread[Range[20], values], Identity]; {Keys[grouped], Keys[Lookup[grouped, 1]], Keys[Lookup[grouped, 17]]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], List[1, 18, 20], List[17, 19]]"
+    );
+}

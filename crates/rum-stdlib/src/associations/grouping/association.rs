@@ -8,13 +8,44 @@ pub(super) fn resume_association_group_by_from_index(
     spec_index: usize,
     reducer: Option<Expr>,
     entries: Vec<AssociationEntryForm>,
+    index: usize,
+    grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+) -> Result<Expr, EvalError> {
+    resume_association_group_by_from_index_with_groups(
+        session,
+        head,
+        call_args,
+        specs,
+        spec_index,
+        reducer,
+        entries,
+        index,
+        IndexedGroups::from_entries(grouped),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_association_group_by_from_index_with_groups(
+    session: &mut Session,
+    head: Expr,
+    call_args: Vec<Expr>,
+    specs: Vec<GroupBySpec>,
+    spec_index: usize,
+    reducer: Option<Expr>,
+    entries: Vec<AssociationEntryForm>,
     mut index: usize,
-    mut grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+    mut grouped: IndexedGroups<AssociationEntryForm>,
 ) -> Result<Expr, EvalError> {
     loop {
         let Some(entry) = entries.get(index).cloned() else {
             return finish_association_group_by_grouped(
-                session, head, call_args, specs, spec_index, reducer, grouped,
+                session,
+                head,
+                call_args,
+                specs,
+                spec_index,
+                reducer,
+                grouped.into_entries(),
             );
         };
 
@@ -71,7 +102,7 @@ pub(super) fn resume_association_group_by_from_index(
             }
         };
 
-        push_association_group_by_entry(&mut grouped, key, grouped_entry);
+        grouped.push(key, grouped_entry);
         index += 1;
     }
 }
@@ -86,7 +117,7 @@ fn resume_association_group_by_with_key(
     reducer: Option<Expr>,
     entries: Vec<AssociationEntryForm>,
     index: usize,
-    grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+    grouped: IndexedGroups<AssociationEntryForm>,
     entry: AssociationEntryForm,
     key: Expr,
 ) -> Result<Expr, EvalError> {
@@ -150,13 +181,13 @@ fn resume_association_group_by_with_entry(
     reducer: Option<Expr>,
     entries: Vec<AssociationEntryForm>,
     index: usize,
-    mut grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+    mut grouped: IndexedGroups<AssociationEntryForm>,
     entry: AssociationEntryForm,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    push_association_group_by_entry(&mut grouped, key, entry);
+    grouped.push(key, entry);
 
-    resume_association_group_by_from_index(
+    resume_association_group_by_from_index_with_groups(
         session,
         head,
         call_args,
@@ -167,18 +198,6 @@ fn resume_association_group_by_with_entry(
         index + 1,
         grouped,
     )
-}
-
-fn push_association_group_by_entry(
-    grouped: &mut Vec<(Expr, Vec<AssociationEntryForm>)>,
-    key: Expr,
-    entry: AssociationEntryForm,
-) {
-    if let Some((_, values)) = grouped.iter_mut().find(|(existing, _)| existing == &key) {
-        values.push(entry);
-    } else {
-        grouped.push((key, vec![entry]));
-    }
 }
 
 pub(super) fn finish_association_group_by_leaf(
