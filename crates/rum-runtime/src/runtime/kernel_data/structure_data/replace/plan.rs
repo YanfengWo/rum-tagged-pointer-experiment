@@ -60,7 +60,7 @@ impl ContinuationValue for Vec<ReplacePartTarget> {
 pub(super) fn build_replace_plan_from_targets(targets: Vec<ReplacePartTarget>) -> ReplacePlanNode {
     let mut root = ReplacePlanNode::default();
     for target in targets {
-        insert_replace_plan_path(
+        insert_replace_plan_target(
             &mut root,
             &target.path,
             ReplacePlanAction::Immediate(target.rhs),
@@ -70,45 +70,20 @@ pub(super) fn build_replace_plan_from_targets(targets: Vec<ReplacePartTarget>) -
     root
 }
 
-fn insert_replace_plan_path(node: &mut ReplacePlanNode, path: &[isize], action: ReplacePlanAction) {
+fn insert_replace_plan_target(
+    node: &mut ReplacePlanNode,
+    path: &[isize],
+    action: ReplacePlanAction,
+) {
     let Some((first, rest)) = path.split_first() else {
         node.action = Some(action);
+        node.children.clear();
         return;
     };
 
-    insert_replace_plan_path(node.children.entry(*first).or_default(), rest, action);
-}
-
-fn path_is_prefix(prefix: &[isize], path: &[isize]) -> bool {
-    prefix.len() <= path.len() && prefix.iter().zip(path).all(|(lhs, rhs)| lhs == rhs)
-}
-
-pub(super) fn resolve_conflicting_replace_part_targets(
-    targets: Vec<ReplacePartTarget>,
-) -> Vec<ReplacePartTarget> {
-    let mut kept = Vec::new();
-
-    'next_target: for target in targets {
-        if let Some(existing_index) = kept
-            .iter()
-            .position(|existing: &ReplacePartTarget| existing.path == target.path)
-        {
-            kept.remove(existing_index);
-            kept.push(target);
-            continue;
-        }
-
-        for existing in &kept {
-            if path_is_prefix(&existing.path, &target.path) {
-                continue 'next_target;
-            }
-        }
-
-        kept.retain(|existing| !path_is_prefix(&target.path, &existing.path));
-        kept.push(target);
+    if node.action.is_none() {
+        insert_replace_plan_target(node.children.entry(*first).or_default(), rest, action);
     }
-
-    kept
 }
 
 pub(super) fn wrap_replace_part_pattern_position(pattern: Expr) -> Expr {
@@ -225,5 +200,48 @@ fn replace_part_path_from_expr(expr: Expr) -> Vec<isize> {
             })
             .collect(),
         other => panic!("replace-part continuation paths should use List expressions: {other:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn replace_plan_resolves_duplicates_and_prefixes_during_insertion() {
+        let plan = build_replace_plan_from_targets(vec![
+            target(&[1, 1], 1),
+            target(&[1], 2),
+            target(&[1, 2], 3),
+            target(&[2], 4),
+            target(&[2], 5),
+        ]);
+
+        assert_eq!(plan.children.len(), 2);
+        let first = &plan.children[&1];
+        assert_eq!(first.action, Some(action(2)));
+        assert!(first.children.is_empty());
+        assert_eq!(plan.children[&2].action, Some(action(5)));
+    }
+
+    #[test]
+    fn root_target_discards_existing_and_later_descendants() {
+        let plan =
+            build_replace_plan_from_targets(vec![target(&[1], 1), target(&[], 2), target(&[2], 3)]);
+
+        assert_eq!(plan.action, Some(action(2)));
+        assert!(plan.children.is_empty());
+    }
+
+    fn target(path: &[isize], rhs: i64) -> ReplacePartTarget {
+        ReplacePartTarget {
+            path: path.to_vec(),
+            rhs: Expr::integer(BigInt::from(rhs)),
+            delayed: false,
+        }
+    }
+
+    fn action(rhs: i64) -> ReplacePlanAction {
+        ReplacePlanAction::Immediate(Expr::integer(BigInt::from(rhs)))
     }
 }

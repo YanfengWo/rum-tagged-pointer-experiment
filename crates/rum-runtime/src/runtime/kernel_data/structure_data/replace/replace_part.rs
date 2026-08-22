@@ -2,7 +2,7 @@ use super::parsing::{parse_replace_part_heads_option, parse_replace_part_rules};
 use super::plan::{
     build_replace_plan_from_targets, collect_replace_part_candidate_paths,
     replace_part_pattern_includes_heads, replace_part_position_expr,
-    resolve_conflicting_replace_part_targets, wrap_replace_part_pattern_position,
+    wrap_replace_part_pattern_position,
 };
 use super::*;
 
@@ -96,7 +96,7 @@ impl Session {
         index: usize,
     ) -> Result<Vec<ReplacePartTarget>, EvalError> {
         let Some(position_spec) = position_specs.get(index).cloned() else {
-            return Ok(resolve_conflicting_replace_part_targets(collected));
+            return Ok(collected);
         };
 
         let targets_result = self.collect_position_spec_targets_owned(
