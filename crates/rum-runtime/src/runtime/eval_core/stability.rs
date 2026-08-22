@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashSet;
 
 impl Session {
     pub(in crate::runtime) fn call_stability_uncached_with_bloom(
@@ -114,15 +115,29 @@ impl Session {
         args: &[Expr],
         mut bloom: StabilityBloom,
     ) -> (bool, StabilityBloom) {
-        let mut keys = Vec::with_capacity(args.len());
+        let mut linear_keys: Vec<Expr> =
+            Vec::with_capacity(args.len().min(ASSOCIATION_INDEX_THRESHOLD + 1));
+        let mut indexed_keys: Option<HashSet<Expr>> = None;
         for arg in args {
             let Some(entry) = parse_association_entry_form(arg) else {
                 return (false, bloom);
             };
-            if keys.iter().any(|key| key == &entry.key) {
-                return (false, bloom);
+
+            if let Some(keys) = indexed_keys.as_mut() {
+                if !keys.insert(entry.key) {
+                    return (false, bloom);
+                }
+            } else {
+                if linear_keys.iter().any(|key| key == &entry.key) {
+                    return (false, bloom);
+                }
+                linear_keys.push(entry.key);
+                if linear_keys.len() > ASSOCIATION_INDEX_THRESHOLD {
+                    let mut keys = HashSet::with_capacity(args.len());
+                    keys.extend(linear_keys.drain(..));
+                    indexed_keys = Some(keys);
+                }
             }
-            keys.push(entry.key);
 
             let (arg_stable, arg_bloom) = self.cached_expr_stability_with_bloom(arg);
             bloom.union_assign(arg_bloom);

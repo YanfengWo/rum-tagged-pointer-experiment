@@ -74,6 +74,26 @@ fn join_across_supports_multi_key_and_expression_key_specs() {
 }
 
 #[test]
+fn join_across_wide_key_index_preserves_duplicate_and_missing_key_semantics() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Length[JoinAcross[Table[AssociationThread[Range[20], Range[20] + i], {i, 1, 3}], Table[AssociationThread[Range[20], Range[20] + i], {i, 1, 3}], Join[Map[Key, Range[20]], {Key[1]}]]]",
+        ),
+        "3"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Length[JoinAcross[{AssociationThread[Range[20], Range[20]]}, {AssociationThread[Range[19], Range[19]]}, Map[Key, Range[20]]]]",
+        ),
+        "0"
+    );
+}
+
+#[test]
 fn join_across_rule_renamed_keys_keep_both_columns() {
     let mut session = core_session();
 

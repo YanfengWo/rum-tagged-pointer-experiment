@@ -67,6 +67,31 @@ fn session_with_stable_association(name: &str) -> (Session, Symbol) {
     (session, target)
 }
 
+fn association_with_integer_keys(keys: impl IntoIterator<Item = i64>) -> Expr {
+    Expr::call(
+        system_expr("Association"),
+        keys.into_iter()
+            .map(|key| {
+                Expr::call(
+                    system_expr("Rule"),
+                    vec![Expr::small_integer(key), Expr::small_integer(key)],
+                )
+            })
+            .collect(),
+    )
+}
+
+#[test]
+fn association_stability_index_preserves_distinct_and_duplicate_verdicts() {
+    let mut session = Session::default();
+    let indexed_len = ASSOCIATION_INDEX_THRESHOLD as i64 + 1;
+    let distinct = association_with_integer_keys(0..indexed_len);
+    assert!(session.cached_expr_is_evaluation_stable(&distinct));
+
+    let duplicate = association_with_integer_keys((0..indexed_len).chain([0]));
+    assert!(!session.cached_expr_is_evaluation_stable(&duplicate));
+}
+
 #[test]
 fn append_to_args_become_exclusive_after_definition_take_and_cache_entry_removal() {
     let mut session = Session::default();

@@ -1,5 +1,7 @@
 use super::super::*;
 
+pub(in crate::runtime) const ASSOCIATION_INDEX_THRESHOLD: usize = 16;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AssociationEntryForm {
     /// Association entry key expression.

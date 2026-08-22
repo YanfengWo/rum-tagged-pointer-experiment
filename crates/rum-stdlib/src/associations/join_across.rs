@@ -22,6 +22,60 @@ struct JoinRow {
     entries: Vec<AssociationEntryForm>,
 }
 
+const JOIN_KEY_INDEX_THRESHOLD: usize = 16;
+
+enum JoinKeyPositions {
+    One(usize),
+    Many(Vec<usize>),
+}
+
+enum JoinKeyLookup<'a> {
+    Linear(&'a [Expr]),
+    Indexed {
+        positions: HashMap<&'a Expr, JoinKeyPositions>,
+        len: usize,
+    },
+}
+
+impl<'a> JoinKeyLookup<'a> {
+    fn new(keys: &'a [Expr]) -> Self {
+        if keys.len() <= JOIN_KEY_INDEX_THRESHOLD {
+            return Self::Linear(keys);
+        }
+
+        let mut positions = HashMap::with_capacity(keys.len());
+        for (position, key) in keys.iter().enumerate() {
+            match positions.entry(key) {
+                std::collections::hash_map::Entry::Vacant(entry) => {
+                    entry.insert(JoinKeyPositions::One(position));
+                }
+                std::collections::hash_map::Entry::Occupied(mut entry) => {
+                    let positions = entry.get_mut();
+                    match positions {
+                        JoinKeyPositions::One(first) => {
+                            *positions = JoinKeyPositions::Many(vec![*first, position]);
+                        }
+                        JoinKeyPositions::Many(positions) => positions.push(position),
+                    }
+                }
+            }
+        }
+
+        Self::Indexed {
+            positions,
+            len: keys.len(),
+        }
+    }
+
+    #[inline]
+    fn values(&self, row: &JoinRow) -> Option<Vec<Expr>> {
+        match self {
+            Self::Linear(keys) => join_value_tuple_linear(row, keys),
+            Self::Indexed { positions, len } => join_value_tuple_indexed(row, positions, *len),
+        }
+    }
+}
+
 pub(crate) fn eval_join_across(
     session: &mut Session,
     _head: &Expr,
@@ -162,12 +216,15 @@ fn join_left_major(
     include_unmatched_left: bool,
     append_unmatched_right: bool,
 ) -> Vec<Expr> {
-    let right_index = index_rows(right_rows, &key_spec.right);
+    let left_key_lookup = JoinKeyLookup::new(&key_spec.left);
+    let right_key_lookup = JoinKeyLookup::new(&key_spec.right);
+    let right_index = index_rows(right_rows, &right_key_lookup);
     let mut matched_right = vec![false; right_rows.len()];
     let mut joined = Vec::new();
 
     for left_row in left_rows {
-        let matching_right = join_value_tuple(left_row, &key_spec.left)
+        let matching_right = left_key_lookup
+            .values(left_row)
             .and_then(|join_values| right_index.get(&join_values));
         if let Some(right_indices) = matching_right {
             for &right_index in right_indices {
@@ -197,11 +254,14 @@ fn join_right_major(
     right_rows: &[JoinRow],
     key_spec: &JoinKeySpec,
 ) -> Vec<Expr> {
-    let left_index = index_rows(left_rows, &key_spec.left);
+    let left_key_lookup = JoinKeyLookup::new(&key_spec.left);
+    let right_key_lookup = JoinKeyLookup::new(&key_spec.right);
+    let left_index = index_rows(left_rows, &left_key_lookup);
     let mut joined = Vec::new();
 
     for right_row in right_rows {
-        let matching_left = join_value_tuple(right_row, &key_spec.right)
+        let matching_left = right_key_lookup
+            .values(right_row)
             .and_then(|join_values| left_index.get(&join_values));
         if let Some(left_indices) = matching_left {
             for &left_index in left_indices {
@@ -215,10 +275,10 @@ fn join_right_major(
     joined
 }
 
-fn index_rows(rows: &[JoinRow], keys: &[Expr]) -> HashMap<Vec<Expr>, Vec<usize>> {
+fn index_rows(rows: &[JoinRow], keys: &JoinKeyLookup<'_>) -> HashMap<Vec<Expr>, Vec<usize>> {
     let mut index = HashMap::new();
     for (row_index, row) in rows.iter().enumerate() {
-        if let Some(join_values) = join_value_tuple(row, keys) {
+        if let Some(join_values) = keys.values(row) {
             index
                 .entry(join_values)
                 .or_insert_with(Vec::new)
@@ -228,7 +288,7 @@ fn index_rows(rows: &[JoinRow], keys: &[Expr]) -> HashMap<Vec<Expr>, Vec<usize>>
     index
 }
 
-fn join_value_tuple(row: &JoinRow, keys: &[Expr]) -> Option<Vec<Expr>> {
+fn join_value_tuple_linear(row: &JoinRow, keys: &[Expr]) -> Option<Vec<Expr>> {
     keys.iter()
         .map(|key| {
             row.entries
@@ -237,6 +297,40 @@ fn join_value_tuple(row: &JoinRow, keys: &[Expr]) -> Option<Vec<Expr>> {
                 .map(|entry| entry.value.clone())
         })
         .collect()
+}
+
+fn join_value_tuple_indexed(
+    row: &JoinRow,
+    positions: &HashMap<&Expr, JoinKeyPositions>,
+    len: usize,
+) -> Option<Vec<Expr>> {
+    let mut values = vec![None; len];
+    let mut remaining = len;
+
+    for entry in &row.entries {
+        let Some(positions) = positions.get(&entry.key) else {
+            continue;
+        };
+
+        match positions {
+            JoinKeyPositions::One(position) => {
+                values[*position] = Some(entry.value.clone());
+                remaining -= 1;
+            }
+            JoinKeyPositions::Many(positions) => {
+                for &position in positions {
+                    values[position] = Some(entry.value.clone());
+                    remaining -= 1;
+                }
+            }
+        }
+
+        if remaining == 0 {
+            break;
+        }
+    }
+
+    values.into_iter().collect()
 }
 
 fn join_rows_as_association(left: &JoinRow, right: &JoinRow) -> Expr {

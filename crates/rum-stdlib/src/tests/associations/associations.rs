@@ -169,6 +169,22 @@ fn association_and_associationq_cover_first_pass_rule_subset() {
 }
 
 #[test]
+fn association_canonicalization_preserves_order_and_last_rule_above_index_threshold() {
+    let mut session = core_session();
+
+    let result = session
+        .eval_text(
+            "assoc = Association[Join[Table[Rule[i, i], {i, 1, 20}], {RuleDelayed[5, delayed]}]]; {Keys[assoc] == Range[20], Normal[KeyTake[assoc, {5}]]}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        result.value.to_string(),
+        "List[True, List[RuleDelayed[5, delayed]]]"
+    );
+}
+
+#[test]
 fn lookup_keys_values_and_key_cover_first_pass_association_queries() {
     let mut session = core_session();
 
