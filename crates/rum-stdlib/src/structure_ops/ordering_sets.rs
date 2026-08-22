@@ -54,14 +54,27 @@ impl<'a> AdaptiveSetMembership<'a> {
     }
 }
 
-#[derive(Clone)]
 enum SetOperationKind {
     Union,
     Intersection { groups: Vec<Vec<Expr>> },
     Complement { excluded: Vec<Expr> },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
+enum SetSameTestPhase {
+    Scan,
+    Deduplicate {
+        kept_index: usize,
+    },
+    Intersection {
+        group_index: usize,
+        item_index: usize,
+    },
+    Complement {
+        excluded_index: usize,
+    },
+}
+
 struct SetSameTestState {
     expr_head: Expr,
     same_test: Expr,
@@ -69,6 +82,8 @@ struct SetSameTestState {
     index: usize,
     kept: Vec<Expr>,
     kind: SetOperationKind,
+    candidate: Option<Expr>,
+    phase: SetSameTestPhase,
 }
 
 pub(crate) fn eval_sort(
@@ -171,7 +186,7 @@ pub(crate) fn eval_union(
     if let Some(same_test) = same_test {
         let mut scan = items;
         scan.sort_by(compare_structural_order);
-        return resume_set_same_test_from_scan(
+        return resume_set_same_test(
             session,
             SetSameTestState {
                 expr_head,
@@ -180,6 +195,8 @@ pub(crate) fn eval_union(
                 index: 0,
                 kept: Vec::new(),
                 kind: SetOperationKind::Union,
+                candidate: None,
+                phase: SetSameTestPhase::Scan,
             },
         );
     }
@@ -212,7 +229,7 @@ pub(crate) fn eval_intersection(
     if let Some(same_test) = same_test {
         let mut scan = first;
         scan.sort_by(compare_structural_order);
-        return resume_set_same_test_from_scan(
+        return resume_set_same_test(
             session,
             SetSameTestState {
                 expr_head,
@@ -221,6 +238,8 @@ pub(crate) fn eval_intersection(
                 index: 0,
                 kept: Vec::new(),
                 kind: SetOperationKind::Intersection { groups },
+                candidate: None,
+                phase: SetSameTestPhase::Scan,
             },
         );
     }
@@ -274,7 +293,7 @@ pub(crate) fn eval_complement(
     if let Some(same_test) = same_test {
         let mut scan = first;
         scan.sort_by(compare_structural_order);
-        return resume_set_same_test_from_scan(
+        return resume_set_same_test(
             session,
             SetSameTestState {
                 expr_head,
@@ -283,6 +302,8 @@ pub(crate) fn eval_complement(
                 index: 0,
                 kept: Vec::new(),
                 kind: SetOperationKind::Complement { excluded },
+                candidate: None,
+                phase: SetSameTestPhase::Scan,
             },
         );
     }
@@ -440,191 +461,187 @@ fn effective_same_test(
     Ok(same_test.filter(|value| !is_system_symbol_name(value, "Automatic")))
 }
 
-fn resume_set_same_test_from_scan(
-    session: &mut Session,
-    state: SetSameTestState,
-) -> Result<Expr, EvalError> {
-    let Some(candidate) = state.scan.get(state.index).cloned() else {
-        return Ok(Expr::call(state.expr_head, state.kept));
-    };
-
-    if state.kept.is_empty() {
-        return resume_set_same_test_membership(session, state, candidate);
-    }
-
-    resume_set_same_test_dedup(session, state, candidate, 0)
-}
-
-fn resume_set_same_test_dedup(
-    session: &mut Session,
-    state: SetSameTestState,
-    candidate: Expr,
-    kept_index: usize,
-) -> Result<Expr, EvalError> {
-    let Some(existing) = state.kept.get(kept_index).cloned() else {
-        return resume_set_same_test_membership(session, state, candidate);
-    };
-
-    let result = eval_binary_predicate(session, &state.same_test, &candidate, &existing);
-    let suspended_state = state.clone();
-    let suspended_candidate = candidate.clone();
-    let value = session.suspend_with_frame(result, move |session, value| {
-        resume_set_same_test_dedup_with_value(
-            session,
-            suspended_state,
-            suspended_candidate,
-            kept_index,
-            value,
-        )
-    })?;
-
-    resume_set_same_test_dedup_with_value(session, state, candidate, kept_index, value)
-}
-
-fn resume_set_same_test_dedup_with_value(
+fn resume_set_same_test(
     session: &mut Session,
     mut state: SetSameTestState,
-    candidate: Expr,
-    kept_index: usize,
+) -> Result<Expr, EvalError> {
+    loop {
+        match state.phase {
+            SetSameTestPhase::Scan => {
+                let Some(candidate) = state.scan.get(state.index).cloned() else {
+                    return Ok(Expr::call(state.expr_head, state.kept));
+                };
+                state.candidate = Some(candidate);
+                if state.kept.is_empty() {
+                    begin_set_same_test_membership(&mut state);
+                } else {
+                    state.phase = SetSameTestPhase::Deduplicate { kept_index: 0 };
+                }
+            }
+            SetSameTestPhase::Deduplicate { kept_index } => {
+                let Some(existing) = state.kept.get(kept_index) else {
+                    begin_set_same_test_membership(&mut state);
+                    continue;
+                };
+                let candidate = state
+                    .candidate
+                    .as_ref()
+                    .expect("deduplication should have a candidate");
+                let value =
+                    match eval_binary_predicate(session, &state.same_test, candidate, existing) {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            return session.suspend_with_frame(
+                                Err(EvalError::InputRequired { request }),
+                                move |session, value| {
+                                    resume_set_same_test_with_value(session, state, value)
+                                },
+                            );
+                        }
+                        Err(error) => return Err(error),
+                    };
+                advance_set_same_test_after_value(&mut state, &value);
+            }
+            SetSameTestPhase::Intersection {
+                group_index,
+                item_index,
+            } => {
+                let SetOperationKind::Intersection { groups } = &state.kind else {
+                    unreachable!("intersection phase requires intersection state")
+                };
+                let Some(group) = groups.get(group_index) else {
+                    finish_set_same_test_candidate(&mut state, true);
+                    continue;
+                };
+                let Some(item) = group.get(item_index) else {
+                    finish_set_same_test_candidate(&mut state, false);
+                    continue;
+                };
+                let candidate = state
+                    .candidate
+                    .as_ref()
+                    .expect("intersection should have a candidate");
+                let value = match eval_binary_predicate(session, &state.same_test, candidate, item)
+                {
+                    Ok(value) => value,
+                    Err(EvalError::InputRequired { request }) => {
+                        return session.suspend_with_frame(
+                            Err(EvalError::InputRequired { request }),
+                            move |session, value| {
+                                resume_set_same_test_with_value(session, state, value)
+                            },
+                        );
+                    }
+                    Err(error) => return Err(error),
+                };
+                advance_set_same_test_after_value(&mut state, &value);
+            }
+            SetSameTestPhase::Complement { excluded_index } => {
+                let SetOperationKind::Complement { excluded } = &state.kind else {
+                    unreachable!("complement phase requires complement state")
+                };
+                let Some(item) = excluded.get(excluded_index) else {
+                    finish_set_same_test_candidate(&mut state, true);
+                    continue;
+                };
+                let candidate = state
+                    .candidate
+                    .as_ref()
+                    .expect("complement should have a candidate");
+                let value = match eval_binary_predicate(session, &state.same_test, candidate, item)
+                {
+                    Ok(value) => value,
+                    Err(EvalError::InputRequired { request }) => {
+                        return session.suspend_with_frame(
+                            Err(EvalError::InputRequired { request }),
+                            move |session, value| {
+                                resume_set_same_test_with_value(session, state, value)
+                            },
+                        );
+                    }
+                    Err(error) => return Err(error),
+                };
+                advance_set_same_test_after_value(&mut state, &value);
+            }
+        }
+    }
+}
+
+fn resume_set_same_test_with_value(
+    session: &mut Session,
+    mut state: SetSameTestState,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        state.index += 1;
-        resume_set_same_test_from_scan(session, state)
-    } else {
-        resume_set_same_test_dedup(session, state, candidate, kept_index + 1)
-    }
+    advance_set_same_test_after_value(&mut state, &value);
+    resume_set_same_test(session, state)
 }
 
-fn resume_set_same_test_membership(
-    session: &mut Session,
-    mut state: SetSameTestState,
-    candidate: Expr,
-) -> Result<Expr, EvalError> {
+fn begin_set_same_test_membership(state: &mut SetSameTestState) {
     match &state.kind {
-        SetOperationKind::Union => {
-            state.kept.push(candidate);
-            state.index += 1;
-            resume_set_same_test_from_scan(session, state)
-        }
+        SetOperationKind::Union => finish_set_same_test_candidate(state, true),
         SetOperationKind::Intersection { .. } => {
-            resume_set_same_test_intersection_group(session, state, candidate, 0, 0)
+            state.phase = SetSameTestPhase::Intersection {
+                group_index: 0,
+                item_index: 0,
+            };
         }
         SetOperationKind::Complement { .. } => {
-            resume_set_same_test_complement_excluded(session, state, candidate, 0)
+            state.phase = SetSameTestPhase::Complement { excluded_index: 0 };
         }
     }
 }
 
-fn resume_set_same_test_intersection_group(
-    session: &mut Session,
-    mut state: SetSameTestState,
-    candidate: Expr,
-    group_index: usize,
-    item_index: usize,
-) -> Result<Expr, EvalError> {
-    let SetOperationKind::Intersection { groups } = &state.kind else {
-        unreachable!("intersection membership is used only for Intersection")
-    };
-    let Some(group) = groups.get(group_index) else {
-        state.kept.push(candidate);
-        state.index += 1;
-        return resume_set_same_test_from_scan(session, state);
-    };
-    let Some(item) = group.get(item_index).cloned() else {
-        state.index += 1;
-        return resume_set_same_test_from_scan(session, state);
-    };
-
-    let result = eval_binary_predicate(session, &state.same_test, &candidate, &item);
-    let suspended_state = state.clone();
-    let suspended_candidate = candidate.clone();
-    let value = session.suspend_with_frame(result, move |session, value| {
-        resume_set_same_test_intersection_with_value(
-            session,
-            suspended_state,
-            suspended_candidate,
+fn advance_set_same_test_after_value(state: &mut SetSameTestState, value: &Expr) {
+    let matched = is_true_expr(value);
+    match state.phase {
+        SetSameTestPhase::Scan => unreachable!("scan phase does not evaluate SameTest"),
+        SetSameTestPhase::Deduplicate { kept_index } => {
+            if matched {
+                finish_set_same_test_candidate(state, false);
+            } else {
+                state.phase = SetSameTestPhase::Deduplicate {
+                    kept_index: kept_index + 1,
+                };
+            }
+        }
+        SetSameTestPhase::Intersection {
             group_index,
             item_index,
-            value,
-        )
-    })?;
-
-    resume_set_same_test_intersection_with_value(
-        session,
-        state,
-        candidate,
-        group_index,
-        item_index,
-        value,
-    )
-}
-
-fn resume_set_same_test_intersection_with_value(
-    session: &mut Session,
-    state: SetSameTestState,
-    candidate: Expr,
-    group_index: usize,
-    item_index: usize,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        resume_set_same_test_intersection_group(session, state, candidate, group_index + 1, 0)
-    } else {
-        resume_set_same_test_intersection_group(
-            session,
-            state,
-            candidate,
-            group_index,
-            item_index + 1,
-        )
+        } => {
+            state.phase = if matched {
+                SetSameTestPhase::Intersection {
+                    group_index: group_index + 1,
+                    item_index: 0,
+                }
+            } else {
+                SetSameTestPhase::Intersection {
+                    group_index,
+                    item_index: item_index + 1,
+                }
+            };
+        }
+        SetSameTestPhase::Complement { excluded_index } => {
+            if matched {
+                finish_set_same_test_candidate(state, false);
+            } else {
+                state.phase = SetSameTestPhase::Complement {
+                    excluded_index: excluded_index + 1,
+                };
+            }
+        }
     }
 }
 
-fn resume_set_same_test_complement_excluded(
-    session: &mut Session,
-    mut state: SetSameTestState,
-    candidate: Expr,
-    excluded_index: usize,
-) -> Result<Expr, EvalError> {
-    let SetOperationKind::Complement { excluded } = &state.kind else {
-        unreachable!("complement membership is used only for Complement")
-    };
-    let Some(item) = excluded.get(excluded_index).cloned() else {
+fn finish_set_same_test_candidate(state: &mut SetSameTestState, keep: bool) {
+    let candidate = state
+        .candidate
+        .take()
+        .expect("SameTest candidate should exist while finishing it");
+    if keep {
         state.kept.push(candidate);
-        state.index += 1;
-        return resume_set_same_test_from_scan(session, state);
-    };
-
-    let result = eval_binary_predicate(session, &state.same_test, &candidate, &item);
-    let suspended_state = state.clone();
-    let suspended_candidate = candidate.clone();
-    let value = session.suspend_with_frame(result, move |session, value| {
-        resume_set_same_test_complement_with_value(
-            session,
-            suspended_state,
-            suspended_candidate,
-            excluded_index,
-            value,
-        )
-    })?;
-
-    resume_set_same_test_complement_with_value(session, state, candidate, excluded_index, value)
-}
-
-fn resume_set_same_test_complement_with_value(
-    session: &mut Session,
-    mut state: SetSameTestState,
-    candidate: Expr,
-    excluded_index: usize,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        state.index += 1;
-        resume_set_same_test_from_scan(session, state)
-    } else {
-        resume_set_same_test_complement_excluded(session, state, candidate, excluded_index + 1)
     }
+    state.index += 1;
+    state.phase = SetSameTestPhase::Scan;
 }
 
 fn resume_sort_by_from_index(

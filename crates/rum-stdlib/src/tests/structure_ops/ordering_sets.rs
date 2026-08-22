@@ -201,6 +201,26 @@ fn set_operations_accept_same_test_option() {
 }
 
 #[test]
+fn wide_custom_same_test_set_operations_preserve_comparison_counts() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "never[x_, y_] := (calls = calls + 1; False); \
+             calls = 0; union = Union[Range[200], SameTest -> never]; unionCalls = calls; \
+             calls = 0; intersection = Intersection[Range[80], Range[80], SameTest -> never]; intersectionCalls = calls; \
+             calls = 0; complement = Complement[Range[80], Range[80], SameTest -> never]; \
+             {Length[union], unionCalls, Length[intersection], intersectionCalls, Length[complement], calls}",
+        )
+        .unwrap();
+
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[200, 19900, 0, 6400, 80, 9560]"
+    );
+}
+
+#[test]
 fn intersection_covers_wk_anchored_same_head_subset() {
     let mut session = core_session();
 
