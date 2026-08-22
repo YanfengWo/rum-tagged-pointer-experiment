@@ -91,7 +91,9 @@ fn resume_eval_request_with_input_can_finish_catenate_after_suspending_delayed_a
     let mut session = core_session();
 
     let failure = session
-        .eval_request("Catenate[Association[a :> {InputString[\"value: \"]}]]")
+        .eval_request(
+            "Catenate[Association[a :> {InputString[\"value: \"]}, b :> {InputString[\"value: \"]}]]",
+        )
         .expect_err("Catenate should suspend when a delayed association value requests input");
 
     match &failure.error {
@@ -101,11 +103,33 @@ fn resume_eval_request_with_input_can_finish_catenate_after_suspending_delayed_a
         other => panic!("expected input-required failure, got {other:?}"),
     }
 
-    let response = session
-        .resume_eval_request_with_input("done")
-        .expect("resume should continue Catenate after the delayed association value resolves");
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("Catenate should continue to the second delayed value");
+    assert_input_prompt(&second.error, "value: ");
 
-    assert_eq!(response.value.to_string(), "List[\"done\"]");
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("resume should continue Catenate after both delayed values resolve");
+
+    assert_eq!(response.value.to_string(), "List[\"one\", \"two\"]");
+
+    let first = session
+        .eval_request(
+            "Catenate[{Association[a :> InputString[\"step: \"]], Association[b :> InputString[\"step: \"]]}]",
+        )
+        .expect_err("list Catenate should suspend on the first association value");
+    assert_input_prompt(&first.error, "step: ");
+
+    let second = session
+        .resume_eval_request_with_input("left")
+        .expect_err("list Catenate should continue to the second association value");
+    assert_input_prompt(&second.error, "step: ");
+
+    let response = session
+        .resume_eval_request_with_input("right")
+        .expect("list Catenate should retain the first resumed value");
+    assert_eq!(response.value.to_string(), "List[\"left\", \"right\"]");
 }
 
 #[test]
@@ -113,7 +137,9 @@ fn resume_eval_request_with_input_can_finish_counts_after_suspending_delayed_ass
     let mut session = core_session();
 
     let failure = session
-        .eval_request("Counts[Association[a :> InputString[\"value: \"]], {\"done\", \"other\"}]")
+        .eval_request(
+            "Counts[Association[a :> InputString[\"value: \"], b :> InputString[\"value: \"]], {\"one\", \"two\", \"other\"}]",
+        )
         .expect_err("Counts should suspend when a delayed association value requests input");
 
     match &failure.error {
@@ -123,13 +149,18 @@ fn resume_eval_request_with_input_can_finish_counts_after_suspending_delayed_ass
         other => panic!("expected input-required failure, got {other:?}"),
     }
 
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("Counts should continue to the second delayed association value");
+    assert_input_prompt(&second.error, "value: ");
+
     let response = session
-        .resume_eval_request_with_input("done")
-        .expect("resume should continue Counts after the delayed association value resolves");
+        .resume_eval_request_with_input("two")
+        .expect("resume should continue Counts after both delayed association values resolve");
 
     assert_eq!(
         response.value.to_string(),
-        "Association[Rule[\"done\", 1], Rule[\"other\", 0]]"
+        "Association[Rule[\"one\", 1], Rule[\"two\", 1], Rule[\"other\", 0]]"
     );
 }
 

@@ -26,7 +26,6 @@ pub(crate) fn eval_catenate(
     if let Some(entries) = association_entry_forms_from_expr(associations_expr) {
         return resume_catenate_direct_association_entries_from_index(
             session,
-            head.clone(),
             args.to_vec(),
             entries,
             0,
@@ -40,7 +39,6 @@ pub(crate) fn eval_catenate(
 
     resume_catenate_steps_from_index(
         session,
-        head.clone(),
         args.to_vec(),
         catenate_steps_for_list_items(items),
         0,
@@ -156,39 +154,36 @@ pub(crate) fn eval_position_index(
 fn resume_counts_association_entries_from_index(
     session: &mut Session,
     entries: Vec<AssociationEntryForm>,
-    index: usize,
-    values: Vec<Expr>,
+    mut index: usize,
+    mut values: Vec<Expr>,
     spec_keys: Option<Vec<Expr>>,
 ) -> Result<Expr, EvalError> {
-    let Some(entry) = entries.get(index).cloned() else {
-        return Ok(render_count_association_for_spec(values, spec_keys));
-    };
+    loop {
+        let Some(entry) = entries.get(index).cloned() else {
+            return Ok(render_count_association_for_spec(values, spec_keys));
+        };
 
-    if entry.delayed {
-        let suspended_entries = entries.clone();
-        let suspended_values = values.clone();
-        let suspended_spec_keys = spec_keys.clone();
-        let value_result = session.evaluate(entry.value);
-        let value = session.suspend_with_frame(value_result, move |session, value| {
-            resume_counts_after_association_value(
-                session,
-                suspended_entries,
-                index,
-                suspended_values,
-                suspended_spec_keys,
-                value,
-            )
-        })?;
-        resume_counts_after_association_value(session, entries, index, values, spec_keys, value)
-    } else {
-        resume_counts_after_association_value(
-            session,
-            entries,
-            index,
-            values,
-            spec_keys,
-            entry.value,
-        )
+        let value = if entry.delayed {
+            match session.evaluate(entry.value) {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, value| {
+                            resume_counts_after_association_value(
+                                session, entries, index, values, spec_keys, value,
+                            )
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        } else {
+            entry.value
+        };
+
+        values.push(value);
+        index += 1;
     }
 }
 
@@ -206,52 +201,42 @@ fn resume_counts_after_association_value(
 
 fn resume_catenate_direct_association_entries_from_index(
     session: &mut Session,
-    head: Expr,
     call_args: Vec<Expr>,
     entries: Vec<AssociationEntryForm>,
-    index: usize,
-    values: Vec<Expr>,
+    mut index: usize,
+    mut values: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    let Some(entry) = entries.get(index).cloned() else {
-        return finish_catenate_direct_association_values(session, call_args, values);
-    };
+    loop {
+        let Some(entry) = entries.get(index).cloned() else {
+            return finish_catenate_direct_association_values(session, call_args, values);
+        };
 
-    if entry.delayed {
-        let suspended_head = head.clone();
-        let suspended_call_args = call_args.clone();
-        let suspended_entries = entries.clone();
-        let suspended_values = values.clone();
-        let value_result = session.evaluate(entry.value);
-        let value = session.suspend_with_frame(value_result, move |session, value| {
-            resume_catenate_direct_association_value(
-                session,
-                suspended_head,
-                suspended_call_args,
-                suspended_entries,
-                index,
-                suspended_values,
-                value,
-            )
-        })?;
-        resume_catenate_direct_association_value(
-            session, head, call_args, entries, index, values, value,
-        )
-    } else {
-        resume_catenate_direct_association_value(
-            session,
-            head,
-            call_args,
-            entries,
-            index,
-            values,
-            entry.value,
-        )
+        let value = if entry.delayed {
+            match session.evaluate(entry.value) {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, value| {
+                            resume_catenate_direct_association_value(
+                                session, call_args, entries, index, values, value,
+                            )
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        } else {
+            entry.value
+        };
+
+        values.push(value);
+        index += 1;
     }
 }
 
 fn resume_catenate_direct_association_value(
     session: &mut Session,
-    head: Expr,
     call_args: Vec<Expr>,
     entries: Vec<AssociationEntryForm>,
     index: usize,
@@ -261,7 +246,6 @@ fn resume_catenate_direct_association_value(
     values.push(value);
     resume_catenate_direct_association_entries_from_index(
         session,
-        head,
         call_args,
         entries,
         index + 1,
@@ -304,60 +288,57 @@ fn finish_catenate_direct_association_values(
 
 fn resume_catenate_steps_from_index(
     session: &mut Session,
-    head: Expr,
     call_args: Vec<Expr>,
     steps: Vec<CatenateStep>,
-    index: usize,
+    mut index: usize,
     mut flattened: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    let Some(step) = steps.get(index).cloned() else {
-        return Ok(Expr::call(system_expr("List"), flattened));
-    };
+    loop {
+        let Some(step) = steps.get(index).cloned() else {
+            return Ok(Expr::call(system_expr("List"), flattened));
+        };
 
-    match step {
-        CatenateStep::Append(items) => {
-            flattened.extend(items);
-            resume_catenate_steps_from_index(session, head, call_args, steps, index + 1, flattened)
-        }
-        CatenateStep::AssociationValue { value, delayed } => {
-            if delayed {
-                let suspended_head = head.clone();
-                let suspended_call_args = call_args.clone();
-                let suspended_steps = steps.clone();
-                let suspended_flattened = flattened.clone();
-                let value_result = session.evaluate(value);
-                let value = session.suspend_with_frame(value_result, move |session, value| {
-                    resume_catenate_after_association_value(
-                        session,
-                        suspended_head,
-                        suspended_call_args,
-                        suspended_steps,
-                        index,
-                        suspended_flattened,
-                        value,
-                    )
-                })?;
-                resume_catenate_after_association_value(
-                    session, head, call_args, steps, index, flattened, value,
-                )
-            } else {
-                resume_catenate_after_association_value(
-                    session, head, call_args, steps, index, flattened, value,
-                )
+        match step {
+            CatenateStep::Append(items) => {
+                flattened.extend(items);
+                index += 1;
+            }
+            CatenateStep::AssociationValue { value, delayed } => {
+                let value = if delayed {
+                    match session.evaluate(value) {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            return session.suspend_with_frame(
+                                Err(EvalError::InputRequired { request }),
+                                move |session, value| {
+                                    resume_catenate_after_association_value(
+                                        session, call_args, steps, index, flattened, value,
+                                    )
+                                },
+                            );
+                        }
+                        Err(error) => return Err(error),
+                    }
+                } else {
+                    value
+                };
+                flattened.push(value);
+                index += 1;
+            }
+            CatenateStep::Invalid(expr) => {
+                return Ok(session.invalid_call_with_message(
+                    "Catenate",
+                    &call_args,
+                    "invrp",
+                    invalid_association_or_list_message(&expr),
+                ));
             }
         }
-        CatenateStep::Invalid(expr) => Ok(session.invalid_call_with_message(
-            "Catenate",
-            &call_args,
-            "invrp",
-            invalid_association_or_list_message(&expr),
-        )),
     }
 }
 
 fn resume_catenate_after_association_value(
     session: &mut Session,
-    head: Expr,
     call_args: Vec<Expr>,
     steps: Vec<CatenateStep>,
     index: usize,
@@ -365,7 +346,7 @@ fn resume_catenate_after_association_value(
     value: Expr,
 ) -> Result<Expr, EvalError> {
     flattened.push(value);
-    resume_catenate_steps_from_index(session, head, call_args, steps, index + 1, flattened)
+    resume_catenate_steps_from_index(session, call_args, steps, index + 1, flattened)
 }
 
 fn catenate_item_contribution(expr: &Expr) -> Option<Vec<Expr>> {

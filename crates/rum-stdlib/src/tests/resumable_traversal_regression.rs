@@ -121,3 +121,35 @@ fn large_resumable_fold_loops_do_not_recurse_through_the_rust_stack() {
         "List[5000, 5000, 5000]",
     );
 }
+
+#[test]
+fn delayed_association_aggregates_evaluate_each_value_once() {
+    let mut session = core_session();
+
+    assert_eval(
+        &mut session,
+        "calls = 0; counts = Counts[Association[Table[RuleDelayed[i, (calls = calls + 1; 1)], {i, 1, 64}]]]; {Length[counts], calls}",
+        "List[1, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "calls = 0; values = Catenate[Association[Table[RuleDelayed[i, {calls = calls + 1}], {i, 1, 64}]]]; {Length[values], calls}",
+        "List[64, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "calls = 0; values = Catenate[Table[Association[RuleDelayed[i, (calls = calls + 1)]], {i, 1, 64}]]; {Length[values], calls}",
+        "List[64, 64]",
+    );
+}
+
+#[test]
+fn large_catenate_list_walk_does_not_recurse_through_the_rust_stack() {
+    let mut session = core_session();
+
+    assert_eval(
+        &mut session,
+        "Length[Catenate[Table[{i}, {i, 1, 5000}]]]",
+        "5000",
+    );
+}
