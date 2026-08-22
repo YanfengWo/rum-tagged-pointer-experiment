@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Clone)]
 struct SequenceFoldEvalState {
     head: Expr,
     operator: Expr,
@@ -14,40 +13,49 @@ struct SequenceFoldEvalState {
 fn resume_sequence_fold_from_offset(
     session: &mut Session,
     state: SequenceFoldEvalState,
-    offset: usize,
-    history: Vec<Expr>,
+    mut offset: usize,
+    mut history: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if offset + state.consumed_per_step > state.items.len() {
-        return Ok(finish_sequence_fold_result(state, history));
+    loop {
+        if offset + state.consumed_per_step > state.items.len() {
+            return Ok(finish_sequence_fold_result(state, history));
+        }
+
+        let mut call_args = if state.seed_len == 0 {
+            Vec::new()
+        } else {
+            history
+                .iter()
+                .rev()
+                .take(state.seed_len)
+                .cloned()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect::<Vec<_>>()
+        };
+        call_args.extend(
+            state.items[offset..offset + state.consumed_per_step]
+                .iter()
+                .cloned(),
+        );
+
+        let value = match session.evaluate(Expr::call(state.operator.clone(), call_args)) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_sequence_fold_with_value(session, state, offset, history, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        history.push(value);
+        offset += state.consumed_per_step;
     }
-
-    let mut call_args = if state.seed_len == 0 {
-        Vec::new()
-    } else {
-        history
-            .iter()
-            .rev()
-            .take(state.seed_len)
-            .cloned()
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect::<Vec<_>>()
-    };
-    call_args.extend(
-        state.items[offset..offset + state.consumed_per_step]
-            .iter()
-            .cloned(),
-    );
-
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
-    let value_result = session.evaluate(Expr::call(state.operator.clone(), call_args));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_sequence_fold_with_value(session, suspended_state, offset, suspended_history, value)
-    })?;
-
-    resume_sequence_fold_with_value(session, state, offset, history, value)
 }
 
 fn resume_sequence_fold_with_value(

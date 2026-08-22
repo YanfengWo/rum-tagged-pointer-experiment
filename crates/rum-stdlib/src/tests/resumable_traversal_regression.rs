@@ -84,3 +84,40 @@ fn large_inner_callback_loop_does_not_recurse_through_the_rust_stack() {
         "g",
     );
 }
+
+#[test]
+fn resumable_fold_traversals_visit_each_item_once() {
+    let mut session = core_session();
+
+    assert_eval(
+        &mut session,
+        "calls = 0; value = SequenceFold[(calls = calls + 1; #2) &, {0}, Range[64]]; {value, calls}",
+        "List[64, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "calls = 0; values = SequenceFoldList[(calls = calls + 1; #2) &, {0}, Range[64]]; {Length[values], calls}",
+        "List[65, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "operators = 0; projectors = 0; value = FoldPair[(operators = operators + 1; {#2, #2}) &, 0, Range[64], (projectors = projectors + 1; Last[#]) &]; {value, operators, projectors}",
+        "List[64, 64, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "steps = 0; tests = 0; value = FoldWhile[(steps = steps + 1; #2) &, 0, Range[64], (tests = tests + 1; True) &]; {value, steps, tests}",
+        "List[64, 64, 64]",
+    );
+}
+
+#[test]
+fn large_resumable_fold_loops_do_not_recurse_through_the_rust_stack() {
+    let mut session = core_session();
+
+    assert_eval(
+        &mut session,
+        "{SequenceFold[Function[Slot[2]], {0}, Range[5000]], FoldPair[Function[List[Slot[2], Slot[2]]], 0, Range[5000]], FoldWhile[Function[Slot[2]], 0, Range[5000], Function[True]]}",
+        "List[5000, 5000, 5000]",
+    );
+}

@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Clone)]
 struct FoldWhileEvalState {
     head: Expr,
     operator: Expr,
@@ -13,26 +12,61 @@ struct FoldWhileEvalState {
 fn resume_fold_while_from_index(
     session: &mut Session,
     state: FoldWhileEvalState,
-    index: usize,
-    current: Expr,
-    history: Vec<Expr>,
+    mut index: usize,
+    mut current: Expr,
+    mut history: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index >= state.items.len() {
-        return Ok(finish_fold_while_result(state, history));
+    loop {
+        if index >= state.items.len() {
+            return Ok(finish_fold_while_result(state, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current, state.items[index].clone()],
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_fold_while_with_step_value(session, state, index, history, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        history.push(value.clone());
+        let next_index = index + 1;
+        let call = Expr::call(
+            state.test.clone(),
+            nest_while_test_args(&history, state.config.test_arity),
+        );
+        let test_value = match session.evaluate(call) {
+            Ok(test_value) => test_value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, test_value| {
+                        resume_fold_while_with_test_value(
+                            session, state, next_index, value, history, test_value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&test_value) == Some(true) {
+            current = value;
+            index = next_index;
+            continue;
+        }
+
+        return finish_fold_while_after_false_test(session, state, next_index, value, history);
     }
-
-    let call = Expr::call(
-        state.operator.clone(),
-        vec![current, state.items[index].clone()],
-    );
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_fold_while_with_step_value(session, suspended_state, index, suspended_history, value)
-    })?;
-
-    resume_fold_while_with_step_value(session, state, index, history, value)
 }
 
 fn resume_fold_while_with_step_value(
@@ -48,20 +82,20 @@ fn resume_fold_while_with_step_value(
         state.test.clone(),
         nest_while_test_args(&history, state.config.test_arity),
     );
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
-    let suspended_value = value.clone();
-    let value_result = session.evaluate(call);
-    let test_value = session.suspend_with_frame(value_result, move |session, test_value| {
-        resume_fold_while_with_test_value(
-            session,
-            suspended_state,
-            next_index,
-            suspended_value,
-            suspended_history,
-            test_value,
-        )
-    })?;
+    let test_value = match session.evaluate(call) {
+        Ok(test_value) => test_value,
+        Err(EvalError::InputRequired { request }) => {
+            return session.suspend_with_frame(
+                Err(EvalError::InputRequired { request }),
+                move |session, test_value| {
+                    resume_fold_while_with_test_value(
+                        session, state, next_index, value, history, test_value,
+                    )
+                },
+            );
+        }
+        Err(error) => return Err(error),
+    };
 
     resume_fold_while_with_test_value(session, state, next_index, value, history, test_value)
 }
@@ -71,13 +105,23 @@ fn resume_fold_while_with_test_value(
     state: FoldWhileEvalState,
     index: usize,
     current: Expr,
-    mut history: Vec<Expr>,
+    history: Vec<Expr>,
     test_value: Expr,
 ) -> Result<Expr, EvalError> {
     if truthiness_symbol(&test_value) == Some(true) {
         return resume_fold_while_from_index(session, state, index, current, history);
     }
 
+    finish_fold_while_after_false_test(session, state, index, current, history)
+}
+
+fn finish_fold_while_after_false_test(
+    session: &mut Session,
+    state: FoldWhileEvalState,
+    index: usize,
+    current: Expr,
+    mut history: Vec<Expr>,
+) -> Result<Expr, EvalError> {
     if state.config.tail_adjustment > 0 {
         let remaining = usize::try_from(state.config.tail_adjustment).unwrap_or(0);
         return resume_fold_while_tail_from_index(
@@ -102,34 +146,40 @@ fn resume_fold_while_with_test_value(
 fn resume_fold_while_tail_from_index(
     session: &mut Session,
     state: FoldWhileEvalState,
-    index: usize,
-    current: Expr,
-    history: Vec<Expr>,
-    remaining: usize,
+    mut index: usize,
+    mut current: Expr,
+    mut history: Vec<Expr>,
+    mut remaining: usize,
 ) -> Result<Expr, EvalError> {
-    if remaining == 0 || index >= state.items.len() {
-        return Ok(finish_fold_while_result(state, history));
+    loop {
+        if remaining == 0 || index >= state.items.len() {
+            return Ok(finish_fold_while_result(state, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current, state.items[index].clone()],
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_fold_while_tail_with_value(
+                            session, state, index, history, remaining, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        history.push(value.clone());
+        current = value;
+        index += 1;
+        remaining -= 1;
     }
-
-    let call = Expr::call(
-        state.operator.clone(),
-        vec![current, state.items[index].clone()],
-    );
-    let suspended_state = state.clone();
-    let suspended_history = history.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_fold_while_tail_with_value(
-            session,
-            suspended_state,
-            index,
-            suspended_history,
-            remaining,
-            value,
-        )
-    })?;
-
-    resume_fold_while_tail_with_value(session, state, index, history, remaining, value)
 }
 
 fn resume_fold_while_tail_with_value(

@@ -139,7 +139,7 @@ fn resume_eval_request_with_input_can_finish_foldpair_operator_and_projector() {
 
     let pair = session
         .eval_request(
-            "FoldPair[Function[List[InputString[\"pair: \"], Slot[2]]], seed, {a}, Function[List[InputString[\"project: \"], Slot[1]]]]",
+            "FoldPair[Function[List[InputString[\"pair: \"], Slot[2]]], seed, {a, b}, Function[List[InputString[\"project: \"], Slot[1]]]]",
         )
         .expect_err("FoldPair operator should suspend before producing the pair");
     assert_input_prompt(&pair.error, "pair: ");
@@ -149,11 +149,21 @@ fn resume_eval_request_with_input_can_finish_foldpair_operator_and_projector() {
         .expect_err("FoldPair projector should run after the operator resumes");
     assert_input_prompt(&projector.error, "project: ");
 
-    let response = session
+    let second_pair = session
         .resume_eval_request_with_input("p")
-        .expect("FoldPair should finish after the projector resumes");
+        .expect_err("FoldPair should continue to the second item");
+    assert_input_prompt(&second_pair.error, "pair: ");
 
-    assert_eq!(response.value.to_string(), "List[\"p\", List[\"x\", a]]");
+    let second_projector = session
+        .resume_eval_request_with_input("y")
+        .expect_err("FoldPair should project the second pair");
+    assert_input_prompt(&second_projector.error, "project: ");
+
+    let response = session
+        .resume_eval_request_with_input("q")
+        .expect("FoldPair should finish after both items");
+
+    assert_eq!(response.value.to_string(), "List[\"q\", List[\"y\", b]]");
 }
 
 #[test]
@@ -162,7 +172,7 @@ fn resume_eval_request_with_input_can_finish_foldwhile_step_and_test() {
 
     let step = session
         .eval_request(
-            "FoldWhile[Function[List[Slot[1], InputString[\"step: \"], Slot[2]]], seed, {a}, Function[SameQ[InputString[\"test: \"], \"yes\"]]]",
+            "FoldWhile[Function[List[Slot[1], InputString[\"step: \"], Slot[2]]], seed, {a, b}, Function[SameQ[InputString[\"test: \"], \"yes\"]]]",
         )
         .expect_err("FoldWhile operator should suspend");
     assert_input_prompt(&step.error, "step: ");
@@ -172,11 +182,24 @@ fn resume_eval_request_with_input_can_finish_foldwhile_step_and_test() {
         .expect_err("FoldWhile test should run after the step resumes");
     assert_input_prompt(&test.error, "test: ");
 
+    let second_step = session
+        .resume_eval_request_with_input("yes")
+        .expect_err("truthy resumed test should continue FoldWhile");
+    assert_input_prompt(&second_step.error, "step: ");
+
+    let second_test = session
+        .resume_eval_request_with_input("t")
+        .expect_err("FoldWhile should test the second step");
+    assert_input_prompt(&second_test.error, "test: ");
+
     let response = session
         .resume_eval_request_with_input("no")
-        .expect("falsy resumed test should finish FoldWhile");
+        .expect("falsy second test should finish FoldWhile");
 
-    assert_eq!(response.value.to_string(), "List[seed, \"s\", a]");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[seed, \"s\", a], \"t\", b]"
+    );
 }
 
 #[test]
@@ -185,18 +208,23 @@ fn resume_eval_request_with_input_can_finish_sequencefoldlist_callback_loop() {
 
     let failure = session
         .eval_request(
-            "SequenceFoldList[Function[List[Slot[1], InputString[\"seq: \"], Slot[2]]], {seed}, {a}]",
+            "SequenceFoldList[Function[List[Slot[1], InputString[\"seq: \"], Slot[2]]], {seed}, {a, b}]",
         )
         .expect_err("SequenceFoldList callback should suspend");
     assert_input_prompt(&failure.error, "seq: ");
 
-    let response = session
+    let second = session
         .resume_eval_request_with_input("one")
-        .expect("SequenceFoldList should preserve seed history after resuming");
+        .expect_err("SequenceFoldList should continue to the second item");
+    assert_input_prompt(&second.error, "seq: ");
+
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("SequenceFoldList should preserve completed history after resuming");
 
     assert_eq!(
         response.value.to_string(),
-        "List[seed, List[seed, \"one\", a]]"
+        "List[seed, List[seed, \"one\", a], List[List[seed, \"one\", a], \"two\", b]]"
     );
 }
 

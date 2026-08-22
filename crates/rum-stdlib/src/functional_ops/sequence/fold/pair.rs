@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Clone)]
 struct FoldPairEvalState {
     head: Expr,
     operator: Expr,
@@ -12,72 +11,101 @@ struct FoldPairEvalState {
 fn resume_fold_pair_from_index(
     session: &mut Session,
     state: FoldPairEvalState,
-    index: usize,
-    current_state: Expr,
-    last_output: Option<Expr>,
+    mut index: usize,
+    mut current_state: Expr,
+    mut last_output: Option<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index >= state.items.len() {
-        return Ok(finish_fold_pair_result(state, last_output));
+    loop {
+        if index >= state.items.len() {
+            return Ok(finish_fold_pair_result(state, last_output));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![current_state, state.items[index].clone()],
+        );
+        let pair = match session.evaluate(call) {
+            Ok(pair) => pair,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, pair| {
+                        resume_fold_pair_with_pair_result(session, state, index, pair)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        let Some((x_value, y_value)) = parse_pair_result(&pair) else {
+            return Ok(fold_pair_unevaluated(state));
+        };
+
+        let output = if let Some(projector) = state.projector.as_ref() {
+            let call = Expr::call(
+                projector.clone(),
+                vec![Expr::call(
+                    system_expr("List"),
+                    vec![x_value.clone(), y_value.clone()],
+                )],
+            );
+            match session.evaluate(call) {
+                Ok(output) => output,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, output| {
+                            resume_fold_pair_with_output(session, state, index, y_value, output)
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        } else {
+            x_value
+        };
+
+        current_state = y_value;
+        last_output = Some(output);
+        index += 1;
     }
-
-    let call = Expr::call(
-        state.operator.clone(),
-        vec![current_state, state.items[index].clone()],
-    );
-    let suspended_state = state.clone();
-    let suspended_last_output = last_output.clone();
-    let value_result = session.evaluate(call);
-    let pair = session.suspend_with_frame(value_result, move |session, value| {
-        resume_fold_pair_with_pair_result(
-            session,
-            suspended_state,
-            index,
-            suspended_last_output,
-            value,
-        )
-    })?;
-
-    resume_fold_pair_with_pair_result(session, state, index, last_output, pair)
 }
 
 fn resume_fold_pair_with_pair_result(
     session: &mut Session,
     state: FoldPairEvalState,
     index: usize,
-    last_output: Option<Expr>,
     pair: Expr,
 ) -> Result<Expr, EvalError> {
     let Some((x_value, y_value)) = parse_pair_result(&pair) else {
         return Ok(fold_pair_unevaluated(state));
     };
 
-    let Some(projector) = state.projector.clone() else {
-        return resume_fold_pair_with_output(session, state, index, y_value, last_output, x_value);
+    let Some(projector) = state.projector.as_ref() else {
+        return resume_fold_pair_with_output(session, state, index, y_value, x_value);
     };
 
     let call = Expr::call(
-        projector,
+        projector.clone(),
         vec![Expr::call(
             system_expr("List"),
             vec![x_value.clone(), y_value.clone()],
         )],
     );
-    let suspended_state = state.clone();
-    let suspended_y_value = y_value.clone();
-    let suspended_last_output = last_output.clone();
-    let value_result = session.evaluate(call);
-    let output = session.suspend_with_frame(value_result, move |session, value| {
-        resume_fold_pair_with_output(
-            session,
-            suspended_state,
-            index,
-            suspended_y_value,
-            suspended_last_output,
-            value,
-        )
-    })?;
+    let output = match session.evaluate(call) {
+        Ok(output) => output,
+        Err(EvalError::InputRequired { request }) => {
+            return session.suspend_with_frame(
+                Err(EvalError::InputRequired { request }),
+                move |session, output| {
+                    resume_fold_pair_with_output(session, state, index, y_value, output)
+                },
+            );
+        }
+        Err(error) => return Err(error),
+    };
 
-    resume_fold_pair_with_output(session, state, index, y_value, last_output, output)
+    resume_fold_pair_with_output(session, state, index, y_value, output)
 }
 
 fn resume_fold_pair_with_output(
@@ -85,7 +113,6 @@ fn resume_fold_pair_with_output(
     state: FoldPairEvalState,
     index: usize,
     next_state: Expr,
-    _last_output: Option<Expr>,
     output: Expr,
 ) -> Result<Expr, EvalError> {
     resume_fold_pair_from_index(session, state, index + 1, next_state, Some(output))
