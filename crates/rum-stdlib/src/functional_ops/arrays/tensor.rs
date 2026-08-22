@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Clone)]
 pub(super) struct TensorCallbackEvalState {
     pub(super) operator: Expr,
     pub(super) output_head: Expr,
@@ -8,7 +7,6 @@ pub(super) struct TensorCallbackEvalState {
     pub(super) operator_args: Vec<Expr>,
 }
 
-#[derive(Clone)]
 struct InnerEvalState {
     f: Expr,
     g: Expr,
@@ -216,28 +214,34 @@ fn push_tensor_message_once(session: &mut Session, symbol: &str, tag: &str, text
 pub(super) fn resume_tensor_callback_from_index(
     session: &mut Session,
     state: TensorCallbackEvalState,
-    index: usize,
-    outputs: Vec<Expr>,
+    mut index: usize,
+    mut outputs: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    let Some(operator_arg) = state.operator_args.get(index) else {
-        return Ok(rebuild_tensor_expr(
-            &state.output_head,
-            &state.output_shape,
-            &outputs,
-        ));
-    };
+    loop {
+        let Some(operator_arg) = state.operator_args.get(index).cloned() else {
+            return Ok(rebuild_tensor_expr(
+                &state.output_head,
+                &state.output_shape,
+                &outputs,
+            ));
+        };
 
-    let suspended_state = state.clone();
-    let suspended_outputs = outputs.clone();
-    let value_result = session.evaluate(Expr::call(
-        state.operator.clone(),
-        vec![operator_arg.clone()],
-    ));
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_tensor_callback_with_value(session, suspended_state, index, suspended_outputs, value)
-    })?;
+        let value = match session.evaluate(Expr::call(state.operator.clone(), vec![operator_arg])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_tensor_callback_with_value(session, state, index, outputs, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_tensor_callback_with_value(session, state, index, outputs, value)
+        outputs.push(value);
+        index += 1;
+    }
 }
 
 fn resume_tensor_callback_with_value(
@@ -257,104 +261,109 @@ fn resume_inner_output_from_index(
     output_index: usize,
     output_scalars: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if output_index >= state.output_indices.len() {
-        return Ok(rebuild_tensor_expr(
-            &state.head,
-            &state.output_shape,
-            &output_scalars,
-        ));
-    }
-
-    resume_inner_terms_from_index(session, state, output_index, 0, Vec::new(), output_scalars)
+    resume_inner_from_indices(session, state, output_index, 0, Vec::new(), output_scalars)
 }
 
-fn resume_inner_terms_from_index(
+fn resume_inner_from_indices(
     session: &mut Session,
     state: InnerEvalState,
-    output_index: usize,
-    contract_index: usize,
-    terms: Vec<Expr>,
-    output_scalars: Vec<Expr>,
+    mut output_index: usize,
+    mut contract_index: usize,
+    mut terms: Vec<Expr>,
+    mut output_scalars: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if contract_index >= state.contract_dim {
-        let suspended_state = state.clone();
-        let suspended_output_scalars = output_scalars.clone();
-        let reduced_result = session.evaluate(Expr::call(state.g.clone(), terms));
-        let reduced = session.suspend_with_frame(reduced_result, move |session, reduced| {
-            resume_inner_reduced_with_value(
-                session,
-                suspended_state,
-                output_index,
-                suspended_output_scalars,
-                reduced,
-            )
-        })?;
+    loop {
+        if output_index >= state.output_indices.len() {
+            return Ok(rebuild_tensor_expr(
+                &state.head,
+                &state.output_shape,
+                &output_scalars,
+            ));
+        }
 
-        return resume_inner_reduced_with_value(
-            session,
-            state,
-            output_index,
-            output_scalars,
-            reduced,
-        );
+        while contract_index < state.contract_dim {
+            let Some(output_indices) = state.output_indices.get(output_index) else {
+                return Ok(rebuild_tensor_expr(
+                    &state.head,
+                    &state.output_shape,
+                    &output_scalars,
+                ));
+            };
+            let (left_index, right_index) = output_indices.split_at(state.left_prefix_rank);
+            let mut lhs = left_index.to_vec();
+            lhs.push(contract_index);
+            let mut rhs = vec![contract_index];
+            rhs.extend_from_slice(right_index);
+
+            let Some(lhs_value) = tensor_scalar_at(&state.left_flat, &state.left_shape, &lhs)
+            else {
+                return Ok(rebuild_tensor_expr(
+                    &state.head,
+                    &state.output_shape,
+                    &output_scalars,
+                ));
+            };
+            let Some(rhs_value) = tensor_scalar_at(&state.right_flat, &state.right_shape, &rhs)
+            else {
+                return Ok(rebuild_tensor_expr(
+                    &state.head,
+                    &state.output_shape,
+                    &output_scalars,
+                ));
+            };
+
+            let term = match session.evaluate(Expr::call(
+                state.f.clone(),
+                vec![lhs_value.clone(), rhs_value.clone()],
+            )) {
+                Ok(term) => term,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, term| {
+                            resume_inner_term_with_value(
+                                session,
+                                state,
+                                output_index,
+                                contract_index,
+                                terms,
+                                output_scalars,
+                                term,
+                            )
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+
+            terms.push(term);
+            contract_index += 1;
+        }
+
+        let reduced = match session.evaluate(Expr::call(state.g.clone(), terms)) {
+            Ok(reduced) => reduced,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, reduced| {
+                        resume_inner_reduced_with_value(
+                            session,
+                            state,
+                            output_index,
+                            output_scalars,
+                            reduced,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        output_scalars.push(reduced);
+        output_index += 1;
+        contract_index = 0;
+        terms = Vec::new();
     }
-
-    let Some(output_indices) = state.output_indices.get(output_index) else {
-        return Ok(rebuild_tensor_expr(
-            &state.head,
-            &state.output_shape,
-            &output_scalars,
-        ));
-    };
-    let (left_index, right_index) = output_indices.split_at(state.left_prefix_rank);
-    let mut lhs = left_index.to_vec();
-    lhs.push(contract_index);
-    let mut rhs = vec![contract_index];
-    rhs.extend_from_slice(right_index);
-
-    let Some(lhs_value) = tensor_scalar_at(&state.left_flat, &state.left_shape, &lhs) else {
-        return Ok(rebuild_tensor_expr(
-            &state.head,
-            &state.output_shape,
-            &output_scalars,
-        ));
-    };
-    let Some(rhs_value) = tensor_scalar_at(&state.right_flat, &state.right_shape, &rhs) else {
-        return Ok(rebuild_tensor_expr(
-            &state.head,
-            &state.output_shape,
-            &output_scalars,
-        ));
-    };
-
-    let suspended_state = state.clone();
-    let suspended_terms = terms.clone();
-    let suspended_output_scalars = output_scalars.clone();
-    let term_result = session.evaluate(Expr::call(
-        state.f.clone(),
-        vec![lhs_value.clone(), rhs_value.clone()],
-    ));
-    let term = session.suspend_with_frame(term_result, move |session, term| {
-        resume_inner_term_with_value(
-            session,
-            suspended_state,
-            output_index,
-            contract_index,
-            suspended_terms,
-            suspended_output_scalars,
-            term,
-        )
-    })?;
-
-    resume_inner_term_with_value(
-        session,
-        state,
-        output_index,
-        contract_index,
-        terms,
-        output_scalars,
-        term,
-    )
 }
 
 fn resume_inner_term_with_value(
@@ -367,7 +376,7 @@ fn resume_inner_term_with_value(
     term: Expr,
 ) -> Result<Expr, EvalError> {
     terms.push(term);
-    resume_inner_terms_from_index(
+    resume_inner_from_indices(
         session,
         state,
         output_index,
@@ -385,7 +394,14 @@ fn resume_inner_reduced_with_value(
     reduced: Expr,
 ) -> Result<Expr, EvalError> {
     output_scalars.push(reduced);
-    resume_inner_output_from_index(session, state, output_index + 1, output_scalars)
+    resume_inner_from_indices(
+        session,
+        state,
+        output_index + 1,
+        0,
+        Vec::new(),
+        output_scalars,
+    )
 }
 
 pub(super) fn parse_tensor_node(expr: &Expr, expected_head: &Expr) -> TensorNode {

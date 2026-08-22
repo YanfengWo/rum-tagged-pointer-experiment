@@ -47,3 +47,40 @@ fn resumable_traversals_visit_each_completed_item_once() {
         "List[64, 2080]",
     );
 }
+
+#[test]
+fn resumable_array_traversals_visit_each_generated_item_once() {
+    let mut session = core_session();
+
+    assert_eval(
+        &mut session,
+        "calls = 0; values = Array[(calls = calls + 1; #) &, 64]; {Length[values], calls}",
+        "List[64, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "calls = 0; values = Outer[(calls = calls + 1; f[#1, #2]) &, Range[32], {x, y}]; {Length[values], Length[First[values]], calls}",
+        "List[32, 2, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "calls = 0; values = ArrayReduce[(calls = calls + 1; #) &, Range[64], {}]; {Length[values], calls}",
+        "List[64, 64]",
+    );
+    assert_eval(
+        &mut session,
+        "terms = 0; reductions = 0; value = Inner[(terms = terms + 1; f[#1, #2]) &, Range[64], Range[64], (reductions = reductions + 1; h[#]) &]; {Head[value], terms, reductions}",
+        "List[h, 64, 1]",
+    );
+}
+
+#[test]
+fn large_inner_callback_loop_does_not_recurse_through_the_rust_stack() {
+    let mut session = core_session();
+
+    assert_eval(
+        &mut session,
+        "Head[Inner[f, Range[5000], Range[5000], g]]",
+        "g",
+    );
+}

@@ -49,6 +49,44 @@ fn resume_eval_request_with_input_can_finish_array_callback_helpers() {
 }
 
 #[test]
+fn resume_eval_request_with_input_preserves_array_and_outer_progress() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request("Array[Function[InputString[\"array: \"]], 2]")
+        .expect_err("Array should suspend on the first generated element");
+    assert_input_prompt(&first.error, "array: ");
+
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("Array should continue to the second generated element");
+    assert_input_prompt(&second.error, "array: ");
+
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("Array should retain its first generated element");
+    assert_eq!(response.value.to_string(), "List[\"one\", \"two\"]");
+
+    let first = session
+        .eval_request("Outer[Function[InputString[\"outer: \"]], {a, b}, {x}]")
+        .expect_err("Outer should suspend on the first generated element");
+    assert_input_prompt(&first.error, "outer: ");
+
+    let second = session
+        .resume_eval_request_with_input("ax")
+        .expect_err("Outer should continue to the second generated element");
+    assert_input_prompt(&second.error, "outer: ");
+
+    let response = session
+        .resume_eval_request_with_input("bx")
+        .expect("Outer should retain its first generated element");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[\"ax\"], List[\"bx\"]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_inner_term_and_reducer_callbacks() {
     let mut session = core_session();
 
@@ -70,6 +108,36 @@ fn resume_eval_request_with_input_can_finish_inner_term_and_reducer_callbacks() 
     assert_eq!(
         response.value.to_string(),
         "List[\"sum\", List[\"mul\", a, b]]"
+    );
+}
+
+#[test]
+fn resume_eval_request_with_input_preserves_completed_inner_terms() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request(
+            "Inner[Function[List[InputString[\"term2: \"], Slot[1], Slot[2]]], {a, b}, {c, d}, Function[List[InputString[\"reduce2: \"], Slot[1], Slot[2]]]]",
+        )
+        .expect_err("Inner should suspend on its first term");
+    assert_input_prompt(&first.error, "term2: ");
+
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("Inner should continue to its second term");
+    assert_input_prompt(&second.error, "term2: ");
+
+    let reducer = session
+        .resume_eval_request_with_input("two")
+        .expect_err("Inner should reduce after both terms complete");
+    assert_input_prompt(&reducer.error, "reduce2: ");
+
+    let response = session
+        .resume_eval_request_with_input("sum")
+        .expect("Inner should retain both completed terms");
+    assert_eq!(
+        response.value.to_string(),
+        "List[\"sum\", List[\"one\", a, c], List[\"two\", b, d]]"
     );
 }
 

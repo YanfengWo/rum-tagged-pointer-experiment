@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 struct ArrayEvalState {
     operator: Expr,
     output_head: Expr,
@@ -15,7 +15,7 @@ struct OuterInput {
     values: Vec<Expr>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 struct OuterEvalState {
     operator: Expr,
     output_head: Expr,
@@ -169,29 +169,38 @@ fn checked_generated_shape_counts(session: &Session, shape: &[BigInt]) -> Result
 fn resume_array_from_index(
     session: &mut Session,
     state: ArrayEvalState,
-    index: usize,
-    outputs: Vec<Expr>,
+    mut index: usize,
+    mut outputs: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index >= state.total {
-        return Ok(rebuild_tensor_expr(
-            &state.output_head,
-            &state.shape,
-            &outputs,
-        ));
+    loop {
+        if index >= state.total {
+            return Ok(rebuild_tensor_expr(
+                &state.output_head,
+                &state.shape,
+                &outputs,
+            ));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            array_index_args(&state.shape, &state.origins, index),
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_array_with_value(session, state, index, outputs, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        outputs.push(value);
+        index += 1;
     }
-
-    let call = Expr::call(
-        state.operator.clone(),
-        array_index_args(&state.shape, &state.origins, index),
-    );
-    let suspended_state = state.clone();
-    let suspended_outputs = outputs.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_array_with_value(session, suspended_state, index, suspended_outputs, value)
-    })?;
-
-    resume_array_with_value(session, state, index, outputs, value)
 }
 
 fn resume_array_with_value(
@@ -208,26 +217,35 @@ fn resume_array_with_value(
 fn resume_outer_from_index(
     session: &mut Session,
     state: OuterEvalState,
-    index: usize,
-    outputs: Vec<Expr>,
+    mut index: usize,
+    mut outputs: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    if index >= state.total {
-        return Ok(rebuild_tensor_expr(
-            &state.output_head,
-            &state.output_shape,
-            &outputs,
-        ));
+    loop {
+        if index >= state.total {
+            return Ok(rebuild_tensor_expr(
+                &state.output_head,
+                &state.output_shape,
+                &outputs,
+            ));
+        }
+
+        let call = Expr::call(state.operator.clone(), outer_call_args(&state, index));
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_outer_with_value(session, state, index, outputs, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        outputs.push(value);
+        index += 1;
     }
-
-    let call = Expr::call(state.operator.clone(), outer_call_args(&state, index));
-    let suspended_state = state.clone();
-    let suspended_outputs = outputs.clone();
-    let value_result = session.evaluate(call);
-    let value = session.suspend_with_frame(value_result, move |session, value| {
-        resume_outer_with_value(session, suspended_state, index, suspended_outputs, value)
-    })?;
-
-    resume_outer_with_value(session, state, index, outputs, value)
 }
 
 fn resume_outer_with_value(
