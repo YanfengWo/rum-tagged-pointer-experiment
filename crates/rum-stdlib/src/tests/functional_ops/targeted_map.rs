@@ -49,6 +49,19 @@ fn mapat_mapthread_and_subsetmap_cover_current_first_pass_subset() {
 }
 
 #[test]
+fn map_at_evaluates_each_target_once_at_scale() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "count = 0; values = Range[5000]; paths = List /@ Range[5000]; mapped = MapAt[Function[(count = count + 1; Slot[1])], values, paths]; {Length[mapped], First[mapped], Last[mapped], count}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[5000, 1, 5000, 5000]");
+}
+
+#[test]
 fn targeted_mapping_reports_only_explicit_missing_or_incompatible_paths() {
     let mut session = core_session();
 

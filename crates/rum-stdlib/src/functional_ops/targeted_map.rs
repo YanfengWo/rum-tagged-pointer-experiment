@@ -6,7 +6,6 @@ enum MapThreadDispatch {
     Mismatch,
 }
 
-#[derive(Clone)]
 struct MapAtEvalState {
     operator: Expr,
     paths: Vec<Vec<isize>>,
@@ -194,25 +193,35 @@ fn apply_map_at_paths(
 fn resume_map_at_from_index(
     session: &mut Session,
     state: MapAtEvalState,
-    index: usize,
-    current: Expr,
+    mut index: usize,
+    mut current: Expr,
 ) -> Result<Expr, EvalError> {
-    let Some(path) = state.paths.get(index) else {
-        return Ok(current);
-    };
+    loop {
+        let Some(path) = state.paths.get(index) else {
+            return Ok(current);
+        };
 
-    let Some(part) = exact_expr_at_path(&current, path) else {
-        return resume_map_at_from_index(session, state, index + 1, current);
-    };
+        let Some(part) = exact_expr_at_path(&current, path) else {
+            index += 1;
+            continue;
+        };
 
-    let suspended_state = state.clone();
-    let suspended_current = current.clone();
-    let mapped_result = session.evaluate(Expr::call(state.operator.clone(), vec![part]));
-    let mapped = session.suspend_with_frame(mapped_result, move |session, mapped| {
-        resume_map_at_with_value(session, suspended_state, index, suspended_current, mapped)
-    })?;
+        let mapped = match session.evaluate(Expr::call(state.operator.clone(), vec![part])) {
+            Ok(mapped) => mapped,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, mapped| {
+                        resume_map_at_with_value(session, state, index, current, mapped)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
-    resume_map_at_with_value(session, state, index, current, mapped)
+        current = replace_exact_path(current, path, mapped);
+        index += 1;
+    }
 }
 
 fn resume_map_at_with_value(
