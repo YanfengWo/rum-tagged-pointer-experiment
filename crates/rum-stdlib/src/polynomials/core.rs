@@ -72,13 +72,29 @@ impl Polynomial {
                 Some(Self::from_normalized_terms(terms))
             }
             Expr::Call { head, args } if is_system_symbol_name(head, "Times") => {
-                let mut polynomial = Self::one();
+                let mut monomial_terms = Vec::new();
+                let mut polynomial = None;
 
                 for arg in args {
-                    polynomial = polynomial.multiply(&Self::from_expr(arg)?);
+                    let factor = Self::from_expr(arg)?;
+                    if polynomial.is_none() && factor.terms.len() == 1 {
+                        monomial_terms.push(factor.terms.into_iter().next().expect("one term"));
+                        continue;
+                    }
+
+                    let product = polynomial.take().unwrap_or_else(|| {
+                        let product = Self::from_normalized_terms(vec![Term::multiply_many(
+                            monomial_terms.iter(),
+                        )]);
+                        monomial_terms.clear();
+                        product
+                    });
+                    polynomial = Some(product.multiply(&factor));
                 }
 
-                Some(polynomial)
+                Some(polynomial.unwrap_or_else(|| {
+                    Self::from_normalized_terms(vec![Term::multiply_many(monomial_terms.iter())])
+                }))
             }
             Expr::Call { head, args }
                 if is_system_symbol_name(head, "Power") && args.len() == 2 =>

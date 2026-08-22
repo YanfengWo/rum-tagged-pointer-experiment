@@ -137,6 +137,20 @@ fn wide_expand_batches_sum_and_product_term_normalization() {
 }
 
 #[test]
+fn wide_monomial_products_normalize_factors_once() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "{LeafCount[Expand[Apply[Times, Table[x[i], {i, 1, 128}]]]], \
+             LeafCount[Factor[Apply[Times, Table[x[i], {i, 1, 128}]]]]}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[257, 257]");
+}
+
+#[test]
 fn expand_preserves_non_polynomial_or_pattern_bearing_regions() {
     let mut session = core_session();
 

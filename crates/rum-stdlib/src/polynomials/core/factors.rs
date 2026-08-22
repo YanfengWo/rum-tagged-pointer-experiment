@@ -16,14 +16,27 @@ impl Term {
     }
 
     pub(in crate::polynomials) fn multiply(&self, rhs: &Self) -> Self {
-        let mut factors = self.factors.clone();
-        factors.extend(rhs.factors.clone());
-
         Self {
             coefficient: self.coefficient.mul(&rhs.coefficient),
-            factors,
+            factors: multiply_normalized_factors(&self.factors, &rhs.factors),
         }
-        .normalized()
+    }
+
+    pub(in crate::polynomials) fn multiply_many<'a>(
+        terms: impl IntoIterator<Item = &'a Self>,
+    ) -> Self {
+        let mut coefficient = Rational::one();
+        let mut factors = Vec::new();
+
+        for term in terms {
+            coefficient = coefficient.mul(&term.coefficient);
+            factors.extend(term.factors.iter().cloned());
+        }
+
+        Self {
+            coefficient,
+            factors: normalize_factors(factors),
+        }
     }
 
     pub(in crate::polynomials) fn total_degree(&self) -> usize {
@@ -239,6 +252,54 @@ fn normalize_factors(mut factors: Vec<Factor>) -> Vec<Factor> {
 
     merged
 }
+
+fn multiply_normalized_factors(lhs: &[Factor], rhs: &[Factor]) -> Vec<Factor> {
+    let mut factors = Vec::with_capacity(lhs.len() + rhs.len());
+    let mut lhs_index = 0;
+    let mut rhs_index = 0;
+
+    while let (Some(lhs_factor), Some(rhs_factor)) = (lhs.get(lhs_index), rhs.get(rhs_index)) {
+        match compare_expr_canonical(&lhs_factor.base, &rhs_factor.base) {
+            std::cmp::Ordering::Less => {
+                push_merged_factor(&mut factors, lhs_factor);
+                lhs_index += 1;
+            }
+            std::cmp::Ordering::Greater => {
+                push_merged_factor(&mut factors, rhs_factor);
+                rhs_index += 1;
+            }
+            std::cmp::Ordering::Equal => {
+                // `sort_by` is stable, so the legacy concat-and-normalize path
+                // keeps the entire lhs equivalence class before the rhs one.
+                // Canonical-order equality is not necessarily structural Eq.
+                push_merged_factor(&mut factors, lhs_factor);
+                lhs_index += 1;
+            }
+        }
+    }
+
+    for factor in &lhs[lhs_index..] {
+        push_merged_factor(&mut factors, factor);
+    }
+    for factor in &rhs[rhs_index..] {
+        push_merged_factor(&mut factors, factor);
+    }
+    factors
+}
+
+fn push_merged_factor(factors: &mut Vec<Factor>, factor: &Factor) {
+    if let Some(previous) = factors.last_mut() {
+        if previous.base == factor.base {
+            previous.exponent += factor.exponent;
+            return;
+        }
+    }
+
+    factors.push(factor.clone());
+}
+
+#[cfg(test)]
+mod tests;
 
 pub(in crate::polynomials) fn parse_coefficient_list_monomials(
     expr: &Expr,

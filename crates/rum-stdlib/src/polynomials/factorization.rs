@@ -1,4 +1,8 @@
-use super::{core::Polynomial, factor_collections::stable_factor_counts, *};
+use super::{
+    core::{Polynomial, Term},
+    factor_collections::stable_factor_counts,
+    *,
+};
 pub(super) struct PolynomialFactorization {
     pub(super) unit: Rational,
     pub(super) factors: Vec<Polynomial>,
@@ -47,6 +51,13 @@ impl PolynomialFactorization {
     pub(super) fn to_polynomial(&self) -> Polynomial {
         if self.unit.is_zero() {
             return Polynomial::zero();
+        }
+
+        if self.factors.iter().all(|factor| factor.terms.len() == 1) {
+            let mut product =
+                Term::multiply_many(self.factors.iter().map(|factor| &factor.terms[0]));
+            product.coefficient = product.coefficient.mul(&self.unit);
+            return Polynomial::from_normalized_terms(vec![product]);
         }
 
         let mut polynomial = Polynomial::constant(self.unit.clone());
