@@ -25,7 +25,6 @@ struct DecorateByState {
     operation: DecoratedOperation,
 }
 
-#[derive(Clone)]
 struct TallyTestState {
     test: Expr,
     items: Vec<Expr>,
@@ -68,7 +67,7 @@ pub(crate) fn eval_tally(
     };
 
     if let Some(test) = test {
-        return resume_tally_test_from_index(
+        return resume_tally_test_from_count(
             session,
             TallyTestState {
                 test: test.clone(),
@@ -76,6 +75,7 @@ pub(crate) fn eval_tally(
                 index: 0,
                 counts: Vec::new(),
             },
+            0,
         );
     }
 
@@ -89,60 +89,64 @@ pub(crate) fn eval_tally(
     ))
 }
 
-fn resume_tally_test_from_index(
-    session: &mut Session,
-    mut state: TallyTestState,
-) -> Result<Expr, EvalError> {
-    loop {
-        let Some(item) = state.items.get(state.index).cloned() else {
-            return Ok(render_tally_counts(state.counts));
-        };
-
-        if state.counts.is_empty() {
-            state.counts.push((item, 1));
-            state.index += 1;
-            continue;
-        }
-
-        return resume_tally_test_from_count(session, state, item, 0);
-    }
-}
-
 fn resume_tally_test_from_count(
     session: &mut Session,
     mut state: TallyTestState,
-    item: Expr,
-    count_index: usize,
+    mut count_index: usize,
 ) -> Result<Expr, EvalError> {
-    let Some((representative, _)) = state.counts.get(count_index).cloned() else {
-        state.counts.push((item, 1));
-        state.index += 1;
-        return resume_tally_test_from_index(session, state);
-    };
+    loop {
+        if state.index >= state.items.len() {
+            return Ok(render_tally_counts(state.counts));
+        }
 
-    let result = eval_binary_predicate(session, &state.test, &item, &representative);
-    let suspended_state = state.clone();
-    let suspended_item = item.clone();
-    let value = session.suspend_with_frame(result, move |session, value| {
-        resume_tally_test_with_value(session, suspended_state, suspended_item, count_index, value)
-    })?;
+        if count_index >= state.counts.len() {
+            state.counts.push((state.items[state.index].clone(), 1));
+            state.index += 1;
+            count_index = 0;
+            continue;
+        }
 
-    resume_tally_test_with_value(session, state, item, count_index, value)
+        let result = eval_binary_predicate(
+            session,
+            &state.test,
+            &state.items[state.index],
+            &state.counts[count_index].0,
+        );
+        let value = match result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_tally_test_with_value(session, state, count_index, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if is_true_expr(&value) {
+            state.counts[count_index].1 += 1;
+            state.index += 1;
+            count_index = 0;
+        } else {
+            count_index += 1;
+        }
+    }
 }
 
 fn resume_tally_test_with_value(
     session: &mut Session,
     mut state: TallyTestState,
-    item: Expr,
     count_index: usize,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if is_true_expr(&value) {
         state.counts[count_index].1 += 1;
         state.index += 1;
-        resume_tally_test_from_index(session, state)
+        resume_tally_test_from_count(session, state, 0)
     } else {
-        resume_tally_test_from_count(session, state, item, count_index + 1)
+        resume_tally_test_from_count(session, state, count_index + 1)
     }
 }
 

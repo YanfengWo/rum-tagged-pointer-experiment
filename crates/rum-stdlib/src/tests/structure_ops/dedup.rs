@@ -42,6 +42,25 @@ fn delete_duplicates_accepts_custom_same_test() {
 }
 
 #[test]
+fn custom_delete_duplicates_test_preserves_wide_pair_count_without_growing_the_stack() {
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(
+                r#"n = 160;
+                   calls = 0;
+                   kept = DeleteDuplicates[Range[n], Function[{a, b}, calls = calls + 1; False]];
+                   SameQ[{kept, calls}, {Range[n], n (n - 1) / 2}]"#,
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "True"
+    );
+}
+
+#[test]
 fn delete_duplicates_reports_current_invalid_boundaries() {
     let mut session = core_session();
 

@@ -33,6 +33,23 @@ fn tally_and_riffle_cover_first_occurrence_and_boundaries() {
 }
 
 #[test]
+fn custom_tally_test_preserves_wide_pair_count_without_growing_the_stack() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            r#"n = 160;
+               calls = 0;
+               counted = Tally[Range[n], Function[{a, b}, calls = calls + 1; False]];
+               SameQ[{First[counted], Last[counted], calls},
+                     {{1, 1}, {n, 1}, n (n - 1) / 2}]"#,
+        ),
+        "True"
+    );
+}
+
+#[test]
 fn by_extrema_take_and_reverse_sort_cover_ties_and_boundaries() {
     let mut session = core_session();
 

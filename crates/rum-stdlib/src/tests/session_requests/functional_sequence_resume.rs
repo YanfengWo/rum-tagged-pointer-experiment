@@ -109,6 +109,33 @@ fn resume_eval_request_with_input_can_finish_custom_sort_comparator_loops() {
 }
 
 #[test]
+fn resume_eval_request_with_input_can_finish_custom_equivalence_loops() {
+    for (source, expected) in [
+        (
+            r#"calls = 0;
+               {Tally[{1, 2, 3}, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["equivalence: "], "yes"], False]]], calls}"#,
+            "List[List[List[1, 1], List[2, 1], List[3, 1]], 3]",
+        ),
+        (
+            r#"calls = 0;
+               {DeleteDuplicates[{1, 2, 3}, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["equivalence: "], "yes"], False]]], calls}"#,
+            "List[List[1, 2, 3], 3]",
+        ),
+    ] {
+        let mut session = core_session();
+        let failure = session
+            .eval_request(source)
+            .expect_err("custom equivalence test should suspend on its first comparison");
+        assert_input_prompt(&failure.error, "equivalence: ");
+
+        let response = session
+            .resume_eval_request_with_input("no")
+            .expect("custom equivalence loop should finish after resuming");
+        assert_eq!(response.value.to_string(), expected);
+    }
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_gatherby_function_list_key_loop() {
     let mut session = core_session();
 
