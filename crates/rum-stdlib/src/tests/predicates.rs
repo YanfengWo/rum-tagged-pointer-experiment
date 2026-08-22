@@ -553,6 +553,19 @@ fn collection_predicates_accept_same_test_options() {
 }
 
 #[test]
+fn collection_same_test_pairs_run_once_each_without_native_stack_recursion() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "duplicateCalls = 0; relationCalls = 0; {DuplicateFreeQ[Range[100], SameTest -> Function[(duplicateCalls = duplicateCalls + 1; False)]], duplicateCalls, ContainsNone[Range[100], Range[100], SameTest -> Function[(relationCalls = relationCalls + 1; False)]], relationCalls}",
+        )
+        .unwrap();
+
+    assert_eq!(outcome.value.to_string(), "List[True, 4950, True, 10000]");
+}
+
+#[test]
 fn predicate_operator_forms_are_inert_and_apply_to_data() {
     let mut session = core_session();
 

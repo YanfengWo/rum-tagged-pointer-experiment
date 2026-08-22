@@ -12,7 +12,6 @@ enum SameTestRelationKind {
     ContainsOnly,
 }
 
-#[derive(Clone)]
 struct DuplicateFreeSameTestState {
     same_test: Expr,
     items: Vec<Expr>,
@@ -20,7 +19,6 @@ struct DuplicateFreeSameTestState {
     rhs_index: usize,
 }
 
-#[derive(Clone)]
 struct SameTestMatrixState {
     same_test: Expr,
     lhs: Vec<Expr>,
@@ -349,28 +347,40 @@ fn resume_duplicate_free_same_test(
     mut state: DuplicateFreeSameTestState,
 ) -> Result<Expr, EvalError> {
     loop {
-        if state.lhs_index >= state.items.len().saturating_sub(1) {
-            return Ok(predicate_bool_expr(true));
+        loop {
+            if state.lhs_index >= state.items.len().saturating_sub(1) {
+                return Ok(predicate_bool_expr(true));
+            }
+            if state.rhs_index < state.items.len() {
+                break;
+            }
+            state.lhs_index += 1;
+            state.rhs_index = state.lhs_index + 1;
         }
-        if state.rhs_index < state.items.len() {
-            break;
+
+        let value = match eval_same_test_pair(
+            session,
+            &state.same_test,
+            &state.items[state.lhs_index],
+            &state.items[state.rhs_index],
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_duplicate_free_same_test_with_value(session, state, value)
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if is_true_expr(&value) {
+            return Ok(predicate_bool_expr(false));
         }
-        state.lhs_index += 1;
-        state.rhs_index = state.lhs_index + 1;
+        state.rhs_index += 1;
     }
-
-    let result = eval_same_test_pair(
-        session,
-        &state.same_test,
-        &state.items[state.lhs_index],
-        &state.items[state.rhs_index],
-    );
-    let suspended_state = state.clone();
-    let value = session.suspend_with_frame(result, move |session, value| {
-        resume_duplicate_free_same_test_with_value(session, suspended_state, value)
-    })?;
-
-    resume_duplicate_free_same_test_with_value(session, state, value)
 }
 
 fn resume_duplicate_free_same_test_with_value(
@@ -412,33 +422,43 @@ fn resume_same_test_matrix(
     mut state: SameTestMatrixState,
 ) -> Result<Expr, EvalError> {
     loop {
-        if state.lhs_index >= state.lhs.len() {
-            return Ok(predicate_bool_expr(same_test_relation_result(
-                state.kind,
-                &state.matches,
-                state.lhs.len(),
-                state.rhs.len(),
-            )));
+        loop {
+            if state.lhs_index >= state.lhs.len() {
+                return Ok(predicate_bool_expr(same_test_relation_result(
+                    state.kind,
+                    &state.matches,
+                    state.lhs.len(),
+                    state.rhs.len(),
+                )));
+            }
+            if state.rhs_index < state.rhs.len() {
+                break;
+            }
+            state.lhs_index += 1;
+            state.rhs_index = 0;
         }
-        if state.rhs_index < state.rhs.len() {
-            break;
+
+        let value = match eval_same_test_pair(
+            session,
+            &state.same_test,
+            &state.lhs[state.lhs_index],
+            &state.rhs[state.rhs_index],
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| resume_same_test_matrix_with_value(session, state, value),
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if is_true_expr(&value) {
+            state.matches[state.lhs_index][state.rhs_index] = true;
         }
-        state.lhs_index += 1;
-        state.rhs_index = 0;
+        state.rhs_index += 1;
     }
-
-    let result = eval_same_test_pair(
-        session,
-        &state.same_test,
-        &state.lhs[state.lhs_index],
-        &state.rhs[state.rhs_index],
-    );
-    let suspended_state = state.clone();
-    let value = session.suspend_with_frame(result, move |session, value| {
-        resume_same_test_matrix_with_value(session, suspended_state, value)
-    })?;
-
-    resume_same_test_matrix_with_value(session, state, value)
 }
 
 fn resume_same_test_matrix_with_value(

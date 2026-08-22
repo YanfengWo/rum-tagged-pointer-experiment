@@ -160,6 +160,8 @@ mod session_requests_functional_sequence_resume;
 mod session_requests_functional_targeted_resume;
 #[path = "tests/session_requests/functional_tensor_string_resume.rs"]
 mod session_requests_functional_tensor_string_resume;
+#[path = "tests/session_requests/predicate_collections_resume.rs"]
+mod session_requests_predicate_collections_resume;
 #[path = "tests/session_requests/transforms_resume_associations.rs"]
 mod session_requests_transforms_resume_associations;
 #[path = "tests/stress_corpus.rs"]
