@@ -1,48 +1,5 @@
 use super::*;
 
-impl VariableBasis {
-    pub(in crate::polynomials) fn from_polynomials(polynomials: &[&Polynomial]) -> Self {
-        let mut variables = Vec::new();
-
-        for polynomial in polynomials {
-            for variable in polynomial.variables() {
-                if !variables.iter().any(|existing| existing == &variable) {
-                    variables.push(variable);
-                }
-            }
-        }
-
-        variables.sort_by(compare_expr_canonical);
-        Self { variables }
-    }
-
-    pub(in crate::polynomials) fn compare_terms(
-        &self,
-        lhs: &Term,
-        rhs: &Term,
-    ) -> std::cmp::Ordering {
-        let lhs_degree = lhs.total_degree();
-        let rhs_degree = rhs.total_degree();
-
-        match lhs_degree.cmp(&rhs_degree) {
-            std::cmp::Ordering::Equal => {
-                for variable in &self.variables {
-                    match lhs
-                        .exponent_for_factor(variable)
-                        .cmp(&rhs.exponent_for_factor(variable))
-                    {
-                        std::cmp::Ordering::Equal => {}
-                        ordering => return ordering,
-                    }
-                }
-
-                std::cmp::Ordering::Equal
-            }
-            ordering => ordering,
-        }
-    }
-}
-
 impl Term {
     pub(in crate::polynomials) fn constant(coefficient: Rational) -> Self {
         Self {

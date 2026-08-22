@@ -5,6 +5,7 @@ use super::{
 
 mod construction;
 mod factors;
+mod variables;
 pub(super) use factors::parse_coefficient_list_monomials;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -263,21 +264,6 @@ impl Polynomial {
             .map(|term| term.divide_by_monomial(monomial))
             .collect::<Option<Vec<_>>>()?;
         Some(Self::from_order_preserving_terms(terms))
-    }
-
-    pub(super) fn variables(&self) -> Vec<Expr> {
-        let mut variables = Vec::new();
-
-        for term in &self.terms {
-            for factor in &term.factors {
-                if !variables.iter().any(|existing| existing == &factor.base) {
-                    variables.push(factor.base.clone());
-                }
-            }
-        }
-
-        variables.sort_by(compare_expr_canonical);
-        variables
     }
 
     pub(super) fn total_degree(&self) -> usize {
