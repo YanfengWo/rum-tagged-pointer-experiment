@@ -29,6 +29,31 @@ fn replaceall_applies_rule_list_in_order() {
 }
 
 #[test]
+fn replaceall_shape_prefilter_stays_conservative_for_head_attributes() {
+    let mut session = session_with_test_control_builtins();
+
+    session.eval_text("SetAttributes[f, OneIdentity]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("a /. f[a] -> hit")
+            .unwrap()
+            .value
+            .to_string(),
+        "hit"
+    );
+
+    session.eval_text("SetAttributes[g, Orderless]").unwrap();
+    assert_eq!(
+        session
+            .eval_text("g[b, a] /. g[a, b] -> hit")
+            .unwrap()
+            .value
+            .to_string(),
+        "hit"
+    );
+}
+
+#[test]
 fn replaceall_traverses_nested_expressions() {
     let mut session = session_with_test_control_builtins();
 

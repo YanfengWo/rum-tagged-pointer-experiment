@@ -228,73 +228,83 @@ impl Session {
         normalized_expr: Expr,
         rules: SharedRewriteRules,
         source: RuleApplicationSource,
-        index: usize,
+        mut index: usize,
     ) -> Result<Option<Expr>, EvalError> {
-        let Some(rule) = rules.get(index) else {
-            return Ok(None);
-        };
-        let would_reject =
-            !Self::definition_lhs_could_match_candidate(&rule.lhs, &rule.matcher, &normalized_expr);
-        record_profile_rewrite_rule_prefilter_candidate(would_reject);
-        let matcher = rule.matcher.clone();
-
-        let match_result =
-            self.match_compiled_owned(matcher, normalized_expr.clone(), SymbolExprMap::default());
-
-        let outcome = match match_result {
-            Ok(outcome) => outcome,
-            Err(EvalError::InputRequired { request }) => {
-                let rule = rules
-                    .get(index)
-                    .cloned()
-                    .expect("rewrite rule should still exist for suspended match");
-                return self.drive_internal_value::<CompiledMatchOutcome, Option<Expr>, _>(
-                    Err(EvalError::InputRequired { request }),
-                    move |session, outcome| {
-                        record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
-                        if !outcome.matched {
-                            return session.apply_rules_once_from_list(
-                                expr,
-                                normalized_expr,
-                                rules,
-                                source,
-                                index + 1,
-                            );
-                        }
-
-                        let replaced = substitute_rule_bindings_for_rhs(
-                            &rule.rhs,
-                            &outcome.bindings,
-                            rule.rhs_may_splice_without_bindings,
-                        );
-                        session.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
-                        Ok(Some(replaced))
-                    },
-                );
-            }
-            Err(error) => return Err(error),
-        };
-        record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
-
-        if !outcome.matched {
-            return self.apply_rules_once_from_list(
-                expr,
-                normalized_expr,
-                rules,
-                source,
-                index + 1,
+        loop {
+            let Some(rule) = rules.get(index) else {
+                return Ok(None);
+            };
+            let would_reject = !Self::definition_lhs_could_match_candidate(
+                &rule.lhs,
+                &rule.matcher,
+                &normalized_expr,
             );
-        }
+            record_profile_rewrite_rule_prefilter_candidate(would_reject);
+            if would_reject {
+                index += 1;
+                continue;
+            }
+            let matcher = rule.matcher.clone();
 
-        let rule = rules
-            .get(index)
-            .expect("rewrite rule should still exist after match");
-        let replaced = substitute_rule_bindings_for_rhs(
-            &rule.rhs,
-            &outcome.bindings,
-            rule.rhs_may_splice_without_bindings,
-        );
-        self.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
-        Ok(Some(replaced))
+            let match_result = self.match_compiled_owned(
+                matcher,
+                normalized_expr.clone(),
+                SymbolExprMap::default(),
+            );
+
+            let outcome = match match_result {
+                Ok(outcome) => outcome,
+                Err(EvalError::InputRequired { request }) => {
+                    let rule = rules
+                        .get(index)
+                        .cloned()
+                        .expect("rewrite rule should still exist for suspended match");
+                    return self.drive_internal_value::<CompiledMatchOutcome, Option<Expr>, _>(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, outcome| {
+                            record_profile_rewrite_rule_match_outcome(
+                                would_reject,
+                                outcome.matched,
+                            );
+                            if !outcome.matched {
+                                return session.apply_rules_once_from_list(
+                                    expr,
+                                    normalized_expr,
+                                    rules,
+                                    source,
+                                    index + 1,
+                                );
+                            }
+
+                            let replaced = substitute_rule_bindings_for_rhs(
+                                &rule.rhs,
+                                &outcome.bindings,
+                                rule.rhs_may_splice_without_bindings,
+                            );
+                            session.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
+                            Ok(Some(replaced))
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+            record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
+
+            if !outcome.matched {
+                index += 1;
+                continue;
+            }
+
+            let rule = rules
+                .get(index)
+                .expect("rewrite rule should still exist after match");
+            let replaced = substitute_rule_bindings_for_rhs(
+                &rule.rhs,
+                &outcome.bindings,
+                rule.rhs_may_splice_without_bindings,
+            );
+            self.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
+            return Ok(Some(replaced));
+        }
     }
 }
