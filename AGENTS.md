@@ -121,6 +121,12 @@ construction or `Drop`, candidate-value lookup) must be gated with a
 cost" intention is not evidence; an O(N) cost hidden inside a "fast path"
 only shows up when measured.
 
+The timing suite uses in-kernel `AbsoluteTiming` backed by Rust's monotonic
+`Instant`. Never difference the wall clock, and do not make timing decisions
+while another CPU-heavy workload is running. The benchmark scripts run in the
+normal workspace sandbox; timing is not a reason to request elevated execution.
+Native ZeroMQ tests skip automatically when loopback access is unavailable.
+
 **No default-path cost for diagnostics.** Counters and instrumentation go
 behind the env-gated cold-load `AtomicU8` pattern; a `Mutex`, allocation, or
 branch paid on every call when the flag is off is a regression.

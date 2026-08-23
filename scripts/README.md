@@ -7,8 +7,10 @@ invocation.
 ## Performance and profiling
 
 - `core-language-microbench.sh` — the `rum`-vs-`rum` language-performance A/B.
-  Runs a labeled workload and writes per-label `timings.tsv`; run it on two builds
-  and compare. Hot-path changes are expected to come with such an A/B.
+  Runs a labeled workload and writes per-label `timings.tsv`; run it on two
+  builds and compare. It measures with in-kernel `AbsoluteTiming` backed by
+  Rust's monotonic `Instant`, not the wall clock. Run timing gates only on an
+  otherwise idle machine and in the normal workspace sandbox.
 - `core-memory-microbench.sh` — the `rum`-vs-`rum` memory-baseline A/B.
 - `sample-self-time.py` — compute per-function self-time from macOS `sample`
   call-graph output.

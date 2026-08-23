@@ -81,8 +81,17 @@ Behavior worth keeping is documented; documentation is what tests cite.
 - Any change touching an evaluation hot path requires an A/B (see
   `AGENTS.md`); a regression on the target label's same-tier neighbors
   rejects the change even if the target improves.
-- Keep measurement discipline: profiling/diagnostic env vars OFF for timing
-  numbers; one variable per A/B; persist raw output to files before parsing.
+- Timing rows must come from the suite's in-kernel `AbsoluteTiming`, which uses
+  Rust's monotonic `Instant`. Never measure elapsed work by differencing
+  `AbsoluteTime` or another civil/wall clock: clock correction can slew or step
+  inside a sample.
+- Run timing gates on an otherwise idle machine. A competing CPU-heavy process
+  invalidates accept/reject decisions even though the monotonic clock itself is
+  sound. Allocation and operation counters may still prove that a mechanism
+  fired, but they do not replace a valid timing pass.
+- Keep profiling/diagnostic env vars OFF for timing numbers; change one variable
+  per A/B; persist raw output to files before parsing. Run the benchmark scripts
+  in the normal workspace sandbox; timing does not require elevated execution.
 
 ## Coverage Measurement
 

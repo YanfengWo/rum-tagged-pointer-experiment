@@ -115,6 +115,9 @@ The repository is a Cargo workspace with these crates:
 
 ## Documentation
 
+- [Full documentation index](./docs/README.md)
+- [Language guide](./docs/guide/)
+- [Generated builtin reference](./docs/reference/builtins.md)
 - [Disclaimer, Trademarks, and Project History](./DISCLAIMER.md)
 - [Architecture](./ARCHITECTURE.md)
 - [TODO / Roadmap](./TODO.md)
@@ -171,13 +174,6 @@ Run the minimal Rust host embedding example:
 cargo run -p rum-host --example basic_embedding
 ```
 
-## Documentation
-
-- Full index: **[docs/README.md](./docs/README.md)**.
-- [Language guide](./docs/guide/) — learn the language and the embedding surface.
-- [Builtin reference](./docs/reference/builtins.md) — the generated per-builtin
-  contract.
-
 ## Development
 
 - The workspace targets Rust `1.85` (edition 2024); build and test with
@@ -189,13 +185,15 @@ cargo run -p rum-host --example basic_embedding
 
 ## Direction
 
-Near-term work concentrates on the embedding story: polishing the `rum-host`
-boundary and its documentation, deepening rum-native integration and stress
-coverage (resource-limit and cancellation paths in particular), and the
-language guide / builtin reference documentation pass. A Python binding (via
-native Rust bindings layered on `rum-host`) and a plugin-sandbox showcase
-application are future directions, deliberately deferred until the kernel and
-host contract are stable.
+The `v0.1.0` host and language boundary is published. Current maintenance work
+is a measured, safe-Rust audit of avoidable superlinear algorithms in the
+runtime and standard library. The P0 tranche is complete; the remaining P1
+items and deliberately deferred work are tracked in [TODO.md](./TODO.md).
+
+Broader polynomial factorization is intentionally deferred until the project
+is ready to add the finite-field polynomial machinery needed for a complete
+algorithm. Downstream Python bindings and showcase applications remain future
+projects on top of the stable `rum-host` facade rather than kernel work.
 
 ## Contributing, security, and license
 

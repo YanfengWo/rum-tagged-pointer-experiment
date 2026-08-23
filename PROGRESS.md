@@ -1393,3 +1393,63 @@ Durable lessons, all learned the hard way in this arc:
   ApplyTo runs user code" false for all eleven compound assignments;
   Association O(n^3) not O(n^2)), all confirmed at the gate, and on 297 found
   the feature gap that had been mis-diagnosed as a performance problem.
+
+## 2026-08-22 → 08-23 — post-v0.1 safe-Rust algorithmic performance sweep
+
+The first repository-wide audit for avoidable O(n^2)-and-worse work after
+`v0.1.0` landed as 53 commits after the prior documentation checkpoint
+`2c8b824`: 50 performance changes, two correctness fixes found while tracing
+cost shapes, and one test-environment fix. `rum-core` and `rum-runtime` remain
+zero-`unsafe`.
+
+The accepted changes fall into six groups:
+
+- resumable predicate, collection, traversal, tensor, fold, sort, equivalence,
+  and grouping loops now keep cursors/accumulators instead of rebuilding or
+  recursively cloning continuation state;
+- wide collections, associations, schemas, arithmetic groups, definition
+  candidates, codec dispatch, and exact replacement rules use adaptive indexes
+  while retaining allocation-light small-input tiers;
+- polynomial transforms batch canonicalization and use sparse/indexed term,
+  variable, factor-multiset, and containment machinery; this optimizes the
+  existing polynomial kernel but deliberately does not expand `Factor`'s
+  documented algorithmic scope;
+- `ReplacePart`, `ReplaceAll`, batched association selection, DownValue/UpValue
+  construction and lookup, traversal, and `Module` escape analysis no longer
+  repeat suffix copies or linear closure scans;
+- string matching/search, reversible suffix matching, entity scanning, wide
+  sequence edits, `Drop`, and bounded `Nearest` selection were linearized or
+  indexed where the previous wide path rescanned prefixes/suffixes;
+- the final P0 tranche landed as `c73df5c` (traversal suffix state), `97873ee`
+  (`Module` escape closure), and `d97abd7` (wide UpValue symbols).
+
+Two correctness defects surfaced during the audit rather than being hidden by
+performance patches: recursive operator parsing is now depth-bounded
+(`28afe35`), and uninitialized `Module` bindings are processed iteratively
+(`28b321c`). The nine native ZeroMQ tests now skip when loopback access is
+unavailable (`69fde1f`), so ordinary sandboxed workspace tests no longer need
+an out-of-sandbox rerun merely to classify that environment.
+
+Correction to the 2026-07-20/21 entry above: its statement that symbolic
+`Plus`/`Times` like-term grouping remained an accepted quadratic tradeoff is
+historical, not current. Commit `48838b3` added an adaptive group index to all
+four additive/multiplicative grouping paths. Inputs stay linear-scan below the
+threshold; wide inputs build a `HashMap` after 16 distinct groups when enough
+work remains. The old unconditional O(n^2) description has therefore been
+removed from `TODO.md`.
+
+Timing discipline was also re-confirmed. Elapsed measurements come from
+`AbsoluteTiming`, whose implementation uses Rust's monotonic `Instant`; wall
+clock differencing is invalid on a host whose civil clock can slew or step.
+Competing CPU load can still invalidate timings even though it cannot make the
+monotonic clock run backward. Counters remain useful for proving that a
+mechanism fired, but do not substitute for an uncontended timing gate.
+
+Three P1 items remain: the ordered all-`Single` matcher cursor; a shared
+`RewriteRulePlan` plus negative-level-only depth computation for `Replace`; and
+the bounded `RumTokens` prefix, TOML table-key, and `Reap` tag-bucket scans.
+An ordered-matcher candidate has been prepared but deliberately not accepted or
+committed while another CPU-heavy workload makes its timing gate unreliable.
+`Factor` expansion is separately deferred because a complete
+factorizer needs finite-field polynomial machinery, not another local linear-
+factor optimization.

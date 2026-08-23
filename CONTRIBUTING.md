@@ -43,7 +43,9 @@ Performance changes are gated by **`rum`-vs-`rum` A/B**
   it is unavoidable, stop and raise it first.
 - **Hot-path changes are measured, not asserted.** A change to eval/dispatch/the
   matcher, or to `Expr`/`SharedExpr`/`SharedArgs` construction, must be gated
-  with a microbench A/B. There is no default-path cost for diagnostics.
+  with a microbench A/B. Use the suite's monotonic in-kernel timer on an idle
+  machine; never substitute wall-clock differencing. There is no default-path
+  cost for diagnostics.
 - **Keep files within the size thresholds** in
   [`docs/code-organization-guidelines.md`](./docs/code-organization-guidelines.md)
   (split by responsibility, not arbitrarily).

@@ -572,6 +572,9 @@ Performance is a kernel architecture concern, held to measured evidence:
   `scripts/core-memory-microbench.sh`) are the baseline; optimization work is
   gated by rum-vs-rum A/B per label, with same-tier neighbor labels checked
   so a targeted win cannot hide a neighboring regression
+- elapsed measurements use the kernel's monotonic Rust `Instant`, never wall
+  clock differencing, and timing gates are valid only on an uncontended machine;
+  counters diagnose mechanisms but do not replace timing evidence
 - changes to evaluation hot paths are measured, not asserted (`AGENTS.md`)
 - the retained representation and dispatch work (symbol interning with dense
   ids, shared call trees, the compact `Expr` layout, staged dispatch) landed
