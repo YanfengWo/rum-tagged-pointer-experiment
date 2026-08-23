@@ -164,6 +164,33 @@ fn resume_eval_request_with_input_preserves_block_scope_until_completion() {
 }
 
 #[test]
+fn resume_eval_request_with_input_skips_uninitialized_module_bindings() {
+    let mut session = session_with_test_control_builtins();
+
+    let failure = session
+        .eval_request(
+            "Module[{before, value = InputString[\"name: \"], after}, List[before, value, after]]",
+        )
+        .expect_err("Module initializer should suspend when it reaches InputString");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "name: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("Alice")
+        .expect("resume should skip the remaining uninitialized binding");
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[before$1, \"Alice\", after$3]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_reports_input_parse_errors_as_syntax_diagnostics() {
     let mut session = session_with_test_control_builtins();
 

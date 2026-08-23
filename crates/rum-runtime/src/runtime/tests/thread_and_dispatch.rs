@@ -66,6 +66,24 @@ fn module_skips_existing_generated_symbol_names() {
 }
 
 #[test]
+fn module_handles_many_uninitialized_bindings_without_exhausting_the_native_stack() {
+    let binding_count = 12_800;
+    let mut source = String::with_capacity(binding_count * 12 + 16);
+    source.push_str("Module[{");
+    for index in 0..binding_count {
+        if index > 0 {
+            source.push(',');
+        }
+        source.push_str("local");
+        source.push_str(&index.to_string());
+    }
+    source.push_str("}, 0]");
+
+    let mut session = session_with_test_control_builtins();
+    assert_eq!(session.eval_text(&source).unwrap().value.to_string(), "0");
+}
+
+#[test]
 fn orderless_attribute_canonicalizes_calls_and_rules() {
     let mut session = session_with_test_control_builtins();
 
