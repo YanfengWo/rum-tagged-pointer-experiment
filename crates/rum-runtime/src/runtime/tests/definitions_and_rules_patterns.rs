@@ -237,6 +237,60 @@ fn wide_ground_downvalue_scan_falls_back_to_live_order_after_matcher_mutation() 
 }
 
 #[test]
+fn wide_downvalue_store_index_preserves_specificity_and_alpha_replacement() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[f]; \
+             Do[With[{k = i}, f[k] = k], {i, 1, 32}]; \
+             f[x_] := fallback[x]; \
+             f[33] = 33; \
+             f[y_] := updated[y]; \
+             f[2] = two",
+        )
+        .unwrap();
+
+    assert_eq!(session.eval_text("f[1]").unwrap().value.to_string(), "1");
+    assert_eq!(session.eval_text("f[2]").unwrap().value.to_string(), "two");
+    assert_eq!(session.eval_text("f[33]").unwrap().value.to_string(), "33");
+    assert_eq!(
+        session.eval_text("f[34]").unwrap().value.to_string(),
+        "updated[34]"
+    );
+    let down_values = session.eval_text("DownValues[f]").unwrap().value;
+    let Expr::Call { args, .. } = down_values else {
+        panic!("DownValues[f] should return a List");
+    };
+    assert_eq!(args.len(), 34);
+}
+
+#[test]
+fn wide_pattern_downvalue_store_index_replaces_renamed_condition_pattern() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[g, sameQ]; \
+             sameQ[value_, expected_] := MatchQ[value, expected]; \
+             Do[With[{k = i}, g[x_ /; sameQ[x, k]] = k], {i, 1, 40}]; \
+             g[y_ /; sameQ[y, 17]] = changed",
+        )
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("g[17]").unwrap().value.to_string(),
+        "changed"
+    );
+    assert_eq!(session.eval_text("g[18]").unwrap().value.to_string(), "18");
+    let down_values = session.eval_text("DownValues[g]").unwrap().value;
+    let Expr::Call { args, .. } = down_values else {
+        panic!("DownValues[g] should return a List");
+    };
+    assert_eq!(args.len(), 40);
+}
+
+#[test]
 fn compiled_downvalue_matcher_falls_back_for_sequence_patterns() {
     let mut session = session_with_test_control_builtins();
 

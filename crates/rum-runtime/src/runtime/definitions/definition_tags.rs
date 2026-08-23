@@ -226,9 +226,14 @@ impl Session {
                     );
                     definition.note_down_values_rebuilt(&symbol);
                 } else {
-                    let replaced_was_ground =
-                        replace_or_insert_down_value(&mut definition.down_values, &lhs, down_value);
-                    definition.note_down_value_stored(&symbol, lhs_is_ground, replaced_was_ground);
+                    let (store_index, replaced_was_ground) =
+                        replace_or_insert_down_value(definition, &lhs, down_value);
+                    definition.note_down_value_stored(
+                        &symbol,
+                        lhs_is_ground,
+                        replaced_was_ground,
+                        store_index,
+                    );
                 }
                 self.push_definition_stored_trace(&symbol, DefinitionKind::DownValue, || {
                     Expr::call(
@@ -295,26 +300,28 @@ impl Session {
 }
 
 fn replace_or_insert_down_value(
-    entries: &mut Vec<DownValue>,
+    definition: &mut SymbolDefinition,
     lhs: &Expr,
     new_entry: DownValue,
-) -> Option<bool> {
-    if let Some(index) = entries
-        .iter()
-        .position(|entry| lhs_patterns_equivalent(&entry.lhs, lhs))
-    {
-        let replaced_was_ground = entries[index].lhs_is_ground;
-        entries[index] = new_entry;
-        return Some(replaced_was_ground);
+) -> (usize, Option<bool>) {
+    if let Some(index) = definition.equivalent_down_value_index(lhs, new_entry.lhs_is_ground) {
+        let replaced_was_ground = definition.down_values[index].lhs_is_ground;
+        definition.down_values[index] = new_entry;
+        return (index, Some(replaced_was_ground));
     }
 
     let new_specificity = definition_specificity(lhs);
-    let index = entries
-        .iter()
-        .position(|entry| new_specificity > definition_specificity(&entry.lhs))
-        .unwrap_or(entries.len());
-    entries.insert(index, new_entry);
-    None
+    let index = definition.down_values.last().map_or(0, |last| {
+        if new_specificity <= definition_specificity(&last.lhs) {
+            definition.down_values.len()
+        } else {
+            definition
+                .down_values
+                .partition_point(|entry| definition_specificity(&entry.lhs) >= new_specificity)
+        }
+    });
+    definition.down_values.insert(index, new_entry);
+    (index, None)
 }
 
 fn replace_or_insert_sub_value(entries: &mut Vec<SubValue>, lhs: &Expr, new_entry: SubValue) {
