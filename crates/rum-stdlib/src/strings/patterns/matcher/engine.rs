@@ -1,3 +1,4 @@
+use super::state_set::UniqueMatchStates;
 use super::*;
 
 #[cfg(test)]
@@ -301,37 +302,34 @@ fn pattern_match_states(
         StringPattern::Sequence(parts) => {
             let mut states = vec![empty_match_state(start)];
             for part in parts {
-                let mut next_states = Vec::new();
+                let mut next_states = UniqueMatchStates::new();
                 for state in states {
                     for part_state in pattern_match_states(part, chars, state.end, config) {
                         if let Some(bindings) =
                             merge_match_bindings(&state.bindings, &part_state.bindings)
                         {
-                            push_unique_match_state(
-                                &mut next_states,
-                                StringPatternMatchState {
-                                    end: part_state.end,
-                                    bindings,
-                                },
-                            );
+                            next_states.insert(StringPatternMatchState {
+                                end: part_state.end,
+                                bindings,
+                            });
                         }
                     }
                 }
                 if next_states.is_empty() {
                     return Vec::new();
                 }
-                states = next_states;
+                states = next_states.into_vec();
             }
             states
         }
         StringPattern::Alternatives(alternatives) => {
-            let mut states = Vec::new();
+            let mut states = UniqueMatchStates::new();
             for alternative in alternatives {
                 for state in pattern_match_states(alternative, chars, start, config) {
-                    push_unique_match_state(&mut states, state);
+                    states.insert(state);
                 }
             }
-            states
+            states.into_vec()
         }
     }
 }
@@ -388,11 +386,10 @@ fn repeated_pattern_match_states(
     config: StringPatternMatchConfig,
 ) -> Vec<StringPatternMatchState> {
     let mut frontier = vec![empty_match_state(start)];
-    let mut states = if min == 0 {
-        vec![empty_match_state(start)]
-    } else {
-        Vec::new()
-    };
+    let mut states = UniqueMatchStates::new();
+    if min == 0 {
+        states.insert(empty_match_state(start));
+    }
     let mut steps = 0usize;
 
     loop {
@@ -400,7 +397,7 @@ fn repeated_pattern_match_states(
             break;
         }
 
-        let mut next = Vec::new();
+        let mut next = UniqueMatchStates::new();
         for state in frontier {
             for part_state in pattern_match_states(pattern, chars, state.end, config) {
                 if part_state.end <= state.end {
@@ -408,13 +405,10 @@ fn repeated_pattern_match_states(
                 }
                 if let Some(bindings) = merge_match_bindings(&state.bindings, &part_state.bindings)
                 {
-                    push_unique_match_state(
-                        &mut next,
-                        StringPatternMatchState {
-                            end: part_state.end,
-                            bindings,
-                        },
-                    );
+                    next.insert(StringPatternMatchState {
+                        end: part_state.end,
+                        bindings,
+                    });
                 }
             }
         }
@@ -426,13 +420,13 @@ fn repeated_pattern_match_states(
         steps += 1;
         if steps >= min {
             for state in next.iter().cloned() {
-                push_unique_match_state(&mut states, state);
+                states.insert(state);
             }
         }
-        frontier = next;
+        frontier = next.into_vec();
     }
 
-    states
+    states.into_vec()
 }
 
 fn any_character_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
@@ -608,15 +602,6 @@ fn merge_match_bindings(left: &SymbolExprMap, right: &SymbolExprMap) -> Option<S
         }
     }
     Some(merged)
-}
-
-fn push_unique_match_state(
-    states: &mut Vec<StringPatternMatchState>,
-    candidate: StringPatternMatchState,
-) {
-    if !states.contains(&candidate) {
-        states.push(candidate);
-    }
 }
 
 #[cfg(test)]

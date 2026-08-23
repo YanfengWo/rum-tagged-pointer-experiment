@@ -4,6 +4,7 @@ mod api;
 mod engine;
 mod literal;
 mod split_trim;
+mod state_set;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct StringPatternMatchState {
