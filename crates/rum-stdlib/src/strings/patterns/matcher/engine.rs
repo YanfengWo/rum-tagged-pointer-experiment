@@ -1,5 +1,25 @@
 use super::*;
 
+#[cfg(test)]
+std::thread_local! {
+    static EXCEPT_EXCLUDED_EVALUATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static EXCEPT_MEMBERSHIP_COMPARISONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+fn reset_except_work_counts() {
+    EXCEPT_EXCLUDED_EVALUATIONS.set(0);
+    EXCEPT_MEMBERSHIP_COMPARISONS.set(0);
+}
+
+#[cfg(test)]
+fn except_work_counts() -> (usize, usize) {
+    (
+        EXCEPT_EXCLUDED_EVALUATIONS.get(),
+        EXCEPT_MEMBERSHIP_COMPARISONS.get(),
+    )
+}
+
 pub(in crate::strings::patterns) fn pattern_match_text(chars: &[char]) -> String {
     chars.iter().collect()
 }
@@ -140,13 +160,15 @@ fn pattern_match_end_positions(
                 Some(inner) => pattern_match_end_positions(inner, chars, start, config),
                 None => any_character_match_end_positions(chars, start),
             };
-
-            candidates
-                .into_iter()
-                .filter(|end| {
-                    !pattern_match_end_positions(excluded, chars, start, config).contains(end)
-                })
-                .collect()
+            if candidates.is_empty() {
+                candidates
+            } else {
+                #[cfg(test)]
+                EXCEPT_EXCLUDED_EVALUATIONS.set(EXCEPT_EXCLUDED_EVALUATIONS.get() + 1);
+                let excluded_positions =
+                    pattern_match_end_positions(excluded, chars, start, config);
+                subtract_sorted_positions(candidates, &excluded_positions)
+            }
         }
         StringPattern::StartOfString => (start == 0).then_some(start).into_iter().collect(),
         StringPattern::EndOfString => (start == chars.len())
@@ -196,6 +218,30 @@ fn pattern_match_end_positions(
             positions
         }
     }
+}
+
+fn subtract_sorted_positions(candidates: Vec<usize>, excluded: &[usize]) -> Vec<usize> {
+    let mut excluded_index = 0usize;
+    candidates
+        .into_iter()
+        .filter(|candidate| {
+            loop {
+                let Some(excluded_position) = excluded.get(excluded_index) else {
+                    return true;
+                };
+                #[cfg(test)]
+                EXCEPT_MEMBERSHIP_COMPARISONS.set(EXCEPT_MEMBERSHIP_COMPARISONS.get() + 1);
+                match excluded_position.cmp(candidate) {
+                    std::cmp::Ordering::Less => excluded_index += 1,
+                    std::cmp::Ordering::Equal => {
+                        excluded_index += 1;
+                        return false;
+                    }
+                    std::cmp::Ordering::Greater => return true,
+                }
+            }
+        })
+        .collect()
 }
 
 fn pattern_prefers_shortest(pattern: &StringPattern) -> bool {
@@ -570,5 +616,30 @@ fn push_unique_match_state(
 ) {
     if !states.contains(&candidate) {
         states.push(candidate);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn except_filters_with_one_excluded_evaluation() {
+        let pattern = StringPattern::Except {
+            excluded: Box::new(StringPattern::Repeated {
+                pattern: Box::new(StringPattern::Literal(vec!['b'])),
+                min: 1,
+                max: None,
+            }),
+            inner: Some(Box::new(StringPattern::AnySequence { min: 1 })),
+        };
+        let chars = vec!['b'; 32];
+
+        reset_except_work_counts();
+        let positions =
+            pattern_match_end_positions(&pattern, &chars, 0, StringPatternMatchConfig::default());
+
+        assert!(positions.is_empty());
+        assert_eq!(except_work_counts(), (1, 32));
     }
 }
