@@ -1453,3 +1453,35 @@ committed while another CPU-heavy workload makes its timing gate unreliable.
 `Factor` expansion is separately deferred because a complete
 factorizer needs finite-field polynomial machinery, not another local linear-
 factor optimization.
+
+## 2026-08-23 — P1 ordered matcher cursor
+
+Commit `d93c859` replaced repeated remaining-vector rebuilds in the ordered,
+non-`Flat`, multi-argument matcher with owned pattern/value cursors. The cursor
+continues across all-`Single` prefixes, falls back to the existing generic
+sequence/optional machinery on the first variable-arity argument, and is
+preserved by typed suspension continuations so resumed conditions do not replay
+already matched prefixes. The implementation remains safe Rust.
+
+The acceptance gate used independent release builds from the committed base
+and candidate source trees. Timing came only from the benchmark program's
+`AbsoluteTiming`/Rust `Instant`; the suite's wall clock was used only for its
+process timeout record. With loop-style labels scaled 3x and B/C each run five
+times, median candidate changes were -17.06% for four arguments, -89.59% for
+800 arguments, and -94.74% for 1600 arguments. Same-tier `MatchQ`,
+`ReplaceAll`, `Cases`, `Count`, and `Position` sentinels ranged from -1.61% to
+-0.18%, so none regressed.
+
+The allocator gate was collected in the normal sandbox with the new
+`core-memory-microbench.sh --no-rss` mode because macOS `/usr/bin/time -l`
+tries a denied `sysctl` even after its child succeeds. After subtracting the
+fresh-process baseline, allocation counts changed only -0.15%/-0.08% at
+800/1600 arguments, while allocated bytes fell 8.63% at both widths and peak
+live allocator bytes fell 8.27%/8.21%. Rum's expression-memory proxy remained
+360 bytes on both sides because it does not account for these Rust temporary
+vectors. This is a time-and-space improvement, not a space-for-time tradeoff.
+
+Correctness gates passed `cargo test -p rum-runtime` (674/674) and
+`cargo test --workspace` (all non-ignored tests; three existing stdlib stress
+tests remained ignored). The remaining P1 order is now: shared `Replace`
+planning/depth work, then the bounded `RumTokens`/TOML/`Reap` wide-input scans.

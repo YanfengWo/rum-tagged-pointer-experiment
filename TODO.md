@@ -4,7 +4,7 @@ This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log),
 and release-facing changes live in [CHANGELOG.md](./CHANGELOG.md).
 
-Status checkpoint: 2026-08-23, committed tree through `d97abd7`. Uncommitted
+Status checkpoint: 2026-08-23, committed tree through `d93c859`. Uncommitted
 performance candidates do not count as completed until their correctness,
 timing, counter, and memory gates have all been reviewed.
 
@@ -20,18 +20,17 @@ three most recent P0 changes are:
 
 The broader completed optimization line is summarized in the 2026-08-22/23
 entry of [PROGRESS.md](./PROGRESS.md).
+The first P1 item landed as `d93c859`: ordered, non-`Flat`, multi-argument
+matching now keeps pattern/value cursors across all-`Single` prefixes and
+suspension instead of rebuilding the remaining vectors.
 The remaining measured work is P1, in this order:
 
-1. **Ordered matcher cursor.** The generic ordered, non-`Flat`, all-`Single`
-   sequence matcher still rebuilds remaining pattern/value vectors. A cursor
-   implementation is under evaluation, but cannot be accepted until its
-   rum-vs-rum timing gate is rerun on an uncontended machine.
-2. **Shared replacement plan.** `Replace` still clones or scans its rules at
+1. **Shared replacement plan.** `Replace` still clones or scans its rules at
    each visited node and computes subtree depth even for level specifications
    that do not need it. Share a compiled `RewriteRulePlan`; compute depth only
    for negative levels. Preserve rule order, held evaluation, suspension, and
    message behavior.
-3. **Three bounded wide-input scans.** Remove repeated prefix rescans in
+2. **Three bounded wide-input scans.** Remove repeated prefix rescans in
    `RumTokens`, index wide TOML table keys, and replace `Reap`'s linear tag
    bucketing with an adaptive index. Keep small-input paths allocation-light.
 
