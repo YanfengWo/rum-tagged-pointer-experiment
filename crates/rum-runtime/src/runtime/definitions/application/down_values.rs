@@ -139,7 +139,7 @@ impl Session {
 
         let runtime_profile_prefilter = runtime_path_timing_start("down_values.prefilter");
         let prefilter_start = definition_dispatch_timing_start();
-        let could_match = Self::definition_lhs_could_match_candidate(
+        let could_match = self.definition_lhs_could_match_candidate(
             &down_value.lhs,
             &down_value.matcher,
             &normalized_candidate,

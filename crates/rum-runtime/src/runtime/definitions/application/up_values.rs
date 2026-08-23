@@ -52,7 +52,7 @@ impl Session {
 
         record_profile_definition_dispatch_candidate("up_value", &symbol);
         let prefilter_start = definition_dispatch_timing_start();
-        let could_match = Self::definition_lhs_could_match_candidate(
+        let could_match = self.definition_lhs_could_match_candidate(
             &up_value.lhs,
             &up_value.matcher,
             &normalized_candidate,

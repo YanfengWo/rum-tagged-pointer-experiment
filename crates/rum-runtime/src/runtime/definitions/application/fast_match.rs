@@ -14,14 +14,15 @@ impl Session {
     }
 
     pub(super) fn definition_lhs_could_match_candidate(
+        &self,
         _lhs: &Expr,
         matcher: &MatcherNode,
         candidate: &Expr,
     ) -> bool {
-        Self::matcher_could_match_candidate_shape(matcher, candidate)
+        self.matcher_could_match_candidate_shape(matcher, candidate)
     }
 
-    fn matcher_could_match_candidate_shape(matcher: &MatcherNode, candidate: &Expr) -> bool {
+    fn matcher_could_match_candidate_shape(&self, matcher: &MatcherNode, candidate: &Expr) -> bool {
         match matcher {
             MatcherNode::Exact(pattern) => pattern == candidate,
             MatcherNode::Blank { head_constraint } => {
@@ -31,12 +32,28 @@ impl Session {
             MatcherNode::Named { inner, .. }
             | MatcherNode::Condition { inner, .. }
             | MatcherNode::PatternTest { inner, .. } => {
-                Self::matcher_could_match_candidate_shape(inner, candidate)
+                self.matcher_could_match_candidate_shape(inner, candidate)
             }
             MatcherNode::Alternatives(alternatives) => alternatives.iter().any(|alternative| {
-                Self::matcher_could_match_candidate_shape(alternative, candidate)
+                self.matcher_could_match_candidate_shape(alternative, candidate)
             }),
             MatcherNode::Call { head, args } => {
+                // Attribute lookup is not free on definition-heavy paths.  Keep
+                // the conservative shape gate sound for attributed heads, but
+                // fetch their attributes only once per call node.
+                let head_attributes = match head.as_ref() {
+                    MatcherNode::Exact(Expr::Atom(Atom::Symbol(symbol))) => {
+                        Some(self.attribute_set_for_symbol(symbol))
+                    }
+                    _ => None,
+                };
+
+                if head_attributes
+                    .is_some_and(|attributes| attributes.contains(Attribute::OneIdentity))
+                {
+                    return true;
+                }
+
                 let Expr::Call {
                     head: value_head,
                     args: value_args,
@@ -45,8 +62,15 @@ impl Session {
                     return true;
                 };
 
-                if !Self::matcher_could_match_candidate_shape(head, value_head) {
+                if !self.matcher_could_match_candidate_shape(head, value_head) {
                     return false;
+                }
+
+                if head_attributes.is_some_and(|attributes| {
+                    attributes.contains(Attribute::Flat)
+                        || attributes.contains(Attribute::Orderless)
+                }) {
+                    return true;
                 }
 
                 if args.iter().any(|arg| !matches!(arg, MatcherArg::Single(_))) {
@@ -58,7 +82,7 @@ impl Session {
                         let MatcherArg::Single(matcher) = pattern_arg else {
                             return true;
                         };
-                        Self::matcher_could_match_candidate_shape(matcher, value_arg)
+                        self.matcher_could_match_candidate_shape(matcher, value_arg)
                     })
             }
         }

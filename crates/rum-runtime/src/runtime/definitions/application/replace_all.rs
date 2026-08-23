@@ -1,7 +1,8 @@
 use super::*;
-use std::sync::Arc;
 
-type SharedRewriteRules = Arc<[RewriteRule]>;
+mod plan;
+
+use plan::{RewriteRulePlan, RewriteRuleScanCursor};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplaceAllTraversalOutcome {
@@ -53,7 +54,7 @@ impl Session {
         source: RuleApplicationSource,
     ) -> Result<Expr, EvalError> {
         let outcome_result =
-            self.apply_replace_all_owned(expr, SharedRewriteRules::from(rules), source);
+            self.apply_replace_all_owned(expr, RewriteRulePlan::from_slice(rules), source);
         self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
     }
 
@@ -64,22 +65,29 @@ impl Session {
         source: RuleApplicationSource,
     ) -> Result<Option<Expr>, EvalError> {
         let normalized_expr = self.normalize_match_expr(&expr);
-        self.apply_rules_once_from_list(expr, normalized_expr, rules.into(), source, 0)
+        // Replace and ReplaceAt currently hand this helper a fresh rule Vec for
+        // each target. Building an index here would merely replace one linear
+        // scan with one linear index build; ReplaceAll shares its plan across
+        // the whole traversal and is the indexed caller.
+        let rules = RewriteRulePlan::linear(rules);
+        let cursor = rules.start_scan(&normalized_expr);
+        self.apply_rules_once_from_list(expr, normalized_expr, rules, source, cursor)
     }
 
     fn apply_replace_all_owned(
         &mut self,
         expr: Expr,
-        rules: SharedRewriteRules,
+        rules: RewriteRulePlan,
         source: RuleApplicationSource,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
         let normalized_expr = self.normalize_match_expr(&expr);
+        let cursor = rules.start_scan(&normalized_expr);
         let replace_result = self.apply_rules_once_from_list(
             expr.clone(),
             normalized_expr,
             rules.clone(),
             source,
-            0,
+            cursor,
         );
 
         self.drive_internal_value(replace_result, move |session, outcome| match outcome {
@@ -94,7 +102,7 @@ impl Session {
     fn apply_replace_all_after_miss(
         &mut self,
         expr: Expr,
-        rules: SharedRewriteRules,
+        rules: RewriteRulePlan,
         source: RuleApplicationSource,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
         match expr {
@@ -150,7 +158,7 @@ impl Session {
         head: Expr,
         mut rewritten_args: Vec<Expr>,
         remaining_args: SharedArgs,
-        rules: SharedRewriteRules,
+        rules: RewriteRulePlan,
         source: RuleApplicationSource,
         changed: bool,
         hold_attribute: HoldAttribute,
@@ -226,22 +234,24 @@ impl Session {
         &mut self,
         expr: Expr,
         normalized_expr: Expr,
-        rules: SharedRewriteRules,
+        rules: RewriteRulePlan,
         source: RuleApplicationSource,
-        mut index: usize,
+        mut cursor: RewriteRuleScanCursor,
     ) -> Result<Option<Expr>, EvalError> {
         loop {
+            let Some(index) = rules.next_rule_index(&mut cursor) else {
+                return Ok(None);
+            };
             let Some(rule) = rules.get(index) else {
                 return Ok(None);
             };
-            let would_reject = !Self::definition_lhs_could_match_candidate(
+            let would_reject = !self.definition_lhs_could_match_candidate(
                 &rule.lhs,
                 &rule.matcher,
                 &normalized_expr,
             );
             record_profile_rewrite_rule_prefilter_candidate(would_reject);
             if would_reject {
-                index += 1;
                 continue;
             }
             let matcher = rule.matcher.clone();
@@ -272,7 +282,7 @@ impl Session {
                                     normalized_expr,
                                     rules,
                                     source,
-                                    index + 1,
+                                    cursor,
                                 );
                             }
 
@@ -291,7 +301,6 @@ impl Session {
             record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
 
             if !outcome.matched {
-                index += 1;
                 continue;
             }
 

@@ -64,7 +64,7 @@ impl Session {
         record_profile_definition_dispatch_candidate("sub_value", &symbol);
         let runtime_profile_prefilter = runtime_path_timing_start("sub_values.prefilter");
         let prefilter_start = definition_dispatch_timing_start();
-        let could_match = Self::definition_lhs_could_match_candidate(
+        let could_match = self.definition_lhs_could_match_candidate(
             &sub_value.lhs,
             &sub_value.matcher,
             &normalized_candidate,

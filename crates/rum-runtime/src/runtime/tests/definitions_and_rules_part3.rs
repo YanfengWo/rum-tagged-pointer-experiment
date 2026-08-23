@@ -54,6 +54,43 @@ fn replaceall_shape_prefilter_stays_conservative_for_head_attributes() {
 }
 
 #[test]
+fn replaceall_exact_rule_index_preserves_first_rule_priority() {
+    let exact_rules = (1..=32)
+        .map(|value| format!("{value} -> exact{value}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut session = session_with_test_control_builtins();
+
+    let pattern_first = format!("7 /. {{x_Integer -> pattern, {exact_rules}}}");
+    assert_eq!(
+        session.eval_text(&pattern_first).unwrap().value.to_string(),
+        "pattern"
+    );
+
+    let exact_first = format!("7 /. {{{exact_rules}, x_Integer -> pattern}}");
+    assert_eq!(
+        session.eval_text(&exact_first).unwrap().value.to_string(),
+        "exact7"
+    );
+
+    let exact_miss = format!("99 /. {{{exact_rules}, x_Integer -> pattern}}");
+    assert_eq!(
+        session.eval_text(&exact_miss).unwrap().value.to_string(),
+        "pattern"
+    );
+
+    let duplicate_exact = format!("7 /. {{7 -> first, {exact_rules}, 7 -> second}}");
+    assert_eq!(
+        session
+            .eval_text(&duplicate_exact)
+            .unwrap()
+            .value
+            .to_string(),
+        "first"
+    );
+}
+
+#[test]
 fn replaceall_traverses_nested_expressions() {
     let mut session = session_with_test_control_builtins();
 
