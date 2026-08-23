@@ -131,6 +131,9 @@ ClearAll[
   fPattern,
   list10,
   rulesSimple,
+  gMicroWideTraversal,
+  gMicroWideAssociation,
+  gMicroReplacePartRules,
   gMicroAppendListSmall,
   gMicroAppendListLarge,
   gMicroAppendPartOuter1000Small,
@@ -217,6 +220,11 @@ rumMicroOnce[label_String, nExpr_, expr_] := Module[
 xOwn = 123;
 list10 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 rulesSimple = {a -> 1, b -> 2, c -> 3};
+gMicroWideTraversal = Range[rumMicroN[1600]];
+gMicroWideAssociation = AssociationThread[
+  Range[rumMicroN[1600]] -> Range[rumMicroN[1600]]
+];
+gMicroReplacePartRules = Table[{1} -> i, {i, 1, rumMicroN[1600]}];
 fExact[1] = 2;
 fPattern[x_Integer] := x + 1;
 
@@ -263,6 +271,41 @@ rumMicroOnce["downvalue-pattern-miss-repeat", rumMicroN[5000], Do[fPattern["x"],
 rumMicroBench["matchq-integer-success", rumMicroN[1000], MatchQ[1, _Integer]];
 rumMicroBench["matchq-integer-fail", rumMicroN[1000], MatchQ["x", _Integer]];
 rumMicroBench["replaceall-simple", rumMicroN[500], a /. rulesSimple];
+rumMicroOnce[
+  "cases-wide-no-match",
+  rumMicroN[1600],
+  Cases[gMicroWideTraversal, _String, {1}]
+];
+rumMicroOnce[
+  "count-wide-no-match",
+  rumMicroN[1600],
+  Count[gMicroWideTraversal, _String, {1}]
+];
+rumMicroOnce[
+  "position-wide-no-match",
+  rumMicroN[1600],
+  Position[gMicroWideTraversal, _String, {1}]
+];
+rumMicroOnce[
+  "deletecases-wide-no-match",
+  rumMicroN[1600],
+  DeleteCases[gMicroWideTraversal, _String, {1}]
+];
+rumMicroOnce[
+  "deletecases-wide-association-no-match",
+  rumMicroN[1600],
+  DeleteCases[gMicroWideAssociation, _String, {1}]
+];
+rumMicroOnce[
+  "replace-wide-no-match",
+  rumMicroN[1600],
+  Replace[gMicroWideTraversal, z -> 0, {1}]
+];
+rumMicroOnce[
+  "replacepart-wide-rule-list",
+  rumMicroN[1600],
+  ReplacePart[{0}, gMicroReplacePartRules]
+];
 
 rumMicroBench["string-repeat-small", rumMicroN[500], StringRepeat["a", 3]];
 rumMicroBench["character-range-small", rumMicroN[200], CharacterRange["a", "z"]];

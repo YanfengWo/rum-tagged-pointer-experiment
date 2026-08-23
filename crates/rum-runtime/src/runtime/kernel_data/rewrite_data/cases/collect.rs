@@ -130,6 +130,7 @@ impl Session {
 
                     self.collect_cases_children(
                         children,
+                        0,
                         expr,
                         spec,
                         traversal,
@@ -175,6 +176,7 @@ impl Session {
 
                 self.collect_cases_children(
                     children,
+                    0,
                     expr,
                     spec,
                     traversal,
@@ -220,6 +222,7 @@ impl Session {
     fn collect_cases_children(
         &mut self,
         children: Vec<(Expr, bool)>,
+        child_index: usize,
         expr: Expr,
         spec: CasesSpec,
         traversal: CasesTraversalConfig,
@@ -228,7 +231,7 @@ impl Session {
         mut matches: Vec<Expr>,
         max_child_depth: usize,
     ) -> Result<CasesCollectionOutcome, EvalError> {
-        let Some(((child, contributes_depth), rest)) = children.split_first() else {
+        let Some((child, contributes_depth)) = children.get(child_index).cloned() else {
             let depth = max_child_depth.saturating_add(1);
             return self.finish_cases_at_current_node(
                 expr,
@@ -241,16 +244,13 @@ impl Session {
             );
         };
 
-        let contributes_depth = *contributes_depth;
         let child_result = self.collect_cases_owned(
-            child.clone(),
+            child,
             spec.clone(),
             traversal,
             level,
             seen_before + matches.len(),
         );
-        let rest = rest.to_vec();
-
         self.drive_internal_value(child_result, move |session, child_outcome| {
             matches.extend(child_outcome.matches);
             let next_max_child_depth = if contributes_depth {
@@ -268,7 +268,8 @@ impl Session {
             }
 
             session.collect_cases_children(
-                rest,
+                children,
+                child_index + 1,
                 expr,
                 spec,
                 traversal,

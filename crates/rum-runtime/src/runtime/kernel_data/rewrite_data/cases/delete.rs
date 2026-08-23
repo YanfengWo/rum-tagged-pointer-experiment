@@ -212,6 +212,7 @@ impl Session {
 
         self.delete_cases_call_children_from_queue(
             children,
+            0,
             pattern,
             traversal,
             level,
@@ -228,6 +229,7 @@ impl Session {
     fn delete_cases_call_children_from_queue(
         &mut self,
         children: Vec<(bool, Expr, bool)>,
+        child_index: usize,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
@@ -238,7 +240,7 @@ impl Session {
         rebuilt_head: Option<Expr>,
         head_deleted: bool,
     ) -> Result<DeleteCasesOutcome, EvalError> {
-        if children.is_empty() {
+        let Some((is_head, child, contributes_depth)) = children.get(child_index).cloned() else {
             if head_deleted {
                 return Ok(DeleteCasesOutcome {
                     result: DeleteCasesResult::Splice(rebuilt_args),
@@ -265,10 +267,7 @@ impl Session {
                 outcome.deleted_count += deleted_before - subtree_start;
                 Ok(outcome)
             });
-        }
-
-        let (is_head, child, contributes_depth) = children[0].clone();
-        let rest = children[1..].to_vec();
+        };
 
         let child_result =
             self.delete_cases_owned(child, pattern.clone(), traversal, level, deleted_before);
@@ -300,8 +299,9 @@ impl Session {
             }
 
             if child_outcome.exhausted {
-                let untouched_rest = rest
+                let untouched_rest = children
                     .iter()
+                    .skip(child_index + 1)
                     .filter_map(|(is_head, expr, _)| (!*is_head).then_some(expr.clone()))
                     .collect::<Vec<_>>();
                 next_args.extend(untouched_rest);
@@ -327,7 +327,8 @@ impl Session {
             }
 
             session.delete_cases_call_children_from_queue(
-                rest,
+                children,
+                child_index + 1,
                 pattern,
                 traversal,
                 level,
@@ -378,6 +379,7 @@ impl Session {
 
         self.delete_cases_association_children_from_queue(
             children,
+            0,
             pattern,
             traversal,
             level,
@@ -394,6 +396,7 @@ impl Session {
     fn delete_cases_association_children_from_queue(
         &mut self,
         children: Vec<(bool, Option<Expr>, Expr, bool)>,
+        child_index: usize,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
@@ -404,7 +407,9 @@ impl Session {
         rebuilt_head: Option<Expr>,
         head_deleted: bool,
     ) -> Result<DeleteCasesOutcome, EvalError> {
-        if children.is_empty() {
+        let Some((is_head, entry_key, child, contributes_depth)) =
+            children.get(child_index).cloned()
+        else {
             if head_deleted {
                 return Ok(DeleteCasesOutcome {
                     result: DeleteCasesResult::Keep(render_association(Vec::new())),
@@ -431,19 +436,10 @@ impl Session {
                 outcome.deleted_count += deleted_before - subtree_start;
                 Ok(outcome)
             });
-        }
+        };
 
-        let (is_head, entry_key, child, contributes_depth) = children[0].clone();
-        let rest = children[1..].to_vec();
-
-        let child_expr = child.clone();
-        let child_result = self.delete_cases_owned(
-            child_expr,
-            pattern.clone(),
-            traversal,
-            level,
-            deleted_before,
-        );
+        let child_result =
+            self.delete_cases_owned(child, pattern.clone(), traversal, level, deleted_before);
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             let deleted_before_next = deleted_before + child_outcome.deleted_count;
@@ -485,8 +481,9 @@ impl Session {
             }
 
             if child_outcome.exhausted {
-                let untouched_rest = rest
+                let untouched_rest = children
                     .iter()
+                    .skip(child_index + 1)
                     .filter_map(|(is_head, key, expr, _)| {
                         if *is_head {
                             None
@@ -514,7 +511,8 @@ impl Session {
             }
 
             session.delete_cases_association_children_from_queue(
-                rest,
+                children,
+                child_index + 1,
                 pattern,
                 traversal,
                 level,

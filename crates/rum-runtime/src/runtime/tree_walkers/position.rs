@@ -125,6 +125,7 @@ impl Session {
 
                     self.collect_position_children(
                         children,
+                        0,
                         expr,
                         pattern,
                         traversal,
@@ -191,6 +192,7 @@ impl Session {
 
                 self.collect_position_children(
                     children,
+                    0,
                     expr,
                     pattern,
                     traversal,
@@ -241,6 +243,7 @@ impl Session {
     fn collect_position_children(
         &mut self,
         children: Vec<(Expr, Vec<Expr>, bool)>,
+        child_index: usize,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
@@ -250,7 +253,8 @@ impl Session {
         mut positions: Vec<Expr>,
         max_child_depth: usize,
     ) -> Result<PositionCollectionOutcome, EvalError> {
-        let Some(((child, child_path, contributes_depth), rest)) = children.split_first() else {
+        let Some((child, child_path, contributes_depth)) = children.get(child_index).cloned()
+        else {
             let depth = max_child_depth.saturating_add(1);
             return self.finish_positions_at_current_node(
                 expr,
@@ -264,16 +268,14 @@ impl Session {
             );
         };
 
-        let contributes_depth = *contributes_depth;
         let child_result = self.collect_positions_owned(
-            child.clone(),
+            child,
             pattern.clone(),
             traversal,
             level,
-            child_path.clone(),
+            child_path,
             seen_before + positions.len(),
         );
-        let rest = rest.to_vec();
 
         self.drive_internal_value(child_result, move |session, child_outcome| {
             positions.extend(child_outcome.positions);
@@ -292,7 +294,8 @@ impl Session {
             }
 
             session.collect_position_children(
-                rest,
+                children,
+                child_index + 1,
                 expr,
                 pattern,
                 traversal,

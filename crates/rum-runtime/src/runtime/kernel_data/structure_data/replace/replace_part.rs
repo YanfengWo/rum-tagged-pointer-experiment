@@ -44,27 +44,26 @@ impl Session {
             }
         };
 
-        self.apply_replace_part_rules_owned(args[0].clone(), rules)
+        self.apply_replace_part_rules_owned(args[0].clone(), rules, 0)
     }
     fn apply_replace_part_rules_owned(
         &mut self,
         expr: Expr,
         rules: Vec<ReplacePartRule>,
+        rule_index: usize,
     ) -> Result<Expr, EvalError> {
-        let Some((first, rest)) = rules.split_first() else {
+        let Some(rule) = rules.get(rule_index).cloned() else {
             return Ok(expr);
         };
 
-        let rule = first.clone();
-        let rest = rest.to_vec();
         let targets_result = self.resolve_rule_targets_owned(expr.clone(), rule.clone());
         self.drive_internal_value(targets_result, move |session, targets| {
             if targets.is_empty() {
-                session.apply_replace_part_rules_owned(expr, rest)
+                session.apply_replace_part_rules_owned(expr, rules, rule_index + 1)
             } else {
                 let plan = build_replace_plan_from_targets(targets);
                 let updated = session.apply_replace_plan_owned(expr, plan)?;
-                session.apply_replace_part_rules_owned(updated, rest)
+                session.apply_replace_part_rules_owned(updated, rules, rule_index + 1)
             }
         })
     }

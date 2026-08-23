@@ -254,6 +254,7 @@ impl Session {
 
                     self.count_pattern_children(
                         children,
+                        0,
                         expr,
                         pattern,
                         traversal,
@@ -309,6 +310,7 @@ impl Session {
 
                 self.count_pattern_children(
                     children,
+                    0,
                     expr,
                     pattern,
                     traversal,
@@ -354,6 +356,7 @@ impl Session {
     fn count_pattern_children(
         &mut self,
         children: Vec<(Expr, bool)>,
+        child_index: usize,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
@@ -362,7 +365,7 @@ impl Session {
         count: usize,
         max_child_depth: usize,
     ) -> Result<TraversalCountOutcome, EvalError> {
-        let Some(((child, contributes_depth), rest)) = children.split_first() else {
+        let Some((child, contributes_depth)) = children.get(child_index).cloned() else {
             let depth = max_child_depth.saturating_add(1);
             return self.finish_count_at_current_node(
                 expr,
@@ -375,16 +378,13 @@ impl Session {
             );
         };
 
-        let contributes_depth = *contributes_depth;
         let child_result = self.count_pattern_matches_owned(
-            child.clone(),
+            child,
             pattern.clone(),
             traversal,
             level,
             seen_before + count,
         );
-        let rest = rest.to_vec();
-
         self.drive_internal_value(child_result, move |session, child_outcome| {
             let next_count = count + child_outcome.count;
             let next_max_child_depth = if contributes_depth {
@@ -402,7 +402,8 @@ impl Session {
             }
 
             session.count_pattern_children(
-                rest,
+                children,
+                child_index + 1,
                 expr,
                 pattern,
                 traversal,

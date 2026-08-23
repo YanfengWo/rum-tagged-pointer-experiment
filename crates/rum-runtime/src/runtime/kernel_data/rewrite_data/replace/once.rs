@@ -247,6 +247,7 @@ impl Session {
                         session.replace_call_children_owned(
                             outcome.expr,
                             args,
+                            0,
                             rules,
                             levels,
                             child_level,
@@ -260,6 +261,7 @@ impl Session {
                     self.replace_call_children_owned(
                         head,
                         args,
+                        0,
                         rules,
                         levels,
                         child_level,
@@ -277,6 +279,7 @@ impl Session {
         &mut self,
         head: Expr,
         args: Vec<Expr>,
+        child_index: usize,
         rules: Vec<RewriteRule>,
         levels: CasesLevelSpec,
         child_level: usize,
@@ -285,7 +288,7 @@ impl Session {
         max_child_depth: usize,
         changed: bool,
     ) -> Result<ReplaceOutcome, EvalError> {
-        let Some((child, rest)) = args.split_first() else {
+        let Some(child) = args.get(child_index).cloned() else {
             return Ok(ReplaceOutcome {
                 expr: Expr::call(head, rebuilt_args),
                 depth: max_child_depth.saturating_add(1),
@@ -293,14 +296,8 @@ impl Session {
             });
         };
 
-        let child_result = self.replace_owned(
-            child.clone(),
-            rules.clone(),
-            levels,
-            child_level,
-            include_heads,
-        );
-        let rest = rest.to_vec();
+        let child_result =
+            self.replace_owned(child, rules.clone(), levels, child_level, include_heads);
         self.drive_internal_value(child_result, move |session, outcome| {
             let mut rebuilt_args = rebuilt_args;
             let child_changed = outcome.changed;
@@ -323,7 +320,8 @@ impl Session {
             };
             session.replace_call_children_owned(
                 head,
-                rest,
+                args,
+                child_index + 1,
                 rules,
                 levels,
                 child_level,
