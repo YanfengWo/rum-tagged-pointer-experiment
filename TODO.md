@@ -18,8 +18,8 @@ three most recent P0 changes are:
 - `97873ee` — `Module` escape closure is computed with a linear worklist;
 - `d97abd7` — wide UpValue candidate-symbol discovery uses an adaptive index.
 
-The broader completed optimization line is summarized in
-[PROGRESS.md](./PROGRESS.md#2026-08-22--08-23--post-v010-safe-rust-algorithmic-performance-sweep).
+The broader completed optimization line is summarized in the 2026-08-22/23
+entry of [PROGRESS.md](./PROGRESS.md).
 The remaining measured work is P1, in this order:
 
 1. **Ordered matcher cursor.** The generic ordered, non-`Flat`, all-`Single`
@@ -67,6 +67,10 @@ regressions and space-for-time tradeoffs.
 - Keep suspension-safe helper state on typed continuation values. `Monitor`
   refresh and `ValueQ` rollback remain best-effort unless their documented
   contract is deliberately promoted.
+- The same-expression evaluation-cycle guard can reject recursive definitions
+  whose visible call shape repeats while other session state progresses. Relax
+  it only with an explicit progress model that preserves genuine-cycle
+  detection.
 - Continue splitting formatter planner/builder/render/test modules by
   responsibility as they grow; do not create a separate string crate without a
   real ownership boundary.

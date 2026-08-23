@@ -92,8 +92,9 @@ The current core includes useful coverage for:
 - sequence behavior: `SequenceHold`
 - selected protection and numeric metadata used by the builtin catalog
 
-The implementation is still an early subset. The reference lists attributes for
-each builtin entry.
+The implemented attribute set is deliberately bounded to these documented
+families. The generated reference lists the exact attributes for each builtin
+entry.
 
 Attribute-driven behavior is part of evaluation, not syntax lowering.
 

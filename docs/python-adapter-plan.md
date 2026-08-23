@@ -2,10 +2,10 @@
 
 Decision (2026-07-06): the Python binding is a **separate downstream
 repository**, not a crate in this workspace. It embeds `rum` into Python via
-`pyo3` on top of `rum-host`, and it starts after this repository's
-publication mechanics are settled (a path dependency works earlier if
-needed; wheels are self-contained either way). This repository does not grow
-Python binding code, packaging workflows, or Python-specific examples.
+`pyo3` on top of `rum-host`. The repository and `v0.1.0` host boundary are now
+published, but the binding remains deferred until a concrete downstream
+consumer requests it. This repository does not grow Python binding code,
+packaging workflows, or Python-specific examples.
 
 This keeps the kernel workspace buildable with nothing but the declared Rust
 toolchain, and it makes the binding what it architecturally is: a downstream
@@ -16,7 +16,7 @@ consumer of the public embedding boundary, like any other host.
 The binding binds to `rum-host`, never directly to broad `rum-runtime`
 internals. `rum`-side obligations are only: keep `rum-host` a sufficient,
 documented embedding boundary, and publish the embedding adoption-cost
-numbers tracked in `TODO.md`.
+numbers recorded in the [embedding guide](./guide/embedding.md).
 
 The intended stack remains:
 
@@ -42,13 +42,10 @@ Do not let Python concerns reshape `rum-runtime`.
 
 ## Revival Criteria
 
-Reopen Python adapter work only when at least one of these is true:
-
-- a concrete downstream project needs Python embedding
-- `rum-host` has a stable enough v0.1 contract to wrap without exposing
-  evaluator internals
-- a small Python smoke surface can be implemented without expanding kernel
-  scope
+Reopen Python adapter work only when a concrete downstream project needs Python
+embedding. At that point, also require that the binding can stay on the
+documented `rum-host` contract and that a small smoke surface can be delivered
+without expanding kernel scope.
 
 If revived, start with:
 

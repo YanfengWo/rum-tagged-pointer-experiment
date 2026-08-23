@@ -155,8 +155,9 @@ The current implemented precedence is:
 
 This is the user-facing model for the current core subset.
 
-It is usable, but not exhaustive. The runtime audit records remaining
-long-tail definition-lattice work.
+The generated reference defines the supported definition and pattern forms;
+additional forms require an explicit rum contract rather than an assumed
+definition-lattice extension.
 
 ## Limits
 
@@ -166,14 +167,8 @@ The current orderless sequence matcher uses `MAX_MATCH_DEPTH = 512`. When that
 guard trips through a top-level recoverable evaluation path, the terminated
 reason is `PatternMatchRecursionLimit`.
 
-There are known low-urgency corners in `Flat` plus `Orderless` plus `Optional`
-combinations:
-
-- binding order for flat-wrapped singletons
-- `ReplaceList` under-collection of grouped flat matches
-- their compound interaction
-
-Those are documented limits, not behavior to paper over in examples.
-
-If your rule set depends on those corners, isolate the case in tests before
-using it as a contract.
+The previously recorded `Flat` plus `Orderless` plus `Optional` gaps are closed:
+flat-wrapped singleton candidates, optional omission collection, and their
+compound interactions have rum-native regression coverage. Rule sets that
+depend on subtle candidate ordering should still pin the exact documented rum
+behavior in their own tests.

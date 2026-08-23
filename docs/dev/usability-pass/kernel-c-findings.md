@@ -1,5 +1,12 @@
 # Kernel C Usability Audit Findings
 
+> Terminology correction (2026-08-23): the `Timing` and `AbsoluteTiming` rows
+> below called their elapsed result "wall-clock" even while citing the
+> implementation's Rust `Instant`. That wording was inaccurate. The operations
+> measure monotonic elapsed time; `AbsoluteTime` is the civil wall-clock reader.
+> The generated reference now states this explicitly. The table remains an
+> otherwise unchanged historical audit record.
+
 ## Count reconciliation and coverage
 
 The installed-reference subtraction reproduces the brief exactly: 612 installed

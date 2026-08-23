@@ -1,5 +1,9 @@
 # Host Adapter Plan
 
+Status: the initial plan and Jupyter migration are complete. This file retains
+the design rationale; the current API contract is `rum-host` rustdoc and the
+[embedding guide](./guide/embedding.md).
+
 ## Goal
 
 `rum-host` is the first-class Rust embedding crate for `rum`.
@@ -8,7 +12,7 @@ Its job is to expose a narrow, stable, host-oriented API on top of
 `rum-runtime` so backend services, rule engines, and DSL-oriented applications
 can embed the kernel without depending directly on evaluator internals.
 
-This crate is meant to become the reference host boundary for:
+This crate is the reference host boundary for:
 
 - long-running Rust services
 - rule-engine style embedding
@@ -32,16 +36,15 @@ This crate is meant to become the reference host boundary for:
 - `rum-host`
   - owns the narrow public embedding surface built on top of `rum-runtime`
 - `rum-jupyter`
-  - remains an optional protocol adapter, but should consume `rum-host` for
-    request handling before its basic Notebook behavior is treated as part of
-    the `v0.1` delivery surface
+  - remains an optional protocol adapter and consumes `rum-host` for kernel
+    request handling; its Notebook behavior shipped in the `v0.1` surface
 - future Python adapter
   - should wrap `rum-host` rather than binding directly to broad
     `rum-runtime` internals
 
 ## Crate Boundary
 
-The planned crate should be optional and dependency-light.
+The crate is intentionally narrow and dependency-light.
 
 It should provide:
 
@@ -54,9 +57,9 @@ It should provide:
 
 It should avoid re-exporting broad internal modules from `rum-runtime`.
 
-## Proposed Public Surface
+## Initial Public-Surface Proposal (historical)
 
-The initial public surface stays intentionally small:
+The initial proposal was intentionally small:
 
 - `HostSessionBuilder`
 - `HostSession`
@@ -76,7 +79,7 @@ The initial public surface stays intentionally small:
 - `HostIsCompleteRequest`
 - `HostIsCompleteResponse`
 
-That surface should cover these flows:
+That surface covered these flows:
 
 - `parse`
 - `eval`
@@ -85,13 +88,13 @@ That surface should cover these flows:
 - `complete`
 - `is_complete`
 
-The public surface may also include:
+The delivered surface also includes:
 
 - session lifecycle helpers
 - resource-limit configuration
 - message/print/output accessors
 
-It should not initially expose:
+It should not expose:
 
 - raw definition tables
 - matcher IR
@@ -136,21 +139,18 @@ bundles, Jupyter wire schemas, and Python binding policy.
 
 ## Relationship To Python
 
-Python adapter work is frozen for the current stabilization phase.
+Python adapter work remains a separate, frozen downstream direction. Publication
+and the Rust host boundary are complete, but no concrete consumer currently
+justifies binding or packaging work in this repository.
 
-If it is revived later, Python should come after `rum-host`, not before it.
-The order would be:
-
-1. continue hardening the Rust host contract in `rum-host`
-2. validate it through Rust-side embedding examples and tests
-3. only then decide whether a thin Python adapter is worth adding on top of
-   that contract
+If it is revived later, Python wraps the existing `rum-host` contract; it does
+not open a preliminary kernel or host-surface expansion line.
 
 Until a concrete downstream need appears, do not spend roadmap time on Python
 API shape, packaging, or examples. This keeps Python ergonomics possible later
 without letting binding details reshape core runtime boundaries too early.
 
-## Validation Strategy
+## Delivered Validation Strategy
 
 The first validation wave for `rum-host` includes:
 
@@ -165,7 +165,7 @@ The first validation wave for `rum-host` includes:
   example; broader showcase work should be driven by concrete external
   pressure from a large downstream package or workload
 
-## Suggested Build Order
+## Delivered Build Order (historical)
 
 1. define the stable host-facing contract in documentation
 2. identify which existing `rum-runtime` types are already close enough to wrap
@@ -176,19 +176,17 @@ The first validation wave for `rum-host` includes:
 7. add one documented real-Notebook smoke/deploy path
 8. keep Python frozen unless a concrete downstream need reopens it
 
-Items 1 through 5 now have an initial implementation. The first hardening pass
-has also split the `rum-host` facade model into request, outcome, and
-inspection modules, added public adapter-contract regression coverage, and
-landed a minimal Rust embedding example. The next work should validate the
-surface through `rum-jupyter` migration and concrete downstream pressure, not
-expand the public surface by default.
+Items 1 through 7 are complete. The facade model is split into request,
+outcome, and inspection modules; public contract tests and the minimal Rust
+embedding example are present; `rum-cli`, `rum-repl`, and `rum-jupyter` consume
+the facade; and the documented Notebook smoke/deploy path shipped in the
+`v0.1.0` boundary. Future surface growth requires concrete downstream pressure.
 
 ## Jupyter Migration Target
 
-The earlier "reuse later" stance has been superseded by the `v0.1` boundary:
-`rum-jupyter` routes kernel-facing request handling through `rum-host`. The
-remaining `v0.1` validation target is a documented real-Notebook deploy path
-and frontend smoke.
+The earlier "reuse later" stance was superseded by the `v0.1` boundary:
+`rum-jupyter` routes kernel-facing request handling through `rum-host`, and the
+documented real-Notebook deploy path and frontend smoke are complete.
 
 The migration moved these responsibilities behind `rum-host`:
 
@@ -209,12 +207,9 @@ These responsibilities remain in `rum-jupyter`:
 - IOPub lifecycle envelopes and MIME bundle construction
 - graceful handling of unsupported Jupyter messages
 
-## Initial Open Questions
+## Deferred Design Questions
 
 - should `rum-host` eventually expose a carefully bounded raw-expression
   escape hatch, or keep all expression data behind rendered/facade values?
 - which additional structured outputs should be guaranteed stable in v1 of
   `rum-host` beyond result, print, message, and trace?
-- does the basic Notebook path need a small `HostStructuredOutput` extension,
-  or are the current text-only result, print, message, and trace outputs enough
-  for `v0.1`?

@@ -25,7 +25,7 @@ Use the lowest layer that can prove the contract being tested.
    mutation, messages, held evaluation, suspension/resume, and `rum`-native
    request behavior, asserted against the documented contract.
 3. **Host and adapter contract tests.** Own the embedding lifecycle in
-   `rum-host` (interrupt/cancel, wall-clock timeout, panic isolation and
+   `rum-host` (interrupt/cancel, monotonic elapsed-time timeout, panic isolation and
    poison recovery, `reset()`, snapshot/restore round-trips, typed
    `HostValue`, capability sandbox, `Send`/concurrency contract) and the
    protocol surface in `rum-jupyter`. These are the layers a host depends on;

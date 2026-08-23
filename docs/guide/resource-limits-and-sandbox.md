@@ -18,6 +18,7 @@ The host hardening document gives the implementation background:
 - `native_stack_limit` (default: 6,291,456 bytes)
 - `replace_repeated_limit`
 - `evaluation_pass_limit`
+- `eval_memory_limit` (optional modeled-memory ceiling per request)
 - `generated_element_limit`
 - `integer_work_limit`
 - `iteration_work_limit`
@@ -125,8 +126,8 @@ When the match-depth guard trips through a recoverable top-level evaluation,
 the terminated reason is `PatternMatchRecursionLimit` and the message tag is
 `General::matchreclim`.
 
-The patterns chapter lists known `Flat` plus `Orderless` plus `Optional`
-corners.
+The patterns chapter and generated reference define the supported pattern
+interactions; the former `Flat` plus `Orderless` plus `Optional` debt is closed.
 
 ## Interrupt And Cancel
 
@@ -142,10 +143,10 @@ recoverable value path.
 
 The handle is invalidated by `reset()`.
 
-## Wall-Clock Timeout
+## Elapsed-Time Timeout
 
 `HostSession::eval_with_timeout(source, duration)` installs a per-evaluation
-deadline.
+deadline measured with Rust's monotonic `Instant`, not the civil wall clock.
 
 When the deadline is exceeded, the recoverable value path returns
 `TerminatedEvaluation["TimeConstraint"]`.
@@ -165,16 +166,21 @@ The current capability classes are:
 - `Random`
 - `Diagnostic`
 - `Process`
+- `Interactive`
 
 Most language and rewrite work is `Pure`.
 
-Filesystem readers such as `Get`, `Needs`, and `FindFile` are `FileRead`.
+Filesystem readers such as `Get`, `Needs`, `FindFile`, and `FileNames` are
+`FileRead`.
 
 Filesystem writers such as `Save` and `DumpSave` are `FileWrite`.
 
-Wall-clock and time-effect builtins such as `AbsoluteTime`, `Timing`,
+Wall-clock and time-observing builtins such as `AbsoluteTime`, `Timing`,
 `AbsoluteTiming`, `RepeatedTiming`, `TimeConstrained`, `Pause`,
-`EvaluationData`, and `TestReport` are `Clock`.
+`EvaluationData`, and `TestReport` are `Clock`. `AbsoluteTime` reads the civil
+wall clock; elapsed-time operations use Rust's monotonic `Instant`. The shared
+capability class controls access to time effects, not the choice of clock used
+to measure an interval.
 
 `AbsoluteTime[]` is the current-time reader and requires `Clock`. `DateList` and
 `DateString` are pure UTC calendar conversions (`DateList[ts]`,
@@ -194,6 +200,9 @@ Instrumentation and resource-disclosure builtins such as `RumProfileSnapshot`,
 
 `Process` is reserved for future downstream process-control integrations and
 has no core builtins today.
+
+`Interactive` covers builtins such as `Input` and `InputString` that may ask the
+host for input or suspend a request pending a host response.
 
 ## Sandboxed Host Configuration
 
@@ -222,25 +231,30 @@ file access, `{Pure, Clock}` for time, `{Pure, Random}` for entropy, or
 Role or identity mapping is the caller's job. `rum` supplies the capability
 partition, policy object, and dispatch enforcement.
 
-## Memory Watchdog Pattern
+## Memory Ceilings And Hard RSS Limits
 
-The host-side memory-budget pattern uses `cancel_handle()`.
+`HostResourceLimits::eval_memory_limit` installs a modeled-memory ceiling for
+each request. A breach returns `TerminatedEvaluation["MemoryLimit"]`, classifies
+the termination as `MemoryLimit`, emits `General::memlim`, and leaves the
+session usable. Nested `MemoryConstrained` frames use the lower of their local
+limit and the request ceiling while active.
 
-The host monitors process RSS with platform code and calls `cancel()` if the
-process exceeds its memory budget.
+The model counts deterministic session/expression structures. It is not an
+allocator meter or process RSS measurement, so a native host that requires a
+hard process-wide memory bound must enforce one outside the kernel. One pattern
+is to monitor process RSS with platform code and trigger a previously obtained
+`cancel_handle()` when the process exceeds its budget.
 
 This keeps `rum-core`, `rum-runtime`, and `rum-host` free of platform-specific
-RSS polling while still giving a real process-wide memory bound to native
-hosts.
-
-`MemoryConstrained` exists as a cooperative memory-proxy subset, but a host
-RSS watchdog is the hardening pattern for embedding.
+RSS polling while allowing embedders to combine an in-kernel deterministic
+ceiling with an OS-level hard boundary.
 
 Deliberate contract note: a tripped memory constraint is CONSUMED by
 `MemoryConstrained` itself (it returns its fallback or `$Aborted` with
-`General::memlim`). It is the one limit that does not surface as a
-top-level `TerminatedEvaluation[...]` value — unlike the budgets listed
-above — because the construct that requested the bound is also its handler.
+`General::memlim`). That local frame does not surface as a top-level
+`TerminatedEvaluation[...]` value because the construct that requested the
+bound is also its handler. A breach of the outer request ceiling does surface
+as `TerminatedEvaluation["MemoryLimit"]`.
 
 ## Poison Recovery
 

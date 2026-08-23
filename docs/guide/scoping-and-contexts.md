@@ -28,8 +28,9 @@ the body.
 It is useful when code should temporarily see another value for an existing
 symbol.
 
-The current implementation localizes the covered categories of symbol state,
-but the runtime audit notes that the broader state space is not yet exhaustive.
+The implementation localizes the symbol-state categories covered by `Block`'s
+documented contract. New categories are not implicitly localized; they require
+an explicit contract and regression tests.
 
 ```text
 $ cargo run -q -p rum-cli -- --eval 'x = 10; {With[{x = 1}, x + 1], Block[{x = 1}, x + 1], x}'

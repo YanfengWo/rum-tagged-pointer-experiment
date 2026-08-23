@@ -46,7 +46,7 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     .protected(),
     BuiltinSpec::ordinary_with_hold(
         "Timing",
-        "Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.",
+        "Evaluates an expression and returns {elapsed, value}, with elapsed exact rational seconds measured by a monotonic clock.",
         HoldAttribute::HoldAll,
         builtin_timing,
     )
@@ -67,7 +67,7 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     .with_capability(Capability::Clock),
     BuiltinSpec::ordinary_with_hold(
         "AbsoluteTiming",
-        "Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.",
+        "Evaluates an expression and returns {elapsed, value}, with elapsed exact rational seconds measured by a monotonic clock.",
         HoldAttribute::HoldAll,
         builtin_absolute_timing,
     )
@@ -78,7 +78,7 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     .with_capability(Capability::Clock),
     BuiltinSpec::ordinary_with_attributes(
         "RepeatedTiming",
-        "Evaluates an expression multiple times and returns {elapsed, value} in the current fixed-sample wall-clock subset.",
+        "Evaluates an expression over a fixed sample set and returns {elapsed, value}, using the minimum monotonic elapsed time.",
         AttributeSet::empty()
             .with(Attribute::HoldFirst)
             .with(Attribute::SequenceHold),

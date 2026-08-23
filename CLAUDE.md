@@ -99,7 +99,10 @@ rather than duplicating them.
 - **No new `unsafe` in `rum-core`/`rum-runtime`** (zero today).
 - **Measure honestly**: profiling env OFF for any timing number; one variable
   per A/B; persist raw output to files before parsing; derive timeouts from
-  data, not guesses.
+  data, not guesses. Elapsed probes use in-kernel `AbsoluteTiming` backed by
+  Rust's monotonic `Instant`, never wall-clock differencing. A competing
+  CPU-heavy workload invalidates timing judgments, and the benchmark runs in
+  the ordinary workspace sandbox.
 
 ## Diagnosis method (durable lessons)
 
@@ -166,6 +169,31 @@ rather than duplicating them.
   evaluator.
 
 ## Current direction (read these for state)
+
+- **Post-`v0.1.0` safe-Rust algorithmic audit is the active maintenance
+  line (2026-08-22/23).** The 50 accepted performance commits through
+  `d97abd7` cover the P0 tranche and a broad first sweep of evaluator,
+  matcher, replacement, collection, association, string, and polynomial
+  wide paths. The current summary is in `PROGRESS.md`; do not reconstruct
+  status from the historical bullets below.
+- **Remaining P1 order is authoritative in `TODO.md`:** (1) ordered
+  non-`Flat` all-`Single` matcher cursor, (2) shared `RewriteRulePlan` plus
+  negative-level-only depth work for `Replace`, (3) the bounded
+  `RumTokens`/TOML/`Reap` scans. The matcher candidate is not accepted until
+  an uncontended A/B can be run; timing stays paused while competing CPU load
+  is present.
+- Full polynomial factorization is separately deferred by user decision. The
+  current linear-factor/monomial subset stays documented as such until a
+  coherent finite-field polynomial layer is designed.
+- The July statement that wide symbolic `Plus`/`Times` grouping remained an
+  accepted O(n^2) tradeoff is superseded by `48838b3`'s adaptive group index.
+  Current docs and TODO have been corrected.
+
+## Historical direction through 2026-07-30
+
+The remainder of this section is a point-in-time director log. It explains
+decisions and measurement lessons but is not the current roadmap; use
+`TODO.md`, `CHANGELOG.md`, and the latest `PROGRESS.md` entry for present state.
 
 - **INCREMENTAL CONTAINER UPDATE + PART ASSIGNMENT — BOTH COMPLETE
   (2026-07-29/30, briefs 291-300). Maintenance-era work, triggered by a

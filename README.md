@@ -2,7 +2,7 @@
 
 `rum` is an embeddable symbolic term-rewriting language and runtime written in
 Rust, built sandbox-first: sessions run under caller-set resource limits
-(recursion, iteration, parse depth, wall-clock timeout), support interrupt and
+(recursion, iteration, parse depth, elapsed-time timeout), support interrupt and
 cancel, can be reset, snapshotted, and restored, and enforce a per-session
 capability policy so default sandboxed evaluation is deterministic and a host
 can evaluate untrusted scripts safely.
@@ -38,7 +38,7 @@ The core language slice is substantial and tested:
   combinatorics, structure and list operations, associations, functional
   operators, strings, predicates, logic, and control flow
 - `rum-host` is the Rust embedding boundary: typed outcomes, interrupt/cancel,
-  wall-clock timeout, panic isolation with session poisoning and recovery,
+  monotonic elapsed-time timeout, panic isolation with session poisoning and recovery,
   `reset()`, snapshot / restore-from-bytes, and a sandbox capability policy
   (`HostConfig::sandboxed()`)
 - `rum-cli` and `rum-repl` are usable developer tools; `rum-jupyter` is an

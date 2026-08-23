@@ -115,7 +115,7 @@ Returns the current exact rational Unix timestamp (seconds since 1970-01-01T00:0
 
 ### AbsoluteTiming
 
-Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.
+Evaluates an expression and returns {elapsed, value}, with elapsed exact rational seconds measured by a monotonic clock.
 
 - Attributes: `HoldAll`, `Protected`
 - Capability: `Clock`
@@ -4282,7 +4282,7 @@ Represents the current string-pattern repetition head for zero or more matches.
 
 ### RepeatedTiming
 
-Evaluates an expression multiple times and returns {elapsed, value} in the current fixed-sample wall-clock subset.
+Evaluates an expression over a fixed sample set and returns {elapsed, value}, using the minimum monotonic elapsed time.
 
 - Attributes: `HoldFirst`, `SequenceHold`, `Protected`
 - Capability: `Clock`
@@ -5579,7 +5579,7 @@ Multiplies a held symbol or exact Part target by an evaluated factor and stores 
 
 ### Timing
 
-Evaluates an expression and returns {elapsed, value} using the current wall-clock exact-rational subset.
+Evaluates an expression and returns {elapsed, value}, with elapsed exact rational seconds measured by a monotonic clock.
 
 - Attributes: `HoldAll`, `Protected`
 - Capability: `Clock`

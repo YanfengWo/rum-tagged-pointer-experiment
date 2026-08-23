@@ -66,13 +66,14 @@ Use `HostSession::builder()` when you need to change configuration:
 - `context_path`
 - `package_search_paths`
 - `file_io`
+- `entropy_source`
 - `tracing_enabled`
 - `asserts_enabled`
 - `install_core_builtins`
 - `builtin_installers`
 
-The default trusted configuration installs `StdFileIo`; sandboxed
-configuration omits a file provider.
+The default trusted configuration installs `StdFileIo` and
+`StdEntropySource`; sandboxed configuration omits both providers.
 
 Downstream builtin families install through
 `HostSession::builder().with_builtin_installer(...)`. Installers receive the
@@ -403,15 +404,15 @@ Construct the session through `HostSession::builder().with_config(...)` and
 pass `HostConfig::sandboxed()`.
 
 That API shape is the same one used by the host tests. The sandboxed policy
-blocks file, clock, and diagnostic builtins at dispatch, including
-runtime-constructed calls.
+blocks every non-`Pure` capability at dispatch, including runtime-constructed
+calls, and omits the file and host-entropy providers.
 
 ## Cancel And Timeout
 
 Use `cancel_handle()` to cancel from another thread.
 
-Use `eval_with_timeout(source, duration)` for a per-evaluation wall-clock
-deadline.
+Use `eval_with_timeout(source, duration)` for a per-evaluation elapsed-time
+deadline backed by Rust's monotonic `Instant`.
 
 Both are cooperative checks. The session remains usable after normal
 recoverable cancellation and timeout outcomes.

@@ -67,8 +67,10 @@ current reference entry.
 Pattern matching is useful for rule authoring, replacement, and traversal, but
 it is still a documented subset.
 
-Known pattern limits include the match-depth guard and the `Flat` plus
-`Orderless` plus `Optional` corners listed in the patterns chapter and TODO.
+Known pattern limits include the match-depth guard and the exact combinator
+surface listed in the generated reference. The former `Flat` plus `Orderless`
+plus `Optional` TODO was closed; those implemented interactions are covered by
+rum-native regression tests rather than carried as open debt.
 
 ## Replacement Scope
 
@@ -104,9 +106,9 @@ sandboxing.
 Instead, each builtin has a capability class and the host chooses a
 `CapabilityPolicy`.
 
-The filesystem surface is the module system (`Get`, `Needs`, `FindFile`) and
-session persistence (`Save`, `DumpSave`) only; a broader filesystem surface is
-future downstream work.
+The filesystem surface is package loading/lookup (`Get`, `Needs`, `FindFile`,
+`FileNames`) and session persistence (`Save`, `DumpSave`) only; a broader
+filesystem surface is future downstream work.
 
 `HostConfig::sandboxed()` allows only `Pure`.
 
@@ -114,12 +116,13 @@ That makes sandboxing a dispatch policy, not a source-text scanner.
 
 ## Determinism
 
-`rum` makes two sandbox claims: no ambient authority by construction, and
-deterministic by default.
+The `sandboxed()` profile makes two claims: ambient authority is denied by
+capability dispatch plus provider removal, and evaluation is deterministic for
+the same session state and source.
 
-The default sandbox policy excludes filesystem, clock, random, and diagnostic
-capabilities. Evaluation results therefore depend only on session state and
-source unless the host grants more capability.
+The profile permits only `Pure`, excluding file read/write, clock, host entropy,
+diagnostic, process, and interactive capabilities. Evaluation results therefore
+depend only on session state and source unless the host grants more capability.
 
 Randomness follows that same boundary. `RandomInteger`, `RandomChoice`,
 `RandomSample`, `RandomString`, `BlockRandom`, `RandomUuid`, and `UuidQ` use a

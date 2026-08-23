@@ -62,13 +62,14 @@ Exceeding one yields an in-band `TerminatedEvaluation[...]` value, not a crash.
 ### Evaluating untrusted scripts — required host settings
 
 The always-on limits bound the *shape* of a computation (depth, count,
-iterations), **not** the wall-clock time or memory of a single expensive
+iterations), **not** the elapsed time or memory of a single expensive
 operation. To evaluate untrusted input safely you MUST also set the two opt-in
 bounds, which are **off by default**:
 
 - a **request memory ceiling** (`eval_memory_limit`, or `MemoryConstrained` in
   the language), and
-- a **wall-clock timeout** (`Session::set_eval_timeout`).
+- an **elapsed-time timeout** (`Session::set_eval_timeout`), enforced against
+  Rust's monotonic `Instant` rather than the civil wall clock.
 
 Without them, a single script can consume unbounded CPU time or memory (for
 example, by producing a very large exact integer). With them, such a request is
@@ -82,8 +83,10 @@ poisoned session is reported as requiring reset rather than silently continuing.
 
 ## Out of scope
 
-- Filesystem, OS, and network access are not in the kernel. They are downstream,
-  opt-in capabilities that a host must provide explicitly; there is no ambient
-  authority.
+- The default catalog includes a narrow, provider-mediated filesystem surface
+  for package loading/lookup and textual persistence. It is capability-gated,
+  and `HostConfig::sandboxed()` removes its provider. General filesystem, OS,
+  process, and network APIs remain outside the kernel and belong in downstream
+  integrations.
 - `rum` makes no compatibility claims about any other language or product
   (see [DISCLAIMER.md](./DISCLAIMER.md)).

@@ -19,15 +19,16 @@ guide; if you are looking up a builtin, use the reference.
 - [Runtime evaluation audit](./runtime-evaluation-audit.md) — evaluator
   invariants and current semantic boundaries.
 - [Formatter style](./formatter-style.md) — how expressions are rendered.
-- [v0.1 acceptance boundary](./v0.1-acceptance-boundary.md) — the stabilization
-  and public-contract boundary.
+- [v0.1 acceptance boundary](./v0.1-acceptance-boundary.md) — the historical
+  stabilization and public-contract boundary for the published tag.
 
 ## Embedding and host
 
-- [Host embedding and hardening](./host-embedding-and-hardening.md) — the host
-  contract: interrupt/cancel, timeout, poison recovery, reset, snapshot/restore,
-  capability sandbox.
-- [Host adapter plan](./host-adapter-plan.md) — the embedding-adapter design.
+- [Host embedding and hardening](./host-embedding-and-hardening.md) — a concise
+  map of the current host contract: limits, interrupt/cancel, poison recovery,
+  reset, snapshot/restore, and the capability sandbox.
+- [Host adapter plan](./host-adapter-plan.md) — the embedding-adapter design
+  rationale and delivered build order.
 - [Python adapter plan](./python-adapter-plan.md) — the future, downstream
   Python binding plan.
 

@@ -50,7 +50,7 @@ term-rewriting language and runtime written in Rust.
   a bidirectional typed value bridge, and named capability profiles
   (`sandboxed` / `hermetic` / `scripting`).
 - Per-session capability policy, always-on resource limits, opt-in request
-  memory ceiling and wall-clock timeout, crash-only per-request isolation,
+  memory ceiling and monotonic elapsed-time timeout, crash-only per-request isolation,
   interrupt/cancel, reset, and snapshot/restore. See [`SECURITY.md`](./SECURITY.md).
 
 ### Tooling
