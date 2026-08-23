@@ -52,6 +52,15 @@ fn assert_suspend_resume_matches_queued(source: &str, inputs: &[&str], expected:
 }
 
 #[test]
+fn ordered_single_arg_cursor_resumes_without_replaying_the_matched_prefix() {
+    assert_suspend_resume_matches_queued(
+        "gMatcherSeen = 0; gMatcherTest[x_] := (gMatcherSeen = gMatcherSeen + 1; True); {MatchQ[f[1, 2, 3], f[x_?gMatcherTest, y_ /; MatchQ[InputString[\"cond: \"], \"yes\"], 3]], gMatcherSeen}",
+        &["yes"],
+        "List[True, 1]",
+    );
+}
+
+#[test]
 fn position_collection_continuation_roundtrip_matches_uninterrupted_run() {
     assert_suspend_resume_matches_queued(
         "Position[f[1, 2, 3], x_Integer /; If[MatchQ[x, 2], MatchQ[InputString[\"cond: \"], \"yes\"], True], Infinity]",

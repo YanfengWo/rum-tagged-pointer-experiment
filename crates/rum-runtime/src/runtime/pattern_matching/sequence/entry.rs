@@ -11,6 +11,14 @@ impl Session {
             return Ok(match_outcome(value_args.is_empty(), bindings));
         }
 
+        if pattern_args.len() > 1 && matches!(pattern_args.first(), Some(MatcherArg::Single(_))) {
+            return self.match_compiled_ordered_args_iter_owned(
+                pattern_args.into_iter(),
+                value_args.into_iter(),
+                bindings,
+            );
+        }
+
         let mut pattern_iter = pattern_args.into_iter();
         let first = pattern_iter
             .next()
@@ -103,6 +111,14 @@ impl Session {
             } else {
                 Vec::new()
             });
+        }
+
+        if pattern_args.len() > 1 && matches!(pattern_args.first(), Some(MatcherArg::Single(_))) {
+            return self.collect_compiled_ordered_args_iter_owned(
+                pattern_args.into_iter(),
+                value_args.into_iter(),
+                bindings,
+            );
         }
 
         let mut pattern_iter = pattern_args.into_iter();

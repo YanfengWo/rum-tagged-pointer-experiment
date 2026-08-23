@@ -2,6 +2,7 @@ use super::{outcome::*, *};
 
 mod entry;
 mod optional_sequence;
+mod ordered;
 mod orderless;
 
 fn optional_default_values(expr: Expr) -> Vec<Expr> {

@@ -159,6 +159,21 @@ wide_symbol_call_expr() {
   printf 'gMicroUpvalueProbe[%s]' "${args}"
 }
 
+wide_exact_match_expr() {
+  local width=$1
+  local args=""
+  local index
+
+  for ((index = 1; index <= width; index++)); do
+    if [[ -n "${args}" ]]; then
+      args+=", "
+    fi
+    args+="${index}"
+  done
+
+  printf 'MatchQ[gMicroWideMatcher[%s], gMicroWideMatcher[%s]]' "${args}" "${args}"
+}
+
 module_chain_small_width=96
 module_chain_large_width=192
 module_chain_small_expr=$(module_chain_expr "${module_chain_small_width}")
@@ -167,6 +182,10 @@ upvalue_candidates_small_width=1600
 upvalue_candidates_large_width=3200
 upvalue_candidates_small_expr=$(wide_symbol_call_expr "${upvalue_candidates_small_width}")
 upvalue_candidates_large_expr=$(wide_symbol_call_expr "${upvalue_candidates_large_width}")
+matcher_single_small_width=800
+matcher_single_large_width=1600
+matcher_single_small_expr=$(wide_exact_match_expr "${matcher_single_small_width}")
+matcher_single_large_expr=$(wide_exact_match_expr "${matcher_single_large_width}")
 
 cat > "${bench_rum}" <<EOF
 ClearAll[
@@ -177,6 +196,7 @@ ClearAll[
   rumMicroSink,
   fExact,
   fPattern,
+  gMicroWideMatcher,
   gMicroUpvalueTag,
   gMicroUpvalueMarker,
   gMicroUpvalueProbe,
@@ -332,6 +352,24 @@ rumMicroOnce["downvalue-pattern-miss-repeat", rumMicroN[5000], Do[fPattern["x"],
 
 rumMicroBench["matchq-integer-success", rumMicroN[1000], MatchQ[1, _Integer]];
 rumMicroBench["matchq-integer-fail", rumMicroN[1000], MatchQ["x", _Integer]];
+rumMicroBench[
+  "matcher-single-tiny",
+  rumMicroN[1000],
+  MatchQ[gMicroWideMatcher[1, 2, 3, 4], gMicroWideMatcher[1, 2, 3, 4]]
+];
+If[SameQ[rumMicroSink, True], Null, Exit[2]];
+rumMicroOnce[
+  "matcher-single-wide-small",
+  ${matcher_single_small_width},
+  ${matcher_single_small_expr}
+];
+If[SameQ[rumMicroSink, True], Null, Exit[2]];
+rumMicroOnce[
+  "matcher-single-wide-large",
+  ${matcher_single_large_width},
+  ${matcher_single_large_expr}
+];
+If[SameQ[rumMicroSink, True], Null, Exit[2]];
 rumMicroBench["replaceall-simple", rumMicroN[500], a /. rulesSimple];
 rumMicroOnce[
   "cases-wide-no-match",

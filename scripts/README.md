@@ -11,7 +11,10 @@ invocation.
   builds and compare. It measures with in-kernel `AbsoluteTiming` backed by
   Rust's monotonic `Instant`, not the wall clock. Run timing gates only on an
   otherwise idle machine and in the normal workspace sandbox.
-- `core-memory-microbench.sh` — the `rum`-vs-`rum` memory-baseline A/B.
+- `core-memory-microbench.sh` — the `rum`-vs-`rum` memory-baseline A/B. Pass
+  `--no-rss` in sandboxes that deny `/usr/bin/time -l`'s system probes; Rum's
+  memory proxies and any enabled allocation count/byte/peak-live profile are
+  still recorded, while the RSS columns remain empty.
 - `sample-self-time.py` — compute per-function self-time from macOS `sample`
   call-graph output.
 - `sample-attribute-callers.py` — attribute a target leaf symbol's samples to its

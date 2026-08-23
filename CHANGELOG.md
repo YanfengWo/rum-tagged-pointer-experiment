@@ -14,6 +14,9 @@ minor versions may include breaking changes; the project aims to follow
   evaluation, matching, replacement, collection, association, string, and
   polynomial paths now avoid numerous repeated scans, suffix copies, and
   per-step continuation clones; small-input paths retain adaptive linear tiers.
+- Ordered, non-`Flat` multi-argument matching now advances all-`Single`
+  pattern/value cursors in place instead of rebuilding the remaining vectors
+  at every argument, including across suspended matcher conditions.
 - Incremental `AppendTo`, association mutation, and positional `Part`
   assignment now use conservative in-place/COW fast paths when ownership and
   evaluator-cache invariants permit it.
