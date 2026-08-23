@@ -1,6 +1,7 @@
 use super::*;
 
 mod delete;
+mod edit_plan;
 mod insert;
 mod range;
 mod take_drop;

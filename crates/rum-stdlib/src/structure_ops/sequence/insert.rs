@@ -1,5 +1,9 @@
 use super::*;
 
+// The planner's temporary vectors pay off at 16 paths in the measured
+// crossover; smaller calls keep the allocation-light sequential path.
+const BATCHED_INSERT_THRESHOLD: usize = 16;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct InsertPathFailure {
     position: String,
@@ -169,6 +173,9 @@ fn insert_position_message_part(path: &[isize]) -> String {
 fn insert_canonical_paths(expr: Expr, item: Expr, mut paths: Vec<Vec<usize>>) -> Expr {
     paths.sort_by(|left, right| right.cmp(left));
     paths.dedup();
+    if paths.len() >= BATCHED_INSERT_THRESHOLD {
+        return super::edit_plan::batch_insert_canonical_paths(expr, &item, &paths);
+    }
     paths
         .into_iter()
         .fold(expr, |expr, path| insert_canonical_path(expr, &path, &item))
@@ -201,5 +208,39 @@ fn insert_canonical_path(expr: Expr, path: &[usize], item: &Expr) -> Expr {
             }
             Expr::Call { head, args }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insert_planner_starts_at_the_measured_crossover() {
+        let expr = list_of_integers(64);
+        super::super::edit_plan::reset_insert_parent_scan_count();
+        insert_canonical_paths(
+            expr.clone(),
+            Expr::symbol("x"),
+            (0..15).map(|index| vec![index]).collect(),
+        );
+        assert_eq!(super::super::edit_plan::insert_parent_scan_count(), 0);
+
+        super::super::edit_plan::reset_insert_parent_scan_count();
+        insert_canonical_paths(
+            expr,
+            Expr::symbol("x"),
+            (0..16).map(|index| vec![index]).collect(),
+        );
+        assert_eq!(super::super::edit_plan::insert_parent_scan_count(), 64);
+    }
+
+    fn list_of_integers(len: usize) -> Expr {
+        Expr::call(
+            system_expr(heads::structure::LIST),
+            (0..len)
+                .map(|value| Expr::integer(BigInt::from(value)))
+                .collect(),
+        )
     }
 }

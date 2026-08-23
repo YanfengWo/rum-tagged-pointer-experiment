@@ -1,5 +1,9 @@
 use super::*;
 
+// Deletion compaction crossed over at eight paths in the measured wide-parent
+// workload; preserve the allocation-light direct path below that point.
+const BATCHED_DELETE_THRESHOLD: usize = 8;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct DeletePathFailure {
     part: String,
@@ -191,6 +195,9 @@ fn delete_failure_part(path: &[isize], depth: usize, position: isize) -> String 
 fn delete_canonical_paths(expr: Expr, mut paths: Vec<Vec<isize>>) -> Expr {
     paths.sort_by(|left, right| right.cmp(left));
     paths.dedup();
+    if paths.len() >= BATCHED_DELETE_THRESHOLD {
+        return super::edit_plan::batch_delete_canonical_paths(expr, &paths);
+    }
     paths
         .into_iter()
         .fold(expr, |expr, path| delete_canonical_path(expr, &path))
@@ -235,5 +242,31 @@ fn expression_without_head(args: Vec<Expr>) -> Expr {
     match args.as_slice() {
         [single] => single.clone(),
         _ => Expr::call(system_expr("Sequence"), args),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn delete_planner_starts_at_the_measured_crossover() {
+        let expr = list_of_integers(64);
+        super::super::edit_plan::reset_delete_parent_scan_count();
+        delete_canonical_paths(expr.clone(), (1..=7).map(|index| vec![index]).collect());
+        assert_eq!(super::super::edit_plan::delete_parent_scan_count(), 0);
+
+        super::super::edit_plan::reset_delete_parent_scan_count();
+        delete_canonical_paths(expr, (1..=8).map(|index| vec![index]).collect());
+        assert_eq!(super::super::edit_plan::delete_parent_scan_count(), 64);
+    }
+
+    fn list_of_integers(len: usize) -> Expr {
+        Expr::call(
+            system_expr(heads::structure::LIST),
+            (0..len)
+                .map(|value| Expr::integer(BigInt::from(value)))
+                .collect(),
+        )
     }
 }
