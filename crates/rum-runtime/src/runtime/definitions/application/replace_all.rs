@@ -1,4 +1,7 @@
 use super::*;
+use std::sync::Arc;
+
+type SharedRewriteRules = Arc<[RewriteRule]>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplaceAllTraversalOutcome {
@@ -49,7 +52,8 @@ impl Session {
         rules: &[RewriteRule],
         source: RuleApplicationSource,
     ) -> Result<Expr, EvalError> {
-        let outcome_result = self.apply_replace_all_owned(expr, rules.to_vec(), source);
+        let outcome_result =
+            self.apply_replace_all_owned(expr, SharedRewriteRules::from(rules), source);
         self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
     }
 
@@ -60,13 +64,13 @@ impl Session {
         source: RuleApplicationSource,
     ) -> Result<Option<Expr>, EvalError> {
         let normalized_expr = self.normalize_match_expr(&expr);
-        self.apply_rules_once_from_list(expr, normalized_expr, rules, source, 0)
+        self.apply_rules_once_from_list(expr, normalized_expr, rules.into(), source, 0)
     }
 
     fn apply_replace_all_owned(
         &mut self,
         expr: Expr,
-        rules: Vec<RewriteRule>,
+        rules: SharedRewriteRules,
         source: RuleApplicationSource,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
         let normalized_expr = self.normalize_match_expr(&expr);
@@ -90,7 +94,7 @@ impl Session {
     fn apply_replace_all_after_miss(
         &mut self,
         expr: Expr,
-        rules: Vec<RewriteRule>,
+        rules: SharedRewriteRules,
         source: RuleApplicationSource,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
         match expr {
@@ -145,7 +149,7 @@ impl Session {
         head: Expr,
         mut rewritten_args: Vec<Expr>,
         remaining_args: Vec<Expr>,
-        rules: Vec<RewriteRule>,
+        rules: SharedRewriteRules,
         source: RuleApplicationSource,
         changed: bool,
         hold_attribute: HoldAttribute,
@@ -221,7 +225,7 @@ impl Session {
         &mut self,
         expr: Expr,
         normalized_expr: Expr,
-        rules: Vec<RewriteRule>,
+        rules: SharedRewriteRules,
         source: RuleApplicationSource,
         index: usize,
     ) -> Result<Option<Expr>, EvalError> {
