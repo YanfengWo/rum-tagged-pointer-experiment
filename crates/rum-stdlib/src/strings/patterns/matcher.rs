@@ -3,6 +3,7 @@ use super::*;
 mod api;
 mod engine;
 mod literal;
+mod reverse;
 mod split_trim;
 mod state_set;
 

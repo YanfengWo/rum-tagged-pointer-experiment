@@ -352,6 +352,30 @@ pub(super) fn regex_pattern_match_ends(
     ends
 }
 
+pub(super) fn reversed_regex_pattern(pattern: &RegexPattern) -> RegexPattern {
+    RegexPattern {
+        branches: pattern
+            .branches
+            .iter()
+            .map(|branch| {
+                branch
+                    .iter()
+                    .rev()
+                    .map(|token| RegexToken {
+                        atom: match &token.atom {
+                            RegexAtom::Group(pattern) => {
+                                RegexAtom::Group(Box::new(reversed_regex_pattern(pattern)))
+                            }
+                            atom => atom.clone(),
+                        },
+                        quantifier: token.quantifier,
+                    })
+                    .collect()
+            })
+            .collect(),
+    }
+}
+
 fn regex_branch_match_ends(tokens: &[RegexToken], haystack: &[char], start: usize) -> Vec<usize> {
     fn recur(
         tokens: &[RegexToken],
@@ -467,5 +491,27 @@ fn regex_class_item_matches(item: &RegexClassItem, ch: char) -> bool {
         RegexClassItem::Digit => ch.is_ascii_digit(),
         RegexClassItem::Word => ch.is_ascii_alphanumeric() || ch == '_',
         RegexClassItem::Whitespace => ch.is_whitespace(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reversed_regex_accepts_exactly_reversed_full_matches() {
+        let pattern = compile_string_regex_pattern("a(bc|d+)*e").unwrap();
+        let reversed = reversed_regex_pattern(&pattern);
+
+        for text in ["ae", "abce", "adddbce", "a", "abde", "xabce"] {
+            let chars = text.chars().collect::<Vec<_>>();
+            let reversed_chars = chars.iter().rev().copied().collect::<Vec<_>>();
+            assert_eq!(
+                regex_pattern_match_ends(&pattern, &chars, 0).contains(&chars.len()),
+                regex_pattern_match_ends(&reversed, &reversed_chars, 0)
+                    .contains(&reversed_chars.len()),
+                "{text}",
+            );
+        }
     }
 }

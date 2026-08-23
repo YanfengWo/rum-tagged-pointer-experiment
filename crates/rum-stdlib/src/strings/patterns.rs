@@ -30,6 +30,7 @@ pub(in crate::strings) enum StringPattern {
     PunctuationCharacter,
     RegularExpression(RegexPattern),
     NumberString,
+    ReversedNumberString,
     Except {
         excluded: Box<StringPattern>,
         inner: Option<Box<StringPattern>>,

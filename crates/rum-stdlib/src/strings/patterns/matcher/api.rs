@@ -6,10 +6,18 @@ use super::literal::{
     LiteralMatches, exact_literal_pattern, linear_literal_pattern,
     linear_literal_search_worthwhile, single_linear_literal_pattern,
 };
+use super::reverse::reversed_string_pattern;
 use super::split_trim::{
     split_by_string_patterns, split_by_whitespace, trim_string_patterns, trim_whitespace_chars,
 };
 use super::*;
+
+const REVERSED_SUFFIX_MATCH_THRESHOLD: usize = 32;
+
+#[cfg(test)]
+std::thread_local! {
+    static SUFFIX_MATCH_ATTEMPTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 
 pub(in crate::strings::patterns) fn string_contains_q(
     haystack: &[char],
@@ -56,7 +64,29 @@ pub(in crate::strings::patterns) fn string_ends_q(
         return haystack.ends_with(literal);
     }
 
-    (0..=haystack.len()).any(|start| {
+    #[cfg(test)]
+    SUFFIX_MATCH_ATTEMPTS.set(SUFFIX_MATCH_ATTEMPTS.get() + 1);
+    if best_pattern_match_state(pattern, haystack, 0, config)
+        .is_some_and(|state| state.end == haystack.len())
+    {
+        return true;
+    }
+
+    if haystack.len() >= REVERSED_SUFFIX_MATCH_THRESHOLD
+        && !matches!(pattern, StringPattern::Shortest(_))
+    {
+        if let Some(reversed_pattern) = reversed_string_pattern(pattern) {
+            let reversed_haystack = haystack.iter().rev().copied().collect::<Vec<_>>();
+            #[cfg(test)]
+            SUFFIX_MATCH_ATTEMPTS.set(SUFFIX_MATCH_ATTEMPTS.get() + 1);
+            return best_pattern_match_state(&reversed_pattern, &reversed_haystack, 0, config)
+                .is_some();
+        }
+    }
+
+    (1..=haystack.len()).any(|start| {
+        #[cfg(test)]
+        SUFFIX_MATCH_ATTEMPTS.set(SUFFIX_MATCH_ATTEMPTS.get() + 1);
         best_pattern_match_state(pattern, haystack, start, config)
             .is_some_and(|state| state.end == haystack.len())
     })
@@ -377,4 +407,50 @@ fn string_pattern_positions<'a>(
     }
 
     positions.into_iter()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reversible_suffix_pattern_uses_two_match_attempts() {
+        let pattern = StringPattern::Repeated {
+            pattern: Box::new(StringPattern::Literal(vec!['a'])),
+            min: 1,
+            max: None,
+        };
+        let mut haystack = vec!['a'; 32];
+        haystack.push('b');
+        SUFFIX_MATCH_ATTEMPTS.set(0);
+
+        assert!(!string_ends_q(
+            &haystack,
+            &pattern,
+            StringPatternMatchConfig::default(),
+        ));
+        assert_eq!(SUFFIX_MATCH_ATTEMPTS.get(), 2);
+    }
+
+    #[test]
+    fn reversed_suffix_matching_preserves_repeated_capture_equality() {
+        let symbol = Symbol::from_name("captured");
+        let capture = || StringPattern::Capture {
+            symbol: symbol.clone(),
+            inner: Box::new(StringPattern::Literal(vec!['a', 'b'])),
+        };
+        let pattern = StringPattern::Sequence(vec![
+            capture(),
+            StringPattern::Literal(vec!['-']),
+            capture(),
+        ]);
+        let mut haystack = vec!['x'; REVERSED_SUFFIX_MATCH_THRESHOLD];
+        haystack.extend(['a', 'b', '-', 'a', 'b']);
+
+        assert!(string_ends_q(
+            &haystack,
+            &pattern,
+            StringPatternMatchConfig::default(),
+        ));
+    }
 }

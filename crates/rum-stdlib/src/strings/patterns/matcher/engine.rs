@@ -156,6 +156,9 @@ fn pattern_match_end_positions(
             regex_pattern_match_ends(pattern, chars, start)
         }
         StringPattern::NumberString => number_string_match_end_positions(chars, start),
+        StringPattern::ReversedNumberString => {
+            reversed_number_string_match_end_positions(chars, start)
+        }
         StringPattern::Except { excluded, inner } => {
             let candidates = match inner {
                 Some(inner) => pattern_match_end_positions(inner, chars, start, config),
@@ -271,6 +274,7 @@ fn pattern_match_states(
         | StringPattern::PunctuationCharacter
         | StringPattern::RegularExpression(_)
         | StringPattern::NumberString
+        | StringPattern::ReversedNumberString
         | StringPattern::Except { .. }
         | StringPattern::StartOfString
         | StringPattern::EndOfString
@@ -562,6 +566,42 @@ fn number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize>
         if integer_end == integer_start && fraction_start == index {
             return Vec::new();
         }
+    }
+
+    positions
+}
+
+fn reversed_number_string_match_end_positions(chars: &[char], start: usize) -> Vec<usize> {
+    let mut positions = Vec::new();
+    let mut index = start;
+
+    while index < chars.len() && chars[index].is_ascii_digit() {
+        index += 1;
+        positions.push(index);
+    }
+    let has_leading_digits = index > start;
+
+    if chars.get(index) != Some(&'.') {
+        if has_leading_digits && matches!(chars.get(index), Some(&'+') | Some(&'-')) {
+            positions.push(index + 1);
+        }
+        return positions;
+    }
+
+    index += 1;
+    if has_leading_digits {
+        positions.push(index);
+    }
+    let trailing_start = index;
+    while index < chars.len() && chars[index].is_ascii_digit() {
+        index += 1;
+        positions.push(index);
+    }
+
+    if (has_leading_digits || index > trailing_start)
+        && matches!(chars.get(index), Some(&'+') | Some(&'-'))
+    {
+        positions.push(index + 1);
     }
 
     positions
