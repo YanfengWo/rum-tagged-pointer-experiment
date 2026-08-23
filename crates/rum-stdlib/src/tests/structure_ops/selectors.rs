@@ -210,6 +210,28 @@ fn keyed_part_and_extract_cover_association_paths() {
 }
 
 #[test]
+fn wide_batched_key_part_preserves_order_duplicates_and_missing_values() {
+    let entries = (1..=64)
+        .map(|value| format!("{value} -> {value}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut session = core_session();
+
+    assert_eq!(
+        session
+            .eval_text(&format!(
+                "Part[Association[{entries}], \
+                 {{Key[64], Key[1], Key[63], Key[2], Key[64], Key[99], Key[62], Key[3]}}]"
+            ))
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[64, 64], Rule[1, 1], Rule[63, 63], Rule[2, 2], \
+         Rule[99, Missing[\"KeyAbsent\", Key[99]]], Rule[62, 62], Rule[3, 3]]"
+    );
+}
+
+#[test]
 fn extract_consumes_exact_paths_and_position_output() {
     let mut session = core_session();
 

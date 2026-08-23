@@ -1,5 +1,10 @@
 use super::spans;
 use super::*;
+use std::collections::HashMap;
+
+const ASSOCIATION_BATCH_KEY_INDEX_MIN_ENTRIES: usize = 32;
+const ASSOCIATION_BATCH_KEY_INDEX_MIN_KEYS: usize = 8;
+const NO_ASSOCIATION_KEY_POSITION: usize = usize::MAX;
 
 pub(in crate::runtime::kernel_data::structure_data) fn apply_part_selectors(
     expr: &Expr,
@@ -328,24 +333,7 @@ fn select_association_parts_for_selector(
                 .all(|spec| matches!(spec, PartSelector::Key(_)))
             {
                 return Some(SelectedPartShape::AssociationBranch(
-                    specs
-                        .iter()
-                        .filter_map(|spec| match spec {
-                            PartSelector::Key(key) => Some((
-                                key.clone(),
-                                SelectedPartShape::Leaf(
-                                    entries
-                                        .iter()
-                                        .find(|(entry_key, _)| entry_key == key)
-                                        .map(|(_, value)| value.clone())
-                                        .unwrap_or_else(|| {
-                                            missing_key_absent_expr(key_expr(key.clone()))
-                                        }),
-                                ),
-                            )),
-                            _ => None,
-                        })
-                        .collect(),
+                    select_association_entries_for_keys(entries, specs),
                 ));
             }
 
@@ -363,6 +351,85 @@ fn select_association_parts_for_selector(
             ))
         }
     }
+}
+
+fn select_association_entries_for_keys(
+    entries: &[(Expr, Expr)],
+    specs: &[PartSelector],
+) -> Vec<(Expr, SelectedPartShape)> {
+    if entries.len() < ASSOCIATION_BATCH_KEY_INDEX_MIN_ENTRIES
+        || specs.len() < ASSOCIATION_BATCH_KEY_INDEX_MIN_KEYS
+    {
+        return specs
+            .iter()
+            .filter_map(|spec| match spec {
+                PartSelector::Key(key) => Some((
+                    key.clone(),
+                    SelectedPartShape::Leaf(
+                        entries
+                            .iter()
+                            .find(|(entry_key, _)| entry_key == key)
+                            .map(|(_, value)| value.clone())
+                            .unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
+                    ),
+                )),
+                _ => None,
+            })
+            .collect();
+    }
+
+    // Index the query side, then visit the Association at most once.
+    // The linked duplicate positions avoid one allocation per distinct key
+    // while preserving selector order and duplicate-key results.
+    let mut first_position_by_key: HashMap<Expr, usize> = HashMap::with_capacity(specs.len());
+    let mut next_duplicate = vec![NO_ASSOCIATION_KEY_POSITION; specs.len()];
+    let mut unmatched_distinct_keys = 0usize;
+    for (position, spec) in specs.iter().enumerate() {
+        let PartSelector::Key(key) = spec else {
+            continue;
+        };
+        if let Some(previous) = first_position_by_key.insert(key.clone(), position) {
+            next_duplicate[position] = previous;
+        } else {
+            unmatched_distinct_keys += 1;
+        }
+    }
+
+    let mut selected_values = vec![None; specs.len()];
+    for (entry_key, value) in entries {
+        let Some(&first_position) = first_position_by_key.get(entry_key) else {
+            continue;
+        };
+
+        let mut position = first_position;
+        loop {
+            selected_values[position] = Some(value.clone());
+            let next = next_duplicate[position];
+            if next == NO_ASSOCIATION_KEY_POSITION {
+                break;
+            }
+            position = next;
+        }
+
+        unmatched_distinct_keys -= 1;
+        if unmatched_distinct_keys == 0 {
+            break;
+        }
+    }
+
+    specs
+        .iter()
+        .zip(selected_values)
+        .filter_map(|(spec, value)| match spec {
+            PartSelector::Key(key) => Some((
+                key.clone(),
+                SelectedPartShape::Leaf(
+                    value.unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
+                ),
+            )),
+            _ => None,
+        })
+        .collect()
 }
 
 fn association_entry_by_index(entries: &[(Expr, Expr)], index: isize) -> Option<(Expr, Expr)> {
