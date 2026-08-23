@@ -330,15 +330,8 @@ fn apply_drop_specs(expr: &Expr, specs: &[StructuralSequenceSpec]) -> Option<Exp
         return None;
     };
 
-    let dropped = resolve_take_components(*first, args.len())?
-        .into_iter()
-        .collect::<BTreeSet<_>>();
-    let kept_args = args
-        .iter()
-        .enumerate()
-        .filter(|(index, _)| !dropped.contains(&(*index as isize + 1)))
-        .map(|(_, arg)| arg.clone())
-        .collect::<Vec<_>>();
+    let dropped = resolve_take_components(*first, args.len())?;
+    let kept_args = retain_args_except_positions(args, dropped);
     let kept = Expr::call(head.as_ref().clone(), kept_args);
 
     if rest.is_empty() {
@@ -346,6 +339,31 @@ fn apply_drop_specs(expr: &Expr, specs: &[StructuralSequenceSpec]) -> Option<Exp
     } else {
         apply_take_drop_rest_to_expr(kept, rest, apply_drop_specs)
     }
+}
+
+// Keep the wide scan out of the recursive spec walker. Release A/B found no
+// small-call cost and materially less same-tier microbenchmark variance.
+#[inline(never)]
+fn retain_args_except_positions(args: &[Expr], mut dropped: Vec<isize>) -> Vec<Expr> {
+    if dropped.first() > dropped.last() {
+        dropped.reverse();
+    }
+    debug_assert!(dropped.windows(2).all(|pair| pair[0] < pair[1]));
+    debug_assert!(dropped.len() <= args.len());
+
+    let mut kept_args = Vec::with_capacity(args.len() - dropped.len());
+    let mut dropped = dropped.into_iter();
+    let mut next_dropped = dropped.next();
+    for (index, arg) in args.iter().enumerate() {
+        let position = index as isize + 1;
+        if next_dropped == Some(position) {
+            next_dropped = dropped.next();
+        } else {
+            kept_args.push(arg.clone());
+        }
+    }
+    debug_assert!(next_dropped.is_none());
+    kept_args
 }
 
 fn apply_take_drop_rest_to_expr(
@@ -424,4 +442,46 @@ fn resolve_take_components(spec: StructuralSequenceSpec, len: usize) -> Option<V
 
 fn normalize_exact_structural_component(position: isize, len: usize) -> Option<isize> {
     Some(normalize_structural_arg_position(position, len)? as isize + 1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn linear_drop_filter_matches_set_membership_for_small_ranges() {
+        for len in 1..=8 {
+            let positions = (-(len as isize)..=-1)
+                .chain(1..=len as isize)
+                .collect::<Vec<_>>();
+            let args = (1..=len)
+                .map(|value| Expr::integer(BigInt::from(value)))
+                .collect::<Vec<_>>();
+
+            for &start in &positions {
+                for &end in &positions {
+                    for step in [-3, -2, -1, 1, 2, 3] {
+                        let dropped = resolve_take_components(
+                            StructuralSequenceSpec::Range { start, end, step },
+                            len,
+                        )
+                        .expect("in-range endpoints and a nonzero step are valid");
+                        assert!(
+                            dropped.windows(2).all(|pair| pair[0] < pair[1])
+                                || dropped.windows(2).all(|pair| pair[0] > pair[1])
+                        );
+
+                        let dropped_set = dropped.iter().copied().collect::<BTreeSet<_>>();
+                        let expected = args
+                            .iter()
+                            .enumerate()
+                            .filter(|(index, _)| !dropped_set.contains(&(*index as isize + 1)))
+                            .map(|(_, arg)| arg.clone())
+                            .collect::<Vec<_>>();
+                        assert_eq!(retain_args_except_positions(&args, dropped), expected);
+                    }
+                }
+            }
+        }
+    }
 }

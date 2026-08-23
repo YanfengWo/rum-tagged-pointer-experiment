@@ -144,6 +144,38 @@ fn take_drop_insert_delete_and_take_list_cover_current_structural_subset() {
     );
     assert_eq!(
         session
+            .eval_text("Drop[f[a, b, c, d, e], {1, 5, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Drop[f[a, b, c, d, e], {5, 1, -2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[b, d]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Drop[f[a, b, c], None]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[a, b, c]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Drop[f[a, b, c], All]")
+            .unwrap()
+            .value
+            .to_string(),
+        "f[]"
+    );
+    assert_eq!(
+        session
             .eval_text("Drop[f[g[a, b], h[c, d]], None, 1]")
             .unwrap()
             .value
