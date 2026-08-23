@@ -124,6 +124,31 @@ fn returned_expr_extra_root_keeps_candidate_definition_live() {
 }
 
 #[test]
+fn module_result_root_retains_only_its_transitive_local_chain() {
+    let mut session = session_with_test_control_builtins();
+
+    let outcome = session
+        .eval_text(
+            "Module[{gcChainA = Hold[gcChainB], gcChainB = Hold[gcChainC], gcChainC = 7, gcUnused = 9}, Hold[gcChainA]]",
+        )
+        .unwrap();
+    let candidates = retained_candidates(&session);
+
+    assert_eq!(
+        candidates.len(),
+        3,
+        "the unrelated local should be reclaimed"
+    );
+    assert_candidate_definition_count(&session, &candidates, 3);
+
+    session.collect_and_sweep_dead_gensyms(std::slice::from_ref(&outcome.value));
+    assert_candidate_definition_count(&session, &candidates, 3);
+
+    session.collect_and_sweep_dead_gensyms(&[]);
+    assert_candidate_definition_count(&session, &candidates, 0);
+}
+
+#[test]
 fn outcome_extra_roots_keep_success_return_throw_and_cleanup_candidates_live() {
     assert_outcome_roots_keep_then_drop_candidates("Ok", 1, |exprs| Ok(exprs[0].clone()));
     assert_outcome_roots_keep_then_drop_candidates("Return", 1, |exprs| {

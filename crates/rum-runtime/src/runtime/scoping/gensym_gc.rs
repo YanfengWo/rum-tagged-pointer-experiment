@@ -208,7 +208,7 @@ pub(in crate::runtime) fn for_each_symbol_in_expr(expr: &Expr, visit: &mut dyn F
     }
 }
 
-fn seed_live_gensyms_from_expr(
+pub(in crate::runtime) fn seed_live_gensyms_from_expr(
     expr: &Expr,
     candidates: &std::collections::HashSet<Symbol>,
     live: &mut std::collections::HashSet<Symbol>,
@@ -221,7 +221,10 @@ fn seed_live_gensyms_from_expr(
     });
 }
 
-fn for_each_definition_expr(definition: &SymbolDefinition, visit: &mut dyn FnMut(&Expr)) {
+pub(in crate::runtime) fn for_each_definition_expr(
+    definition: &SymbolDefinition,
+    visit: &mut dyn FnMut(&Expr),
+) {
     if let Some(expr) = &definition.own_value {
         visit(expr);
     }

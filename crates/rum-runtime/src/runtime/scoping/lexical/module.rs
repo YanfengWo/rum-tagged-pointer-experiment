@@ -255,44 +255,33 @@ impl Session {
         activation: &ModuleActivation,
         roots: &[Expr],
     ) -> Vec<Symbol> {
-        let mut retained: BTreeSet<Symbol> = activation
+        let candidates = activation
             .gensyms
             .iter()
-            .filter(|gensym| roots.iter().any(|root| expr_contains_symbol(root, gensym)))
-            .cloned()
-            .collect();
+            .copied()
+            .collect::<std::collections::HashSet<_>>();
+        let mut retained = std::collections::HashSet::with_capacity(candidates.len());
+        let mut worklist = Vec::new();
 
-        loop {
-            let retained_snapshot: Vec<Symbol> = retained.iter().cloned().collect();
-            let mut grew = false;
+        for root in roots {
+            seed_live_gensyms_from_expr(root, &candidates, &mut retained, &mut worklist);
+        }
 
-            for retained_gensym in retained_snapshot {
-                let Some(definition) = self.definitions.get(&retained_gensym) else {
-                    continue;
-                };
+        while let Some(retained_gensym) = worklist.pop() {
+            let Some(definition) = self.definitions.get(&retained_gensym) else {
+                continue;
+            };
 
-                for gensym in &activation.gensyms {
-                    if retained.contains(gensym) {
-                        continue;
-                    }
-
-                    if definition_references_symbol(definition, gensym) {
-                        retained.insert(gensym.clone());
-                        grew = true;
-                    }
-                }
-            }
-
-            if !grew {
-                break;
-            }
+            for_each_definition_expr(definition, &mut |expr| {
+                seed_live_gensyms_from_expr(expr, &candidates, &mut retained, &mut worklist);
+            });
         }
 
         activation
             .gensyms
             .iter()
             .filter(|gensym| !retained.contains(*gensym))
-            .cloned()
+            .copied()
             .collect()
     }
 }

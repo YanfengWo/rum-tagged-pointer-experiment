@@ -120,6 +120,34 @@ runs_tsv="${output_dir}/runs.tsv"
 measurements_tsv="${output_dir}/measurements.tsv"
 timings_tsv="${output_dir}/timings.tsv"
 
+module_chain_expr() {
+  local width=$1
+  local locals=""
+  local index
+  local name
+  local next_name
+
+  for ((index = 1; index <= width; index++)); do
+    name="gMicroModuleChain${index}"
+    if [[ -n "${locals}" ]]; then
+      locals+=", "
+    fi
+    if ((index < width)); then
+      next_name="gMicroModuleChain$((index + 1))"
+      locals+="${name} = Hold[${next_name}]"
+    else
+      locals+="${name} = 1"
+    fi
+  done
+
+  printf 'Module[{%s}, Hold[gMicroModuleChain1]]' "${locals}"
+}
+
+module_chain_small_width=96
+module_chain_large_width=192
+module_chain_small_expr=$(module_chain_expr "${module_chain_small_width}")
+module_chain_large_expr=$(module_chain_expr "${module_chain_large_width}")
+
 cat > "${bench_rum}" <<EOF
 ClearAll[
   rumMicroBench,
@@ -251,6 +279,16 @@ rumMicroBench["sameq-list", rumMicroN[1000], SameQ[list10, list10]];
 
 rumMicroBench["if-true", rumMicroN[2000], If[True, 1, 2]];
 rumMicroBench["module-local", rumMicroN[500], Module[{x = 1}, x + 1]];
+rumMicroOnce[
+  "module-chain-escape-small",
+  ${module_chain_small_width},
+  ${module_chain_small_expr}
+];
+rumMicroOnce[
+  "module-chain-escape-large",
+  ${module_chain_large_width},
+  ${module_chain_large_expr}
+];
 rumMicroBench["block-local", rumMicroN[500], Block[{xOwn = 1}, xOwn + 1]];
 rumMicroOnce["block-symbol-only-repeat", rumMicroN[1000], Do[Block[{b}, Null], {1000 * rumMicroScale}]];
 rumMicroOnce["block-init-null-repeat", rumMicroN[1000], Do[Block[{b = 1}, Null], {1000 * rumMicroScale}]];
