@@ -3,10 +3,12 @@ use super::*;
 mod distance;
 mod lexical;
 mod nearest;
+mod selection;
 
 use self::distance::*;
 use self::lexical::*;
 use self::nearest::*;
+use self::selection::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum NearestResultSpec {

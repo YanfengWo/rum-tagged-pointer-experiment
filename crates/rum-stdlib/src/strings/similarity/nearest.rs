@@ -221,80 +221,6 @@ pub(super) fn nearest_values_for_numbers(
         .collect()
 }
 
-pub(super) fn select_nearest_indices_by_usize(
-    distances: &[(usize, usize)],
-    spec: NearestResultSpec,
-) -> Vec<usize> {
-    match spec {
-        NearestResultSpec::Count(0) => Vec::new(),
-        NearestResultSpec::Count(limit) => {
-            let mut indices = (0..distances.len()).collect::<Vec<_>>();
-            indices.sort_by_key(|index| (distances[*index].1, distances[*index].0));
-            indices.truncate(limit.min(indices.len()));
-            indices
-        }
-        NearestResultSpec::All => {
-            let mut indices = (0..distances.len()).collect::<Vec<_>>();
-            indices.sort_by_key(|index| (distances[*index].1, distances[*index].0));
-            indices
-        }
-        NearestResultSpec::BestTies => {
-            let Some(best) = distances.iter().map(|(_, distance)| *distance).min() else {
-                return Vec::new();
-            };
-            distances
-                .iter()
-                .enumerate()
-                .filter_map(|(index, (_, distance))| (*distance == best).then_some(index))
-                .collect()
-        }
-    }
-}
-
-pub(super) fn select_nearest_indices_by_rational(
-    distances: &[(usize, Rational)],
-    spec: NearestResultSpec,
-) -> Vec<usize> {
-    match spec {
-        NearestResultSpec::Count(0) => Vec::new(),
-        NearestResultSpec::Count(limit) => {
-            let mut indices = (0..distances.len()).collect::<Vec<_>>();
-            indices.sort_by(|lhs, rhs| {
-                compare_rationals_local(&distances[*lhs].1, &distances[*rhs].1)
-                    .then(distances[*lhs].0.cmp(&distances[*rhs].0))
-            });
-            indices.truncate(limit.min(indices.len()));
-            indices
-        }
-        NearestResultSpec::All => {
-            let mut indices = (0..distances.len()).collect::<Vec<_>>();
-            indices.sort_by(|lhs, rhs| {
-                compare_rationals_local(&distances[*lhs].1, &distances[*rhs].1)
-                    .then(distances[*lhs].0.cmp(&distances[*rhs].0))
-            });
-            indices
-        }
-        NearestResultSpec::BestTies => {
-            let Some((best_index, _)) = distances
-                .iter()
-                .enumerate()
-                .min_by(|(_, lhs), (_, rhs)| compare_rationals_local(&lhs.1, &rhs.1))
-            else {
-                return Vec::new();
-            };
-            distances
-                .iter()
-                .enumerate()
-                .filter_map(|(index, distance)| {
-                    (compare_rationals_local(&distance.1, &distances[best_index].1)
-                        == std::cmp::Ordering::Equal)
-                        .then_some(index)
-                })
-                .collect()
-        }
-    }
-}
-
 fn nearest_result_spec(spec: &NearestSelectionSpec) -> NearestResultSpec {
     match spec {
         NearestSelectionSpec::Results(results)
@@ -364,6 +290,12 @@ pub(super) fn rational_abs_difference(lhs: &Rational, rhs: &Rational) -> Rationa
 }
 
 pub(super) fn compare_rationals_local(lhs: &Rational, rhs: &Rational) -> std::cmp::Ordering {
+    // Rational normalizes denominators to positive values, so equal
+    // denominators can be ordered without allocating cross-products.
+    if lhs.denominator() == rhs.denominator() {
+        return lhs.numerator().cmp(rhs.numerator());
+    }
+
     let lhs_cross = lhs.numerator() * rhs.denominator();
     let rhs_cross = rhs.numerator() * lhs.denominator();
     lhs_cross.cmp(&rhs_cross)
