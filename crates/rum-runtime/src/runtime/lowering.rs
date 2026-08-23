@@ -283,16 +283,14 @@ where
         return lower_comparison_chain(op, lhs, rhs, resolve_symbol);
     }
 
+    if matches!(op, BinaryOp::CompoundExpression) {
+        return lower_compound_expression_sugar(lhs, rhs, resolve_symbol);
+    }
+
     let lowered_lhs = lower_syntax_expr_with(lhs, resolve_symbol)?;
     let lowered_rhs = lower_syntax_expr_with(rhs, resolve_symbol)?;
 
     match op {
-        BinaryOp::CompoundExpression => {
-            let mut items = Vec::new();
-            push_compound_expression_item(&mut items, lowered_lhs);
-            push_compound_expression_item(&mut items, lowered_rhs);
-            Ok(canonical_call("CompoundExpression", items))
-        }
         BinaryOp::MessageName => Ok(message_name_expr(
             match lowered_lhs {
                 Expr::Atom(Atom::Symbol(symbol)) => symbol,
@@ -441,7 +439,49 @@ where
         | BinaryOp::Greater
         | BinaryOp::LessEqual
         | BinaryOp::GreaterEqual => unreachable!("comparison ops handled before lowering operands"),
+        BinaryOp::CompoundExpression => {
+            unreachable!("compound expression handled before lowering operands")
+        }
     }
+}
+
+/// Lowers a `;` spine iteratively: the right-nested syntax chain is walked in
+/// a loop, so statement count no longer consumes lowering recursion depth.
+/// The output is byte-identical to the recursive form — one flat n-ary
+/// `CompoundExpression` with the items in source order.
+fn lower_compound_expression_sugar<F>(
+    lhs: &SyntaxExpr,
+    rhs: &SyntaxExpr,
+    resolve_symbol: &mut F,
+) -> Result<Expr, EvalError>
+where
+    F: FnMut(&str) -> Option<Symbol>,
+{
+    let mut items = Vec::new();
+    let mut lhs = lhs;
+    let mut rhs = rhs;
+
+    loop {
+        let lowered = lower_syntax_expr_with(lhs, resolve_symbol)?;
+        push_compound_expression_item(&mut items, lowered);
+
+        match &rhs.kind {
+            SyntaxExprKind::Binary {
+                op: BinaryOp::CompoundExpression,
+                lhs: next_lhs,
+                rhs: next_rhs,
+            } => {
+                lhs = next_lhs;
+                rhs = next_rhs;
+            }
+            _ => break,
+        }
+    }
+
+    let lowered_tail = lower_syntax_expr_with(rhs, resolve_symbol)?;
+    push_compound_expression_item(&mut items, lowered_tail);
+
+    Ok(canonical_call("CompoundExpression", items))
 }
 
 fn comparison_head(op: BinaryOp) -> Option<&'static str> {

@@ -53,7 +53,7 @@ fn parses_multiline_string_literals_as_string_atoms() {
 
 #[test]
 fn rejects_too_deep_nested_call_without_panicking() {
-    let depth = MAX_PARSE_DEPTH + 1;
+    let depth = MAX_DELIMITER_NESTING_DEPTH + 1;
     let mut input = String::with_capacity(depth * 3 + 1);
     for _ in 0..depth {
         input.push_str("f[");
@@ -67,7 +67,7 @@ fn rejects_too_deep_nested_call_without_panicking() {
     assert!(matches!(
         error,
         SyntaxError::ParseDepthExceeded {
-            max: MAX_PARSE_DEPTH,
+            max: MAX_DELIMITER_NESTING_DEPTH,
             ..
         }
     ));
@@ -87,15 +87,15 @@ fn pins_nested_call_parse_depth_boundary() {
         input
     }
 
-    let accepted = nested_call(127);
+    let accepted = nested_call(MAX_DELIMITER_NESTING_DEPTH - 1);
     assert_eq!(parse_expr(&accepted).unwrap().to_string(), accepted);
 
-    let rejected = nested_call(129);
-    let error = parse_expr(&rejected).expect_err("depth 129 should exceed the parser guard");
+    let rejected = nested_call(MAX_DELIMITER_NESTING_DEPTH + 1);
+    let error = parse_expr(&rejected).expect_err("depth should exceed the parser guard");
     assert!(matches!(
         error,
         SyntaxError::ParseDepthExceeded {
-            max: MAX_PARSE_DEPTH,
+            max: MAX_DELIMITER_NESTING_DEPTH,
             ..
         }
     ));
@@ -113,7 +113,7 @@ fn rejects_deep_right_associative_chain_without_panicking() {
     assert!(matches!(
         error,
         SyntaxError::ParseDepthExceeded {
-            max: MAX_PARSE_DEPTH,
+            max: MAX_OPERATOR_CHAIN_DEPTH,
             ..
         }
     ));
@@ -127,7 +127,34 @@ fn rejects_deep_prefix_chain_without_panicking() {
     assert!(matches!(
         error,
         SyntaxError::ParseDepthExceeded {
-            max: MAX_PARSE_DEPTH,
+            max: MAX_OPERATOR_CHAIN_DEPTH,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn pins_power_chain_operator_depth_boundary() {
+    fn power_chain(links: usize, rendered: bool) -> String {
+        let separator = if rendered { " ^ a" } else { "^a" };
+        let mut input = String::with_capacity(links * 4 + 1);
+        input.push('a');
+        for _ in 0..links {
+            input.push_str(separator);
+        }
+        input
+    }
+
+    let accepted = power_chain(MAX_OPERATOR_CHAIN_DEPTH - 1, true);
+    let source = power_chain(MAX_OPERATOR_CHAIN_DEPTH - 1, false);
+    assert_eq!(parse_expr(&source).unwrap().to_string(), accepted);
+
+    let rejected = power_chain(MAX_OPERATOR_CHAIN_DEPTH + 1, false);
+    let error = parse_expr(&rejected).expect_err("chain should exceed the operator-chain guard");
+    assert!(matches!(
+        error,
+        SyntaxError::ParseDepthExceeded {
+            max: MAX_OPERATOR_CHAIN_DEPTH,
             ..
         }
     ));

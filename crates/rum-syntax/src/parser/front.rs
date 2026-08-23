@@ -6,7 +6,25 @@ const INFIX_APPLICATION_PRECEDENCE: u8 = 67;
 /// A parser-specific guard kept below the debug and release native stack limits.
 /// The recursive-descent parser uses multiple Rust frames per delimiter level,
 /// so this is intentionally lower than the runtime evaluator's recursion limit.
-pub(crate) const MAX_PARSE_DEPTH: usize = 128;
+/// Delimiter rather than "bracket" because `( ... )` is guarded too.
+pub(crate) const MAX_DELIMITER_NESTING_DEPTH: usize = 128;
+/// Guards binary-operator-chain recursion (right-associative spines such as
+/// `^` chains and prefix-operator runs). This cap exists to fail gracefully
+/// *before* the native stack runs out, so it is sized by the stack budget,
+/// not by semantic analogy with the evaluator's `DEFAULT_RECURSION_LIMIT`:
+/// the parser spends ~4.6 KiB of native stack per chain link, and a 2 MiB
+/// thread — Rust's default for a spawned thread, and the realistic worst
+/// case for an embedder — aborts at 452 links, so a cap of 1024 could never
+/// fire there. 128 keeps roughly a 3.5× margin on that measurement and
+/// matches the delimiter cap, which `2a23d5e` chose the same way.
+pub(crate) const MAX_OPERATOR_CHAIN_DEPTH: usize = 128;
+/// Bounds how many `;`-separated statements one parsed form may hold.
+/// Counted along the whole spine — including empty statements, which return
+/// to the climbing loop one `;` at a time — because the chain helper itself
+/// holds at most two operands while the spine grows without bound.
+/// Splitting the statements across lines sidesteps the cap: scripts are
+/// split into forms line by line before parsing.
+pub(crate) const MAX_STATEMENT_CHAIN_DEPTH: usize = 256;
 
 pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
     let tokens = lex(input)?;
@@ -16,7 +34,8 @@ pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
 pub(super) struct Parser {
     pub(super) tokens: Vec<Token>,
     pub(super) index: usize,
-    parse_depth: usize,
+    delimiter_depth: usize,
+    operator_chain_depth: usize,
 }
 
 impl Parser {
@@ -24,25 +43,44 @@ impl Parser {
         Self {
             tokens,
             index: 0,
-            parse_depth: 0,
+            delimiter_depth: 0,
+            operator_chain_depth: 0,
         }
     }
 
-    fn with_nested_parse_depth<T>(
+    fn with_delimiter_depth<T>(
         &mut self,
         span: Span,
         parse: impl FnOnce(&mut Self) -> Result<T, SyntaxError>,
     ) -> Result<T, SyntaxError> {
-        if self.parse_depth >= MAX_PARSE_DEPTH {
+        if self.delimiter_depth >= MAX_DELIMITER_NESTING_DEPTH {
             return Err(SyntaxError::ParseDepthExceeded {
-                max: MAX_PARSE_DEPTH,
+                max: MAX_DELIMITER_NESTING_DEPTH,
                 span,
             });
         }
 
-        self.parse_depth += 1;
+        self.delimiter_depth += 1;
         let result = parse(self);
-        self.parse_depth -= 1;
+        self.delimiter_depth -= 1;
+        result
+    }
+
+    fn with_operator_chain_depth<T>(
+        &mut self,
+        span: Span,
+        parse: impl FnOnce(&mut Self) -> Result<T, SyntaxError>,
+    ) -> Result<T, SyntaxError> {
+        if self.operator_chain_depth >= MAX_OPERATOR_CHAIN_DEPTH {
+            return Err(SyntaxError::ParseDepthExceeded {
+                max: MAX_OPERATOR_CHAIN_DEPTH,
+                span,
+            });
+        }
+
+        self.operator_chain_depth += 1;
+        let result = parse(self);
+        self.operator_chain_depth -= 1;
         result
     }
 
@@ -97,7 +135,7 @@ impl Parser {
 
     fn parse_nested_binary_expr(&mut self, min_precedence: u8) -> Result<SyntaxExpr, SyntaxError> {
         let span = self.current().span;
-        self.with_nested_parse_depth(span, |parser| parser.parse_binary_expr(min_precedence))
+        self.with_operator_chain_depth(span, |parser| parser.parse_binary_expr(min_precedence))
     }
 
     fn parse_nested_binary_expr_internal(
@@ -107,7 +145,7 @@ impl Parser {
         allow_infix_application: bool,
     ) -> Result<SyntaxExpr, SyntaxError> {
         let span = self.current().span;
-        self.with_nested_parse_depth(span, |parser| {
+        self.with_operator_chain_depth(span, |parser| {
             parser.parse_binary_expr_internal(
                 min_precedence,
                 allow_function_postfix,
@@ -129,6 +167,13 @@ impl Parser {
         } else {
             self.parse_prefix_expr()?
         };
+
+        // `;` links consumed by this climbing loop and the chain helper it
+        // calls, trailing-`Null` branch included. The count is local to one
+        // call because this loop owns exactly one spine: an independent
+        // spine elsewhere (`f[a;b]` vs `g[c;d]`) parses through a nested
+        // call with its own fresh count.
+        let mut statement_chain_links: usize = 0;
 
         loop {
             if allow_function_postfix && PostfixOp::Function.precedence() >= min_precedence {
@@ -178,24 +223,50 @@ impl Parser {
 
             self.bump();
 
+            if matches!(op, BinaryOp::CompoundExpression) {
+                statement_chain_links += 1;
+                // The spine starts at one statement (the lhs), so the
+                // `MAX_STATEMENT_CHAIN_DEPTH`-th `;` would append statement
+                // `MAX_STATEMENT_CHAIN_DEPTH + 1`.
+                if statement_chain_links >= MAX_STATEMENT_CHAIN_DEPTH {
+                    return Err(SyntaxError::StatementChainTooLong {
+                        max: MAX_STATEMENT_CHAIN_DEPTH,
+                        span: self.current().span,
+                    });
+                }
+
+                if !self.token_starts_expression() {
+                    // Trailing `;`: the missing statement yields `Null`.
+                    let rhs = SyntaxExpr::symbol("Null", self.current().span);
+                    let span = lhs.span().merge(rhs.span());
+                    lhs = SyntaxExpr::binary(op, lhs, rhs, span);
+                    continue;
+                }
+
+                lhs = self.parse_compound_expression_chain(
+                    lhs,
+                    allow_function_postfix,
+                    allow_infix_application,
+                    &mut statement_chain_links,
+                )?;
+                continue;
+            }
+
             let next_min_precedence = next_min_precedence_for_binary_op(op);
 
-            let rhs =
-                if matches!(op, BinaryOp::CompoundExpression) && !self.token_starts_expression() {
-                    SyntaxExpr::symbol("Null", self.current().span)
-                } else if matches!(op, BinaryOp::Rule | BinaryOp::RuleDelayed) {
-                    self.parse_nested_binary_expr_internal(
-                        next_min_precedence,
-                        false,
-                        allow_infix_application,
-                    )?
-                } else {
-                    self.parse_nested_binary_expr_internal(
-                        next_min_precedence,
-                        allow_function_postfix,
-                        allow_infix_application,
-                    )?
-                };
+            let rhs = if matches!(op, BinaryOp::Rule | BinaryOp::RuleDelayed) {
+                self.parse_nested_binary_expr_internal(
+                    next_min_precedence,
+                    false,
+                    allow_infix_application,
+                )?
+            } else {
+                self.parse_nested_binary_expr_internal(
+                    next_min_precedence,
+                    allow_function_postfix,
+                    allow_infix_application,
+                )?
+            };
             let span = lhs.span().merge(rhs.span());
             lhs = SyntaxExpr::binary(op, lhs, rhs, span);
         }
@@ -206,6 +277,66 @@ impl Parser {
         }
 
         Ok(lhs)
+    }
+
+    /// Collects the rest of a `;`-separated statement chain iteratively, so
+    /// the chain links no longer consume recursion depth in either guard.
+    /// The caller has consumed the leading `;` and verified that an
+    /// expression follows. Each statement still parses through the ordinary
+    /// operator-chain guard; only the `;` links are hoisted out of it. Every
+    /// `;` consumed here increments the caller's spine-wide link count, so
+    /// the statement cap bounds the whole spine, not one collection loop.
+    fn parse_compound_expression_chain(
+        &mut self,
+        lhs: SyntaxExpr,
+        allow_function_postfix: bool,
+        allow_infix_application: bool,
+        statement_chain_links: &mut usize,
+    ) -> Result<SyntaxExpr, SyntaxError> {
+        let mut operands = vec![lhs];
+
+        loop {
+            if !self.token_starts_expression() {
+                // An empty statement yields `Null` and ends this chain here:
+                // breaking (rather than continuing) keeps an empty statement
+                // locally left-leaning — `a; ; b` still parses as
+                // `(a; Null); b`, with the remaining `;` links handled by the
+                // climbing loop that called us.
+                operands.push(SyntaxExpr::symbol("Null", self.current().span));
+                break;
+            }
+
+            operands.push(self.parse_nested_binary_expr_internal(
+                BinaryOp::CompoundExpression.precedence() + 1,
+                allow_function_postfix,
+                allow_infix_application,
+            )?);
+
+            if !matches!(self.current_binary_op(), Some(BinaryOp::CompoundExpression)) {
+                break;
+            }
+
+            self.bump();
+            *statement_chain_links += 1;
+            if *statement_chain_links >= MAX_STATEMENT_CHAIN_DEPTH {
+                return Err(SyntaxError::StatementChainTooLong {
+                    max: MAX_STATEMENT_CHAIN_DEPTH,
+                    span: self.current().span,
+                });
+            }
+        }
+
+        // Fold from the right so the AST shape is unchanged: `a; b; c` is
+        // `a; (b; c)`, exactly what the recursive form produced.
+        let mut expr = operands
+            .pop()
+            .expect("compound expression chain has at least one operand");
+        while let Some(operand) = operands.pop() {
+            let span = operand.span().merge(expr.span());
+            expr = SyntaxExpr::binary(BinaryOp::CompoundExpression, operand, expr, span);
+        }
+
+        Ok(expr)
     }
 
     fn parse_infix_application(
@@ -285,10 +416,9 @@ impl Parser {
 
         loop {
             if let Some(open_span) = self.consume_double_lbracket() {
-                let (mut specs, close_span) = self
-                    .with_nested_parse_depth(open_span, |parser| {
-                        parser.parse_double_bracket_expression_list(open_span)
-                    })?;
+                let (mut specs, close_span) = self.with_delimiter_depth(open_span, |parser| {
+                    parser.parse_double_bracket_expression_list(open_span)
+                })?;
                 let span = expr.span().merge(close_span);
                 let mut args = vec![expr];
                 args.append(&mut specs);
@@ -297,7 +427,7 @@ impl Parser {
             }
 
             if let Some(open_span) = self.consume_lbracket() {
-                let (args, close_span) = self.with_nested_parse_depth(open_span, |parser| {
+                let (args, close_span) = self.with_delimiter_depth(open_span, |parser| {
                     parser.parse_expression_list(TokenKind::RBracket, "]", open_span, "[")
                 })?;
                 let span = expr.span().merge(close_span);
@@ -521,7 +651,7 @@ impl Parser {
             }
             TokenKind::LParen => {
                 self.bump();
-                self.with_nested_parse_depth(token.span, |parser| {
+                self.with_delimiter_depth(token.span, |parser| {
                     let expr = parser.parse_function_expr()?;
                     let close_span = parser.expect_rparen(token.span, "(")?;
                     Ok(expr.with_span(token.span.merge(close_span)))
@@ -529,7 +659,7 @@ impl Parser {
             }
             TokenKind::LBrace => {
                 self.bump();
-                self.with_nested_parse_depth(token.span, |parser| {
+                self.with_delimiter_depth(token.span, |parser| {
                     let (items, close_span) =
                         parser.parse_expression_list(TokenKind::RBrace, "}", token.span, "{")?;
                     Ok(SyntaxExpr::list(items, token.span.merge(close_span)))
@@ -537,7 +667,7 @@ impl Parser {
             }
             TokenKind::LAssociation => {
                 self.bump();
-                self.with_nested_parse_depth(token.span, |parser| {
+                self.with_delimiter_depth(token.span, |parser| {
                     let (items, close_span) = parser.parse_expression_list(
                         TokenKind::RAssociation,
                         "|>",

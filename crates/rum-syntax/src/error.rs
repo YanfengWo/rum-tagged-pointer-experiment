@@ -24,6 +24,10 @@ pub enum SyntaxError {
     TrailingInput { span: Span },
     #[error("parse nesting exceeded limit {max} at bytes {span}")]
     ParseDepthExceeded { max: usize, span: Span },
+    #[error(
+        "statement chain exceeded limit {max} at bytes {span}; split the statements across separate lines"
+    )]
+    StatementChainTooLong { max: usize, span: Span },
     #[error("unexpected character `{found}` at bytes {span}")]
     UnexpectedCharacter { found: char, span: Span },
     #[error("unterminated string at bytes {span}")]
@@ -51,6 +55,7 @@ impl SyntaxError {
             | Self::UnclosedDelimiter { span, .. }
             | Self::TrailingInput { span }
             | Self::ParseDepthExceeded { span, .. }
+            | Self::StatementChainTooLong { span, .. }
             | Self::UnexpectedCharacter { span, .. }
             | Self::UnterminatedString { span }
             | Self::UnterminatedComment { span } => Some(*span),

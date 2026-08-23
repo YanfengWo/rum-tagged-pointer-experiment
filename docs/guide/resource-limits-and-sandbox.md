@@ -110,13 +110,34 @@ TerminatedEvaluation["IterationLimit"]
 
 ## Parse Depth
 
-The parser has `MAX_PARSE_DEPTH = 128`.
+The parser has three independent guards.
 
-That protects source-evaluation paths from pathologically nested input.
+`MAX_DELIMITER_NESTING_DEPTH = 128` bounds delimiter nesting —
+`[...]`, `[[...]]`, `(...)`, `{...}`, and `<|...|>`.
 
-Parse-depth overflow is a syntax failure, not a normal evaluated expression.
+`MAX_OPERATOR_CHAIN_DEPTH = 128` bounds operator-chain recursion —
+right-associative chains such as `^` spines and prefix-operator runs. This
+cap is sized by the native stack budget, not by the evaluator's recursion
+limit: the parser spends about 4.6 KiB of stack per chain link, and a
+2 MiB thread — Rust's default for a spawned thread — aborts at roughly
+452 links. 128 fails gracefully well before the stack runs out.
 
-The CLI reports it as an error with a source span.
+`MAX_STATEMENT_CHAIN_DEPTH = 256` bounds how many `;`-separated statements
+a single form may hold. The parser collects `;` chains iteratively, so
+statements consume neither depth budget; a chain's length is bounded by
+this cap instead, counted along the whole spine so that consecutive empty
+statements cannot slip past it. Hitting it reports its own error —
+
+```text
+statement chain exceeded limit 256 at bytes 0..4321; split the statements across separate lines
+```
+
+— and the advice is literal: script sources are split into forms line by
+line, so writing the statements on separate lines parses and runs the same
+program.
+
+All three guards fail closed at parse time: overflow is a syntax failure
+with a source span, not a normal evaluated expression.
 
 ## Match Depth
 

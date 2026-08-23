@@ -711,7 +711,9 @@ verdict.
 | Native stack | `native_stack_limit = 6 MiB` | yes | `metadata.rs:5` | `f[n_]:=f[n+1]; f[0]` → `TerminatedEvaluation["StackLimit"]` (`General::reslim`, 6291456 bytes) |
 | Iteration work | `iteration_work_limit = 100_000` | yes | `metadata.rs:10`; `debug_tools/resources/constraints.rs:206-210` | `Do[0,{50000000}]` → `TerminatedEvaluation["IterationWorkLimit"]` |
 | Generated elements | `generated_element_limit = 100_000` | yes | `metadata.rs:8` | `Range[10^9]` → `TerminatedEvaluation["GeneratedElementLimit"]` |
-| Parse nesting depth | `MAX_PARSE_DEPTH = 128` (compile-time) | yes | `crates/rum-syntax/src/parser/front.rs:9,36-38` | 200 nested `(...)` → parse error `parse nesting exceeded limit` (fail-closed at parse time) |
+| Parse nesting depth | `MAX_DELIMITER_NESTING_DEPTH = 128` (compile-time) | yes | `crates/rum-syntax/src/parser/front.rs:10,51-67` | 200 nested `(...)` → parse error `parse nesting exceeded limit` (fail-closed at parse time) |
+| Operator-chain depth | `MAX_OPERATOR_CHAIN_DEPTH = 128` (compile-time) | yes | `crates/rum-syntax/src/parser/front.rs:20,69-85` | 16 000-link `^` chain → parse error `parse nesting exceeded limit 128` (fail-closed at parse time; sized to the native stack budget — a 2 MiB thread aborts at ~452 links, so the guard fires first) |
+| Statement-chain length | `MAX_STATEMENT_CHAIN_DEPTH = 256` (compile-time) | yes | `crates/rum-syntax/src/parser/front.rs:27,226-236,319-326` | 300-statement one-line `;` chain → parse error `statement chain exceeded limit 256 … split the statements across separate lines` (fail-closed at parse time; per-line script splitting unaffected) |
 | Match depth | `MAX_MATCH_DEPTH = 512` (compile-time) | yes | `crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/match_choices.rs:4,17-19` | bounded by construction in the orderless matcher |
 | ReplaceRepeated | `replace_repeated_limit = 256` | yes | `metadata.rs:3` | per-call runaway budget (brief-184) |
 | Evaluation passes | `evaluation_pass_limit = 256` | yes | `metadata.rs:7` | fixed-point runaway budget |

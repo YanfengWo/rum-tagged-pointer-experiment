@@ -123,6 +123,55 @@ fn compound_expression_sugar_flows_through_lowering_and_evaluation() {
 }
 
 #[test]
+fn long_statement_chain_lowers_to_flat_nary_compound_expression() {
+    // brief-301: the `;` spine lowers iteratively, but the output stays the
+    // flat n-ary CompoundExpression the recursive form produced — correct
+    // arity, elements in source order.
+    let count = 200;
+    let mut input = String::new();
+    let mut expected = String::from("CompoundExpression[");
+    for i in 0..count {
+        if i > 0 {
+            input.push_str("; ");
+            expected.push_str(", ");
+        }
+        input.push_str(&i.to_string());
+        expected.push_str(&i.to_string());
+    }
+    expected.push(']');
+
+    let lowered = lower_syntax_expr(&parse_expr(&input).unwrap()).unwrap();
+
+    assert_eq!(lowered.to_string(), expected);
+}
+
+#[test]
+fn over_cap_statement_chain_line_does_not_swallow_later_lines() {
+    // brief-302: if StatementChainTooLong were ever classified as
+    // "incomplete", split_script_into_forms would keep appending later lines
+    // to the offending one, silently swallowing the rest of the script. The
+    // over-cap line must become its own (reported) form and the following
+    // lines must still split. MAX_STATEMENT_CHAIN_DEPTH is pub(crate) in
+    // rum-syntax, so the count is a literal: 300 sits well over the 256 cap.
+    let over_cap_line = (0..300)
+        .map(|i| format!("x{i} = {i}"))
+        .collect::<Vec<_>>()
+        .join("; ");
+    let script = format!("{over_cap_line}\ny = 1\nz = 2");
+
+    let error = parse_expr(&over_cap_line)
+        .expect_err("a 300-statement line should exceed the statement cap");
+    assert!(matches!(error, SyntaxError::StatementChainTooLong { .. }));
+    assert!(!error.is_incomplete());
+
+    let forms = split_script_into_forms(&script).unwrap();
+    assert_eq!(forms.len(), 3);
+    assert!(forms[0].starts_with("x0 = 0"));
+    assert_eq!(forms[1], "y = 1");
+    assert_eq!(forms[2], "z = 2");
+}
+
+#[test]
 fn attributes_reports_builtin_and_user_defined_attribute_sets() {
     let mut session = session_with_test_control_builtins();
 
