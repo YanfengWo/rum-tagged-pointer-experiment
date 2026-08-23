@@ -284,8 +284,7 @@ impl Session {
         }
 
         definition
-            .down_value_shallow_signatures
-            .as_ref()
+            .down_value_shallow_signatures()
             .is_some_and(|signatures| {
                 signatures
                     .iter()

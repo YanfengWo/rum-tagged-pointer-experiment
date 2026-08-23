@@ -224,10 +224,12 @@ impl Session {
                         down_value,
                         |entry| &entry.lhs,
                     );
+                    definition.note_down_values_rebuilt(&symbol);
                 } else {
-                    replace_or_insert_down_value(&mut definition.down_values, &lhs, down_value);
+                    let replaced_was_ground =
+                        replace_or_insert_down_value(&mut definition.down_values, &lhs, down_value);
+                    definition.note_down_value_stored(&symbol, lhs_is_ground, replaced_was_ground);
                 }
-                definition.refresh_down_value_shallow_signatures(&symbol);
                 self.push_definition_stored_trace(&symbol, DefinitionKind::DownValue, || {
                     Expr::call(
                         system_expr(if delayed { "SetDelayed" } else { "Set" }),
@@ -292,8 +294,27 @@ impl Session {
     }
 }
 
-fn replace_or_insert_down_value(entries: &mut Vec<DownValue>, lhs: &Expr, new_entry: DownValue) {
-    replace_or_insert_definition_by_specificity(entries, lhs, new_entry, |entry| &entry.lhs);
+fn replace_or_insert_down_value(
+    entries: &mut Vec<DownValue>,
+    lhs: &Expr,
+    new_entry: DownValue,
+) -> Option<bool> {
+    if let Some(index) = entries
+        .iter()
+        .position(|entry| lhs_patterns_equivalent(&entry.lhs, lhs))
+    {
+        let replaced_was_ground = entries[index].lhs_is_ground;
+        entries[index] = new_entry;
+        return Some(replaced_was_ground);
+    }
+
+    let new_specificity = definition_specificity(lhs);
+    let index = entries
+        .iter()
+        .position(|entry| new_specificity > definition_specificity(&entry.lhs))
+        .unwrap_or(entries.len());
+    entries.insert(index, new_entry);
+    None
 }
 
 fn replace_or_insert_sub_value(entries: &mut Vec<SubValue>, lhs: &Expr, new_entry: SubValue) {

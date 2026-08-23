@@ -323,13 +323,8 @@ impl Session {
             .as_ref()
             .is_some_and(|definition| !definition.up_values.is_empty());
 
-        self.definitions.insert(
-            *symbol,
-            SymbolDefinition {
-                own_value: Some(value),
-                ..SymbolDefinition::default()
-            },
-        );
+        self.definitions
+            .insert(*symbol, SymbolDefinition::with_own_value(value));
         self.bump_evaluation_epoch_for_symbol(symbol);
 
         if removed_up_values {

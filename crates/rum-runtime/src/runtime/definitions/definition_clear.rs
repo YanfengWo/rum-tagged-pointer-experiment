@@ -183,7 +183,7 @@ impl Session {
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
         let changed = definition.down_values.len() != original_len;
         if changed {
-            definition.refresh_down_value_shallow_signatures(symbol);
+            definition.note_down_values_rebuilt(symbol);
             self.bump_evaluation_epoch_for_symbol(symbol);
         }
         changed
@@ -340,7 +340,7 @@ impl Session {
         if definition.is_empty() {
             self.definitions.remove(&default_symbol);
         } else if changed {
-            definition.refresh_down_value_shallow_signatures(&default_symbol);
+            definition.note_down_values_rebuilt(&default_symbol);
         }
 
         changed

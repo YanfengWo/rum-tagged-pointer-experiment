@@ -336,6 +336,7 @@ fn render_definition_memory_proxy_bytes(definition: &SymbolDefinition) -> usize 
                 .map(render_downvalue_memory_proxy_bytes)
                 .sum::<usize>(),
         )
+        .saturating_add(definition.down_value_dispatch_memory_proxy_bytes())
         .saturating_add(
             definition
                 .sub_values

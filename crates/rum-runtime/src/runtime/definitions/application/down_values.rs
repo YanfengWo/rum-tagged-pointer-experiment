@@ -36,10 +36,10 @@ impl Session {
 
         let args_slice = args.as_ref();
         let head_allows_raw_miss_cache = matches!(attributes.hold_attribute(), HoldAttribute::None);
-        let down_values_cannot_match = head_allows_raw_miss_cache
+        let down_values_cannot_match = !definition.has_ground_down_value_index()
+            && head_allows_raw_miss_cache
             && definition
-                .down_value_shallow_signatures
-                .as_ref()
+                .down_value_shallow_signatures()
                 .is_some_and(|signatures| {
                     signatures
                         .iter()
@@ -73,22 +73,43 @@ impl Session {
             self.normalize_definition_candidate_for_matching(&candidate, attributes);
         record_profile_runtime_path_timing(runtime_profile_normalize, RuntimeProfileOutcome::Ok);
 
-        self.try_apply_down_values_from_symbol(candidate, normalized_candidate, symbol.clone(), 0)
+        let indexed_scan = self
+            .definitions
+            .get(symbol)
+            .expect("DownValue definition remains present during dispatch setup")
+            .start_indexed_down_value_scan(&normalized_candidate, self.evaluation_epoch);
+        if let Some(scan) = indexed_scan {
+            self.try_apply_down_values_from_symbol(
+                candidate,
+                normalized_candidate,
+                symbol.clone(),
+                scan,
+            )
+        } else {
+            self.try_apply_down_values_from_symbol(
+                candidate,
+                normalized_candidate,
+                symbol.clone(),
+                LinearDownValueScan::default(),
+            )
+        }
     }
 
-    fn try_apply_down_values_from_symbol(
+    fn try_apply_down_values_from_symbol<Scan: DownValueScan>(
         &mut self,
         candidate: Expr,
         normalized_candidate: Expr,
         symbol: Symbol,
-        index: usize,
+        mut scan: Scan,
     ) -> Result<Option<Expr>, EvalError> {
         let runtime_profile_value = runtime_path_timing_start("down_values.value_lookup");
-        let Some(down_value) = self
-            .definitions
-            .get(&symbol)
-            .and_then(|definition| definition.down_values.get(index))
-        else {
+        let Some((index, down_value)) = self.definitions.get(&symbol).and_then(|definition| {
+            let index = scan.next_rule_index(definition, self.evaluation_epoch)?;
+            definition
+                .down_values
+                .get(index)
+                .map(|value| (index, value))
+        }) else {
             record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::None);
             return Ok(None);
         };
@@ -102,7 +123,7 @@ impl Session {
                     candidate,
                     normalized_candidate,
                     symbol,
-                    index + 1,
+                    scan,
                 );
             }
 
@@ -157,7 +178,7 @@ impl Session {
                 candidate,
                 normalized_candidate,
                 symbol,
-                index + 1,
+                scan,
             );
         }
 
@@ -185,7 +206,7 @@ impl Session {
                     candidate,
                     normalized_candidate,
                     symbol,
-                    index + 1,
+                    scan,
                 );
             }
 
@@ -270,7 +291,7 @@ impl Session {
                     candidate,
                     normalized_candidate,
                     symbol,
-                    index + 1,
+                    scan,
                 );
             }
 

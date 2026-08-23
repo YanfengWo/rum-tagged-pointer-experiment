@@ -176,6 +176,67 @@ fn compiled_downvalue_matcher_preserves_exact_vs_pattern_precedence() {
 }
 
 #[test]
+fn wide_ground_downvalue_index_preserves_pattern_priority_fallback_and_invalidation() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[f, oneQ]; \
+             oneQ[x_] := MatchQ[x, 1]; \
+             f[x_Integer?oneQ?oneQ?oneQ?oneQ] := pattern; \
+             Do[With[{k = i}, f[k] = k], {i, 1, 32}]; \
+             f[x_Integer] := fallback",
+        )
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("f[1]").unwrap().value.to_string(),
+        "pattern"
+    );
+    assert_eq!(session.eval_text("f[2]").unwrap().value.to_string(), "2");
+    assert_eq!(
+        session.eval_text("f[33]").unwrap().value.to_string(),
+        "fallback"
+    );
+
+    session.eval_text("f[2] = updated").unwrap();
+    assert_eq!(
+        session.eval_text("f[2]").unwrap().value.to_string(),
+        "updated"
+    );
+    session.eval_text("Unset[f[2]]").unwrap();
+    assert_eq!(
+        session.eval_text("f[2]").unwrap().value.to_string(),
+        "fallback"
+    );
+
+    let snapshot = session.capture_loader_snapshot();
+    session.eval_text("ClearAll[f]").unwrap();
+    session.restore_loader_snapshot(snapshot);
+    assert_eq!(
+        session.eval_text("f[2]").unwrap().value.to_string(),
+        "fallback"
+    );
+}
+
+#[test]
+fn wide_ground_downvalue_scan_falls_back_to_live_order_after_matcher_mutation() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[f, mutatingQ]; \
+             mutatingQ[x_] := (Unset[f[1]]; False); \
+             f[x_Integer?mutatingQ?mutatingQ?mutatingQ?mutatingQ] := pattern; \
+             Do[With[{k = i}, f[k] = k], {i, 1, 32}]",
+        )
+        .unwrap();
+
+    assert_eq!(session.eval_text("f[2]").unwrap().value.to_string(), "2");
+    assert_eq!(session.eval_text("f[1]").unwrap().value.to_string(), "f[1]");
+}
+
+#[test]
 fn compiled_downvalue_matcher_falls_back_for_sequence_patterns() {
     let mut session = session_with_test_control_builtins();
 

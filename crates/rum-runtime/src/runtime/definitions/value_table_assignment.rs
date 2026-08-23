@@ -107,7 +107,7 @@ impl Session {
             ValueTableKind::DownValues => {
                 let changed = !definition.down_values.is_empty();
                 definition.down_values.clear();
-                definition.refresh_down_value_shallow_signatures(target);
+                definition.note_down_values_rebuilt(target);
                 (changed, false)
             }
             ValueTableKind::UpValues => {

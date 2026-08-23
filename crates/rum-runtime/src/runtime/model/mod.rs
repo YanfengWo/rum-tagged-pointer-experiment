@@ -19,11 +19,11 @@ pub(super) use cache::{
 };
 pub use cache::{RuntimeCacheHasher, SymbolExprMap};
 pub use config::{ResourceLimits, SessionConfig};
-pub(super) use definitions::expr_contains_pattern_syntax;
 pub use definitions::{
     DefinitionCatalogEntry, DownValue, MessageCatalogEntry, RewriteRule, RewriteRuleInfo, SubValue,
     SymbolDefinition, SymbolInfo, UpValue,
 };
+pub(super) use definitions::{DownValueScan, LinearDownValueScan, expr_contains_pattern_syntax};
 pub use messages::{
     DefinitionKind, RuleApplicationSource, RuntimeInputKind, RuntimeInputRequest, RuntimeMessage,
     TraceEvent,
