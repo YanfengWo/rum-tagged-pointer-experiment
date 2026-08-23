@@ -108,13 +108,14 @@ impl Session {
                 } else {
                     HoldAttribute::None
                 };
-                let remaining_args = args.into_vec();
+                let remaining_args = args;
                 let head_result =
                     self.apply_replace_all_owned(head.into_owned(), rules.clone(), source);
                 self.drive_internal_value(head_result, move |session, head_outcome| {
+                    let rewritten_args = Vec::with_capacity(remaining_args.len());
                     session.apply_replace_all_args(
                         head_outcome.expr,
-                        Vec::new(),
+                        rewritten_args,
                         remaining_args,
                         rules,
                         source,
@@ -148,21 +149,20 @@ impl Session {
         &mut self,
         head: Expr,
         mut rewritten_args: Vec<Expr>,
-        remaining_args: Vec<Expr>,
+        remaining_args: SharedArgs,
         rules: SharedRewriteRules,
         source: RuleApplicationSource,
         changed: bool,
         hold_attribute: HoldAttribute,
         argument_index: usize,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
-        let Some((current, rest)) = remaining_args.split_first() else {
+        let Some(current) = remaining_args.get(argument_index) else {
             return Ok(ReplaceAllTraversalOutcome {
                 expr: Expr::call(head, rewritten_args),
                 changed,
             });
         };
 
-        let rest = rest.to_vec();
         if source == RuleApplicationSource::ReplaceAllUnheld
             && hold_attribute.holds_argument(argument_index)
         {
@@ -170,7 +170,7 @@ impl Session {
             return self.apply_replace_all_args(
                 head,
                 rewritten_args,
-                rest,
+                remaining_args,
                 rules,
                 source,
                 changed,
@@ -179,7 +179,8 @@ impl Session {
             );
         }
 
-        let arg_result = self.apply_replace_all_owned(current.clone(), rules.clone(), source);
+        let current = current.clone();
+        let arg_result = self.apply_replace_all_owned(current, rules.clone(), source);
 
         self.drive_internal_value(arg_result, move |session, outcome| {
             if outcome.changed {
@@ -190,7 +191,7 @@ impl Session {
             session.apply_replace_all_args(
                 head,
                 rewritten_args,
-                rest,
+                remaining_args,
                 rules,
                 source,
                 changed || outcome.changed,
