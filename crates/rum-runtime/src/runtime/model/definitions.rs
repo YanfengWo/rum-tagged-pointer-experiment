@@ -1,6 +1,7 @@
 use super::*;
 
 mod down_value_dispatch;
+mod tagged_value_store;
 
 use down_value_dispatch::DownValueDispatchMetadata;
 pub(in crate::runtime) use down_value_dispatch::{DownValueScan, LinearDownValueScan};

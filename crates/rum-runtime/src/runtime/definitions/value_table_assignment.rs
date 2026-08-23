@@ -113,11 +113,13 @@ impl Session {
             ValueTableKind::UpValues => {
                 let changed = !definition.up_values.is_empty();
                 definition.up_values.clear();
+                definition.note_up_values_rebuilt();
                 (changed, changed)
             }
             ValueTableKind::SubValues => {
                 let changed = !definition.sub_values.is_empty();
                 definition.sub_values.clear();
+                definition.note_sub_values_rebuilt();
                 (changed, false)
             }
         };

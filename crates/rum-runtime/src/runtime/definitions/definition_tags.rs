@@ -248,7 +248,7 @@ impl Session {
                 let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 replace_or_insert_sub_value(
-                    &mut definition.sub_values,
+                    definition,
                     &lhs,
                     SubValue {
                         lhs: lhs.clone(),
@@ -272,7 +272,7 @@ impl Session {
                 let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 replace_or_insert_up_value(
-                    &mut definition.up_values,
+                    definition,
                     &lhs,
                     UpValue {
                         lhs: lhs.clone(),
@@ -324,12 +324,28 @@ fn replace_or_insert_down_value(
     (index, None)
 }
 
-fn replace_or_insert_sub_value(entries: &mut Vec<SubValue>, lhs: &Expr, new_entry: SubValue) {
-    replace_or_insert_definition_by_specificity(entries, lhs, new_entry, |entry| &entry.lhs);
+fn replace_or_insert_sub_value(definition: &mut SymbolDefinition, lhs: &Expr, new_entry: SubValue) {
+    let lookup = definition.prepare_sub_value_store(lhs);
+    let (store_index, replaced) = replace_or_insert_definition_by_specificity(
+        &mut definition.sub_values,
+        lhs,
+        new_entry,
+        |entry| &entry.lhs,
+        lookup.equivalent_index(),
+    );
+    definition.note_sub_value_stored(store_index, replaced, lookup);
 }
 
-fn replace_or_insert_up_value(entries: &mut Vec<UpValue>, lhs: &Expr, new_entry: UpValue) {
-    replace_or_insert_definition_by_specificity(entries, lhs, new_entry, |entry| &entry.lhs);
+fn replace_or_insert_up_value(definition: &mut SymbolDefinition, lhs: &Expr, new_entry: UpValue) {
+    let lookup = definition.prepare_up_value_store(lhs);
+    let (store_index, replaced) = replace_or_insert_definition_by_specificity(
+        &mut definition.up_values,
+        lhs,
+        new_entry,
+        |entry| &entry.lhs,
+        lookup.equivalent_index(),
+    );
+    definition.note_up_value_stored(store_index, replaced, lookup);
 }
 
 fn replace_or_insert_definition_by_specificity<T, F>(
@@ -337,23 +353,27 @@ fn replace_or_insert_definition_by_specificity<T, F>(
     lhs: &Expr,
     new_entry: T,
     lhs_of: F,
-) where
+    equivalent_index: Option<usize>,
+) -> (usize, bool)
+where
     F: Fn(&T) -> &Expr,
 {
-    if let Some(index) = entries
-        .iter()
-        .position(|entry| lhs_patterns_equivalent(lhs_of(entry), lhs))
-    {
+    if let Some(index) = equivalent_index {
         entries[index] = new_entry;
-        return;
+        return (index, true);
     }
 
     let new_specificity = definition_specificity(lhs);
-    let index = entries
-        .iter()
-        .position(|entry| new_specificity > definition_specificity(lhs_of(entry)))
-        .unwrap_or(entries.len());
+    let index = entries.last().map_or(0, |last| {
+        if new_specificity <= definition_specificity(lhs_of(last)) {
+            entries.len()
+        } else {
+            entries
+                .partition_point(|entry| definition_specificity(lhs_of(entry)) >= new_specificity)
+        }
+    });
     entries.insert(index, new_entry);
+    (index, false)
 }
 
 fn definition_specificity(expr: &Expr) -> usize {

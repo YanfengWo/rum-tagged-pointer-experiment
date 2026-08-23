@@ -207,6 +207,9 @@ impl Session {
                 .up_values
                 .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
             changed = definition.up_values.len() != original_len;
+            if changed {
+                definition.note_up_values_rebuilt();
+            }
             symbol_has_no_more_up_values = definition.up_values.is_empty();
         }
 
@@ -234,6 +237,7 @@ impl Session {
             .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
         let changed = definition.sub_values.len() != original_len;
         if changed {
+            definition.note_sub_values_rebuilt();
             self.bump_evaluation_epoch_for_symbol(symbol);
         }
         changed

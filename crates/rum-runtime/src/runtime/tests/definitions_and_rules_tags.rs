@@ -239,6 +239,107 @@ fn typed_subvalues_are_prioritized_over_earlier_generic_subvalues() {
 }
 
 #[test]
+fn wide_upvalue_store_index_preserves_specificity_replacement_and_invalidation() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[f, g]; \
+             Do[With[{k = i}, g /: f[g[k], x_] := k], {i, 1, 32}]; \
+             g /: f[g[z_], x_] := fallback[z, x]; \
+             g /: f[g[33], x_] := 33; \
+             g /: f[g[17], y_] := updated[y]; \
+             TagUnset[g, f[g[5], q_]]; \
+             g /: f[g[34], x_] := 34",
+        )
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("f[g[17], a]").unwrap().value.to_string(),
+        "updated[a]"
+    );
+    assert_eq!(
+        session.eval_text("f[g[5], a]").unwrap().value.to_string(),
+        "fallback[5, a]"
+    );
+    assert_eq!(
+        session.eval_text("f[g[34], a]").unwrap().value.to_string(),
+        "34"
+    );
+    assert_eq!(
+        session.eval_text("f[g[99], a]").unwrap().value.to_string(),
+        "fallback[99, a]"
+    );
+    let up_values = session.eval_text("UpValues[g]").unwrap().value;
+    let Expr::Call { args, .. } = up_values else {
+        panic!("UpValues[g] should return a List");
+    };
+    assert_eq!(args.len(), 34);
+
+    session
+        .eval_text("Do[With[{k = i}, g[h[k]] = k], {i, 1, 32}]")
+        .unwrap();
+    assert_eq!(
+        session.eval_text("g[h[17]]").unwrap().value.to_string(),
+        "17"
+    );
+    session.eval_text("Unset[g[h[5]]]").unwrap();
+    assert_eq!(
+        session.eval_text("g[h[5]]").unwrap().value.to_string(),
+        "g[h[5]]"
+    );
+    session.eval_text("g /: f[g[35], x_] := 35").unwrap();
+    assert_eq!(
+        session.eval_text("f[g[35], a]").unwrap().value.to_string(),
+        "35"
+    );
+    session.eval_text("DownValues[g] = {}").unwrap();
+    assert_eq!(
+        session.eval_text("f[g[17], a]").unwrap().value.to_string(),
+        "updated[a]"
+    );
+}
+
+#[test]
+fn wide_subvalue_store_index_preserves_specificity_replacement_and_invalidation() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[f]; \
+             Do[With[{k = i}, f[k][x_] := k], {i, 1, 32}]; \
+             f[z_][x_] := fallback[z, x]; \
+             f[33][x_] := 33; \
+             f[17][y_] := updated[y]; \
+             Unset[f[5][q_]]; \
+             f[34][x_] := 34",
+        )
+        .unwrap();
+
+    assert_eq!(
+        session.eval_text("f[17][a]").unwrap().value.to_string(),
+        "updated[a]"
+    );
+    assert_eq!(
+        session.eval_text("f[5][a]").unwrap().value.to_string(),
+        "fallback[5, a]"
+    );
+    assert_eq!(
+        session.eval_text("f[34][a]").unwrap().value.to_string(),
+        "34"
+    );
+    assert_eq!(
+        session.eval_text("f[99][a]").unwrap().value.to_string(),
+        "fallback[99, a]"
+    );
+    let sub_values = session.eval_text("SubValues[f]").unwrap().value;
+    let Expr::Call { args, .. } = sub_values else {
+        panic!("SubValues[f] should return a List");
+    };
+    assert_eq!(args.len(), 34);
+}
+
+#[test]
 fn subvalues_list_and_apply_nested_head_definitions() {
     let mut session = Session::new();
 

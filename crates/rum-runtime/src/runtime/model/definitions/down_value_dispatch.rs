@@ -1,3 +1,4 @@
+use super::tagged_value_store::TaggedValueStoreMetadata;
 use super::*;
 use std::collections::hash_map::RandomState;
 use std::hash::BuildHasher;
@@ -32,11 +33,11 @@ pub(in crate::runtime) trait DownValueScan: Copy + Send + 'static {
 pub(super) struct DownValueDispatchMetadata {
     shallow_signatures: Option<Vec<DownValueShallowSignature>>,
     ground_count: usize,
-    dispatch_index: DownValueDispatchIndexCache,
+    pub(super) dispatch_index: DownValueDispatchIndexCache,
 }
 
 #[derive(Debug, Default)]
-struct DownValueDispatchIndexCache {
+pub(super) struct DownValueDispatchIndexCache {
     index: OnceLock<Box<DownValueDispatchIndex>>,
 }
 
@@ -63,6 +64,7 @@ struct DownValueDispatchIndex {
     next_equivalence_collision: Vec<usize>,
     non_ground_rule_indices: Vec<usize>,
     wrapped_ground_rule_indices: Vec<usize>,
+    tagged_value_stores: TaggedValueStoreMetadata,
 }
 
 impl SymbolDefinition {
@@ -73,6 +75,10 @@ impl SymbolDefinition {
         replaced_was_ground: Option<bool>,
         store_index: usize,
     ) {
+        if self.down_values.len() == 1 && replaced_was_ground.is_none() {
+            self.note_down_values_rebuilt(symbol);
+            return;
+        }
         if self.down_value_dispatch.is_none() {
             self.note_down_values_rebuilt(symbol);
             return;
@@ -132,13 +138,22 @@ impl SymbolDefinition {
                     index.append(store_index, down_value);
                 }
             }
-            _ => metadata.dispatch_index.clear(),
+            _ => metadata
+                .dispatch_index
+                .rebuild_down_values_preserving_tags(&self.down_values),
         }
     }
 
     pub(in crate::runtime) fn note_down_values_rebuilt(&mut self, symbol: &Symbol) {
         if self.down_values.is_empty() {
-            self.down_value_dispatch = None;
+            if let Some(metadata) = self.down_value_dispatch.as_mut() {
+                metadata.shallow_signatures = None;
+                metadata.ground_count = 0;
+                metadata
+                    .dispatch_index
+                    .rebuild_down_values_preserving_tags(&self.down_values);
+            }
+            self.prune_dispatch_metadata_if_unused();
             return;
         }
 
@@ -152,7 +167,9 @@ impl SymbolDefinition {
             .down_value_dispatch
             .get_or_insert_with(|| Box::new(DownValueDispatchMetadata::default()));
         metadata.ground_count = ground_count;
-        metadata.dispatch_index.clear();
+        metadata
+            .dispatch_index
+            .rebuild_down_values_preserving_tags(&self.down_values);
         metadata.shallow_signatures = shallow_signatures;
     }
 
@@ -235,6 +252,17 @@ impl SymbolDefinition {
             std::mem::size_of::<DownValueDispatchMetadata>()
                 .saturating_add(metadata.dispatch_index.memory_proxy_bytes())
         })
+    }
+
+    pub(super) fn prune_dispatch_metadata_if_unused(&mut self) {
+        let unused = self.down_values.is_empty()
+            && self
+                .down_value_dispatch
+                .as_ref()
+                .is_some_and(|metadata| !metadata.dispatch_index.has_tagged_value_stores());
+        if unused {
+            self.down_value_dispatch = None;
+        }
     }
 }
 
@@ -320,8 +348,65 @@ impl DownValueDispatchIndexCache {
         self.index.get_mut().map(Box::as_mut)
     }
 
-    fn clear(&mut self) {
-        self.index.take();
+    pub(super) fn tagged_value_stores_mut(
+        &mut self,
+        down_values: &[DownValue],
+    ) -> &mut TaggedValueStoreMetadata {
+        self.index
+            .get_or_init(|| Box::new(DownValueDispatchIndex::new(down_values)));
+        &mut self
+            .index
+            .get_mut()
+            .expect("initialized definition indexes remain present")
+            .tagged_value_stores
+    }
+
+    pub(super) fn tagged_value_stores_mut_if_present(
+        &mut self,
+    ) -> Option<&mut TaggedValueStoreMetadata> {
+        Some(&mut self.index.get_mut()?.tagged_value_stores)
+    }
+
+    pub(super) fn clear_up_value_store(&mut self, down_values_empty: bool) {
+        let Some(index) = self.index.get_mut() else {
+            return;
+        };
+        index.tagged_value_stores.clear_up_value_store();
+        if down_values_empty && index.tagged_value_stores.is_empty() {
+            self.index.take();
+        }
+    }
+
+    pub(super) fn clear_sub_value_store(&mut self, down_values_empty: bool) {
+        let Some(index) = self.index.get_mut() else {
+            return;
+        };
+        index.tagged_value_stores.clear_sub_value_store();
+        if down_values_empty && index.tagged_value_stores.is_empty() {
+            self.index.take();
+        }
+    }
+
+    pub(super) fn has_tagged_value_stores(&self) -> bool {
+        self.index
+            .get()
+            .is_some_and(|index| !index.tagged_value_stores.is_empty())
+    }
+
+    fn rebuild_down_values_preserving_tags(&mut self, down_values: &[DownValue]) {
+        let Some(mut previous) = self.index.take() else {
+            return;
+        };
+        let tagged_value_stores = std::mem::take(&mut previous.tagged_value_stores);
+        if tagged_value_stores.is_empty() {
+            return;
+        }
+
+        let mut rebuilt = Box::new(DownValueDispatchIndex::new(down_values));
+        rebuilt.tagged_value_stores = tagged_value_stores;
+        self.index
+            .set(rebuilt)
+            .expect("cleared definition index cache accepts rebuilt index");
     }
 
     fn memory_proxy_bytes(&self) -> usize {
@@ -364,6 +449,7 @@ impl DownValueDispatchIndex {
             next_equivalence_collision,
             non_ground_rule_indices,
             wrapped_ground_rule_indices,
+            tagged_value_stores: TaggedValueStoreMetadata::default(),
         }
     }
 
@@ -443,6 +529,7 @@ impl DownValueDispatchIndex {
                     .capacity()
                     .saturating_mul(std::mem::size_of::<usize>()),
             )
+            .saturating_add(self.tagged_value_stores.memory_proxy_bytes())
     }
 }
 
