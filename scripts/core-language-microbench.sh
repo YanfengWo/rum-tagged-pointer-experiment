@@ -143,10 +143,30 @@ module_chain_expr() {
   printf 'Module[{%s}, Hold[gMicroModuleChain1]]' "${locals}"
 }
 
+wide_symbol_call_expr() {
+  local width=$1
+  local args=""
+  local index
+
+  for ((index = 1; index <= width; index++)); do
+    if [[ -n "${args}" ]]; then
+      args+=", "
+    fi
+    args+="gMicroUpvalueArg${index}"
+  done
+  args+=", gMicroUpvalueNonce"
+
+  printf 'gMicroUpvalueProbe[%s]' "${args}"
+}
+
 module_chain_small_width=96
 module_chain_large_width=192
 module_chain_small_expr=$(module_chain_expr "${module_chain_small_width}")
 module_chain_large_expr=$(module_chain_expr "${module_chain_large_width}")
+upvalue_candidates_small_width=1600
+upvalue_candidates_large_width=3200
+upvalue_candidates_small_expr=$(wide_symbol_call_expr "${upvalue_candidates_small_width}")
+upvalue_candidates_large_expr=$(wide_symbol_call_expr "${upvalue_candidates_large_width}")
 
 cat > "${bench_rum}" <<EOF
 ClearAll[
@@ -157,6 +177,10 @@ ClearAll[
   rumMicroSink,
   fExact,
   fPattern,
+  gMicroUpvalueTag,
+  gMicroUpvalueMarker,
+  gMicroUpvalueProbe,
+  gMicroUpvalueNonce,
   list10,
   rulesSimple,
   gMicroWideTraversal,
@@ -434,6 +458,39 @@ rumMicroOnce[
   "set-part-fill-large",
   400,
   Do[gMicroSetPartFillLarge[[i]] = i, {i, 1, 400}]
+];
+
+gMicroUpvalueNonce = 0;
+gMicroUpvalueTag /: gMicroUpvalueMarker[gMicroUpvalueTag] := 1;
+rumMicroBench[
+  "upvalue-candidates-tiny",
+  rumMicroN[1000],
+  (
+    gMicroUpvalueNonce = gMicroUpvalueNonce + 1;
+    gMicroUpvalueProbe[a, b, c, d, gMicroUpvalueNonce]
+  )
+];
+rumMicroOnce[
+  "upvalue-candidates-wide-small",
+  ${upvalue_candidates_small_width},
+  (
+    gMicroUpvalueNonce = gMicroUpvalueNonce + 1;
+    ${upvalue_candidates_small_expr}
+  )
+];
+rumMicroOnce[
+  "upvalue-candidates-wide-large",
+  ${upvalue_candidates_large_width},
+  (
+    gMicroUpvalueNonce = gMicroUpvalueNonce + 1;
+    ${upvalue_candidates_large_expr}
+  )
+];
+ClearAll[
+  gMicroUpvalueTag,
+  gMicroUpvalueMarker,
+  gMicroUpvalueProbe,
+  gMicroUpvalueNonce
 ];
 
 Print["RUM_CORE_MICRO_END"];

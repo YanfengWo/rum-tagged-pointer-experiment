@@ -1,4 +1,5 @@
 use super::super::*;
+use super::unique_symbols::UniqueSymbolCollector;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) enum TaggedDefinitionTarget {
@@ -342,22 +343,27 @@ pub(in crate::runtime) fn expr_contains_symbol(expr: &Expr, target: &Symbol) -> 
 }
 
 pub(in crate::runtime) fn collect_upvalue_candidate_symbols(args: &[Expr]) -> Vec<Symbol> {
-    let mut symbols = Vec::new();
+    let mut symbols = UniqueSymbolCollector::with_capacity_hint(args.len());
 
     for arg in args {
         collect_expr_symbols_unique(arg, &mut symbols);
     }
 
-    symbols
+    symbols.into_symbols()
 }
 
 pub(in crate::runtime) fn collect_upset_target_symbols(lhs: &Expr) -> Vec<Symbol> {
-    let mut symbols = Vec::new();
-    collect_upset_target_symbols_from_lhs(strip_hold_pattern(lhs), &mut symbols);
-    symbols
+    let lhs = strip_hold_pattern(lhs);
+    let capacity_hint = match lhs {
+        Expr::Call { args, .. } => args.len(),
+        Expr::Atom(_) => 0,
+    };
+    let mut symbols = UniqueSymbolCollector::with_capacity_hint(capacity_hint);
+    collect_upset_target_symbols_from_lhs(lhs, &mut symbols);
+    symbols.into_symbols()
 }
 
-fn collect_upset_target_symbols_from_lhs(expr: &Expr, symbols: &mut Vec<Symbol>) {
+fn collect_upset_target_symbols_from_lhs(expr: &Expr, symbols: &mut UniqueSymbolCollector) {
     if let Expr::Call { head, args } = expr {
         if is_system_symbol_name(head, "Condition") && !args.is_empty() {
             collect_upset_target_symbols_from_lhs(&args[0], symbols);
@@ -370,7 +376,7 @@ fn collect_upset_target_symbols_from_lhs(expr: &Expr, symbols: &mut Vec<Symbol>)
     }
 }
 
-fn collect_upset_target_symbol_from_arg(expr: &Expr, symbols: &mut Vec<Symbol>) {
+fn collect_upset_target_symbol_from_arg(expr: &Expr, symbols: &mut UniqueSymbolCollector) {
     if let Some((_, inner)) = pattern_named_pattern(expr) {
         collect_upset_target_symbol_from_arg(inner, symbols);
         return;
@@ -391,32 +397,22 @@ fn collect_upset_target_symbol_from_arg(expr: &Expr, symbols: &mut Vec<Symbol>) 
     }
 
     match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => push_unique_upset_target(symbols, symbol.clone()),
+        Expr::Atom(Atom::Symbol(symbol)) => symbols.push(*symbol),
         Expr::Call { head, .. }
             if is_system_symbol_name(head, "BlankSequence")
                 || is_system_symbol_name(head, "BlankNullSequence") => {}
         Expr::Call { head, .. } => {
             if let Some(symbol) = expr_as_symbol(head) {
-                push_unique_upset_target(symbols, symbol.clone());
+                symbols.push(*symbol);
             }
         }
         Expr::Atom(_) => {}
     }
 }
 
-fn push_unique_upset_target(symbols: &mut Vec<Symbol>, symbol: Symbol) {
-    if !symbols.iter().any(|existing| existing == &symbol) {
-        symbols.push(symbol);
-    }
-}
-
-pub(in crate::runtime) fn collect_expr_symbols_unique(expr: &Expr, symbols: &mut Vec<Symbol>) {
+fn collect_expr_symbols_unique(expr: &Expr, symbols: &mut UniqueSymbolCollector) {
     match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => {
-            if !symbols.iter().any(|existing| existing == symbol) {
-                symbols.push(symbol.clone());
-            }
-        }
+        Expr::Atom(Atom::Symbol(symbol)) => symbols.push(*symbol),
         Expr::Atom(_) => {}
         Expr::Call { head, args } => {
             collect_expr_symbols_unique(head, symbols);
