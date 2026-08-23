@@ -102,6 +102,38 @@ fn pins_nested_call_parse_depth_boundary() {
 }
 
 #[test]
+fn rejects_deep_right_associative_chain_without_panicking() {
+    let mut input = String::with_capacity(32_001);
+    input.push('a');
+    for _ in 0..16_000 {
+        input.push_str("^a");
+    }
+
+    let error = parse_expr(&input).expect_err("deep power chain should exceed the parser guard");
+    assert!(matches!(
+        error,
+        SyntaxError::ParseDepthExceeded {
+            max: MAX_PARSE_DEPTH,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn rejects_deep_prefix_chain_without_panicking() {
+    let input = format!("{}x", "!".repeat(16_000));
+
+    let error = parse_expr(&input).expect_err("deep prefix chain should exceed the parser guard");
+    assert!(matches!(
+        error,
+        SyntaxError::ParseDepthExceeded {
+            max: MAX_PARSE_DEPTH,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn parses_association_literals() {
     let parsed = parse_expr("<|a -> 1, b -> <|c -> 3|>|>").unwrap();
     assert_eq!(parsed.to_string(), "<|a -> 1, b -> <|c -> 3|>|>");

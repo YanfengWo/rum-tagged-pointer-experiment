@@ -80,7 +80,7 @@ impl Parser {
             }
 
             self.bump();
-            let rhs = self.parse_binary_expr(next_min_precedence_for_binary_op(op))?;
+            let rhs = self.parse_nested_binary_expr(next_min_precedence_for_binary_op(op))?;
             let span = expr.span().merge(rhs.span());
             expr = SyntaxExpr::binary(op, expr, rhs, span);
         }
@@ -93,6 +93,27 @@ impl Parser {
         min_precedence: u8,
     ) -> Result<SyntaxExpr, SyntaxError> {
         self.parse_binary_expr_internal(min_precedence, true, true)
+    }
+
+    fn parse_nested_binary_expr(&mut self, min_precedence: u8) -> Result<SyntaxExpr, SyntaxError> {
+        let span = self.current().span;
+        self.with_nested_parse_depth(span, |parser| parser.parse_binary_expr(min_precedence))
+    }
+
+    fn parse_nested_binary_expr_internal(
+        &mut self,
+        min_precedence: u8,
+        allow_function_postfix: bool,
+        allow_infix_application: bool,
+    ) -> Result<SyntaxExpr, SyntaxError> {
+        let span = self.current().span;
+        self.with_nested_parse_depth(span, |parser| {
+            parser.parse_binary_expr_internal(
+                min_precedence,
+                allow_function_postfix,
+                allow_infix_application,
+            )
+        })
     }
 
     fn parse_binary_expr_internal(
@@ -138,7 +159,7 @@ impl Parser {
                     let times = BinaryOp::Times;
                     if self.token_starts_primary() && times.precedence() >= min_precedence {
                         let next_min_precedence = next_min_precedence_for_binary_op(times);
-                        let rhs = self.parse_binary_expr_internal(
+                        let rhs = self.parse_nested_binary_expr_internal(
                             next_min_precedence,
                             allow_function_postfix,
                             allow_infix_application,
@@ -163,13 +184,13 @@ impl Parser {
                 if matches!(op, BinaryOp::CompoundExpression) && !self.token_starts_expression() {
                     SyntaxExpr::symbol("Null", self.current().span)
                 } else if matches!(op, BinaryOp::Rule | BinaryOp::RuleDelayed) {
-                    self.parse_binary_expr_internal(
+                    self.parse_nested_binary_expr_internal(
                         next_min_precedence,
                         false,
                         allow_infix_application,
                     )?
                 } else {
-                    self.parse_binary_expr_internal(
+                    self.parse_nested_binary_expr_internal(
                         next_min_precedence,
                         allow_function_postfix,
                         allow_infix_application,
@@ -209,9 +230,9 @@ impl Parser {
             });
         }
 
-        let head = self.parse_binary_expr_internal(0, allow_function_postfix, false)?;
+        let head = self.parse_nested_binary_expr_internal(0, allow_function_postfix, false)?;
         self.expect_tilde()?;
-        let rhs = self.parse_binary_expr_internal(
+        let rhs = self.parse_nested_binary_expr_internal(
             INFIX_APPLICATION_PRECEDENCE + 1,
             allow_function_postfix,
             true,
@@ -227,31 +248,31 @@ impl Parser {
         match &token.kind {
             TokenKind::Plus => {
                 self.bump();
-                let expr = self.parse_binary_expr(PrefixOp::Plus.precedence())?;
+                let expr = self.parse_nested_binary_expr(PrefixOp::Plus.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::Plus, expr, span))
             }
             TokenKind::PlusPlus => {
                 self.bump();
-                let expr = self.parse_binary_expr(PrefixOp::PreIncrement.precedence())?;
+                let expr = self.parse_nested_binary_expr(PrefixOp::PreIncrement.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::PreIncrement, expr, span))
             }
             TokenKind::Minus => {
                 self.bump();
-                let expr = self.parse_binary_expr(PrefixOp::Minus.precedence())?;
+                let expr = self.parse_nested_binary_expr(PrefixOp::Minus.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::Minus, expr, span))
             }
             TokenKind::Bang => {
                 self.bump();
-                let expr = self.parse_binary_expr(PrefixOp::Not.precedence())?;
+                let expr = self.parse_nested_binary_expr(PrefixOp::Not.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::Not, expr, span))
             }
             TokenKind::MinusMinus => {
                 self.bump();
-                let expr = self.parse_binary_expr(PrefixOp::PreDecrement.precedence())?;
+                let expr = self.parse_nested_binary_expr(PrefixOp::PreDecrement.precedence())?;
                 let span = token.span.merge(expr.span());
                 Ok(SyntaxExpr::prefix(PrefixOp::PreDecrement, expr, span))
             }
@@ -414,7 +435,7 @@ impl Parser {
             if matches!(self.current().kind, TokenKind::Span) || !self.token_starts_expression() {
                 None
             } else {
-                let expr = self.parse_binary_expr(SPAN_PRECEDENCE + 1)?;
+                let expr = self.parse_nested_binary_expr(SPAN_PRECEDENCE + 1)?;
                 end_span = expr.span();
                 Some(expr)
             };
@@ -435,7 +456,7 @@ impl Parser {
                 });
             }
 
-            let expr = self.parse_binary_expr(SPAN_PRECEDENCE + 1)?;
+            let expr = self.parse_nested_binary_expr(SPAN_PRECEDENCE + 1)?;
             end_span = expr.span();
             Some(expr)
         } else {
