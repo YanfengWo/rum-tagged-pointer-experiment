@@ -79,11 +79,11 @@ impl Hasher for RuntimeCacheHasher {
 pub(in crate::runtime) type CallStabilityCache =
     HashMap<CallStabilityCacheKey, CallStabilityCacheEntry, BuildHasherDefault<RuntimeCacheHasher>>;
 
-const ASSOCIATION_LOOKUP_INDEX_THRESHOLD: usize = 16;
+pub(in crate::runtime) const ASSOCIATION_LOOKUP_INDEX_THRESHOLD: usize = 16;
 // Bound retained side data independently of the number of Associations a
 // session evaluates. Wider values keep the allocation-free borrowed scan.
 const ASSOCIATION_LOOKUP_CACHE_MAX_ASSOCIATIONS: usize = 4;
-const ASSOCIATION_LOOKUP_CACHE_MAX_KEYS: usize = 65_536;
+pub(in crate::runtime) const ASSOCIATION_LOOKUP_CACHE_MAX_KEYS: usize = 65_536;
 const NO_ASSOCIATION_KEY_POSITION: usize = usize::MAX;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -107,6 +107,14 @@ pub(in crate::runtime) struct AssociationLookupCache {
 #[derive(Debug)]
 struct AssociationLookupCacheEntry {
     args: WeakSharedArgs,
+    index: AssociationKeyIndex,
+}
+
+/// A write path's held-out index: position data only, with the weak witness
+/// dropped for the mutation window. See
+/// [`AssociationLookupCache::detach_write_index`].
+#[derive(Debug)]
+pub(in crate::runtime) struct AssociationWriteIndex {
     index: AssociationKeyIndex,
 }
 
@@ -182,6 +190,101 @@ impl AssociationLookupCache {
         let index = AssociationKeyIndex::new(keys, args.len());
         self.record_index_build(index.len());
         self.indexed_keys = self.indexed_keys.saturating_add(index.len());
+        self.entries.push(AssociationLookupCacheEntry {
+            args: args.downgrade(),
+            index,
+        });
+    }
+
+    /// Hands out the index witnessed by `args`, if any, together with the
+    /// position it gives `key`, dropping the weak witness — and a matching
+    /// `pending` admission hint — so the caller can mutate `args` in place:
+    /// `Arc::make_mut` clones whenever any `Weak`, not only a strong
+    /// reference, is alive. A dropped handle is always safe; the next probe
+    /// scans and rebuilds.
+    pub(in crate::runtime) fn detach_write_index(
+        &mut self,
+        args: &SharedArgs,
+        key: &Expr,
+    ) -> Option<(AssociationWriteIndex, Option<usize>)> {
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|pending| pending.ptr_eq(args))
+        {
+            self.pending = None;
+        }
+
+        let position = self
+            .entries
+            .iter()
+            .position(|entry| entry.args.ptr_eq(args))?;
+        let entry = self.entries.remove(position);
+        self.indexed_keys = self.indexed_keys.saturating_sub(entry.index.len());
+        let (found, comparisons) = entry.index.position(args, key);
+        self.record_indexed_probe(comparisons);
+        Some((AssociationWriteIndex { index: entry.index }, found))
+    }
+
+    /// Builds a write path's index without attaching it: the handle stays
+    /// out of the cache for the caller's mutation window. Unlike the read
+    /// side's two-lookup admission, the write path builds on first use — a
+    /// write loop amortizes the build across the writes that follow, and an
+    /// admission `pending` could not survive a mutation window anyway (the
+    /// detach must drop it alongside the entry). `None` when the bounds
+    /// `insert_index` enforces refuse an index for this length.
+    pub(in crate::runtime) fn build_write_index<'a>(
+        &mut self,
+        args: &SharedArgs,
+        key: &Expr,
+        keys: impl Iterator<Item = &'a Expr>,
+    ) -> Option<(AssociationWriteIndex, Option<usize>)> {
+        if args.len() <= ASSOCIATION_LOOKUP_INDEX_THRESHOLD
+            || args.len() > ASSOCIATION_LOOKUP_CACHE_MAX_KEYS
+        {
+            return None;
+        }
+
+        let index = AssociationKeyIndex::new(keys, args.len());
+        self.record_index_build(index.len());
+        let (found, comparisons) = index.position(args, key);
+        self.record_indexed_probe(comparisons);
+        Some((AssociationWriteIndex { index }, found))
+    }
+
+    /// Re-attaches an index after a committed in-place mutation, recording
+    /// `appended` when the mutation appended a new key — the O(1)
+    /// maintenance that keeps the next indexed probe from reporting that key
+    /// `Missing`. No evaluation runs between the detach and this call, so no
+    /// probe can observe the gap. An index the association has outgrown, or
+    /// one whose append would cross the total retention bound, is dropped
+    /// instead of re-attached, matching the bounds `insert_index` enforces.
+    pub(in crate::runtime) fn reattach_write_index(
+        &mut self,
+        args: &SharedArgs,
+        handle: AssociationWriteIndex,
+        appended: Option<&Expr>,
+    ) {
+        let AssociationWriteIndex { mut index } = handle;
+        if args.len() > ASSOCIATION_LOOKUP_CACHE_MAX_KEYS {
+            return;
+        }
+
+        if let Some(key) = appended {
+            if self.indexed_keys >= ASSOCIATION_LOOKUP_CACHE_MAX_KEYS {
+                return;
+            }
+            index.append_key(key);
+            self.indexed_keys = self.indexed_keys.saturating_add(1);
+        }
+
+        self.remove_stale_entries();
+        while self.entries.len() >= ASSOCIATION_LOOKUP_CACHE_MAX_ASSOCIATIONS
+            || self.indexed_keys.saturating_add(index.len()) > ASSOCIATION_LOOKUP_CACHE_MAX_KEYS
+        {
+            let evicted = self.entries.remove(0);
+            self.indexed_keys = self.indexed_keys.saturating_sub(evicted.index.len());
+        }
         self.entries.push(AssociationLookupCacheEntry {
             args: args.downgrade(),
             index,
@@ -297,6 +400,17 @@ impl AssociationKeyIndex {
         }
 
         (None, comparisons)
+    }
+
+    fn append_key(&mut self, key: &Expr) {
+        // Mirror `new`: the appended position becomes the head of its hash
+        // chain, keeping collision chains last-occurrence-first.
+        let hash = self.hash_builder.hash_one(key);
+        let previous = self
+            .buckets
+            .insert(hash, self.next_collision.len())
+            .unwrap_or(NO_ASSOCIATION_KEY_POSITION);
+        self.next_collision.push(previous);
     }
 
     fn len(&self) -> usize {

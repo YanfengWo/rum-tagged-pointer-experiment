@@ -447,7 +447,7 @@ impl Session {
     }
 }
 
-fn flat_association_rule_parts(expr: &Expr) -> Option<(&Expr, &Expr)> {
+pub(in crate::runtime) fn flat_association_rule_parts(expr: &Expr) -> Option<(&Expr, &Expr)> {
     let Expr::Call { head, args } = expr else {
         return None;
     };

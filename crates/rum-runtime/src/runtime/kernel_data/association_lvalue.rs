@@ -118,6 +118,28 @@ impl Session {
             (updated_head, updated_args)
         };
 
+        if let Some(write_index) = plan.write_index {
+            // Re-attach with the appended key recorded in O(1), or the next
+            // indexed probe reports a freshly appended key `Missing` and a
+            // later write of that key appends a duplicate. Replacing an
+            // existing key's value needs no maintenance: the index maps keys
+            // to positions, and a replacement leaves both the key set and
+            // every position unchanged. The appended key is read back from
+            // the mutated tail rather than cloned ahead of the move.
+            let appended = plan
+                .position
+                .is_none()
+                .then(|| updated_args.last())
+                .flatten()
+                .and_then(flat_association_rule_parts)
+                .map(|(key, _)| key);
+            self.association_lookup_cache.reattach_write_index(
+                &updated_args,
+                write_index,
+                appended,
+            );
+        }
+
         self.bump_evaluation_epoch_for_symbol(target);
         proof.bloom.union_assign(rule_bloom);
         self.reinsert_call_stability_proof(&updated_head, &updated_args, proof);
@@ -125,7 +147,7 @@ impl Session {
     }
 
     fn direct_association_rule_plan(
-        &self,
+        &mut self,
         target: &Symbol,
         key: &Expr,
     ) -> Option<DirectAssociationRulePlan> {
@@ -139,30 +161,56 @@ impl Session {
         if !is_system_symbol_name(head, "Association") {
             return None;
         }
+        let cache_key = CallStabilityCacheKey::new(head, args);
 
-        let mut position = None;
-        for (index, entry) in args.iter().enumerate() {
-            let Expr::Call {
-                head: rule_head,
-                args: rule_args,
-            } = entry
-            else {
-                return None;
-            };
-            if !(is_system_symbol_name(rule_head, "Rule")
-                || is_system_symbol_name(rule_head, "RuleDelayed"))
-                || rule_args.len() != 2
+        // Locate the key through the read side's index machinery where one
+        // applies, holding the index OUT of the cache for the mutation
+        // window: `Arc::make_mut` clones while any `Weak` — not only a
+        // strong reference — is alive, so an attached index would turn the
+        // write into an O(n) copy. The caller re-attaches the handle after
+        // the mutation with any appended key recorded. An index exists only
+        // after the same whole-list Rule/RuleDelayed validation the scan
+        // performs, so an indexed position arrives with every entry already
+        // validated — the property the mutation window depends on. The
+        // write path builds on first use rather than waiting for a second
+        // lookup: a write loop amortizes the build across the writes that
+        // follow. The linear scan stays for the lengths the index does not
+        // cover: at or below the index threshold, and past the retention
+        // bound.
+        let (write_index, position) = if args.len() <= ASSOCIATION_LOOKUP_INDEX_THRESHOLD
+            || args.len() > ASSOCIATION_LOOKUP_CACHE_MAX_KEYS
+        {
+            (None, direct_association_scan_position(args, key)?)
+        } else if let Some((write_index, position)) =
+            self.association_lookup_cache.detach_write_index(args, key)
+        {
+            (Some(write_index), position)
+        } else {
+            if !args
+                .iter()
+                .all(|entry| flat_association_rule_parts(entry).is_some())
             {
                 return None;
             }
-            if position.is_none() && rule_args[0] == *key {
-                position = Some(index);
+            let built = self.association_lookup_cache.build_write_index(
+                args,
+                key,
+                args.iter().map(|entry| {
+                    flat_association_rule_parts(entry)
+                        .expect("validated association rule entry")
+                        .0
+                }),
+            );
+            match built {
+                Some((write_index, position)) => (Some(write_index), position),
+                None => (None, direct_association_scan_position(args, key)?),
             }
-        }
+        };
 
         Some(DirectAssociationRulePlan {
-            cache_key: CallStabilityCacheKey::new(head, args),
+            cache_key,
             position,
+            write_index,
         })
     }
 
@@ -198,6 +246,35 @@ impl Session {
 struct DirectAssociationRulePlan {
     cache_key: CallStabilityCacheKey,
     position: Option<usize>,
+    write_index: Option<AssociationWriteIndex>,
+}
+
+/// Full-list validation plus first-match position, `None` when any entry is
+/// not a two-argument `Rule`/`RuleDelayed` (the caller then declines the
+/// direct path). This is the scan the index replaces; it stays for the
+/// lengths the index does not cover.
+fn direct_association_scan_position(args: &SharedArgs, key: &Expr) -> Option<Option<usize>> {
+    let mut position = None;
+    for (index, entry) in args.iter().enumerate() {
+        let Expr::Call {
+            head: rule_head,
+            args: rule_args,
+        } = entry
+        else {
+            return None;
+        };
+        if !(is_system_symbol_name(rule_head, "Rule")
+            || is_system_symbol_name(rule_head, "RuleDelayed"))
+            || rule_args.len() != 2
+        {
+            return None;
+        }
+        if position.is_none() && rule_args[0] == *key {
+            position = Some(index);
+        }
+    }
+
+    Some(position)
 }
 
 enum AssociationRuleMutationUndo {

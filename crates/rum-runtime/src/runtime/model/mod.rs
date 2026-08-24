@@ -11,7 +11,8 @@ mod traversal;
 #[cfg(test)]
 pub(super) use cache::AssociationLookupWork;
 pub(super) use cache::{
-    AssociationLookupCache, AssociationLookupCacheProbe, AttributeMap, AttributeSetCache,
+    ASSOCIATION_LOOKUP_CACHE_MAX_KEYS, ASSOCIATION_LOOKUP_INDEX_THRESHOLD, AssociationLookupCache,
+    AssociationLookupCacheProbe, AssociationWriteIndex, AttributeMap, AttributeSetCache,
     BuiltinDispatchSpecCache, BuiltinSpecMap, CallEffectCacheEntry, CallStabilityCache,
     CallStabilityCacheEntry, CallStabilityCacheKey, DefinitionMap, StabilityBloom,
     SymbolCallEffectCache, SymbolCallEffectKey, SymbolCountMap, SymbolSet, SymbolStabilityCache,
