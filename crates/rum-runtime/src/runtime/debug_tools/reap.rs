@@ -3,7 +3,7 @@ use super::*;
 struct ReapScopeRenderState {
     handler: Option<Expr>,
     pattern_list_form: bool,
-    groups: Vec<Vec<ReapBucket>>,
+    groups: Vec<ReapBucketGroup>,
 }
 
 struct ReapBucketRenderState {
@@ -55,7 +55,7 @@ impl Session {
         let (patterns, pattern_list_form) = normalize_reap_patterns(args.get(1));
         let handler = args.get(2).cloned();
         self.reap_scopes.push(ReapScope {
-            buckets_by_pattern: vec![Vec::new(); patterns.len()],
+            buckets_by_pattern: vec![ReapBucketGroup::default(); patterns.len()],
             patterns,
             pattern_list_form,
             handler,
@@ -132,7 +132,7 @@ impl Session {
 
             let bucket_state = ReapBucketRenderState {
                 handler: state.handler.clone(),
-                buckets: buckets.clone(),
+                buckets: buckets.buckets.clone(),
             };
             let group_result = self.resume_reap_buckets_from_index(bucket_state, 0, Vec::new());
             match group_result {
@@ -233,16 +233,44 @@ fn normalize_reap_patterns(expr: Option<&Expr>) -> (Vec<Expr>, bool) {
     }
 }
 
-fn record_sown_value(buckets: &mut Vec<ReapBucket>, tag: Expr, value: Expr) {
-    if let Some(bucket) = buckets.iter_mut().find(|bucket| bucket.tag == tag) {
+const REAP_BUCKET_INDEX_THRESHOLD: usize = 16;
+
+fn record_sown_value(group: &mut ReapBucketGroup, tag: Expr, value: Expr) {
+    if group.tag_positions.is_none() && group.buckets.len() > REAP_BUCKET_INDEX_THRESHOLD {
+        group.tag_positions = Some(reap_tag_positions(&group.buckets));
+    }
+
+    if let Some(tag_positions) = &group.tag_positions {
+        if let Some(position) = tag_positions.get(&tag).copied() {
+            group.buckets[position].values.push(value);
+            return;
+        }
+    } else if let Some(bucket) = group.buckets.iter_mut().find(|bucket| bucket.tag == tag) {
         bucket.values.push(value);
         return;
     }
 
-    buckets.push(ReapBucket {
+    let position = group.buckets.len();
+    if let Some(tag_positions) = &mut group.tag_positions {
+        tag_positions.insert(tag.clone(), position);
+    }
+    group.buckets.push(ReapBucket {
         tag,
         values: vec![value],
     });
+
+    if group.tag_positions.is_none() && group.buckets.len() > REAP_BUCKET_INDEX_THRESHOLD {
+        group.tag_positions = Some(reap_tag_positions(&group.buckets));
+    }
+}
+
+#[inline(never)]
+fn reap_tag_positions(buckets: &[ReapBucket]) -> std::collections::HashMap<Expr, usize> {
+    buckets
+        .iter()
+        .enumerate()
+        .map(|(position, bucket)| (bucket.tag.clone(), position))
+        .collect()
 }
 
 fn finish_reap_result(value: Expr, harvested: Expr) -> Expr {

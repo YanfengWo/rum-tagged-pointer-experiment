@@ -146,6 +146,7 @@ mod options_and_protection;
 mod package_tools;
 mod part_assignment;
 mod pattern_matching_orderless_optional;
+mod reap;
 mod registered_builtin_resolution;
 mod replace_all_unheld;
 mod rule_rhs_materialization;

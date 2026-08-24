@@ -172,12 +172,58 @@ pub(in crate::runtime) struct ReapBucket {
     pub(in crate::runtime) values: Vec<Expr>,
 }
 
+#[derive(Default)]
+pub(in crate::runtime) struct ReapBucketGroup {
+    pub(in crate::runtime) buckets: Vec<ReapBucket>,
+    /// Lookup mirror for `buckets`; logical state remains entirely in the
+    /// ordered bucket vector.
+    pub(in crate::runtime) tag_positions: Option<HashMap<Expr, usize>>,
+}
+
+impl Clone for ReapBucketGroup {
+    fn clone(&self) -> Self {
+        Self {
+            buckets: self.buckets.clone(),
+            tag_positions: None,
+        }
+    }
+}
+
+impl std::fmt::Debug for ReapBucketGroup {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self.buckets, formatter)
+    }
+}
+
+impl PartialEq for ReapBucketGroup {
+    fn eq(&self, other: &Self) -> bool {
+        self.buckets == other.buckets
+    }
+}
+
+impl Eq for ReapBucketGroup {}
+
+impl ReapBucketGroup {
+    pub(in crate::runtime) fn iter(&self) -> std::slice::Iter<'_, ReapBucket> {
+        self.buckets.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a ReapBucketGroup {
+    type Item = &'a ReapBucket;
+    type IntoIter = std::slice::Iter<'a, ReapBucket>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) struct ReapScope {
     pub(in crate::runtime) patterns: Vec<Expr>,
     pub(in crate::runtime) pattern_list_form: bool,
     pub(in crate::runtime) handler: Option<Expr>,
-    pub(in crate::runtime) buckets_by_pattern: Vec<Vec<ReapBucket>>,
+    pub(in crate::runtime) buckets_by_pattern: Vec<ReapBucketGroup>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
