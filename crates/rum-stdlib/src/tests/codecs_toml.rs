@@ -185,6 +185,127 @@ fn to_toml_selects_tables_quotes_keys_and_preserves_assignment_order() {
     );
 }
 
+/// Golden corpus captured from the release CLI before the linear-encoding
+/// rework (brief-310): 18 output shapes plus 8 error shapes. The expected
+/// strings are byte-for-byte what the encoder emitted at capture time; any
+/// drift is a behavior change in emitted TOML, not a formatting nit.
+#[test]
+fn to_toml_golden_corpus_is_byte_stable() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        (
+            r#"<|"a" -> 1, "b" -> "x", "c" -> True, "d" -> False, "e" -> 1/4, "f" -> {1, 2, 3}|>"#,
+            "a = 1\nb = \"x\"\nc = true\nd = false\ne = 0.25\nf = [1, 2, 3]",
+        ),
+        (
+            r#"<|"t1" -> <|"x" -> 1|>, "t2" -> <|"y" -> 2, "z" -> 3|>|>"#,
+            "[t1]\nx = 1\n\n[t2]\ny = 2\nz = 3",
+        ),
+        (
+            r#"<|"t1" -> <|"x" -> 1|>, "t2" -> <|"x" -> 2|>, "t3" -> <|"x" -> 3|>, "z" -> 0|>"#,
+            "t1 = {x = 1}\nt2 = {x = 2}\nt3 = {x = 3}\nz = 0",
+        ),
+        (
+            r#"<|"t1" -> <|"x" -> 1|>, "z" -> 0, "t2" -> <|"y" -> 2|>|>"#,
+            "t1 = {x = 1}\nz = 0\n\n[t2]\ny = 2",
+        ),
+        (
+            r#"<|"a" -> <|"b" -> <|"c" -> 1|>|>|>"#,
+            "[a]\n\n[a.b]\nc = 1",
+        ),
+        (
+            r#"<|"a" -> <|"b" -> <|"c" -> 1|>, "p" -> 2|>|>"#,
+            "[a]\nb = {c = 1}\np = 2",
+        ),
+        (
+            r#"<|"servers" -> {<|"n" -> "edge"|>, <|"n" -> "batch"|>}|>"#,
+            "[[servers]]\nn = \"edge\"\n\n[[servers]]\nn = \"batch\"",
+        ),
+        (r#"<||>"#, ""),
+        (r#"<|"e" -> <||>|>"#, "[e]\n"),
+        (r#"<|"arr" -> {<||>, <||>}|>"#, "[[arr]]\n\n[[arr]]\n"),
+        (
+            r#"<|"servers" -> {<|"n" -> 1|>, <|"n" -> 2|>}, "z" -> 0|>"#,
+            "servers = [{n = 1}, {n = 2}]\nz = 0",
+        ),
+        (
+            r#"<|"t" -> <|"x" -> 1|>, "z" -> 0, "arr" -> {<|"n" -> 1|>, <|"n" -> 2|>}|>"#,
+            "t = {x = 1}\nz = 0\n\n[[arr]]\nn = 1\n\n[[arr]]\nn = 2",
+        ),
+        (
+            r#"<|"a.b" -> 1, "" -> 2, "with space" -> 3, "q\"uote" -> 4, "tab\tkey" -> 5|>"#,
+            "\"a.b\" = 1\n\"\" = 2\n\"with space\" = 3\n\"q\\\"uote\" = 4\n\"tab\\tkey\" = 5",
+        ),
+        (
+            r#"<|"nl" -> "a\nb", "tab" -> "a\tb", "q" -> "say \"hi\"", "bs" -> "a\\b", "uni" -> "héllo→"|>"#,
+            "nl = \"a\\nb\"\ntab = \"a\\tb\"\nq = \"say \\\"hi\\\"\"\nbs = \"a\\\\b\"\nuni = \"héllo→\"",
+        ),
+        (
+            r#"<|"neg" -> -5, "big" -> 123456789012345678901234567890, "rat" -> 3/8, "rat2" -> -1/20, "zero" -> 0|>"#,
+            "neg = -5\nbig = 123456789012345678901234567890\nrat = 0.375\nrat2 = -0.05\nzero = 0",
+        ),
+        (
+            r#"<|"m" -> {{1, 2}, {3, 4}}, "empty" -> {}, "mixed" -> {1, "s", True, {}}|>"#,
+            "m = [[1, 2], [3, 4]]\nempty = []\nmixed = [1, \"s\", true, []]",
+        ),
+        (
+            r#"<|"arr" -> {<|"i" -> 1|>, <|"i" -> 2|>, 3}|>"#,
+            "arr = [{i = 1}, {i = 2}, 3]",
+        ),
+        (
+            r#"<|"svc" -> <|"name" -> "rum", "opts" -> <|"debug" -> True, "level" -> 2|>, "ports" -> {8080, 9090}|>, "flag" -> False|>"#,
+            "svc = {name = \"rum\", opts = {debug = true, level = 2}, ports = [8080, 9090]}\nflag = false",
+        ),
+    ] {
+        assert_eq!(
+            eval_string_atom(&mut session, &format!("ToToml[{source}]")),
+            expected,
+            "golden corpus case: {source}"
+        );
+    }
+}
+
+#[test]
+fn to_toml_golden_error_corpus_is_byte_stable() {
+    let mut session = core_session();
+
+    for (source, message) in [
+        (r#"<|1 -> "a"|>"#, "ToToml keys must be Strings."),
+        (
+            r#"<|"t" -> <|"x" -> 1, 2 -> "y"|>|>"#,
+            "ToToml keys must be Strings.",
+        ),
+        (
+            r#"<|"t" -> <|"x" -> 1, 2 -> "y"|>, "z" -> 0|>"#,
+            "ToToml inline table keys must be Strings.",
+        ),
+        (
+            r#"<|"s" -> wumbo|>"#,
+            "Cannot encode expression wumbo as TOML.",
+        ),
+        (
+            r#"<|"k" :> 2 + 3|>"#,
+            "Cannot encode expression Plus[2, 3] as TOML.",
+        ),
+        (
+            r#"<|"v" -> {"a" -> 1}|>"#,
+            "Cannot encode expression Rule[\"a\", 1] as TOML.",
+        ),
+        (
+            r#"<|"r" -> 1/3|>"#,
+            "Cannot encode non-terminating Rational 1/3 as TOML; convert it explicitly before calling ToToml.",
+        ),
+        (
+            r#"42"#,
+            "ToToml expects a top-level Association with String keys.",
+        ),
+    ] {
+        let outcome = session.eval_text(&format!("ToToml[{source}]")).unwrap();
+        assert_failed_with_message(outcome.value, outcome.messages, "ToToml", "toml", message);
+    }
+}
+
 #[test]
 fn toml_codecs_compose_with_json() {
     let mut session = core_session();

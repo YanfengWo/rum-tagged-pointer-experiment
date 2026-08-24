@@ -32,9 +32,10 @@ fn write_table_body(
         out.push('\n');
     }
 
+    let last_plain_index = last_plain_assignment_index(entries);
     let mut wrote_assignment = false;
     for (index, (key, value)) in entries.iter().enumerate() {
-        if table_like(value) && !has_plain_assignment_after(entries, index) {
+        if table_like(value) && !has_plain_assignment_after(last_plain_index, index) {
             continue;
         }
         let key = string_key(key, "ToToml keys must be Strings.")?;
@@ -48,7 +49,7 @@ fn write_table_body(
     }
 
     for (index, (key, value)) in entries.iter().enumerate() {
-        if !table_like(value) || has_plain_assignment_after(entries, index) {
+        if !table_like(value) || has_plain_assignment_after(last_plain_index, index) {
             continue;
         }
         let key = string_key(key, "ToToml keys must be Strings.")?;
@@ -85,9 +86,10 @@ fn write_table_assignments_then_children(
     path: &[String],
     out: &mut String,
 ) -> Result<(), TomlEncodeError> {
+    let last_plain_index = last_plain_assignment_index(entries);
     let mut wrote_assignment = false;
     for (index, (key, value)) in entries.iter().enumerate() {
-        if table_like(value) && !has_plain_assignment_after(entries, index) {
+        if table_like(value) && !has_plain_assignment_after(last_plain_index, index) {
             continue;
         }
         if wrote_assignment {
@@ -100,7 +102,7 @@ fn write_table_assignments_then_children(
     }
 
     for (index, (key, value)) in entries.iter().enumerate() {
-        if !table_like(value) || has_plain_assignment_after(entries, index) {
+        if !table_like(value) || has_plain_assignment_after(last_plain_index, index) {
             continue;
         }
         let key = string_key(key, "ToToml keys must be Strings.")?;
@@ -180,13 +182,45 @@ fn list_of_associations(expr: &Expr) -> Option<Vec<Vec<(Expr, Expr)>>> {
 }
 
 fn table_like(expr: &Expr) -> bool {
-    association_entries_from_expr(expr).is_some() || list_of_associations(expr).is_some()
+    association_shaped(expr) || list_of_associations_shaped(expr)
 }
 
-fn has_plain_assignment_after(entries: &[(Expr, Expr)], index: usize) -> bool {
-    entries[index + 1..]
-        .iter()
-        .any(|(_, value)| !table_like(value))
+// Shape-only mirrors of `association_entries_from_expr` / `list_of_associations`
+// success: they answer the same classification question by walking the
+// expression, without building and canonicalizing an entry table per probe.
+fn association_shaped(expr: &Expr) -> bool {
+    let Expr::Call { head, args } = expr else {
+        return false;
+    };
+    is_system_symbol_name(head, "Association") && args.iter().all(deep_entry_shaped)
+}
+
+fn deep_entry_shaped(expr: &Expr) -> bool {
+    let Expr::Call { head, args } = expr else {
+        return false;
+    };
+    if is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed") {
+        return args.len() == 2;
+    }
+    if is_system_symbol_name(head, "Association") {
+        return args.iter().all(deep_entry_shaped);
+    }
+    is_system_symbol_name(head, "List") && args.iter().all(deep_entry_shaped)
+}
+
+fn list_of_associations_shaped(expr: &Expr) -> bool {
+    let Some(items) = list_items(expr) else {
+        return false;
+    };
+    !items.is_empty() && items.iter().all(association_shaped)
+}
+
+fn has_plain_assignment_after(last_plain_index: Option<usize>, index: usize) -> bool {
+    last_plain_index.is_some_and(|last| last > index)
+}
+
+fn last_plain_assignment_index(entries: &[(Expr, Expr)]) -> Option<usize> {
+    entries.iter().rposition(|(_, value)| !table_like(value))
 }
 
 fn string_key<'a>(expr: &'a Expr, message: &str) -> Result<&'a str, TomlEncodeError> {
