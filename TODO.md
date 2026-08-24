@@ -4,35 +4,53 @@ This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log),
 and release-facing changes live in [CHANGELOG.md](./CHANGELOG.md).
 
-Status checkpoint: 2026-08-23, committed tree through `d93c859`. Uncommitted
+Status checkpoint: 2026-08-24, committed tree through `e1dc9f62`. Uncommitted
 performance candidates do not count as completed until their correctness,
 timing, counter, and memory gates have all been reviewed.
 
 ## Active — post-v0.1 algorithmic audit
 
-The repository-wide O(n^2)-and-worse audit has completed its P0 tranche. The
-three most recent P0 changes are:
+The P0 tranche and most of P1 are done; the 2026-08-24 entry of
+[PROGRESS.md](./PROGRESS.md) records the second sweep in full. Two classes of
+defect were closed along the way that the original audit had not named: wide
+inputs aborting the process on native stack exhaustion, and a cache-clear cliff
+that made incremental association writes 40x slower past a threshold.
 
-- `c73df5c` — resumable traversal state no longer copies the remaining suffix
-  on every step;
-- `97873ee` — `Module` escape closure is computed with a linear worklist;
-- `d97abd7` — wide UpValue candidate-symbol discovery uses an adaptive index.
+**Remaining measured work, in this order:**
 
-The broader completed optimization line is summarized in the 2026-08-22/23
-entry of [PROGRESS.md](./PROGRESS.md).
-The first P1 item landed as `d93c859`: ordered, non-`Flat`, multi-argument
-matching now keeps pattern/value cursors across all-`Single` prefixes and
-suspension instead of rebuilding the remaining vectors.
-The remaining measured work is P1, in this order:
+1. **`RumTokens` byte-to-character offsets.** `byte_to_char_offset`
+   (`crates/rum-stdlib/src/strings/tokenize.rs:302`) counts characters from the
+   start of the source for every span, twice per token, so tokenizing is
+   superlinear: 0.0495 / 0.1263 / 0.3734 s at 25k / 50k / 90k tokens — 1.8x the
+   input for 2.96x the time. Spans are produced in ascending order, so one
+   monotonic cursor answers all of them in a single pass with no allocation.
+   This was listed in the original P1 item but not done in the second sweep.
+2. **Shared replacement plan for `Replace`.** `ReplaceAll` compiles its rules
+   once per traversal and indexes exact rules; `Replace`, `ReplaceAt` and
+   `ReplaceList` still try each rule at each visited node, so cost scales with
+   the rule count: 0.0026 / 0.0046 / 0.0093 s for 50 / 100 / 200 rules over a
+   500-element list. Share the compiled plan and reuse the exact-rule index.
+   Preserve rule order, held evaluation, suspension, and message behavior.
+   Note the depth half of the original item is **not** a complexity reduction:
+   subtree depth is computed unconditionally, but tree depth is bounded by
+   `DEFAULT_EVALUATION_PASS_LIMIT` (256), so it is a bounded constant factor.
 
-1. **Shared replacement plan.** `Replace` still clones or scans its rules at
-   each visited node and computes subtree depth even for level specifications
-   that do not need it. Share a compiled `RewriteRulePlan`; compute depth only
-   for negative levels. Preserve rule order, held evaluation, suspension, and
-   message behavior.
-2. **Three bounded wide-input scans.** Remove repeated prefix rescans in
-   `RumTokens`, index wide TOML table keys, and replace `Reap`'s linear tag
-   bucketing with an adaptive index. Keep small-input paths allocation-light.
+**Deferred, with evidence, from the second sweep:**
+
+- **Error spans are computed per form but rendered against the whole file.** A
+  script `q = 1\nw = 1 ! 2` reports `2:1` when the offending `!` is at `2:7`,
+  and the `Get` path shows byte offsets with no line/column at all. This is a
+  real pre-existing defect, deliberately excluded from the splitter work
+  because fixing it changes user-visible output and would have voided that
+  change's byte-identical acceptance criterion.
+- **A trailing-operator form still re-parses per line.** The linear splitter
+  drives the parser form by form, but a form whose delimiters are balanced and
+  whose expression is unfinished (`1 +\n2 +\n3`) cannot be predicted from
+  balance alone. Such forms are short in practice; recorded rather than hidden.
+- **Pattern- and key-driven `ReplacePart` rules stay sequential.** Merging them
+  into one pass would reorder user-visible evaluation or change association-key
+  semantics. Their outer walk is iterative, so wide rule lists no longer
+  consume a native frame per rule.
 
 Every item remains subject to the performance gate in
 [docs/testing-strategy.md](./docs/testing-strategy.md): safe Rust only, base

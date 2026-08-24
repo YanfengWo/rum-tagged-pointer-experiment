@@ -1485,3 +1485,88 @@ Correctness gates passed `cargo test -p rum-runtime` (674/674) and
 `cargo test --workspace` (all non-ignored tests; three existing stdlib stress
 tests remained ignored). The remaining P1 order is now: shared `Replace`
 planning/depth work, then the bounded `RumTokens`/TOML/`Reap` wide-input scans.
+
+## 2026-08-24 — second algorithmic sweep, crash class, and two cliffs
+
+The post-v0.1 audit continued through briefs 301-321. Beyond the complexity
+reductions it set out to make, it closed two defect classes the original survey
+had not named, and one of those was found only because a probe was pushed past
+the size the plan had specified.
+
+**Native stack exhaustion on wide input was a shipped bug, not a regression.**
+`Replace[Range[10000], z -> 0]` and `Cases[Range[7000], _Integer]` aborted the
+process; `origin/main` aborted identically. The walkers recursed once per
+element from inside a `drive_internal_value` continuation, and the native-stack
+guard could not see it: the guard polls in `evaluate`, keyed on
+`evaluation_depth`, which these continuation chains never increment. Raising a
+limit was therefore not the fix and adding a poll would only have converted a
+crash into a refusal — a 50 000-element list is a reasonable input. Thirteen
+builtins were converted to explicit loops carrying a `pending` outcome so a
+suspension resumes at the same element: `Replace`, `ReplaceAll`, `Cases`,
+`Count`, `Position`, `DeleteCases`, `ReplaceList`, `Reap` rendering, the
+`UpValue`/`SubValue` dispatchers, `StringReplace`, `StringCases` and
+`StringApply`. The boundary is now `GeneratedElementLimit`, which refuses
+gracefully.
+
+**Two cliffs, both invisible until a probe crossed them.**
+
+Incremental association writes cost 1.5 s at 16 000 keys and 55 s at 20 000 —
+1.25x the work for 36x the time. Every direct write stability-checked a freshly
+built `Rule`, inserting a cache entry for an expression that died immediately,
+so crossing the 16384 entry cap wiped the whole cache including the proof the
+direct path needs; the slow path never re-seeded it, disabling the fast path for
+the rest of the session. The table in the brief that opened this work stopped at
+16 000 — precisely below the cliff — and it surfaced only because the worker
+measured past the specified range.
+
+Installing many UpValues on one symbol took 38.6 s at 20 000 definitions. The
+diagnosis refuted all three suspected causes (index rebuild on non-terminal
+insert, specificity recomputation in the comparator, metadata prune) and found
+the trigger was punctuation: each line ending in `;` lowers to a
+`CompoundExpression` wrapper, ordinary calls enter UpValue dispatch before
+builtin dispatch, and the wrapper's arguments contain the tag nested inside the
+`TagSetDelayed`. A 128-line probe showed `candidates=8128` — C(128,2) — with a
+prefilter skip rate of 1000 per mille: every candidate rejected, the whole scan
+wasted. The same definitions took 2.54 s with trailing semicolons and 0.03 s
+without.
+
+**Measured outcomes.** Script loading 7.75 s to 0.01 s at 10 000 lines, plus one
+parse per form instead of two. `ToToml` 6.9 s to 0.03 s at 8000 entries;
+`FromToml` 0.289 s to 0.014 s at 16 000 keys. `StringReplace` and `StringCases`
+2.7 s and 3.4 s to 0.017 s and 0.018 s at 8000 strings. Association writes
+675 s to 0.08 s at 32 000 keys, across the cliff fix and the write index.
+`KeyTake`/`KeyDrop`/`KeyDropFrom` roughly 20x at 8000 keys. `ReplacePart`
+0.0175 s to 0.0032 s at 2000 rules, and 20 000 rules from a crash to 0.014 s.
+`Together` 0.53 s to 0.077 s at 40 addends. UpValue installation 38.6 s to
+0.15 s. `Reap` collection 0.129 s to 0.014 s at 8000 tags. Workspace tests went
+from 1862 to 1921, always green.
+
+**Method notes worth keeping.**
+
+- *A brief's own measurement range can hide the defect.* The association table
+  stopped one step short of the cliff. Probe past the specified range.
+- *Three green probes do not establish a universal claim.* brief-305's design
+  rested on "balance open implies an incomplete parse error"; the spot-checks
+  passed only because juxtaposition rescues adjacent operands, and real grammar
+  conflicts die before EOF. The brief was withdrawn intact — the working tree
+  was byte-identical — and replaced by a parser-side design whose equivalence
+  follows from prefix determinism instead of sampling.
+- *Counters settle what stopwatches cannot.* Whether a write mutates in place is
+  a yes/no question with a load-immune answer: 65,840,485 allocations became
+  20,020, about one per write. A probe also demonstrated the ownership trap
+  directly — a weak witness alive across `make_mut` forces a copy, dropping it
+  first keeps the allocation.
+- *A survey's structural reading needs a probe before it becomes a plan.*
+  `DownValue` dispatch was listed with `UpValue`/`SubValue` on structure alone
+  and measured fine. `StringCases` was cited as a linear in-tree model, but that
+  measurement used a literal pattern routed elsewhere; its rule form had the
+  same defect. Conversely `KeyDropFrom`, named without a probe, was confirmed.
+- *Semantics-preserving is not the same as merging.* `ReplacePart` rules apply
+  sequentially, each to the result of the last, so merging targets collected
+  against the original tree changes results silently. `Together`'s obvious
+  deferred-normalization fix would have made identical denominators slower;
+  pairwise merging kept the per-step normalization and only changed operand
+  sizes.
+
+Two items from the original P1 list remain and are recorded in `TODO.md`:
+`RumTokens` offset conversion and the shared replacement plan for `Replace`.

@@ -24,12 +24,46 @@ minor versions may include breaking changes; the project aims to follow
   monotonic Rust `Instant` clock rather than differencing the host wall clock.
 - Native ZeroMQ tests skip when the environment denies loopback access instead
   of requiring an out-of-sandbox rerun.
+- Loading a script is linear in its length. The splitter re-parsed the whole
+  accumulated text once per line while a form stayed unterminated, so a
+  10 000-line data literal took 7.75 s and the same data on one line took
+  0.01 s; it now lexes once and drives the parser form by form, taking 0.01 s.
+  Each form also carries the syntax tree that parse produced, so evaluation no
+  longer parses it a second time.
+- A further round of complexity reductions on wide inputs, each measured
+  before and after: `ToToml` and `FromToml` no longer rescan or rebuild per
+  entry; `StringReplace`, `StringCases` and `StringApply` no longer copy their
+  remaining input and accumulated output per element; `KeyTake`, `KeyDrop` and
+  `KeyDropFrom` index their key membership tests; `ReplacePart` merges exact
+  positional rules into a single pass; `Together` merges addends pairwise
+  instead of renormalizing after every one; `Reap` indexes its tag buckets; and
+  UpValue dispatch discovers candidates only at the positions where a stored
+  tag can live, which is what made installing many UpValues on one symbol
+  quadratic.
 
 ### Fixed
 
 - Added the previously missing `list[[i]] = value` assignment semantics.
 - Bounded recursive operator parsing and made uninitialized `Module` binding
-  processing iterative.
+  processing iterative. The parser's single depth limit is now three separate
+  caps — delimiter nesting, operator chains, and `;`-separated statements —
+  because one number could not serve all three: statement count is not nesting
+  depth. `;` chains are collected iteratively in both the parser and lowering,
+  and a form holding too many statements reports its own error naming the limit
+  and suggesting the fix (splitting the line), rather than a nesting message.
+- Wide inputs no longer abort the process. `Replace`, `ReplaceAll`, `Cases`,
+  `Count`, `Position`, `DeleteCases`, `ReplaceList`, `Reap`, `StringReplace`,
+  `StringCases`, `StringApply`, and `UpValue`/`SubValue` dispatch each walked
+  their input by recursing once per element, rule, or definition, so a flat list
+  of a few thousand entries overflowed the native stack. All of them now
+  iterate, with suspension and resume preserved; the boundary is the documented
+  resource limit, which refuses gracefully.
+- Building an association one key at a time no longer falls off a performance
+  cliff. Writes stability-checked a freshly built rule on every store, so the
+  cache filled with single-use entries; crossing its cap wiped the proof the
+  direct write path needs, and the slow path never re-seeded it, disabling the
+  fast path permanently. Twenty thousand keys took 55 seconds and thirty-two
+  thousand took over eleven minutes.
 - Replaced wide symbolic `Plus`/`Times` like-term linear scans with an adaptive
   group index; the former unconditional quadratic wide path is no longer
   current.
