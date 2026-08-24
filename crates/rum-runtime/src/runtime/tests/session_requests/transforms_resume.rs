@@ -114,6 +114,15 @@ fn resume_eval_request_with_input_can_finish_replacepart_after_suspending_patter
 }
 
 #[test]
+fn replacepart_resumes_mid_walk_with_the_same_rule_and_partial_result() {
+    assert_suspend_resume_matches_queued(
+        "ReplacePart[{{1, 2}, {3, 4, 5}}, {{1} -> x, Condition[List[Pattern[i, Blank[]], Pattern[j, Blank[]]], MatchQ[InputString[\"pos: \"], \"yes\"]] -> y, {2, 2} -> z}]",
+        &["yes", "no", "yes"],
+        "List[x, List[y, z, y]]",
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_normalize_rules_after_suspending_rule_source() {
     let mut session = session_with_test_control_builtins();
     session

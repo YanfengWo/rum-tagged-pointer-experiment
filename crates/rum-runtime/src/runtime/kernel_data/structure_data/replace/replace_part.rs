@@ -1,7 +1,8 @@
 use super::parsing::{parse_replace_part_heads_option, parse_replace_part_rules};
 use super::plan::{
     build_replace_plan_from_targets, collect_replace_part_candidate_paths,
-    replace_part_pattern_includes_heads, replace_part_position_expr,
+    merge_replace_part_rule_into_plan, replace_part_pattern_includes_heads,
+    replace_part_position_expr, replace_part_rule_is_merge_safe,
     wrap_replace_part_pattern_position,
 };
 use super::*;
@@ -44,28 +45,64 @@ impl Session {
             }
         };
 
-        self.apply_replace_part_rules_owned(args[0].clone(), rules, 0)
+        self.apply_replace_part_rules_owned(args[0].clone(), rules, 0, None)
     }
     fn apply_replace_part_rules_owned(
         &mut self,
-        expr: Expr,
+        mut expr: Expr,
         rules: Vec<ReplacePartRule>,
-        rule_index: usize,
+        mut rule_index: usize,
+        mut pending_targets: Option<Vec<ReplacePartTarget>>,
     ) -> Result<Expr, EvalError> {
-        let Some(rule) = rules.get(rule_index).cloned() else {
-            return Ok(expr);
-        };
+        let mut merged_plan = ReplacePlanNode::default();
 
-        let targets_result = self.resolve_rule_targets_owned(expr.clone(), rule.clone());
-        self.drive_internal_value(targets_result, move |session, targets| {
-            if targets.is_empty() {
-                session.apply_replace_part_rules_owned(expr, rules, rule_index + 1)
-            } else {
-                let plan = build_replace_plan_from_targets(targets);
-                let updated = session.apply_replace_plan_owned(expr, plan)?;
-                session.apply_replace_part_rules_owned(updated, rules, rule_index + 1)
+        loop {
+            if let Some(targets) = pending_targets.take() {
+                if !targets.is_empty() {
+                    expr = self
+                        .apply_replace_plan_owned(expr, build_replace_plan_from_targets(targets))?;
+                }
+                rule_index += 1;
+                continue;
             }
-        })
+
+            let Some(rule) = rules.get(rule_index) else {
+                return if merged_plan.action.is_none() && merged_plan.children.is_empty() {
+                    Ok(expr)
+                } else {
+                    self.apply_replace_plan_owned(expr, merged_plan)
+                };
+            };
+
+            if replace_part_rule_is_merge_safe(rule) {
+                merge_replace_part_rule_into_plan(&expr, &mut merged_plan, rule);
+                rule_index += 1;
+                continue;
+            }
+
+            if merged_plan.action.is_some() || !merged_plan.children.is_empty() {
+                expr = self.apply_replace_plan_owned(expr, merged_plan)?;
+                merged_plan = ReplacePlanNode::default();
+            }
+
+            let targets_result = self.resolve_rule_targets_owned(expr.clone(), rule.clone());
+            match targets_result {
+                Ok(targets) => pending_targets = Some(targets),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        let targets = Vec::<ReplacePartTarget>::from_continuation_expr(outcome?);
+                        session.apply_replace_part_rules_owned(
+                            expr,
+                            rules,
+                            rule_index,
+                            Some(targets),
+                        )
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     fn resolve_rule_targets_owned(
@@ -206,13 +243,17 @@ impl Session {
 
     fn apply_replace_plan_owned(
         &mut self,
-        expr: Expr,
+        mut expr: Expr,
         mut plan: ReplacePlanNode,
     ) -> Result<Expr, EvalError> {
         if let Some(action) = plan.action.take() {
-            return match action {
-                ReplacePlanAction::Immediate(rhs) => Ok(rhs),
+            expr = match action {
+                ReplacePlanAction::Immediate(rhs) => rhs,
             };
+        }
+
+        if plan.children.is_empty() {
+            return Ok(expr);
         }
 
         match expr {

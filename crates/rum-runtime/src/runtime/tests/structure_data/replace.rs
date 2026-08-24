@@ -319,6 +319,55 @@ fn replacepart_handles_duplicate_and_overlapping_targets_more_stably() {
 }
 
 #[test]
+fn replacepart_rule_lists_preserve_sequential_conflicts_and_missing_positions() {
+    let mut session = Session::new();
+
+    for (input, expected) in [
+        (
+            "ReplacePart[{1, 2, 3}, {{1} -> \"a\", {1} -> \"b\"}]",
+            "List[\"b\", 2, 3]",
+        ),
+        (
+            "ReplacePart[{{1, 2}, {3, 4}}, {{1} -> x, {1, 2} -> y}]",
+            "List[x, List[3, 4]]",
+        ),
+        ("ReplacePart[{1, 2}, {{5} -> z}]", "List[1, 2]"),
+        (
+            "ReplacePart[{a}, {{1} -> f[b, c], {1, 2} -> d}]",
+            "List[f[b, d]]",
+        ),
+    ] {
+        let outcome = session.eval_text(input).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{input}");
+        assert!(outcome.messages.is_empty(), "{input}");
+    }
+}
+
+#[test]
+fn replacepart_handles_twenty_thousand_structural_rules_in_one_walk() {
+    let count = 20_000;
+    let list = (1..=count)
+        .map(|index| index.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let rules = (1..=count)
+        .map(|index| format!("{{{index}}} -> 0"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let source = format!("ReplacePart[{{{list}}}, {{{rules}}}]");
+
+    let outcome = Session::new().eval_text(&source).unwrap();
+    let Expr::Call { head, args } = outcome.value else {
+        panic!("ReplacePart should return a list, got {}", outcome.value);
+    };
+    assert!(is_system_symbol_name(&head, "List"));
+    assert_eq!(args.len(), count);
+    let zero = Expr::integer(BigInt::from(0_u8));
+    assert!(args.iter().all(|arg| *arg == zero));
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
 fn replaceat_supports_exact_positions_operator_form_and_rule_lists() {
     let mut session = Session::new();
 

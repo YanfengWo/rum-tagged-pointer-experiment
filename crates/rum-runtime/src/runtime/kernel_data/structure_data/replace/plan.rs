@@ -70,6 +70,123 @@ pub(super) fn build_replace_plan_from_targets(targets: Vec<ReplacePartTarget>) -
     root
 }
 
+pub(super) fn replace_part_rule_is_merge_safe(rule: &ReplacePartRule) -> bool {
+    // Pattern matching can run user code in rule-major candidate order, while
+    // Key selectors can observe keys changed by an earlier rule.
+    rule.position_specs.iter().all(|spec| match spec {
+        ReplacePartPositionSpec::Exact(selectors) => selectors
+            .iter()
+            .all(|selector| matches!(selector, PartSelector::Single(_))),
+        ReplacePartPositionSpec::Pattern(_) => false,
+    })
+}
+
+pub(super) fn merge_replace_part_rule_into_plan(
+    expr: &Expr,
+    plan: &mut ReplacePlanNode,
+    rule: &ReplacePartRule,
+) {
+    let mut targets = Vec::new();
+    for spec in &rule.position_specs {
+        let ReplacePartPositionSpec::Exact(selectors) = spec else {
+            unreachable!("only merge-safe ReplacePart rules reach the combined planner");
+        };
+        let mut paths = Vec::new();
+        collect_planned_exact_paths(
+            expr,
+            Some(plan),
+            selectors,
+            rule.heads,
+            &mut Vec::new(),
+            &mut paths,
+        );
+        targets.extend(paths.into_iter().map(|path| ReplacePartTarget {
+            path,
+            rhs: rule.rhs.clone(),
+            delayed: rule.delayed,
+        }));
+    }
+
+    merge_replace_plans(plan, build_replace_plan_from_targets(targets));
+}
+
+fn merge_replace_plans(plan: &mut ReplacePlanNode, incoming: ReplacePlanNode) {
+    if let Some(action) = incoming.action {
+        plan.action = Some(action);
+        plan.children.clear();
+    }
+    for (component, child) in incoming.children {
+        merge_replace_plans(plan.children.entry(component).or_default(), child);
+    }
+}
+
+fn collect_planned_exact_paths(
+    expr: &Expr,
+    plan: Option<&ReplacePlanNode>,
+    selectors: &[PartSelector],
+    heads: ReplacePartHeadsMode,
+    path: &mut Vec<isize>,
+    paths: &mut Vec<Vec<isize>>,
+) {
+    let Some((selector, rest)) = selectors.split_first() else {
+        paths.push(path.clone());
+        return;
+    };
+    let expr = plan
+        .and_then(|plan| plan.action.as_ref())
+        .map(|ReplacePlanAction::Immediate(rhs)| rhs)
+        .unwrap_or(expr);
+    let mut visit = |component: isize, child: &Expr| {
+        path.push(component);
+        collect_planned_exact_paths(
+            child,
+            plan.and_then(|plan| plan.children.get(&component)),
+            rest,
+            heads,
+            path,
+            paths,
+        );
+        path.pop();
+    };
+
+    match selector {
+        PartSelector::Single(AtomicPartSpec::Index(0)) => {
+            if !matches!(heads, ReplacePartHeadsMode::Exclude) {
+                if let Expr::Call { head, .. } = expr {
+                    visit(0, head);
+                }
+            }
+        }
+        PartSelector::Single(AtomicPartSpec::Index(index)) => {
+            if let Expr::Call { args, .. } = expr {
+                if let Some(index) = normalize_structural_arg_position(*index, args.len()) {
+                    visit(index as isize + 1, &args[index]);
+                }
+            }
+        }
+        PartSelector::Single(AtomicPartSpec::All) => {
+            if let Expr::Call { head, args } = expr {
+                if matches!(heads, ReplacePartHeadsMode::Include) {
+                    visit(0, head);
+                }
+                for (index, arg) in args.iter().enumerate() {
+                    visit(index as isize + 1, arg);
+                }
+            }
+        }
+        PartSelector::Single(AtomicPartSpec::Span(span)) => {
+            if let Some(selected) = select_positioned_parts_for_span(expr, *span) {
+                for (component, child) in &selected {
+                    visit(*component, child);
+                }
+            }
+        }
+        PartSelector::Key(_) | PartSelector::Multi(_) => {
+            unreachable!("non-structural selectors use sequential ReplacePart application")
+        }
+    }
+}
+
 fn insert_replace_plan_target(
     node: &mut ReplacePlanNode,
     path: &[isize],
