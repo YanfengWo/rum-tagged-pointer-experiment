@@ -31,21 +31,67 @@ pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
     super::parse_tokens(tokens)
 }
 
-pub(super) struct Parser {
-    pub(super) tokens: Vec<Token>,
+pub(super) struct Parser<'a, const SPLIT_FORMS: bool = false> {
+    pub(super) tokens: &'a [Token],
     pub(super) index: usize,
     delimiter_depth: usize,
     operator_chain_depth: usize,
+    /// Script-form splitting mode: `line_breaks[i]` says token `i` is the
+    /// first token on its source line. Empty unless `SPLIT_FORMS`.
+    pub(super) line_breaks: &'a [bool],
+    /// Depth of sub-parses inside a committed construct that a form can
+    /// never end within (the `~`-infix head, whose closing `~` is still
+    /// required) — the boundary guard stays off there.
+    boundary_suspension_depth: usize,
 }
 
-impl Parser {
-    pub(super) fn new(tokens: Vec<Token>) -> Self {
+impl<'a> Parser<'a, false> {
+    pub(super) fn new(tokens: &'a [Token]) -> Self {
         Self {
             tokens,
             index: 0,
             delimiter_depth: 0,
             operator_chain_depth: 0,
+            line_breaks: &[],
+            boundary_suspension_depth: 0,
         }
+    }
+}
+
+impl<'a> Parser<'a, true> {
+    pub(super) fn new_with_line_breaks(tokens: &'a [Token], line_breaks: &'a [bool]) -> Self {
+        Self {
+            tokens,
+            index: 0,
+            delimiter_depth: 0,
+            operator_chain_depth: 0,
+            line_breaks,
+            boundary_suspension_depth: 0,
+        }
+    }
+}
+
+impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
+    /// Script-form boundary rule: at delimiter depth 0, an optional
+    /// continuation decision stops before a token that starts a new line.
+    /// Compiles to a constant `false` when `SPLIT_FORMS` is false, so the
+    /// single-expression parse path (`parse_expr`) pays nothing for the
+    /// splitter it never uses.
+    pub(super) fn at_form_boundary(&self) -> bool {
+        SPLIT_FORMS
+            && self.delimiter_depth == 0
+            && self.boundary_suspension_depth == 0
+            && self.line_breaks[self.index]
+    }
+
+    fn with_boundary_suspended<T>(
+        &mut self,
+        parse: impl FnOnce(&mut Self) -> Result<T, SyntaxError>,
+    ) -> Result<T, SyntaxError> {
+        self.boundary_suspension_depth += 1;
+        let result = parse(self);
+        self.boundary_suspension_depth -= 1;
+        result
     }
 
     fn with_delimiter_depth<T>(
@@ -91,7 +137,7 @@ impl Parser {
 
         let expr = self.parse_function_expr()?;
 
-        if self.at_end() {
+        if self.at_end() || self.at_form_boundary() {
             Ok(expr)
         } else {
             Err(SyntaxError::TrailingInput {
@@ -113,7 +159,7 @@ impl Parser {
                 break;
             };
 
-            if !can_follow_function_postfix(op) {
+            if !can_follow_function_postfix(op) || self.at_form_boundary() {
                 break;
             }
 
@@ -184,7 +230,10 @@ impl Parser {
                 }
             }
 
-            if matches!(self.current().kind, TokenKind::Span) && SPAN_PRECEDENCE >= min_precedence {
+            if matches!(self.current().kind, TokenKind::Span)
+                && SPAN_PRECEDENCE >= min_precedence
+                && !self.at_form_boundary()
+            {
                 lhs = self.parse_span_sugar(Some(lhs))?;
                 continue;
             }
@@ -192,6 +241,7 @@ impl Parser {
             if matches!(self.current().kind, TokenKind::Tilde)
                 && allow_infix_application
                 && INFIX_APPLICATION_PRECEDENCE >= min_precedence
+                && !self.at_form_boundary()
             {
                 lhs = self.parse_infix_application(lhs, allow_function_postfix)?;
                 continue;
@@ -202,7 +252,10 @@ impl Parser {
                 None => {
                     // Implicit multiplication (juxtaposition): `a b` == Times[a, b].
                     let times = BinaryOp::Times;
-                    if self.token_starts_primary() && times.precedence() >= min_precedence {
+                    if self.token_starts_primary()
+                        && times.precedence() >= min_precedence
+                        && !self.at_form_boundary()
+                    {
                         let next_min_precedence = next_min_precedence_for_binary_op(times);
                         let rhs = self.parse_nested_binary_expr_internal(
                             next_min_precedence,
@@ -217,7 +270,7 @@ impl Parser {
                 }
             };
 
-            if op.precedence() < min_precedence {
+            if op.precedence() < min_precedence || self.at_form_boundary() {
                 break;
             }
 
@@ -235,7 +288,7 @@ impl Parser {
                     });
                 }
 
-                if !self.token_starts_expression() {
+                if !self.token_starts_expression() || self.at_form_boundary() {
                     // Trailing `;`: the missing statement yields `Null`.
                     let rhs = SyntaxExpr::symbol("Null", self.current().span);
                     let span = lhs.span().merge(rhs.span());
@@ -296,7 +349,7 @@ impl Parser {
         let mut operands = vec![lhs];
 
         loop {
-            if !self.token_starts_expression() {
+            if !self.token_starts_expression() || self.at_form_boundary() {
                 // An empty statement yields `Null` and ends this chain here:
                 // breaking (rather than continuing) keeps an empty statement
                 // locally left-leaning — `a; ; b` still parses as
@@ -312,7 +365,9 @@ impl Parser {
                 allow_infix_application,
             )?);
 
-            if !matches!(self.current_binary_op(), Some(BinaryOp::CompoundExpression)) {
+            if !matches!(self.current_binary_op(), Some(BinaryOp::CompoundExpression))
+                || self.at_form_boundary()
+            {
                 break;
             }
 
@@ -361,7 +416,14 @@ impl Parser {
             });
         }
 
-        let head = self.parse_nested_binary_expr_internal(0, allow_function_postfix, false)?;
+        // The head of a `~`-infix application is a committed construct: the
+        // closing `~` is still required, so no form can end inside it — and
+        // stopping the head early at a line-first token would turn that
+        // required `~` check into a hard error the line-driven splitter never
+        // produces. Suspend the boundary guard for the head parse.
+        let head = self.with_boundary_suspended(|parser| {
+            parser.parse_nested_binary_expr_internal(0, allow_function_postfix, false)
+        })?;
         self.expect_tilde()?;
         let rhs = self.parse_nested_binary_expr_internal(
             INFIX_APPLICATION_PRECEDENCE + 1,
@@ -415,6 +477,10 @@ impl Parser {
         let mut expr = self.parse_primary()?;
 
         loop {
+            if self.at_form_boundary() {
+                break;
+            }
+
             if let Some(open_span) = self.consume_double_lbracket() {
                 let (mut specs, close_span) = self.with_delimiter_depth(open_span, |parser| {
                     parser.parse_double_bracket_expression_list(open_span)
@@ -561,16 +627,18 @@ impl Parser {
 
         let start_span = start.as_ref().map(SyntaxExpr::span).unwrap_or(first_span);
         let mut end_span = first_span;
-        let end =
-            if matches!(self.current().kind, TokenKind::Span) || !self.token_starts_expression() {
-                None
-            } else {
-                let expr = self.parse_nested_binary_expr(SPAN_PRECEDENCE + 1)?;
-                end_span = expr.span();
-                Some(expr)
-            };
+        let end = if matches!(self.current().kind, TokenKind::Span)
+            || !self.token_starts_expression()
+            || self.at_form_boundary()
+        {
+            None
+        } else {
+            let expr = self.parse_nested_binary_expr(SPAN_PRECEDENCE + 1)?;
+            end_span = expr.span();
+            Some(expr)
+        };
 
-        let step = if self.consume_span().is_some() {
+        let step = if !self.at_form_boundary() && self.consume_span().is_some() {
             if !self.token_starts_expression() {
                 return Err(if self.at_end() {
                     SyntaxError::Incomplete {

@@ -1,6 +1,6 @@
 use super::*;
 
-impl Parser {
+impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
     pub(super) fn parse_slot(&mut self) -> Result<SyntaxExpr, SyntaxError> {
         let start_span = self.bump();
         let mut end_span = start_span;
@@ -39,7 +39,7 @@ impl Parser {
         kind: BlankKind,
         start_span: Span,
     ) -> Result<SyntaxExpr, SyntaxError> {
-        let head = if self.token_starts_primary() {
+        let head = if self.token_starts_primary() && !self.at_form_boundary() {
             Some(self.parse_postfix_expr()?)
         } else {
             None
@@ -197,7 +197,7 @@ impl Parser {
     }
 
     pub(super) fn consume_ampersand(&mut self) -> Option<Span> {
-        if matches!(self.current().kind, TokenKind::Ampersand) {
+        if matches!(self.current().kind, TokenKind::Ampersand) && !self.at_form_boundary() {
             Some(self.bump())
         } else {
             None
@@ -293,7 +293,7 @@ impl Parser {
     }
 
     pub(super) fn consume_unset(&mut self) -> Option<Span> {
-        if matches!(self.current().kind, TokenKind::Unset) {
+        if matches!(self.current().kind, TokenKind::Unset) && !self.at_form_boundary() {
             Some(self.bump())
         } else {
             None
@@ -322,6 +322,13 @@ impl Parser {
                 .tokens
                 .get(self.index + 1)
                 .is_some_and(|next| matches!(next.kind, TokenKind::RBracket))
+            // The `]]` pair is the one lookahead consumption with no
+            // adjacency requirement, so a full-stream parse would pair two
+            // brackets across a line boundary that the line-driven splitter
+            // never tests together (its line prefix ends between them and
+            // hard-errors on the lone `]`). Script-form splitting must not
+            // pair them either. Compiles away when `SPLIT_FORMS` is false.
+            && !(SPLIT_FORMS && self.line_breaks[self.index + 1])
     }
 
     pub(super) fn consume_double_rbracket(&mut self) -> Option<Span> {
