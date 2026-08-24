@@ -162,3 +162,4 @@ mod thread_and_dispatch;
 mod thread_and_dispatch_part2;
 mod traversal_part2;
 mod wide_child_traversals;
+mod wide_definition_dispatch;

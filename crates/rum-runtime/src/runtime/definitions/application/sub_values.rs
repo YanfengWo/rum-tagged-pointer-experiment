@@ -40,87 +40,53 @@ impl Session {
             self.normalize_definition_candidate_for_matching(&candidate, attributes);
         record_profile_runtime_path_timing(runtime_profile_normalize, RuntimeProfileOutcome::Ok);
 
-        self.try_apply_sub_values_from_symbol(candidate, normalized_candidate, symbol, 0)
+        self.try_apply_sub_values_from_symbol(candidate, normalized_candidate, symbol, 0, None)
     }
 
+    /// Walks the sub-value candidates one per loop iteration instead of
+    /// recursing per candidate, so a wide sub-value list no longer grows the
+    /// native stack. `pending` carries an already-computed matcher outcome
+    /// across a suspension resume, so the outcome is merged exactly once per
+    /// candidate on both the live and the resumed paths.
     fn try_apply_sub_values_from_symbol(
         &mut self,
         candidate: Expr,
         normalized_candidate: Expr,
         symbol: Symbol,
-        index: usize,
+        mut index: usize,
+        mut pending: Option<CompiledMatchOutcome>,
     ) -> Result<Option<Expr>, EvalError> {
-        let runtime_profile_value = runtime_path_timing_start("sub_values.value_lookup");
-        let Some(sub_value) = self
-            .definitions
-            .get(&symbol)
-            .and_then(|definition| definition.sub_values.get(index))
-        else {
-            record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::None);
-            return Ok(None);
-        };
-        record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::Some);
-
-        record_profile_definition_dispatch_candidate("sub_value", &symbol);
-        let runtime_profile_prefilter = runtime_path_timing_start("sub_values.prefilter");
-        let prefilter_start = definition_dispatch_timing_start();
-        let could_match = self.definition_lhs_could_match_candidate(
-            &sub_value.lhs,
-            &sub_value.matcher,
-            &normalized_candidate,
-        );
-        record_profile_definition_dispatch_phase_timing(
-            "sub_value",
-            &symbol,
-            "prefilter",
-            prefilter_start,
-        );
-        record_profile_runtime_path_timing(runtime_profile_prefilter, RuntimeProfileOutcome::Ok);
-        if !could_match {
-            record_profile_definition_dispatch_prefilter_skip("sub_value", &symbol);
-            return self.try_apply_sub_values_from_symbol(
-                candidate,
-                normalized_candidate,
-                symbol,
-                index + 1,
-            );
-        }
-
-        let runtime_profile_fast_match = runtime_path_timing_start("sub_values.fast_match");
-        let fast_match_start = definition_dispatch_timing_start();
-        let fast_outcome = if sub_value.matcher_attribute_revision == self.attribute_revision {
-            self.try_fast_definition_match_compiled(&sub_value.matcher, &normalized_candidate)
-        } else {
-            self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
-        };
-        record_profile_definition_dispatch_phase_timing(
-            "sub_value",
-            &symbol,
-            "fast_match",
-            fast_match_start,
-        );
-        record_profile_runtime_path_timing(
-            runtime_profile_fast_match,
-            runtime_profile_outcome_for_optional_fast_match(&fast_outcome),
-        );
-        if let Some(outcome) = fast_outcome {
-            record_profile_definition_dispatch_fast_outcome("sub_value", &symbol, outcome.matched);
-            if !outcome.matched {
-                return self.try_apply_sub_values_from_symbol(
-                    candidate,
-                    normalized_candidate,
-                    symbol,
-                    index + 1,
+        loop {
+            let runtime_profile_value = runtime_path_timing_start("sub_values.value_lookup");
+            let Some(sub_value) = self
+                .definitions
+                .get(&symbol)
+                .and_then(|definition| definition.sub_values.get(index))
+            else {
+                record_profile_runtime_path_timing(
+                    runtime_profile_value,
+                    RuntimeProfileOutcome::None,
                 );
-            }
+                return Ok(None);
+            };
+            record_profile_runtime_path_timing(runtime_profile_value, RuntimeProfileOutcome::Some);
 
-            let lhs = sub_value.lhs.clone();
-            let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
-            let rhs = {
+            if let Some(outcome) = pending.take() {
+                record_profile_definition_dispatch_matcher_outcome(
+                    "sub_value",
+                    &symbol,
+                    outcome.matched,
+                );
+                if !outcome.matched {
+                    index += 1;
+                    continue;
+                }
+
                 let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
                 let runtime_profile_rhs_substitution =
                     runtime_path_timing_start("sub_values.rhs_substitution");
                 let rhs_substitution_start = definition_dispatch_timing_start();
+                let lhs = sub_value.lhs.clone();
                 let rhs = substitute_rule_bindings_for_rhs(
                     &sub_value.rhs,
                     &outcome.bindings,
@@ -136,109 +102,169 @@ impl Session {
                     runtime_profile_rhs_substitution,
                     RuntimeProfileOutcome::Ok,
                 );
-                rhs
-            };
-            let trace_rhs = rhs.clone();
-            self.push_rule_applied_trace(
-                RuleApplicationSource::SubValue,
-                &candidate,
-                &lhs,
-                &trace_rhs,
-            );
-            self.record_profile_sub_value_application(&symbol);
-            let _profile_definition_source = evaluation_profile_definition_source(symbol);
-            let profile_rule_start = definition_rule_timing_start();
-            let result = self.evaluate_definition_rhs(option_scope, rhs);
-            record_profile_definition_rule_timing(
-                "sub_value_rhs_eval",
-                &symbol,
-                index,
-                profile_rule_start,
-                result.is_ok(),
-            );
-            return result.map(Some);
-        }
-
-        let sub_value = sub_value.clone();
-        let matcher = if sub_value.matcher_attribute_revision == self.attribute_revision {
-            sub_value.matcher.clone()
-        } else {
-            self.compile_matcher_for_expr(&sub_value.lhs)
-        };
-        let runtime_profile_compiled_matcher =
-            runtime_path_timing_start("sub_values.compiled_matcher");
-        let compiled_matcher_start = definition_dispatch_timing_start();
-        let match_result = self.match_compiled_owned(
-            matcher,
-            normalized_candidate.clone(),
-            SymbolExprMap::default(),
-        );
-        record_profile_definition_dispatch_phase_timing(
-            "sub_value",
-            &symbol,
-            "compiled_matcher",
-            compiled_matcher_start,
-        );
-        record_profile_runtime_path_timing(
-            runtime_profile_compiled_matcher,
-            runtime_profile_outcome_for_internal_result(&match_result),
-        );
-
-        self.drive_internal_value(match_result, move |session, outcome| {
-            record_profile_definition_dispatch_matcher_outcome(
-                "sub_value",
-                &symbol,
-                outcome.matched,
-            );
-            if !outcome.matched {
-                return session.try_apply_sub_values_from_symbol(
-                    candidate,
-                    normalized_candidate,
-                    symbol,
-                    index + 1,
+                let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
+                let trace_rhs = rhs.clone();
+                self.push_rule_applied_trace(
+                    RuleApplicationSource::SubValue,
+                    &candidate,
+                    &lhs,
+                    &trace_rhs,
                 );
+                self.record_profile_sub_value_application(&symbol);
+                let _profile_definition_source = evaluation_profile_definition_source(symbol);
+                let profile_rule_start = definition_rule_timing_start();
+                let result = self.evaluate_definition_rhs(option_scope, rhs);
+                record_profile_definition_rule_timing(
+                    "sub_value_rhs_eval",
+                    &symbol,
+                    index,
+                    profile_rule_start,
+                    result.is_ok(),
+                );
+                return result.map(Some);
             }
 
-            let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
-            let runtime_profile_rhs_substitution =
-                runtime_path_timing_start("sub_values.rhs_substitution");
-            let rhs_substitution_start = definition_dispatch_timing_start();
-            let rhs = substitute_rule_bindings_for_rhs(
-                &sub_value.rhs,
-                &outcome.bindings,
-                sub_value.rhs_may_splice_without_bindings,
+            record_profile_definition_dispatch_candidate("sub_value", &symbol);
+            let runtime_profile_prefilter = runtime_path_timing_start("sub_values.prefilter");
+            let prefilter_start = definition_dispatch_timing_start();
+            let could_match = self.definition_lhs_could_match_candidate(
+                &sub_value.lhs,
+                &sub_value.matcher,
+                &normalized_candidate,
             );
             record_profile_definition_dispatch_phase_timing(
                 "sub_value",
                 &symbol,
-                "rhs_substitution",
-                rhs_substitution_start,
+                "prefilter",
+                prefilter_start,
             );
             record_profile_runtime_path_timing(
-                runtime_profile_rhs_substitution,
+                runtime_profile_prefilter,
                 RuntimeProfileOutcome::Ok,
             );
-            let option_scope =
-                session.option_value_scope_for_definition(&sub_value.lhs, &candidate);
-            let trace_rhs = rhs.clone();
-            session.push_rule_applied_trace(
-                RuleApplicationSource::SubValue,
-                &candidate,
-                &sub_value.lhs,
-                &trace_rhs,
-            );
-            session.record_profile_sub_value_application(&symbol);
-            let _profile_definition_source = evaluation_profile_definition_source(symbol);
-            let profile_rule_start = definition_rule_timing_start();
-            let result = session.evaluate_definition_rhs(option_scope, rhs);
-            record_profile_definition_rule_timing(
-                "sub_value_rhs_eval",
+            if !could_match {
+                record_profile_definition_dispatch_prefilter_skip("sub_value", &symbol);
+                index += 1;
+                continue;
+            }
+
+            let runtime_profile_fast_match = runtime_path_timing_start("sub_values.fast_match");
+            let fast_match_start = definition_dispatch_timing_start();
+            let fast_outcome = if sub_value.matcher_attribute_revision == self.attribute_revision {
+                self.try_fast_definition_match_compiled(&sub_value.matcher, &normalized_candidate)
+            } else {
+                self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
+            };
+            record_profile_definition_dispatch_phase_timing(
+                "sub_value",
                 &symbol,
-                index,
-                profile_rule_start,
-                result.is_ok(),
+                "fast_match",
+                fast_match_start,
             );
-            result.map(Some)
-        })
+            record_profile_runtime_path_timing(
+                runtime_profile_fast_match,
+                runtime_profile_outcome_for_optional_fast_match(&fast_outcome),
+            );
+            if let Some(outcome) = fast_outcome {
+                record_profile_definition_dispatch_fast_outcome(
+                    "sub_value",
+                    &symbol,
+                    outcome.matched,
+                );
+                if !outcome.matched {
+                    index += 1;
+                    continue;
+                }
+
+                let lhs = sub_value.lhs.clone();
+                let option_scope = self.option_value_scope_for_definition(&lhs, &candidate);
+                let rhs = {
+                    let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
+                    let runtime_profile_rhs_substitution =
+                        runtime_path_timing_start("sub_values.rhs_substitution");
+                    let rhs_substitution_start = definition_dispatch_timing_start();
+                    let rhs = substitute_rule_bindings_for_rhs(
+                        &sub_value.rhs,
+                        &outcome.bindings,
+                        sub_value.rhs_may_splice_without_bindings,
+                    );
+                    record_profile_definition_dispatch_phase_timing(
+                        "sub_value",
+                        &symbol,
+                        "rhs_substitution",
+                        rhs_substitution_start,
+                    );
+                    record_profile_runtime_path_timing(
+                        runtime_profile_rhs_substitution,
+                        RuntimeProfileOutcome::Ok,
+                    );
+                    rhs
+                };
+                let trace_rhs = rhs.clone();
+                self.push_rule_applied_trace(
+                    RuleApplicationSource::SubValue,
+                    &candidate,
+                    &lhs,
+                    &trace_rhs,
+                );
+                self.record_profile_sub_value_application(&symbol);
+                let _profile_definition_source = evaluation_profile_definition_source(symbol);
+                let profile_rule_start = definition_rule_timing_start();
+                let result = self.evaluate_definition_rhs(option_scope, rhs);
+                record_profile_definition_rule_timing(
+                    "sub_value_rhs_eval",
+                    &symbol,
+                    index,
+                    profile_rule_start,
+                    result.is_ok(),
+                );
+                return result.map(Some);
+            }
+
+            let sub_value = sub_value.clone();
+            let matcher = if sub_value.matcher_attribute_revision == self.attribute_revision {
+                sub_value.matcher.clone()
+            } else {
+                self.compile_matcher_for_expr(&sub_value.lhs)
+            };
+            let runtime_profile_compiled_matcher =
+                runtime_path_timing_start("sub_values.compiled_matcher");
+            let compiled_matcher_start = definition_dispatch_timing_start();
+            let match_result = self.match_compiled_owned(
+                matcher,
+                normalized_candidate.clone(),
+                SymbolExprMap::default(),
+            );
+            record_profile_definition_dispatch_phase_timing(
+                "sub_value",
+                &symbol,
+                "compiled_matcher",
+                compiled_matcher_start,
+            );
+            record_profile_runtime_path_timing(
+                runtime_profile_compiled_matcher,
+                runtime_profile_outcome_for_internal_result(&match_result),
+            );
+
+            match match_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                        session
+                            .try_apply_sub_values_from_symbol(
+                                candidate,
+                                normalized_candidate,
+                                symbol,
+                                index,
+                                Some(outcome),
+                            )
+                            .map(|result| result.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 }

@@ -1,13 +1,11 @@
 use super::*;
 
-#[derive(Clone)]
 struct ReapScopeRenderState {
     handler: Option<Expr>,
     pattern_list_form: bool,
     groups: Vec<Vec<ReapBucket>>,
 }
 
-#[derive(Clone)]
 struct ReapBucketRenderState {
     handler: Option<Expr>,
     buckets: Vec<ReapBucket>,
@@ -108,40 +106,55 @@ impl Session {
         )
     }
 
+    /// Renders one group per loop iteration instead of recursing per group.
+    /// On suspension the group index and accumulated state move into the
+    /// suspension frame by value — the old per-group `state.clone()` plus
+    /// `rendered_groups.clone()` made a wide Reap quadratic in its group
+    /// count.
     fn resume_reap_scope_groups_from_index(
         &mut self,
         state: ReapScopeRenderState,
         group_index: usize,
-        rendered_groups: Vec<Expr>,
+        mut rendered_groups: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let Some(buckets) = state.groups.get(group_index) else {
-            return Ok(if state.pattern_list_form {
-                Expr::call(system_expr("List"), rendered_groups)
-            } else {
-                rendered_groups
-                    .into_iter()
-                    .next()
-                    .unwrap_or_else(|| Expr::call(system_expr("List"), Vec::new()))
-            });
-        };
+        let mut group_index = group_index;
+        loop {
+            let Some(buckets) = state.groups.get(group_index) else {
+                return Ok(if state.pattern_list_form {
+                    Expr::call(system_expr("List"), rendered_groups)
+                } else {
+                    rendered_groups
+                        .into_iter()
+                        .next()
+                        .unwrap_or_else(|| Expr::call(system_expr("List"), Vec::new()))
+                });
+            };
 
-        let bucket_state = ReapBucketRenderState {
-            handler: state.handler.clone(),
-            buckets: buckets.clone(),
-        };
-        let suspended_state = state.clone();
-        let suspended_rendered_groups = rendered_groups.clone();
-        let group_result = self.resume_reap_buckets_from_index(bucket_state, 0, Vec::new());
-        let group = self.suspend_with_frame(group_result, move |session, group| {
-            session.resume_reap_scope_group_with_value(
-                suspended_state,
-                group_index,
-                suspended_rendered_groups,
-                group,
-            )
-        })?;
-
-        self.resume_reap_scope_group_with_value(state, group_index, rendered_groups, group)
+            let bucket_state = ReapBucketRenderState {
+                handler: state.handler.clone(),
+                buckets: buckets.clone(),
+            };
+            let group_result = self.resume_reap_buckets_from_index(bucket_state, 0, Vec::new());
+            match group_result {
+                Ok(group) => {
+                    rendered_groups.push(group);
+                    group_index += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        let group = outcome?;
+                        session.resume_reap_scope_group_with_value(
+                            state,
+                            group_index,
+                            rendered_groups,
+                            group,
+                        )
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     fn resume_reap_scope_group_with_value(
@@ -155,35 +168,47 @@ impl Session {
         self.resume_reap_scope_groups_from_index(state, group_index + 1, rendered_groups)
     }
 
+    /// Renders one bucket per loop iteration instead of recursing per bucket.
+    /// On suspension the bucket index, the render state, and the accumulated
+    /// output move into the suspension frame by value — the old per-bucket
+    /// `state.clone()` plus `rendered.clone()` made a wide Reap quadratic in
+    /// its bucket count.
     fn resume_reap_buckets_from_index(
         &mut self,
         state: ReapBucketRenderState,
         bucket_index: usize,
-        rendered: Vec<Expr>,
+        mut rendered: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        let Some(bucket) = state.buckets.get(bucket_index) else {
-            return Ok(Expr::call(system_expr("List"), rendered));
-        };
+        let mut bucket_index = bucket_index;
+        loop {
+            let Some(bucket) = state.buckets.get(bucket_index) else {
+                return Ok(Expr::call(system_expr("List"), rendered));
+            };
 
-        let values_expr = Expr::call(system_expr("List"), bucket.values.clone());
-        let Some(handler) = &state.handler else {
-            return self.resume_reap_bucket_with_value(state, bucket_index, rendered, values_expr);
-        };
+            let values_expr = Expr::call(system_expr("List"), bucket.values.clone());
+            let Some(handler) = &state.handler else {
+                rendered.push(values_expr);
+                bucket_index += 1;
+                continue;
+            };
 
-        let suspended_state = state.clone();
-        let suspended_rendered = rendered.clone();
-        let applied = Expr::call(handler.clone(), vec![bucket.tag.clone(), values_expr]);
-        let group_result = self.evaluate(applied);
-        let group = self.suspend_with_frame(group_result, move |session, group| {
-            session.resume_reap_bucket_with_value(
-                suspended_state,
-                bucket_index,
-                suspended_rendered,
-                group,
-            )
-        })?;
-
-        self.resume_reap_bucket_with_value(state, bucket_index, rendered, group)
+            let applied = Expr::call(handler.clone(), vec![bucket.tag.clone(), values_expr]);
+            let group_result = self.evaluate(applied);
+            match group_result {
+                Ok(group) => {
+                    rendered.push(group);
+                    bucket_index += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        let group = outcome?;
+                        session.resume_reap_bucket_with_value(state, bucket_index, rendered, group)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     fn resume_reap_bucket_with_value(

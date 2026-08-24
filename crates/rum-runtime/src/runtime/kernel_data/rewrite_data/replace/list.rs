@@ -113,31 +113,77 @@ impl Session {
         collected: Vec<Expr>,
         index: usize,
     ) -> Result<Vec<Expr>, EvalError> {
-        if max_results.is_some_and(|limit| collected.len() >= limit) {
-            return Ok(collected);
-        }
+        self.collect_replace_list_results_with_pending(
+            target,
+            normalized_target,
+            rules,
+            max_results,
+            collected,
+            index,
+            None,
+        )
+    }
 
-        let Some(rule) = rules.get(index).cloned() else {
-            return Ok(collected);
-        };
-
-        let bindings_result = self.collect_replace_list_rule_bindings_owned(
-            rule.matcher.clone(),
-            normalized_target.clone(),
-        );
-        self.drive_internal_value(bindings_result, move |session, bindings| {
-            if bindings.is_empty() {
-                return session.collect_replace_list_results_owned(
-                    target,
-                    normalized_target,
-                    rules,
-                    max_results,
-                    collected,
-                    index + 1,
-                );
+    /// Walks the rules one per loop iteration instead of recursing per rule,
+    /// so a wide rule list no longer grows the native stack. `pending` carries
+    /// already-collected bindings for the rule at `index` across a suspension
+    /// resume, so a resumed traversal skips re-collecting them and keeps the
+    /// accumulated results in rule order.
+    fn collect_replace_list_results_with_pending(
+        &mut self,
+        target: Expr,
+        normalized_target: Expr,
+        rules: Vec<RewriteRule>,
+        max_results: Option<usize>,
+        collected: Vec<Expr>,
+        mut index: usize,
+        mut pending: Option<Vec<SymbolExprMap>>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        loop {
+            if max_results.is_some_and(|limit| collected.len() >= limit) {
+                return Ok(collected);
             }
 
-            session.collect_replace_list_rule_results_owned(
+            let Some(rule) = rules.get(index).cloned() else {
+                return Ok(collected);
+            };
+
+            let bindings = if let Some(bindings) = pending.take() {
+                bindings
+            } else {
+                let bindings_result = self.collect_replace_list_rule_bindings_owned(
+                    rule.matcher.clone(),
+                    normalized_target.clone(),
+                );
+                match bindings_result {
+                    Ok(bindings) => bindings,
+                    Err(EvalError::InputRequired { request }) => {
+                        self.push_suspension_frame(move |session, outcome| {
+                            let bindings = Vec::<SymbolExprMap>::from_continuation_expr(outcome?);
+                            session
+                                .collect_replace_list_results_with_pending(
+                                    target,
+                                    normalized_target,
+                                    rules,
+                                    max_results,
+                                    collected,
+                                    index,
+                                    Some(bindings),
+                                )
+                                .map(|results| results.into_continuation_expr())
+                        });
+                        return Err(EvalError::InputRequired { request });
+                    }
+                    Err(error) => return Err(error),
+                }
+            };
+
+            if bindings.is_empty() {
+                index += 1;
+                continue;
+            }
+
+            return self.collect_replace_list_rule_results_owned(
                 target,
                 normalized_target,
                 rules,
@@ -147,8 +193,8 @@ impl Session {
                 rule,
                 bindings,
                 0,
-            )
-        })
+            );
+        }
     }
 }
 
