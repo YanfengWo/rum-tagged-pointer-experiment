@@ -50,8 +50,39 @@ impl Session {
             return Ok(false);
         }
 
-        let Some(mut proof) = self.take_call_stability_proof_for_key(plan.cache_key) else {
-            return Ok(false);
+        let mut proof = match self.take_call_stability_proof_for_key(plan.cache_key) {
+            Some(proof) => proof,
+            None => {
+                // The cached proof can be lost between the evaluator's
+                // seeding and this write — a size-cap clear wipes the whole
+                // cache, and without recovery the direct path would stay
+                // disabled for good. Rerun the evaluator's own seeding check
+                // on the current value: when the data is still stable this
+                // re-seeds the exact entry, which the second take below then
+                // consumes, so the write keeps the direct path in exactly
+                // the cases a seeded proof would allow.
+                let current = self
+                    .definitions
+                    .get(target)
+                    .and_then(|definition| definition.own_value.clone());
+                let Some(current) = current else {
+                    return Ok(false);
+                };
+                let matches_plan = match &current {
+                    Expr::Call { head, args } => {
+                        is_system_symbol_name(head, "Association")
+                            && CallStabilityCacheKey::new(head, args) == plan.cache_key
+                    }
+                    _ => false,
+                };
+                if !matches_plan || !self.cached_expr_stability_with_bloom(&current).0 {
+                    return Ok(false);
+                }
+                let Some(proof) = self.take_call_stability_proof_for_key(plan.cache_key) else {
+                    return Ok(false);
+                };
+                proof
+            }
         };
 
         let (updated_head, updated_args) = {

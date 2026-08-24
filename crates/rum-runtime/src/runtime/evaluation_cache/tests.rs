@@ -43,6 +43,15 @@ fn association_definition_args_key(session: &Session, target: &Symbol) -> usize 
     call_parts(current).1.ptr_key()
 }
 
+fn own_value_text(session: &Session, target: &Symbol) -> String {
+    session
+        .definitions
+        .get(target)
+        .and_then(|definition| definition.own_value.as_ref())
+        .expect("the test target must have an own value")
+        .to_string()
+}
+
 fn seed_association_stability_proof(session: &mut Session, target: &Symbol) {
     let current = session
         .definitions
@@ -396,7 +405,7 @@ fn association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof() {
 }
 
 #[test]
-fn association_lvalue_absent_stale_and_dirty_proofs_use_fallback() {
+fn association_lvalue_absent_stale_and_dirty_proofs_recover_by_recomputation() {
     let (mut absent_session, absent_target) =
         session_with_stable_association("absentProofAssociation");
     absent_session.clear_evaluation_caches();
@@ -404,10 +413,17 @@ fn association_lvalue_absent_stale_and_dirty_proofs_use_fallback() {
     absent_session
         .eval_text("absentProofAssociation[x] = 2")
         .unwrap();
-    assert_ne!(
+    assert_eq!(
         association_definition_args_key(&absent_session, &absent_target),
         absent_before
     );
+    assert_eq!(
+        own_value_text(&absent_session, &absent_target),
+        "Association[Rule[x, 2]]"
+    );
+    assert!(absent_session.has_valid_call_stability_proof_for_key(
+        association_definition_cache_key(&absent_session, &absent_target,)
+    ));
 
     let (mut stale_session, stale_target) =
         session_with_stable_association("staleProofAssociation");
@@ -416,10 +432,17 @@ fn association_lvalue_absent_stale_and_dirty_proofs_use_fallback() {
     stale_session
         .eval_text("staleProofAssociation[x] = 2")
         .unwrap();
-    assert_ne!(
+    assert_eq!(
         association_definition_args_key(&stale_session, &stale_target),
         stale_before
     );
+    assert_eq!(
+        own_value_text(&stale_session, &stale_target),
+        "Association[Rule[x, 2]]"
+    );
+    assert!(stale_session.has_valid_call_stability_proof_for_key(
+        association_definition_cache_key(&stale_session, &stale_target,)
+    ));
 
     let (mut dirty_session, dirty_target) =
         session_with_stable_association("dirtyProofAssociation");
@@ -428,9 +451,37 @@ fn association_lvalue_absent_stale_and_dirty_proofs_use_fallback() {
     dirty_session
         .eval_text("dirtyProofAssociation[x] = 2")
         .unwrap();
-    assert_ne!(
+    assert_eq!(
         association_definition_args_key(&dirty_session, &dirty_target),
         dirty_before
+    );
+    assert_eq!(
+        own_value_text(&dirty_session, &dirty_target),
+        "Association[Rule[x, 2]]"
+    );
+    assert!(dirty_session.has_valid_call_stability_proof_for_key(
+        association_definition_cache_key(&dirty_session, &dirty_target,)
+    ));
+}
+
+#[test]
+fn association_lvalue_recovery_falls_back_when_data_became_unstable() {
+    let (mut session, target) = session_with_stable_association("unstableRecovery");
+    session.clear_call_stability_cache_for_size_cap();
+    session.eval_text("x = 5").unwrap();
+    let before = association_definition_args_key(&session, &target);
+
+    session.eval_text("unstableRecovery[z] = 2").unwrap();
+
+    assert_ne!(
+        association_definition_args_key(&session, &target),
+        before,
+        "a recomputation that finds the stored data unstable must fall back"
+    );
+    assert!(
+        !session.has_valid_call_stability_proof_for_key(association_definition_cache_key(
+            &session, &target
+        ))
     );
 }
 

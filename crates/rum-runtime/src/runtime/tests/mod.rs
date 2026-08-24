@@ -117,6 +117,7 @@ fn rum_path(path: &Path) -> String {
 
 mod arithmetic;
 mod association_lookup_cache;
+mod association_write_recovery;
 mod context_and_loader;
 mod debug_tools;
 mod definitions_and_rules;
