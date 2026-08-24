@@ -262,6 +262,7 @@ impl Session {
                         seen_before,
                         0,
                         1,
+                        None,
                     )
                 } else {
                     self.count_pattern_matches_in_standard_call(
@@ -318,6 +319,7 @@ impl Session {
                     seen_before,
                     0,
                     1,
+                    None,
                 )
             }
         }
@@ -353,65 +355,86 @@ impl Session {
         })
     }
 
+    /// Walks the children one per loop iteration, keeping the running count in
+    /// place instead of recursing per element. `pending` carries an
+    /// already-computed child outcome across a suspension resume, so the merge
+    /// step runs exactly once per element on both the live and the resumed
+    /// paths.
     fn count_pattern_children(
         &mut self,
         children: Vec<(Expr, bool)>,
-        child_index: usize,
+        mut child_index: usize,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
         seen_before: usize,
-        count: usize,
-        max_child_depth: usize,
+        mut count: usize,
+        mut max_child_depth: usize,
+        mut pending: Option<TraversalCountOutcome>,
     ) -> Result<TraversalCountOutcome, EvalError> {
-        let Some((child, contributes_depth)) = children.get(child_index).cloned() else {
-            let depth = max_child_depth.saturating_add(1);
-            return self.finish_count_at_current_node(
-                expr,
-                pattern,
-                traversal,
-                level - 1,
-                depth,
-                seen_before,
-                count,
-            );
-        };
+        loop {
+            if let Some(child_outcome) = pending.take() {
+                count += child_outcome.count;
+                let contributes_depth = children
+                    .get(child_index)
+                    .is_some_and(|(_, contributes_depth)| *contributes_depth);
+                if contributes_depth {
+                    max_child_depth = max_child_depth.max(child_outcome.depth);
+                }
 
-        let child_result = self.count_pattern_matches_owned(
-            child,
-            pattern.clone(),
-            traversal,
-            level,
-            seen_before + count,
-        );
-        self.drive_internal_value(child_result, move |session, child_outcome| {
-            let next_count = count + child_outcome.count;
-            let next_max_child_depth = if contributes_depth {
-                max_child_depth.max(child_outcome.depth)
-            } else {
-                max_child_depth
-            };
+                if child_outcome.exhausted {
+                    return Ok(TraversalCountOutcome::new(count, max_child_depth + 1, true));
+                }
 
-            if child_outcome.exhausted {
-                return Ok(TraversalCountOutcome::new(
-                    next_count,
-                    next_max_child_depth + 1,
-                    true,
-                ));
+                child_index += 1;
             }
 
-            session.count_pattern_children(
-                children,
-                child_index + 1,
-                expr,
-                pattern,
+            let Some((child, _contributes_depth)) = children.get(child_index).cloned() else {
+                let depth = max_child_depth.saturating_add(1);
+                return self.finish_count_at_current_node(
+                    expr,
+                    pattern,
+                    traversal,
+                    level - 1,
+                    depth,
+                    seen_before,
+                    count,
+                );
+            };
+
+            let child_result = self.count_pattern_matches_owned(
+                child,
+                pattern.clone(),
                 traversal,
                 level,
-                seen_before,
-                next_count,
-                next_max_child_depth,
-            )
-        })
+                seen_before + count,
+            );
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = TraversalCountOutcome::from_continuation_expr(value?);
+                        session
+                            .count_pattern_children(
+                                children,
+                                child_index,
+                                expr,
+                                pattern,
+                                traversal,
+                                level,
+                                seen_before,
+                                count,
+                                max_child_depth,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 }

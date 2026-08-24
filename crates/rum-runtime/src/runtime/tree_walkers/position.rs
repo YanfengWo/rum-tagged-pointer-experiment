@@ -134,6 +134,7 @@ impl Session {
                         seen_before,
                         Vec::new(),
                         1,
+                        None,
                     )
                 } else {
                     self.collect_positions_in_standard_call(
@@ -201,6 +202,7 @@ impl Session {
                     seen_before,
                     Vec::new(),
                     1,
+                    None,
                 )
             }
         }
@@ -240,10 +242,15 @@ impl Session {
         })
     }
 
+    /// Walks the children one per loop iteration, keeping the accumulated
+    /// positions in place instead of recursing per element. `pending` carries
+    /// an already-computed child outcome across a suspension resume, so the
+    /// merge step runs exactly once per element on both the live and the
+    /// resumed paths.
     fn collect_position_children(
         &mut self,
         children: Vec<(Expr, Vec<Expr>, bool)>,
-        child_index: usize,
+        mut child_index: usize,
         expr: Expr,
         pattern: Expr,
         traversal: CasesTraversalConfig,
@@ -251,61 +258,80 @@ impl Session {
         path: Vec<Expr>,
         seen_before: usize,
         mut positions: Vec<Expr>,
-        max_child_depth: usize,
+        mut max_child_depth: usize,
+        mut pending: Option<PositionCollectionOutcome>,
     ) -> Result<PositionCollectionOutcome, EvalError> {
-        let Some((child, child_path, contributes_depth)) = children.get(child_index).cloned()
-        else {
-            let depth = max_child_depth.saturating_add(1);
-            return self.finish_positions_at_current_node(
-                expr,
-                pattern,
-                traversal,
-                level - 1,
-                depth,
-                path,
-                seen_before,
-                positions,
-            );
-        };
+        loop {
+            if let Some(child_outcome) = pending.take() {
+                positions.extend(child_outcome.positions);
+                let contributes_depth = children
+                    .get(child_index)
+                    .is_some_and(|(_, _, contributes_depth)| *contributes_depth);
+                if contributes_depth {
+                    max_child_depth = max_child_depth.max(child_outcome.depth);
+                }
 
-        let child_result = self.collect_positions_owned(
-            child,
-            pattern.clone(),
-            traversal,
-            level,
-            child_path,
-            seen_before + positions.len(),
-        );
+                if child_outcome.exhausted {
+                    return Ok(PositionCollectionOutcome::new(
+                        positions,
+                        max_child_depth + 1,
+                        true,
+                    ));
+                }
 
-        self.drive_internal_value(child_result, move |session, child_outcome| {
-            positions.extend(child_outcome.positions);
-            let next_max_child_depth = if contributes_depth {
-                max_child_depth.max(child_outcome.depth)
-            } else {
-                max_child_depth
-            };
-
-            if child_outcome.exhausted {
-                return Ok(PositionCollectionOutcome::new(
-                    positions,
-                    next_max_child_depth + 1,
-                    true,
-                ));
+                child_index += 1;
             }
 
-            session.collect_position_children(
-                children,
-                child_index + 1,
-                expr,
-                pattern,
+            let Some((child, child_path, _contributes_depth)) = children.get(child_index).cloned()
+            else {
+                let depth = max_child_depth.saturating_add(1);
+                return self.finish_positions_at_current_node(
+                    expr,
+                    pattern,
+                    traversal,
+                    level - 1,
+                    depth,
+                    path,
+                    seen_before,
+                    positions,
+                );
+            };
+
+            let child_result = self.collect_positions_owned(
+                child,
+                pattern.clone(),
                 traversal,
                 level,
-                path,
-                seen_before,
-                positions,
-                next_max_child_depth,
-            )
-        })
+                child_path,
+                seen_before + positions.len(),
+            );
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = PositionCollectionOutcome::from_continuation_expr(value?);
+                        session
+                            .collect_position_children(
+                                children,
+                                child_index,
+                                expr,
+                                pattern,
+                                traversal,
+                                level,
+                                path,
+                                seen_before,
+                                positions,
+                                max_child_depth,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 }
 

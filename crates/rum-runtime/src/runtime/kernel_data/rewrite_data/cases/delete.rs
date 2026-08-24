@@ -222,124 +222,148 @@ impl Session {
             max_child_depth,
             Some(head),
             head_deleted,
+            None,
         )
     }
 
+    /// Walks the child queue one element per loop iteration, keeping the
+    /// rebuilt arguments in place instead of recursing per element. `pending`
+    /// carries an already-computed child outcome across a suspension resume,
+    /// so the merge step runs exactly once per element on both the live and
+    /// the resumed paths.
     #[allow(clippy::too_many_arguments)]
     fn delete_cases_call_children_from_queue(
         &mut self,
         children: Vec<(bool, Expr, bool)>,
-        child_index: usize,
+        mut child_index: usize,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
         subtree_start: usize,
-        deleted_before: usize,
-        rebuilt_args: Vec<Expr>,
-        max_child_depth: usize,
-        rebuilt_head: Option<Expr>,
-        head_deleted: bool,
+        mut deleted_before: usize,
+        mut rebuilt_args: Vec<Expr>,
+        mut max_child_depth: usize,
+        mut rebuilt_head: Option<Expr>,
+        mut head_deleted: bool,
+        mut pending: Option<DeleteCasesOutcome>,
     ) -> Result<DeleteCasesOutcome, EvalError> {
-        let Some((is_head, child, contributes_depth)) = children.get(child_index).cloned() else {
-            if head_deleted {
-                return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Splice(rebuilt_args),
-                    depth: max_child_depth,
-                    deleted_count: deleted_before - subtree_start,
-                    exhausted: traversal.limit_reached(deleted_before),
-                });
-            }
+        loop {
+            if let Some(child_outcome) = pending.take() {
+                let (is_head, contributes_depth) = match children.get(child_index) {
+                    Some((is_head, _, contributes_depth)) => (*is_head, *contributes_depth),
+                    None => unreachable!("pending outcome belongs to a live child index"),
+                };
 
-            let depth = max_child_depth.saturating_add(1);
-            let expr = Expr::call(
-                rebuilt_head.unwrap_or_else(|| system_expr("Sequence")),
-                rebuilt_args,
-            );
-            let finish_result = self.finish_delete_cases_at_current_node(
-                expr,
-                pattern,
-                traversal,
-                level - 1,
-                depth,
-                deleted_before,
-            );
-            return self.drive_internal_value(finish_result, move |_, mut outcome| {
-                outcome.deleted_count += deleted_before - subtree_start;
-                Ok(outcome)
-            });
-        };
+                deleted_before += child_outcome.deleted_count;
+                if contributes_depth {
+                    max_child_depth = max_child_depth.max(child_outcome.depth);
+                }
 
-        let child_result =
-            self.delete_cases_owned(child, pattern.clone(), traversal, level, deleted_before);
-
-        self.drive_internal_value(child_result, move |session, child_outcome| {
-            let deleted_before_next = deleted_before + child_outcome.deleted_count;
-            let next_max_child_depth = if contributes_depth {
-                max_child_depth.max(child_outcome.depth)
-            } else {
-                max_child_depth
-            };
-            let mut next_args = rebuilt_args;
-            let mut next_head = rebuilt_head;
-            let mut next_head_deleted = head_deleted;
-
-            if is_head {
-                match child_outcome.result {
-                    DeleteCasesResult::Keep(expr) => next_head = Some(expr),
-                    DeleteCasesResult::Delete | DeleteCasesResult::Splice(_) => {
-                        next_head_deleted = true;
+                if is_head {
+                    match child_outcome.result {
+                        DeleteCasesResult::Keep(expr) => rebuilt_head = Some(expr),
+                        DeleteCasesResult::Delete | DeleteCasesResult::Splice(_) => {
+                            head_deleted = true;
+                        }
+                    }
+                } else {
+                    match child_outcome.result {
+                        DeleteCasesResult::Keep(expr) => rebuilt_args.push(expr),
+                        DeleteCasesResult::Delete => {}
+                        DeleteCasesResult::Splice(items) => rebuilt_args.extend(items),
                     }
                 }
-            } else {
-                match child_outcome.result {
-                    DeleteCasesResult::Keep(expr) => next_args.push(expr),
-                    DeleteCasesResult::Delete => {}
-                    DeleteCasesResult::Splice(items) => next_args.extend(items),
-                }
-            }
 
-            if child_outcome.exhausted {
-                let untouched_rest = children
-                    .iter()
-                    .skip(child_index + 1)
-                    .filter_map(|(is_head, expr, _)| (!*is_head).then_some(expr.clone()))
-                    .collect::<Vec<_>>();
-                next_args.extend(untouched_rest);
+                if child_outcome.exhausted {
+                    let untouched_rest = children
+                        .iter()
+                        .skip(child_index + 1)
+                        .filter_map(|(is_head, expr, _)| (!*is_head).then_some(expr.clone()))
+                        .collect::<Vec<_>>();
+                    rebuilt_args.extend(untouched_rest);
 
-                if next_head_deleted {
+                    if head_deleted {
+                        return Ok(DeleteCasesOutcome {
+                            result: DeleteCasesResult::Splice(rebuilt_args),
+                            depth: max_child_depth,
+                            deleted_count: deleted_before - subtree_start,
+                            exhausted: true,
+                        });
+                    }
+
                     return Ok(DeleteCasesOutcome {
-                        result: DeleteCasesResult::Splice(next_args),
-                        depth: next_max_child_depth,
-                        deleted_count: deleted_before_next - subtree_start,
+                        result: DeleteCasesResult::Keep(Expr::call(
+                            rebuilt_head.unwrap_or_else(|| system_expr("Sequence")),
+                            rebuilt_args,
+                        )),
+                        depth: max_child_depth.saturating_add(1),
+                        deleted_count: deleted_before - subtree_start,
                         exhausted: true,
                     });
                 }
 
-                return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(Expr::call(
-                        next_head.unwrap_or_else(|| system_expr("Sequence")),
-                        next_args,
-                    )),
-                    depth: next_max_child_depth.saturating_add(1),
-                    deleted_count: deleted_before_next - subtree_start,
-                    exhausted: true,
-                });
+                child_index += 1;
             }
 
-            session.delete_cases_call_children_from_queue(
-                children,
-                child_index + 1,
-                pattern,
-                traversal,
-                level,
-                subtree_start,
-                deleted_before_next,
-                next_args,
-                next_max_child_depth,
-                next_head,
-                next_head_deleted,
-            )
-        })
+            let Some((_, child, _)) = children.get(child_index).cloned() else {
+                if head_deleted {
+                    return Ok(DeleteCasesOutcome {
+                        result: DeleteCasesResult::Splice(rebuilt_args),
+                        depth: max_child_depth,
+                        deleted_count: deleted_before - subtree_start,
+                        exhausted: traversal.limit_reached(deleted_before),
+                    });
+                }
+
+                let depth = max_child_depth.saturating_add(1);
+                let expr = Expr::call(
+                    rebuilt_head.unwrap_or_else(|| system_expr("Sequence")),
+                    rebuilt_args,
+                );
+                let finish_result = self.finish_delete_cases_at_current_node(
+                    expr,
+                    pattern,
+                    traversal,
+                    level - 1,
+                    depth,
+                    deleted_before,
+                );
+                return self.drive_internal_value(finish_result, move |_, mut outcome| {
+                    outcome.deleted_count += deleted_before - subtree_start;
+                    Ok(outcome)
+                });
+            };
+
+            let child_result =
+                self.delete_cases_owned(child, pattern.clone(), traversal, level, deleted_before);
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
+                        session
+                            .delete_cases_call_children_from_queue(
+                                children,
+                                child_index,
+                                pattern,
+                                traversal,
+                                level,
+                                subtree_start,
+                                deleted_before,
+                                rebuilt_args,
+                                max_child_depth,
+                                rebuilt_head,
+                                head_deleted,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -389,140 +413,163 @@ impl Session {
             max_child_depth,
             Some(head),
             head_deleted,
+            None,
         )
     }
 
+    /// Iterative association-entry queue walk; `pending` carries an
+    /// already-computed entry outcome across a suspension resume, so the merge
+    /// step runs exactly once per entry on both the live and the resumed
+    /// paths.
     #[allow(clippy::too_many_arguments)]
     fn delete_cases_association_children_from_queue(
         &mut self,
         children: Vec<(bool, Option<Expr>, Expr, bool)>,
-        child_index: usize,
+        mut child_index: usize,
         pattern: Expr,
         traversal: CasesTraversalConfig,
         level: usize,
         subtree_start: usize,
-        deleted_before: usize,
-        rebuilt_entries: Vec<Expr>,
-        max_child_depth: usize,
-        rebuilt_head: Option<Expr>,
-        head_deleted: bool,
+        mut deleted_before: usize,
+        mut rebuilt_entries: Vec<Expr>,
+        mut max_child_depth: usize,
+        mut rebuilt_head: Option<Expr>,
+        mut head_deleted: bool,
+        mut pending: Option<DeleteCasesOutcome>,
     ) -> Result<DeleteCasesOutcome, EvalError> {
-        let Some((is_head, entry_key, child, contributes_depth)) =
-            children.get(child_index).cloned()
-        else {
-            if head_deleted {
-                return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(render_association(Vec::new())),
-                    depth: 2,
-                    deleted_count: deleted_before - subtree_start,
-                    exhausted: traversal.limit_reached(deleted_before),
-                });
-            }
+        loop {
+            if let Some(child_outcome) = pending.take() {
+                let (is_head, entry_key, contributes_depth) = match children.get(child_index) {
+                    Some((is_head, entry_key, _, contributes_depth)) => {
+                        (*is_head, entry_key.clone(), *contributes_depth)
+                    }
+                    None => unreachable!("pending outcome belongs to a live child index"),
+                };
 
-            let depth = max_child_depth.saturating_add(1);
-            let expr = Expr::call(
-                rebuilt_head.unwrap_or_else(|| system_expr("Association")),
-                rebuilt_entries,
-            );
-            let finish_result = self.finish_delete_cases_at_current_node(
-                expr,
-                pattern,
-                traversal,
-                level - 1,
-                depth,
-                deleted_before,
-            );
-            return self.drive_internal_value(finish_result, move |_, mut outcome| {
-                outcome.deleted_count += deleted_before - subtree_start;
-                Ok(outcome)
-            });
-        };
+                deleted_before += child_outcome.deleted_count;
+                if contributes_depth {
+                    max_child_depth = max_child_depth.max(child_outcome.depth);
+                }
 
-        let child_result =
-            self.delete_cases_owned(child, pattern.clone(), traversal, level, deleted_before);
-
-        self.drive_internal_value(child_result, move |session, child_outcome| {
-            let deleted_before_next = deleted_before + child_outcome.deleted_count;
-            let next_max_child_depth = if contributes_depth {
-                max_child_depth.max(child_outcome.depth)
-            } else {
-                max_child_depth
-            };
-            let mut next_entries = rebuilt_entries;
-            let mut next_head = rebuilt_head;
-            let mut next_head_deleted = head_deleted;
-
-            if is_head {
-                match child_outcome.result {
-                    DeleteCasesResult::Keep(expr) => next_head = Some(expr),
-                    DeleteCasesResult::Delete | DeleteCasesResult::Splice(_) => {
-                        next_head_deleted = true;
+                if is_head {
+                    match child_outcome.result {
+                        DeleteCasesResult::Keep(expr) => rebuilt_head = Some(expr),
+                        DeleteCasesResult::Delete | DeleteCasesResult::Splice(_) => {
+                            head_deleted = true;
+                        }
+                    }
+                } else if let Some(key) = entry_key {
+                    if let DeleteCasesResult::Keep(value) = child_outcome.result {
+                        rebuilt_entries.push(Expr::call(system_expr("Rule"), vec![key, value]));
+                    }
+                } else {
+                    match child_outcome.result {
+                        DeleteCasesResult::Keep(expr) => rebuilt_entries.push(expr),
+                        DeleteCasesResult::Delete => {}
+                        DeleteCasesResult::Splice(items) => rebuilt_entries.extend(items),
                     }
                 }
-            } else if let Some(key) = entry_key.clone() {
-                if let DeleteCasesResult::Keep(value) = child_outcome.result {
-                    next_entries.push(Expr::call(system_expr("Rule"), vec![key, value]));
+
+                if head_deleted {
+                    return Ok(DeleteCasesOutcome {
+                        result: DeleteCasesResult::Keep(render_association(Vec::new())),
+                        depth: 2,
+                        deleted_count: deleted_before - subtree_start,
+                        exhausted: traversal.limit_reached(deleted_before),
+                    });
                 }
-            } else {
-                match child_outcome.result {
-                    DeleteCasesResult::Keep(expr) => next_entries.push(expr),
-                    DeleteCasesResult::Delete => {}
-                    DeleteCasesResult::Splice(items) => next_entries.extend(items),
+
+                if child_outcome.exhausted {
+                    let untouched_rest = children
+                        .iter()
+                        .skip(child_index + 1)
+                        .filter_map(|(is_head, key, expr, _)| {
+                            if *is_head {
+                                None
+                            } else if let Some(key) = key {
+                                Some(Expr::call(
+                                    system_expr("Rule"),
+                                    vec![key.clone(), expr.clone()],
+                                ))
+                            } else {
+                                Some(expr.clone())
+                            }
+                        })
+                        .collect::<Vec<_>>();
+                    rebuilt_entries.extend(untouched_rest);
+
+                    return Ok(DeleteCasesOutcome {
+                        result: DeleteCasesResult::Keep(Expr::call(
+                            rebuilt_head.unwrap_or_else(|| system_expr("Association")),
+                            rebuilt_entries,
+                        )),
+                        depth: max_child_depth.saturating_add(1),
+                        deleted_count: deleted_before - subtree_start,
+                        exhausted: true,
+                    });
                 }
+
+                child_index += 1;
             }
 
-            if next_head_deleted {
-                return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(render_association(Vec::new())),
-                    depth: 2,
-                    deleted_count: deleted_before_next - subtree_start,
-                    exhausted: traversal.limit_reached(deleted_before_next),
+            let Some((_, _, child, _)) = children.get(child_index).cloned() else {
+                if head_deleted {
+                    return Ok(DeleteCasesOutcome {
+                        result: DeleteCasesResult::Keep(render_association(Vec::new())),
+                        depth: 2,
+                        deleted_count: deleted_before - subtree_start,
+                        exhausted: traversal.limit_reached(deleted_before),
+                    });
+                }
+
+                let depth = max_child_depth.saturating_add(1);
+                let expr = Expr::call(
+                    rebuilt_head.unwrap_or_else(|| system_expr("Association")),
+                    rebuilt_entries,
+                );
+                let finish_result = self.finish_delete_cases_at_current_node(
+                    expr,
+                    pattern,
+                    traversal,
+                    level - 1,
+                    depth,
+                    deleted_before,
+                );
+                return self.drive_internal_value(finish_result, move |_, mut outcome| {
+                    outcome.deleted_count += deleted_before - subtree_start;
+                    Ok(outcome)
                 });
+            };
+
+            let child_result =
+                self.delete_cases_owned(child, pattern.clone(), traversal, level, deleted_before);
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
+                        session
+                            .delete_cases_association_children_from_queue(
+                                children,
+                                child_index,
+                                pattern,
+                                traversal,
+                                level,
+                                subtree_start,
+                                deleted_before,
+                                rebuilt_entries,
+                                max_child_depth,
+                                rebuilt_head,
+                                head_deleted,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
             }
-
-            if child_outcome.exhausted {
-                let untouched_rest = children
-                    .iter()
-                    .skip(child_index + 1)
-                    .filter_map(|(is_head, key, expr, _)| {
-                        if *is_head {
-                            None
-                        } else if let Some(key) = key {
-                            Some(Expr::call(
-                                system_expr("Rule"),
-                                vec![key.clone(), expr.clone()],
-                            ))
-                        } else {
-                            Some(expr.clone())
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                next_entries.extend(untouched_rest);
-
-                return Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(Expr::call(
-                        next_head.unwrap_or_else(|| system_expr("Association")),
-                        next_entries,
-                    )),
-                    depth: next_max_child_depth.saturating_add(1),
-                    deleted_count: deleted_before_next - subtree_start,
-                    exhausted: true,
-                });
-            }
-
-            session.delete_cases_association_children_from_queue(
-                children,
-                child_index + 1,
-                pattern,
-                traversal,
-                level,
-                subtree_start,
-                deleted_before_next,
-                next_entries,
-                next_max_child_depth,
-                next_head,
-                next_head_deleted,
-            )
-        })
+        }
     }
 }

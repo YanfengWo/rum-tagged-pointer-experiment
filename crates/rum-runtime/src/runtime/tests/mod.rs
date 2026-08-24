@@ -161,3 +161,4 @@ mod syntax_information_lifecycle;
 mod thread_and_dispatch;
 mod thread_and_dispatch_part2;
 mod traversal_part2;
+mod wide_child_traversals;

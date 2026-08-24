@@ -220,6 +220,7 @@ impl Session {
                             outcome.depth,
                             outcome.changed,
                             0,
+                            None,
                         )
                     })
                 } else {
@@ -234,6 +235,7 @@ impl Session {
                         1,
                         false,
                         0,
+                        None,
                     )
                 }
             }
@@ -255,6 +257,7 @@ impl Session {
                             Vec::new(),
                             outcome.depth,
                             outcome.changed,
+                            None,
                         )
                     })
                 } else {
@@ -269,70 +272,102 @@ impl Session {
                         Vec::new(),
                         1,
                         false,
+                        None,
                     )
                 }
             }
         }
     }
 
+    /// Walks the children one per loop iteration, keeping the accumulated
+    /// `rebuilt_args` in place instead of recursing per element. `pending`
+    /// carries an already-computed child outcome across a suspension resume,
+    /// so the merge step runs exactly once per element on both the live and
+    /// the resumed paths.
     fn replace_call_children_owned(
         &mut self,
         head: Expr,
         args: Vec<Expr>,
-        child_index: usize,
+        mut child_index: usize,
         rules: Vec<RewriteRule>,
         levels: CasesLevelSpec,
         child_level: usize,
         include_heads: bool,
-        rebuilt_args: Vec<Expr>,
-        max_child_depth: usize,
-        changed: bool,
+        mut rebuilt_args: Vec<Expr>,
+        mut max_child_depth: usize,
+        mut changed: bool,
+        mut pending: Option<ReplaceOutcome>,
     ) -> Result<ReplaceOutcome, EvalError> {
-        let Some(child) = args.get(child_index).cloned() else {
-            return Ok(ReplaceOutcome {
-                expr: Expr::call(head, rebuilt_args),
-                depth: max_child_depth.saturating_add(1),
-                changed,
-            });
-        };
-
-        let child_result =
-            self.replace_owned(child, rules.clone(), levels, child_level, include_heads);
-        self.drive_internal_value(child_result, move |session, outcome| {
-            let mut rebuilt_args = rebuilt_args;
-            let child_changed = outcome.changed;
-            let appended_depth = if child_changed {
-                let appended_start = rebuilt_args.len();
-                let spliced =
-                    session.append_changed_rewrite_argument(&head, &mut rebuilt_args, outcome.expr);
-                if spliced {
-                    rebuilt_args[appended_start..]
-                        .iter()
-                        .map(|expr| replace_expr_depth_for_heads(expr, include_heads))
-                        .max()
-                        .unwrap_or(0)
+        loop {
+            if let Some(outcome) = pending.take() {
+                let child_changed = outcome.changed;
+                let appended_depth = if child_changed {
+                    let appended_start = rebuilt_args.len();
+                    let spliced = self.append_changed_rewrite_argument(
+                        &head,
+                        &mut rebuilt_args,
+                        outcome.expr,
+                    );
+                    if spliced {
+                        rebuilt_args[appended_start..]
+                            .iter()
+                            .map(|expr| replace_expr_depth_for_heads(expr, include_heads))
+                            .max()
+                            .unwrap_or(0)
+                    } else {
+                        outcome.depth
+                    }
                 } else {
+                    rebuilt_args.push(outcome.expr);
                     outcome.depth
-                }
-            } else {
-                rebuilt_args.push(outcome.expr);
-                outcome.depth
+                };
+                max_child_depth = max_child_depth.max(appended_depth);
+                changed = changed || child_changed;
+                child_index += 1;
+            }
+
+            let Some(child) = args.get(child_index).cloned() else {
+                return Ok(ReplaceOutcome {
+                    expr: Expr::call(head, rebuilt_args),
+                    depth: max_child_depth.saturating_add(1),
+                    changed,
+                });
             };
-            session.replace_call_children_owned(
-                head,
-                args,
-                child_index + 1,
-                rules,
-                levels,
-                child_level,
-                include_heads,
-                rebuilt_args,
-                max_child_depth.max(appended_depth),
-                changed || child_changed,
-            )
-        })
+
+            let child_result =
+                self.replace_owned(child, rules.clone(), levels, child_level, include_heads);
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = ReplaceOutcome::from_continuation_expr(value?);
+                        session
+                            .replace_call_children_owned(
+                                head,
+                                args,
+                                child_index,
+                                rules,
+                                levels,
+                                child_level,
+                                include_heads,
+                                rebuilt_args,
+                                max_child_depth,
+                                changed,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
+    /// Iterative association-entry walk; `pending` carries an already-computed
+    /// entry outcome across a suspension resume so the merge step runs exactly
+    /// once per entry on both the live and the resumed paths.
     fn replace_association_children_owned(
         &mut self,
         head: Expr,
@@ -341,64 +376,79 @@ impl Session {
         levels: CasesLevelSpec,
         child_level: usize,
         include_heads: bool,
-        rebuilt_entries: Vec<Expr>,
-        max_child_depth: usize,
-        changed: bool,
-        index: usize,
+        mut rebuilt_entries: Vec<Expr>,
+        mut max_child_depth: usize,
+        mut changed: bool,
+        mut index: usize,
+        mut pending: Option<ReplaceOutcome>,
     ) -> Result<ReplaceOutcome, EvalError> {
-        let Some(entry) = args.get(index).cloned() else {
-            return Ok(ReplaceOutcome {
-                expr: Expr::call(head, rebuilt_entries),
-                depth: max_child_depth.saturating_add(1),
-                changed,
-            });
-        };
-
-        match entry {
-            Expr::Call {
-                head: rule_head,
-                args: rule_args,
-            } if is_system_symbol_name(&rule_head, "Rule") && rule_args.len() == 2 => {
-                let key = rule_args[0].clone();
-                let value = rule_args[1].clone();
-                let value_result =
-                    self.replace_owned(value, rules.clone(), levels, child_level, include_heads);
-                self.drive_internal_value(value_result, move |session, outcome| {
-                    let mut rebuilt_entries = rebuilt_entries;
-                    rebuilt_entries.push(Expr::call(system_expr("Rule"), vec![key, outcome.expr]));
-                    session.replace_association_children_owned(
-                        head,
-                        args,
-                        rules,
-                        levels,
-                        child_level,
-                        include_heads,
-                        rebuilt_entries,
-                        max_child_depth.max(outcome.depth),
-                        changed || outcome.changed,
-                        index + 1,
-                    )
-                })
+        loop {
+            if let Some(outcome) = pending.take() {
+                match args.get(index) {
+                    Some(Expr::Call {
+                        head: rule_head,
+                        args: rule_args,
+                    }) if is_system_symbol_name(rule_head, "Rule") && rule_args.len() == 2 => {
+                        rebuilt_entries.push(Expr::call(
+                            system_expr("Rule"),
+                            vec![rule_args[0].clone(), outcome.expr],
+                        ));
+                    }
+                    _ => {
+                        rebuilt_entries.push(outcome.expr);
+                    }
+                }
+                max_child_depth = max_child_depth.max(outcome.depth);
+                changed = changed || outcome.changed;
+                index += 1;
             }
-            other => {
-                let entry_result =
-                    self.replace_owned(other, rules.clone(), levels, child_level, include_heads);
-                self.drive_internal_value(entry_result, move |session, outcome| {
-                    let mut rebuilt_entries = rebuilt_entries;
-                    rebuilt_entries.push(outcome.expr);
-                    session.replace_association_children_owned(
-                        head,
-                        args,
-                        rules,
-                        levels,
-                        child_level,
-                        include_heads,
-                        rebuilt_entries,
-                        max_child_depth.max(outcome.depth),
-                        changed || outcome.changed,
-                        index + 1,
-                    )
-                })
+
+            let Some(entry) = args.get(index).cloned() else {
+                return Ok(ReplaceOutcome {
+                    expr: Expr::call(head, rebuilt_entries),
+                    depth: max_child_depth.saturating_add(1),
+                    changed,
+                });
+            };
+
+            let child = match entry {
+                Expr::Call {
+                    head: rule_head,
+                    args: rule_args,
+                } if is_system_symbol_name(&rule_head, "Rule") && rule_args.len() == 2 => {
+                    Expr::unwrap_shared_args(rule_args)
+                        .pop()
+                        .expect("association Rule entry stores a value")
+                }
+                other => other,
+            };
+            let entry_result =
+                self.replace_owned(child, rules.clone(), levels, child_level, include_heads);
+
+            match entry_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = ReplaceOutcome::from_continuation_expr(value?);
+                        session
+                            .replace_association_children_owned(
+                                head,
+                                args,
+                                rules,
+                                levels,
+                                child_level,
+                                include_heads,
+                                rebuilt_entries,
+                                max_child_depth,
+                                changed,
+                                index,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
             }
         }
     }

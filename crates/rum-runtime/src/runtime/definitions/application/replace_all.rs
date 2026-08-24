@@ -130,6 +130,7 @@ impl Session {
                         head_outcome.changed,
                         hold_attribute,
                         0,
+                        None,
                     )
                 })
             }
@@ -153,6 +154,12 @@ impl Session {
         attributes.hold_attribute()
     }
 
+    /// Walks the arguments one per loop iteration, keeping the accumulated
+    /// `rewritten_args` in place instead of recursing per element (the
+    /// continuation self-recursion overflowed the native stack on wide flat
+    /// lists). `pending` carries an already-computed argument outcome across a
+    /// suspension resume, so the merge step runs exactly once per element on
+    /// both the live and the resumed paths.
     fn apply_replace_all_args(
         &mut self,
         head: Expr,
@@ -160,53 +167,64 @@ impl Session {
         remaining_args: SharedArgs,
         rules: RewriteRulePlan,
         source: RuleApplicationSource,
-        changed: bool,
+        mut changed: bool,
         hold_attribute: HoldAttribute,
-        argument_index: usize,
+        mut argument_index: usize,
+        mut pending: Option<ReplaceAllTraversalOutcome>,
     ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
-        let Some(current) = remaining_args.get(argument_index) else {
-            return Ok(ReplaceAllTraversalOutcome {
-                expr: Expr::call(head, rewritten_args),
-                changed,
-            });
-        };
-
-        if source == RuleApplicationSource::ReplaceAllUnheld
-            && hold_attribute.holds_argument(argument_index)
-        {
-            rewritten_args.push(current.clone());
-            return self.apply_replace_all_args(
-                head,
-                rewritten_args,
-                remaining_args,
-                rules,
-                source,
-                changed,
-                hold_attribute,
-                argument_index + 1,
-            );
-        }
-
-        let current = current.clone();
-        let arg_result = self.apply_replace_all_owned(current, rules.clone(), source);
-
-        self.drive_internal_value(arg_result, move |session, outcome| {
-            if outcome.changed {
-                session.append_changed_rewrite_argument(&head, &mut rewritten_args, outcome.expr);
-            } else {
-                rewritten_args.push(outcome.expr);
+        loop {
+            if let Some(outcome) = pending.take() {
+                if outcome.changed {
+                    self.append_changed_rewrite_argument(&head, &mut rewritten_args, outcome.expr);
+                } else {
+                    rewritten_args.push(outcome.expr);
+                }
+                changed = changed || outcome.changed;
+                argument_index += 1;
             }
-            session.apply_replace_all_args(
-                head,
-                rewritten_args,
-                remaining_args,
-                rules,
-                source,
-                changed || outcome.changed,
-                hold_attribute,
-                argument_index + 1,
-            )
-        })
+
+            let Some(current) = remaining_args.get(argument_index) else {
+                return Ok(ReplaceAllTraversalOutcome {
+                    expr: Expr::call(head, rewritten_args),
+                    changed,
+                });
+            };
+
+            if source == RuleApplicationSource::ReplaceAllUnheld
+                && hold_attribute.holds_argument(argument_index)
+            {
+                rewritten_args.push(current.clone());
+                argument_index += 1;
+                continue;
+            }
+
+            let current = current.clone();
+            let arg_result = self.apply_replace_all_owned(current, rules.clone(), source);
+
+            match arg_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = ReplaceAllTraversalOutcome::from_continuation_expr(value?);
+                        session
+                            .apply_replace_all_args(
+                                head,
+                                rewritten_args,
+                                remaining_args,
+                                rules,
+                                source,
+                                changed,
+                                hold_attribute,
+                                argument_index,
+                                Some(outcome),
+                            )
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     pub(in crate::runtime) fn append_changed_rewrite_argument(
