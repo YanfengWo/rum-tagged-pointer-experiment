@@ -720,17 +720,48 @@ fn keyed_take_drop_result_for_expr(
     }
 
     if let Some(entries) = single_rule_or_keyed_entry_forms_from_expr(expr) {
+        const KEY_SELECT_INDEX_THRESHOLD: usize = 16;
+        let indexed = entries.len() > KEY_SELECT_INDEX_THRESHOLD
+            && selected_keys.len() > KEY_SELECT_INDEX_THRESHOLD;
         let filtered = if keep_selected {
-            let mut taken = Vec::new();
-            for selected_key in &selected_keys {
-                taken.extend(
-                    entries
-                        .iter()
-                        .filter(|entry| &entry.key == selected_key)
-                        .cloned(),
-                );
+            if indexed {
+                // The result keeps selection order, so index the entries by
+                // key and walk the selected keys. Overwriting inserts keep
+                // the last entry for a duplicated key — what rendering's
+                // canonicalization would pick — and `remove` emits a repeated
+                // selection once while missing keys fall through silently.
+                let mut by_key = HashMap::with_capacity(entries.len());
+                for entry in &entries {
+                    by_key.insert(entry.key.clone(), entry.clone());
+                }
+                let mut taken = Vec::new();
+                for selected_key in &selected_keys {
+                    if let Some(entry) = by_key.remove(selected_key) {
+                        taken.push(entry);
+                    }
+                }
+                taken
+            } else {
+                let mut taken = Vec::new();
+                for selected_key in &selected_keys {
+                    taken.extend(
+                        entries
+                            .iter()
+                            .filter(|entry| &entry.key == selected_key)
+                            .cloned(),
+                    );
+                }
+                taken
             }
-            taken
+        } else if indexed {
+            let selected = selected_keys
+                .iter()
+                .cloned()
+                .collect::<std::collections::HashSet<_>>();
+            entries
+                .into_iter()
+                .filter(|entry| !selected.contains(&entry.key))
+                .collect()
         } else {
             entries
                 .into_iter()

@@ -571,3 +571,21 @@ fn associateto_keydropfrom_and_keyvaluepattern_cover_first_pass_mutation_surface
         .eval_text("Unprotect[assoc]; ClearAll[assoc]")
         .unwrap();
 }
+
+#[test]
+fn keydropfrom_preserves_association_order_at_indexed_width() {
+    let mut session = core_session();
+
+    // 40 entries against 22 selected keys (one repeat, one miss) crosses the
+    // indexed-selection threshold; the surviving keys keep association order.
+    assert_eq!(
+        session
+            .eval_text(
+                "assoc = AssociationThread[Range[40], Range[40]]; KeyDropFrom[assoc, Join[Reverse[Range[2, 40, 2]], {2, 1000}]]; {Length[assoc], Keys[assoc] == Range[1, 39, 2]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[20, True]"
+    );
+}

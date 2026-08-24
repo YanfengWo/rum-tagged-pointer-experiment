@@ -392,6 +392,78 @@ fn key_predicates_take_drop_map_and_sort_cover_first_pass_subset() {
 }
 
 #[test]
+fn key_take_and_drop_preserve_order_rules_at_scan_and_indexed_widths() {
+    let mut session = core_session();
+
+    // KeyTake keeps selection order; a repeated selection appears once and a
+    // missing key is skipped silently.
+    assert_eq!(
+        session
+            .eval_text("KeyTake[Association[a -> 1, b -> 2, c -> 3], {c, a}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[c, 3], Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyTake[Association[a -> 1, b -> 2], {a, a}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyTake[Association[a -> 1], {a, zz}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    // A duplicated key in a rule list keeps the last entry — the one
+    // rendering's canonicalization would pick.
+    assert_eq!(
+        session
+            .eval_text("KeyTake[List[Rule[a, 1], Rule[a, 2]], {a}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 2]]"
+    );
+    // KeyDrop keeps association order; repeats and misses in the selection
+    // are harmless.
+    assert_eq!(
+        session
+            .eval_text("KeyDrop[Association[a -> 1, b -> 2, c -> 3], {b}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1], Rule[c, 3]]"
+    );
+    assert_eq!(
+        session
+            .eval_text("KeyDrop[Association[a -> 1, b -> 2], {b, b, zz}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Association[Rule[a, 1]]"
+    );
+    // Wide cases past the indexed-selection threshold (40 entries, 26
+    // selected keys) keep the same rules.
+    assert_eq!(
+        session
+            .eval_text(
+                "wide = AssociationThread[Range[40], Range[40]]; ks = Join[Reverse[Range[2, 40, 2]], {1000, 1, 3, 5, 2, 4}]; taken = KeyTake[wide, ks]; dropped = KeyDrop[wide, Reverse[Range[2, 40, 2]]]; {Keys[taken] == Join[Reverse[Range[2, 40, 2]], {1, 3, 5}], Values[taken] == Keys[taken], Keys[dropped] == Range[1, 39, 2], Length[dropped]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[True, True, True, 20]"
+    );
+}
+
+#[test]
 fn key_sort_by_evaluates_each_key_once_at_scale() {
     let mut session = core_session();
 

@@ -356,7 +356,19 @@ fn apply_key_drop_from_value(expr: Expr, key_spec: Expr) -> Option<Expr> {
     let entries = association_entry_forms_from_expr(&expr)?;
     let selected_keys = parse_key_spec(&key_spec)?;
 
-    Some(render_association_entry_forms_preserving_heads(
+    const KEY_SELECT_INDEX_THRESHOLD: usize = 16;
+    let kept = if entries.len() > KEY_SELECT_INDEX_THRESHOLD
+        && selected_keys.len() > KEY_SELECT_INDEX_THRESHOLD
+    {
+        let selected = selected_keys
+            .iter()
+            .cloned()
+            .collect::<std::collections::HashSet<_>>();
+        entries
+            .into_iter()
+            .filter(|entry| !selected.contains(&entry.key))
+            .collect()
+    } else {
         entries
             .into_iter()
             .filter(|entry| {
@@ -364,8 +376,10 @@ fn apply_key_drop_from_value(expr: Expr, key_spec: Expr) -> Option<Expr> {
                     .iter()
                     .any(|candidate| candidate == &entry.key)
             })
-            .collect(),
-    ))
+            .collect()
+    };
+
+    Some(render_association_entry_forms_preserving_heads(kept))
 }
 
 fn protected_definition_target_symbol(session: &Session, target_expr: &Expr) -> Option<Symbol> {
