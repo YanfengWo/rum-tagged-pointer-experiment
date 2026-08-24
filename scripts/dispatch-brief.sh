@@ -97,7 +97,13 @@ else
 CLAUDE.md belongs to the director and is NOT your instruction file. \
 Follow AGENTS.md and the brief. Do not commit, branch, or push; leave changes in the \
 working tree. Report with verbatim evidence."
-  cmd="cd '$repo_root' && cgl -p '$task' \
+  # claude-code caps a single response at 32000 output tokens by default, which a
+  # brief asking for a long enumeration plus verbatim evidence can exceed — the
+  # run then dies with "response exceeded the ... output token maximum" and
+  # leaves nothing behind. Raise it, overridable per dispatch.
+  max_output="${CGL_MAX_OUTPUT_TOKENS:-64000}"
+  echo "max-output-tokens: $max_output"
+  cmd="cd '$repo_root' && CLAUDE_CODE_MAX_OUTPUT_TOKENS=$max_output cgl -p '$task' \
 --permission-mode $permission_mode \
 --allowedTools Bash Edit Write Read Grep Glob \
 --append-system-prompt '$role'"
