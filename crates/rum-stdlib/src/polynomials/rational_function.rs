@@ -23,13 +23,7 @@ impl RationalFunction {
         match expr {
             Expr::Atom(_) => Some(Self::from_polynomial(Polynomial::from_expr(expr)?)),
             Expr::Call { head, args } if is_system_symbol_name(head, "Plus") => {
-                let mut result = Self::from_polynomial(Polynomial::zero());
-
-                for arg in args {
-                    result = result.add(Self::from_expr(arg)?)?;
-                }
-
-                Some(result)
+                Self::from_sum(args)
             }
             Expr::Call { head, args } if is_system_symbol_name(head, "Times") => {
                 let mut result = Self::one();
@@ -59,6 +53,17 @@ impl RationalFunction {
                 Self::from_expr(&args[0])?.reciprocal()?.pow(magnitude)
             }
             _ => Some(Self::from_polynomial(Polynomial::from_expr(expr)?)),
+        }
+    }
+
+    fn from_sum(args: &[Expr]) -> Option<Self> {
+        match args {
+            [] => Some(Self::from_polynomial(Polynomial::zero())),
+            [arg] => Self::from_expr(arg),
+            _ => {
+                let (left, right) = args.split_at(args.len() / 2);
+                Self::from_sum(left)?.add(Self::from_sum(right)?)
+            }
         }
     }
 

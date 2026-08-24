@@ -425,6 +425,44 @@ fn together_combines_rational_function_terms_over_common_polynomial_denominators
 }
 
 #[test]
+fn together_preserves_reduced_canonical_rational_function_forms() {
+    let mut session = core_session();
+    let cases = [
+        (
+            "Together[1/x + 1/y]",
+            "Times[Power[x, -1], Power[y, -1], Plus[x, y]]",
+        ),
+        ("Together[1/x + 1/x]", "Times[2, Power[x, -1]]"),
+        (
+            "Together[1/(x*y) + 1/(x*z)]",
+            "Times[Power[x, -1], Power[y, -1], Power[z, -1], Plus[y, z]]",
+        ),
+        ("Together[x/(x^2) + 1/x]", "Times[2, Power[x, -1]]"),
+        (
+            "Together[1/(1/x + 1/y)]",
+            "Times[x, y, Power[Plus[x, y], -1]]",
+        ),
+        ("Together[(x^2 - 1)/(x - 1)]", "Plus[1, x]"),
+        (
+            "Together[(1/2)/x + (1/3)/y]",
+            "Times[Power[x, -1], Power[y, -1], Plus[Times[1/3, x], Times[1/2, y]]]",
+        ),
+        (
+            "Together[1/(x + 1) + 1/(x + 2) + 1/(x + 3)]",
+            "Times[Power[Plus[6, Power[x, 3], Times[6, Power[x, 2]], Times[11, x]], -1], Plus[11, Times[3, Power[x, 2]], Times[12, x]]]",
+        ),
+    ];
+
+    for (input, expected) in cases {
+        assert_eq!(
+            session.eval_text(input).unwrap().value.to_string(),
+            expected,
+            "input: {input}"
+        );
+    }
+}
+
+#[test]
 fn together_keeps_current_pattern_bearing_boundary_for_now() {
     let mut session = core_session();
 
