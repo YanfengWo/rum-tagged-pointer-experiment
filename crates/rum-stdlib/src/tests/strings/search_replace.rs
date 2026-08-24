@@ -447,3 +447,28 @@ fn symbolic_string_patterns_bind_named_captures_in_rules() {
         "List[\"12\"]"
     );
 }
+
+// The list walks must iterate instead of recursing per string: a 50000-string
+// input aborted the process with a native stack overflow before the loop
+// conversion, and the per-string state clone made the walk quadratic.
+
+#[test]
+fn string_replace_and_cases_walk_fifty_thousand_strings() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "result = StringReplace[Table[StringJoin[\"ab\", ToString[i]], {i, 50000}], \"b\" -> \"x\"]; {Length[result], result[[1]], result[[25000]], result[[50000]]}"
+        ),
+        "List[50000, \"ax1\", \"ax25000\", \"ax50000\"]"
+    );
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "result = StringCases[Table[StringJoin[\"ab\", ToString[i]], {i, 50000}], \"b\" -> \"x\"]; {Length[result], result[[1]], result[[25000]], result[[50000]]}"
+        ),
+        "List[50000, List[\"x\"], List[\"x\"], List[\"x\"]]"
+    );
+}

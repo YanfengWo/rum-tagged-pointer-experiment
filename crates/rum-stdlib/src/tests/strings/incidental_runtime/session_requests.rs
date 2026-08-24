@@ -80,6 +80,65 @@ fn resume_eval_request_with_input_can_finish_string_apply_list_callbacks() {
     assert_eq!(response.value.to_string(), "List[\"one\", \"two\"]");
 }
 
+// Mid-walk suspension over a list: the strings before the suspending one
+// resolve without suspending, so their outputs must already be accumulated
+// when the frame is taken, and the walk must resume at the suspending index.
+
+#[test]
+fn string_replace_and_cases_resume_mid_walk_with_accumulated_output() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request(
+            "StringReplace[{\"a\", \"b\", \"c\", \"b\", \"d\"}, \"b\" :> InputString[\"replace: \"]]",
+        )
+        .expect_err("StringReplace should suspend mid-walk on the first b");
+    assert_input_prompt(&first.error, "replace: ");
+
+    let second = session
+        .resume_eval_request_with_input("x")
+        .expect_err("StringReplace should suspend again on the second b after resuming");
+    assert_input_prompt(&second.error, "replace: ");
+
+    let response = session
+        .resume_eval_request_with_input("y")
+        .expect("StringReplace should finish the walk after the second b resolves");
+    assert_eq!(
+        response.value.to_string(),
+        "List[\"a\", \"x\", \"c\", \"y\", \"d\"]"
+    );
+
+    let first = session
+        .eval_request("StringCases[{\"a\", \"b\", \"a\"}, \"b\" :> InputString[\"case: \"]]")
+        .expect_err("StringCases should suspend mid-walk on the middle string");
+    assert_input_prompt(&first.error, "case: ");
+
+    let response = session
+        .resume_eval_request_with_input("x")
+        .expect("StringCases should finish the walk after the middle string resolves");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[], List[\"x\"], List[]]"
+    );
+}
+
+#[test]
+fn string_apply_resumes_mid_walk_with_accumulated_output() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request(
+            "StringApply[Function[If[SameQ[Slot[1], List[\"b\"]], InputString[\"apply: \"], StringJoin[Slot[1]]]], {\"a\", \"b\", \"c\"}]",
+        )
+        .expect_err("StringApply should suspend mid-walk on the middle string");
+    assert_input_prompt(&first.error, "apply: ");
+
+    let response = session
+        .resume_eval_request_with_input("x")
+        .expect("StringApply should finish the walk after the middle string resolves");
+    assert_eq!(response.value.to_string(), "List[\"a\", \"x\", \"c\"]");
+}
+
 // Moved from crates/rum-runtime/src/runtime/tests/session_requests/transforms_resume.rs.
 
 #[test]

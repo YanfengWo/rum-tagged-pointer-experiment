@@ -13,7 +13,6 @@ struct StringReplaceRuleEvalState {
     literal_match_index: usize,
 }
 
-#[derive(Clone)]
 struct StringReplaceValuesEvalState {
     values: Vec<String>,
     rules: Vec<ExactStringReplacementRule>,
@@ -30,7 +29,6 @@ struct StringCasesRuleEvalState {
     literal_match_index: usize,
 }
 
-#[derive(Clone)]
 struct StringCasesValuesEvalState {
     values: Vec<String>,
     spec: ExactStringCaseSpec,
@@ -322,34 +320,46 @@ fn resume_replace_string_value_with_output(
     resume_replace_string_value_from_index(session, state, next_index, replacements + 1, output)
 }
 
+/// Renders one string per loop iteration instead of recursing per string.
+/// On suspension the state, the index, and the accumulated output move into
+/// the suspension frame by value — the old per-string `state.clone()` plus
+/// `rendered.clone()` made a wide list quadratic in its element count.
 fn resume_replace_string_values_from_index(
     session: &mut Session,
     state: StringReplaceValuesEvalState,
-    index: usize,
-    rendered: Vec<String>,
+    mut index: usize,
+    mut rendered: Vec<String>,
 ) -> Result<Expr, EvalError> {
-    let Some(value) = state.values.get(index) else {
-        return Ok(string_list_expr(rendered));
-    };
+    loop {
+        let Some(value) = state.values.get(index) else {
+            return Ok(string_list_expr(rendered));
+        };
 
-    let result = replace_string_value_with_rules(
-        session,
-        value,
-        &state.rules,
-        state.max_replacements,
-        state.config,
-    );
-    let suspended_state = state.clone();
-    let suspended_rendered = rendered.clone();
-    session.drive_internal_value::<String, Expr, _>(result, move |session, value| {
-        resume_replace_string_values_with_value(
+        let result = replace_string_value_with_rules(
             session,
-            suspended_state,
-            index,
-            suspended_rendered,
             value,
-        )
-    })
+            &state.rules,
+            state.max_replacements,
+            state.config,
+        );
+        match result {
+            Ok(value) => {
+                rendered.push(value);
+                index += 1;
+            }
+            Err(EvalError::InputRequired { request }) => {
+                return session.drive_internal_value::<String, Expr, _>(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_replace_string_values_with_value(
+                            session, state, index, rendered, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        }
+    }
 }
 
 fn resume_replace_string_values_with_value(
@@ -514,34 +524,46 @@ fn resume_collect_string_cases_with_output(
     resume_collect_string_cases_from_index(session, state, next_index, matches)
 }
 
+/// Collects one string per loop iteration instead of recursing per string.
+/// On suspension the state, the index, and the accumulated output move into
+/// the suspension frame by value — the old per-string `state.clone()` plus
+/// `outputs.clone()` made a wide list quadratic in its element count.
 fn resume_collect_string_cases_values_from_index(
     session: &mut Session,
     state: StringCasesValuesEvalState,
-    index: usize,
-    outputs: Vec<Expr>,
+    mut index: usize,
+    mut outputs: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    let Some(value) = state.values.get(index) else {
-        return Ok(list_expr(outputs));
-    };
+    loop {
+        let Some(value) = state.values.get(index) else {
+            return Ok(list_expr(outputs));
+        };
 
-    let result = collect_string_cases_with_rule_evaluation(
-        session,
-        value,
-        &state.spec,
-        state.max_matches,
-        state.config,
-    );
-    let suspended_state = state.clone();
-    let suspended_outputs = outputs.clone();
-    session.drive_internal_value::<Vec<Expr>, Expr, _>(result, move |session, items| {
-        resume_collect_string_cases_values_with_value(
+        let result = collect_string_cases_with_rule_evaluation(
             session,
-            suspended_state,
-            index,
-            suspended_outputs,
-            items,
-        )
-    })
+            value,
+            &state.spec,
+            state.max_matches,
+            state.config,
+        );
+        match result {
+            Ok(items) => {
+                outputs.push(list_expr(items));
+                index += 1;
+            }
+            Err(EvalError::InputRequired { request }) => {
+                return session.drive_internal_value::<Vec<Expr>, Expr, _>(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, items| {
+                        resume_collect_string_cases_values_with_value(
+                            session, state, index, outputs, items,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        }
+    }
 }
 
 fn resume_collect_string_cases_values_with_value(

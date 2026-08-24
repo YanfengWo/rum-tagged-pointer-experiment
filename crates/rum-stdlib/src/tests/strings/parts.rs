@@ -250,3 +250,19 @@ fn string_apply_delete_and_count_options_cover_the_next_wave() {
         "List[\"A\", \"b\", \"c\"]"
     );
 }
+
+// StringApply's list walk shares the loop conversion: 50000 strings aborted
+// the process with a native stack overflow before it.
+
+#[test]
+fn string_apply_walks_fifty_thousand_strings() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "result = StringApply[StringJoin, Table[StringJoin[\"ab\", ToString[i]], {i, 50000}]]; {Length[result], result[[1]], result[[25000]], result[[50000]]}"
+        ),
+        "List[50000, \"ab1\", \"ab25000\", \"ab50000\"]"
+    );
+}
