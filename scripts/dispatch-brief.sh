@@ -97,13 +97,17 @@ else
 CLAUDE.md belongs to the director and is NOT your instruction file. \
 Follow AGENTS.md and the brief. Do not commit, branch, or push; leave changes in the \
 working tree. Report with verbatim evidence."
-  # claude-code caps a single response at 32000 output tokens by default, which a
-  # brief asking for a long enumeration plus verbatim evidence can exceed — the
-  # run then dies with "response exceeded the ... output token maximum" and
-  # leaves nothing behind. Raise it, overridable per dispatch.
-  max_output="${CGL_MAX_OUTPUT_TOKENS:-64000}"
-  echo "max-output-tokens: $max_output"
-  cmd="cd '$repo_root' && CLAUDE_CODE_MAX_OUTPUT_TOKENS=$max_output cgl -p '$task' \
+  # A single response is capped at CLAUDE_CODE_MAX_OUTPUT_TOKENS; exceeding it
+  # kills the run and leaves nothing behind (brief-307 died that way at the
+  # 32000 default). The cap belongs to cgl, not to this repo, so it lives in
+  # ~/.claude-glm/settings.json; set CGL_MAX_OUTPUT_TOKENS only to override a
+  # single dispatch.
+  cgl_env=""
+  if [[ -n "${CGL_MAX_OUTPUT_TOKENS:-}" ]]; then
+    cgl_env="CLAUDE_CODE_MAX_OUTPUT_TOKENS=$CGL_MAX_OUTPUT_TOKENS "
+    echo "max-output-tokens: $CGL_MAX_OUTPUT_TOKENS (overriding cgl default)"
+  fi
+  cmd="cd '$repo_root' && ${cgl_env}cgl -p '$task' \
 --permission-mode $permission_mode \
 --allowedTools Bash Edit Write Read Grep Glob \
 --append-system-prompt '$role'"
