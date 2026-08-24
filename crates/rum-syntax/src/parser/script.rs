@@ -2,8 +2,10 @@
 //!
 //! [`parse_script_forms`] drives the (guard-instrumented) recursive-descent
 //! parser over the whole token stream, form by form, so every token is parsed
-//! exactly once. The stop rule and its equivalence to the line-driven
-//! splitter the runtime keeps as its lex-failure fallback:
+//! exactly once — and each parsed form keeps the [`SyntaxExpr`] that parse
+//! built, so evaluation lowers it without parsing a second time. The stop
+//! rule and its equivalence to the line-driven splitter the runtime keeps as
+//! its lex-failure fallback:
 //!
 //! - **Prefix determinism.** The parser never backtracks, so its decision at
 //!   token T depends only on the tokens before T. Its two next-token
@@ -26,6 +28,37 @@ use super::*;
 use crate::lexer::lex_with_trivia;
 use crate::trivia::{LexedSource, TriviaKind};
 
+/// One script form produced by [`parse_script_forms`]: its text always, and
+/// the parsed syntax when the splitter built it.
+///
+/// Text is the form's primary view, reached through
+/// [`text`](ScriptForm::text); the type deliberately does not deref to `&str`,
+/// so a caller cannot silently lose track of which state it holds. Evaluation
+/// lowers a [`Parsed`](ScriptForm::Parsed) form directly instead of re-parsing
+/// its text; an [`Unparsed`](ScriptForm::Unparsed) form is parsed at evaluation
+/// time exactly as a form was before forms carried syntax.
+#[derive(Clone, Debug)]
+pub enum ScriptForm {
+    /// The splitter parsed this form; `syntax` is the tree its parse built
+    /// (spans are whole-source offsets).
+    Parsed { text: String, syntax: SyntaxExpr },
+    /// Text only. Produced for a form the splitter could not parse (a form
+    /// poisoned by a hard error is emitted as text precisely so the error
+    /// surfaces downstream when evaluation parses it) and for every form the
+    /// legacy line-driven fallback yields.
+    Unparsed { text: String },
+}
+
+impl ScriptForm {
+    /// The form's source text: whole source lines, `\n`-joined and trimmed.
+    pub fn text(&self) -> &str {
+        match self {
+            ScriptForm::Parsed { text, .. } => text,
+            ScriptForm::Unparsed { text } => text,
+        }
+    }
+}
+
 /// Why [`parse_script_forms`] could not produce forms.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ScriptFormsError {
@@ -43,8 +76,10 @@ pub enum ScriptFormsError {
 ///
 /// Form text is whole source lines — joined with `\n` (so CRLF sources lose
 /// their `\r`, exactly as the line-driven splitter's `lines()`-based
-/// accumulation does) and trimmed.
-pub fn parse_script_forms(source: &str) -> Result<Vec<String>, ScriptFormsError> {
+/// accumulation does) and trimmed. A form whose parse succeeded carries the
+/// [`SyntaxExpr`] that parse built, so evaluation can lower it without
+/// parsing again; a form the splitter could not parse carries text only.
+pub fn parse_script_forms(source: &str) -> Result<Vec<ScriptForm>, ScriptFormsError> {
     let lexed = match lex_with_trivia(source) {
         Ok(lexed) => lexed,
         Err(err) => return Err(ScriptFormsError::LexFailed(err)),
@@ -60,18 +95,17 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<String>, ScriptFormsError>
             Parser::<true>::new_with_line_breaks(&tokens[start..], &line_breaks[start..]);
 
         match parser.parse_root() {
-            Ok(_) => {
+            Ok(syntax) => {
                 // The parser stopped at the End token or at a boundary guard
                 // (a line-first token declined at an optional decision), so
                 // the form is exactly the tokens the slice parser consumed.
                 let end = start + parser.index;
                 let mut boundary = line_end(source, tokens[end - 1].span.end);
                 extend_through_straddling_comments(source, &lexed, end, &mut boundary);
-                forms.push(form_text(
-                    source,
-                    form_start(source, &lexed, start),
-                    boundary,
-                ));
+                forms.push(ScriptForm::Parsed {
+                    text: form_text(source, form_start(source, &lexed, start), boundary),
+                    syntax,
+                });
                 start = end;
             }
             Err(err) if err.is_incomplete() => {
@@ -87,8 +121,11 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<String>, ScriptFormsError>
                     .join("\n");
 
                 return match parse_expr(&tail) {
-                    Ok(_) => {
-                        forms.push(tail.trim().to_string());
+                    Ok(syntax) => {
+                        forms.push(ScriptForm::Parsed {
+                            text: tail.trim().to_string(),
+                            syntax,
+                        });
                         Ok(forms)
                     }
                     Err(SyntaxError::EmptyInput) => Ok(forms),
@@ -96,7 +133,9 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<String>, ScriptFormsError>
                         Err(ScriptFormsError::IncompleteTail(tail_err))
                     }
                     Err(_) => {
-                        forms.push(tail.trim().to_string());
+                        forms.push(ScriptForm::Unparsed {
+                            text: tail.trim().to_string(),
+                        });
                         Ok(forms)
                     }
                 };
@@ -138,11 +177,9 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<String>, ScriptFormsError>
                     }
                 }
 
-                forms.push(form_text(
-                    source,
-                    form_start(source, &lexed, start),
-                    boundary,
-                ));
+                forms.push(ScriptForm::Unparsed {
+                    text: form_text(source, form_start(source, &lexed, start), boundary),
+                });
                 start = end;
             }
         }
@@ -244,7 +281,11 @@ mod tests {
     use super::*;
 
     fn forms(source: &str) -> Vec<String> {
-        parse_script_forms(source).expect("source should split")
+        parse_script_forms(source)
+            .expect("source should split")
+            .iter()
+            .map(|form| form.text().to_string())
+            .collect()
     }
 
     fn tail_error(source: &str) -> String {
@@ -339,5 +380,20 @@ mod tests {
             forms("a = 1\r\nb = {1,\r\n2}\r\nc"),
             vec!["a = 1", "b = {1,\n2}", "c"]
         );
+    }
+
+    #[test]
+    fn parsed_forms_carry_syntax_and_poisoned_forms_do_not() {
+        let forms = parse_script_forms("a = 1\n2 !").expect("source should split");
+
+        assert_eq!(forms.len(), 2);
+        // `a = 1` parsed, so the splitter hands its syntax along.
+        assert!(matches!(forms[0], ScriptForm::Parsed { .. }));
+        assert_eq!(forms[0].text(), "a = 1");
+        assert_eq!(forms[0].text(), "a = 1");
+        // `2 !` is a hard error (trailing `!`), so the form is text only and
+        // the error surfaces downstream when evaluation parses it.
+        assert!(matches!(forms[1], ScriptForm::Unparsed { .. }));
+        assert_eq!(forms[1].text(), "2 !");
     }
 }

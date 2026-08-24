@@ -1,5 +1,5 @@
 use super::*;
-use rum_syntax::{ScriptFormsError, parse_script_forms};
+use rum_syntax::{ScriptForm, ScriptFormsError, parse_script_forms};
 
 pub(super) fn normalize_context_name(context: impl Into<String>) -> String {
     let mut context = context.into();
@@ -98,7 +98,7 @@ pub(super) fn package_candidates_for_segments(parents: &[&str], leaf: &str) -> V
     candidates
 }
 
-pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<String>, EvalError> {
+pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<ScriptForm>, EvalError> {
     // Dual path, deliberately (not an oversight): a source whose whole-source
     // lex succeeds takes the linear single-lex/single-parse splitter in
     // `rum-syntax`; a source whose lex fails (unterminated string or comment,
@@ -106,11 +106,16 @@ pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<String>, EvalE
     // because that loop evaluates the earlier forms before surfacing the
     // tail error — an ordering pinned by the loader rollback tests. Clean
     // sources, including every wide multi-line data literal that motivates
-    // the linear path, never reach the fallback.
+    // the linear path, never reach the fallback. The fallback's forms are
+    // text-only (`Unparsed`): evaluation parses them, as forms were parsed
+    // before forms carried their syntax.
     match parse_script_forms(source) {
         Ok(forms) => Ok(forms),
         Err(ScriptFormsError::IncompleteTail(err)) => Err(err.into()),
-        Err(ScriptFormsError::LexFailed(_)) => split_script_into_forms_line_driven(source),
+        Err(ScriptFormsError::LexFailed(_)) => Ok(split_script_into_forms_line_driven(source)?
+            .into_iter()
+            .map(|text| ScriptForm::Unparsed { text })
+            .collect()),
     }
 }
 

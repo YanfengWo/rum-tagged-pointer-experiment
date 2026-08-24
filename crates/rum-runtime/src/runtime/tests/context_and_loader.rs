@@ -609,21 +609,24 @@ fn nested_get_prefers_the_current_loader_directory_over_package_search_paths() {
 fn split_script_into_forms_stops_hard_syntax_errors_from_poisoning_later_forms() {
     let forms = split_script_into_forms("1 2\n3").unwrap();
 
-    assert_eq!(forms, vec!["1 2".to_string(), "3".to_string()]);
+    let texts: Vec<&str> = forms.iter().map(|form| form.text()).collect();
+    assert_eq!(texts, vec!["1 2", "3"]);
 }
 
 #[test]
 fn split_script_into_forms_skips_initial_shebang_trivia() {
     let forms = split_script_into_forms("#!/usr/bin/env rum\n\n1\n2").unwrap();
 
-    assert_eq!(forms, vec!["1".to_string(), "2".to_string()]);
+    let texts: Vec<&str> = forms.iter().map(|form| form.text()).collect();
+    assert_eq!(texts, vec!["1", "2"]);
 }
 
 #[test]
 fn split_script_into_forms_treats_multiline_comments_as_incomplete_trivia() {
     let forms = split_script_into_forms("1\n(* multi\n   line *)\n2").unwrap();
 
-    assert_eq!(forms, vec!["1".to_string(), "2".to_string()]);
+    let texts: Vec<&str> = forms.iter().map(|form| form.text()).collect();
+    assert_eq!(texts, vec!["1", "2"]);
 }
 
 /// Corpus for the linear-vs-line-driven splitter differential. Every source
@@ -826,10 +829,26 @@ fn parse_script_forms_matches_the_line_driven_splitter_over_the_corpus() {
         let legacy = split_script_into_forms_line_driven(source);
 
         match (&linear, &legacy) {
-            (Ok(linear_forms), Ok(legacy_forms)) => assert_eq!(
-                linear_forms, legacy_forms,
-                "splitter disagreement on {source:?}"
-            ),
+            (Ok(linear_forms), Ok(legacy_forms)) => {
+                let linear_texts: Vec<&str> = linear_forms.iter().map(|form| form.text()).collect();
+                assert_eq!(
+                    linear_texts, *legacy_forms,
+                    "splitter disagreement on {source:?}"
+                );
+
+                // A Parsed form is lowered without ever re-parsing its text,
+                // so that text must parse standalone: if it ever failed,
+                // evaluation would silently stop surfacing the per-form
+                // syntax error the old always-parse loop reported.
+                for form in linear_forms {
+                    if let rum_syntax::ScriptForm::Parsed { text, .. } = form {
+                        assert!(
+                            rum_syntax::parse_expr(text).is_ok(),
+                            "parsed form text does not parse standalone: {text:?}"
+                        );
+                    }
+                }
+            }
             (Ok(linear_forms), Err(legacy_err)) => panic!(
                 "linear splitter returned {linear_forms:?} but line-driven \
                  failed with {legacy_err:?} on {source:?}"
@@ -857,6 +876,24 @@ fn parse_script_forms_matches_the_line_driven_splitter_over_the_corpus() {
             );
         }
     }
+}
+
+#[test]
+fn eval_script_pins_the_second_form_syntax_error_message() {
+    // brief-308 constraint 4: a hard-error form stays text-only, so
+    // evaluation parses it exactly as it always did — same token, same
+    // message, same form-relative span. Pinned so the two-state form
+    // handling cannot silently alter diagnostics.
+    let mut session = session_with_test_control_builtins();
+
+    let error = session
+        .eval_script("x = 1\nw = 2 !")
+        .expect_err("the second form has a trailing-input syntax error");
+
+    assert!(matches!(error, EvalError::Syntax(_)));
+    assert_eq!(error.to_string(), "trailing input at bytes 6..7");
+    // The first form still ran before the error surfaced.
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
 }
 
 #[test]

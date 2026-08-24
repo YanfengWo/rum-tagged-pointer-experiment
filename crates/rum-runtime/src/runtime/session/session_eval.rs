@@ -1,9 +1,19 @@
 use super::super::*;
+use rum_syntax::ScriptForm;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TerminatedEvaluationHandling {
     ConvertToValue,
     ConvertCyclesToValue,
+}
+
+/// A top-level evaluation input: source text to parse, or syntax a splitter
+/// already parsed. Script forms carry their syntax
+/// ([`ScriptForm::Parsed`]) so the script loop never parses a form twice;
+/// every other entry point evaluates text and parses exactly as before.
+enum TopLevelEvalInput<'a> {
+    Text(&'a str),
+    Parsed(SyntaxExpr),
 }
 
 impl Session {
@@ -186,6 +196,17 @@ impl Session {
         input: &str,
         terminated_handling: TerminatedEvaluationHandling,
     ) -> Result<EvalOutcome, EvalError> {
+        self.eval_input_with_terminated_handling(
+            TopLevelEvalInput::Text(input),
+            terminated_handling,
+        )
+    }
+
+    fn eval_input_with_terminated_handling(
+        &mut self,
+        input: TopLevelEvalInput<'_>,
+        terminated_handling: TerminatedEvaluationHandling,
+    ) -> Result<EvalOutcome, EvalError> {
         self.begin_top_level_interrupt_budget();
         let message_checkpoint = self.messages.len();
         let print_checkpoint = self.prints.len();
@@ -196,7 +217,10 @@ impl Session {
         let previous_message_list_dirty =
             std::mem::replace(&mut self.current_message_list_dirty, false);
         let result = (|| {
-            let syntax = parse_expr(input)?;
+            let syntax = match input {
+                TopLevelEvalInput::Text(text) => parse_expr(text)?,
+                TopLevelEvalInput::Parsed(syntax) => syntax,
+            };
             let expr = self.lower_syntax_expr(&syntax)?;
             let result = self.evaluate(expr);
             match terminated_handling {
@@ -264,7 +288,14 @@ impl Session {
         let mut prints = Vec::new();
 
         for form in forms {
-            match self.eval_text_with_terminated_handling(&form, terminated_handling) {
+            // A parsed form lowers its carried syntax directly; a text-only
+            // form (hard error or lex-failure fallback) is parsed here,
+            // exactly as every form was before forms carried their syntax.
+            let input = match form {
+                ScriptForm::Parsed { syntax, .. } => TopLevelEvalInput::Parsed(syntax),
+                ScriptForm::Unparsed { ref text } => TopLevelEvalInput::Text(text),
+            };
+            match self.eval_input_with_terminated_handling(input, terminated_handling) {
                 Ok(outcome) => {
                     value = outcome.value;
                     termination = outcome.termination;

@@ -166,9 +166,9 @@ fn over_cap_statement_chain_line_does_not_swallow_later_lines() {
 
     let forms = split_script_into_forms(&script).unwrap();
     assert_eq!(forms.len(), 3);
-    assert!(forms[0].starts_with("x0 = 0"));
-    assert_eq!(forms[1], "y = 1");
-    assert_eq!(forms[2], "z = 2");
+    assert!(forms[0].text().starts_with("x0 = 0"));
+    assert_eq!(forms[1].text(), "y = 1");
+    assert_eq!(forms[2].text(), "z = 2");
 }
 
 #[test]
