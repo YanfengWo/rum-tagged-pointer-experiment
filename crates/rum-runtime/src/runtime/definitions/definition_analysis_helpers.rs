@@ -324,11 +324,14 @@ pub(in crate::runtime) fn classify_tagged_definition(
 }
 
 pub(in crate::runtime) fn valid_upvalue_tag_position(expr: &Expr, tag: &Symbol) -> bool {
-    expr_as_symbol(expr).is_some_and(|symbol| symbol == tag)
-        || match expr {
-            Expr::Call { head, .. } => expr_as_symbol(head).is_some_and(|symbol| symbol == tag),
-            _ => false,
-        }
+    upvalue_tag_symbol_at_position(expr).is_some_and(|symbol| symbol == tag)
+}
+
+fn upvalue_tag_symbol_at_position(expr: &Expr) -> Option<&Symbol> {
+    expr_as_symbol(expr).or_else(|| match expr {
+        Expr::Call { head, .. } => expr_as_symbol(head),
+        _ => None,
+    })
 }
 
 pub(in crate::runtime) fn expr_contains_symbol(expr: &Expr, target: &Symbol) -> bool {
@@ -344,12 +347,83 @@ pub(in crate::runtime) fn expr_contains_symbol(expr: &Expr, target: &Symbol) -> 
 
 pub(in crate::runtime) fn collect_upvalue_candidate_symbols(args: &[Expr]) -> Vec<Symbol> {
     let mut symbols = UniqueSymbolCollector::with_capacity_hint(args.len());
+    let mut has_nested_argument = false;
 
     for arg in args {
-        collect_expr_symbols_unique(arg, &mut symbols);
+        has_nested_argument |= matches!(arg, Expr::Call { .. });
+        if let Some(symbol) = upvalue_tag_symbol_at_position(arg) {
+            symbols.push(*symbol);
+        }
     }
 
-    symbols.into_symbols()
+    let candidate_symbols = symbols.into_symbols();
+    if candidate_symbols.len() < 2 || !has_nested_argument {
+        return candidate_symbols;
+    }
+
+    preserve_upvalue_candidate_matching_order(args, candidate_symbols)
+}
+
+#[cold]
+fn preserve_upvalue_candidate_matching_order(
+    args: &[Expr],
+    candidate_symbols: Vec<Symbol>,
+) -> Vec<Symbol> {
+    // Candidate membership comes only from valid tag positions. Preserve the
+    // established first-seen matching order when one of those same symbols
+    // also appeared earlier at a deeper, non-candidate position.
+    let candidate_index = (candidate_symbols.len() > 16).then(|| {
+        candidate_symbols
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>()
+    });
+    let mut ordered_symbols = UniqueSymbolCollector::with_capacity_hint(candidate_symbols.len());
+    for arg in args {
+        collect_upvalue_candidate_symbols_in_matching_order(
+            arg,
+            &candidate_symbols,
+            candidate_index.as_ref(),
+            &mut ordered_symbols,
+        );
+    }
+    ordered_symbols.into_symbols()
+}
+
+fn collect_upvalue_candidate_symbols_in_matching_order(
+    expr: &Expr,
+    candidate_symbols: &[Symbol],
+    candidate_index: Option<&std::collections::HashSet<Symbol>>,
+    ordered_symbols: &mut UniqueSymbolCollector,
+) {
+    match expr {
+        Expr::Atom(Atom::Symbol(symbol)) => {
+            let is_candidate = candidate_index.map_or_else(
+                || candidate_symbols.contains(symbol),
+                |index| index.contains(symbol),
+            );
+            if is_candidate {
+                ordered_symbols.push(*symbol);
+            }
+        }
+        Expr::Atom(_) => {}
+        Expr::Call { head, args } => {
+            collect_upvalue_candidate_symbols_in_matching_order(
+                head,
+                candidate_symbols,
+                candidate_index,
+                ordered_symbols,
+            );
+            for arg in args {
+                collect_upvalue_candidate_symbols_in_matching_order(
+                    arg,
+                    candidate_symbols,
+                    candidate_index,
+                    ordered_symbols,
+                );
+            }
+        }
+    }
 }
 
 pub(in crate::runtime) fn collect_upset_target_symbols(lhs: &Expr) -> Vec<Symbol> {
@@ -407,20 +481,6 @@ fn collect_upset_target_symbol_from_arg(expr: &Expr, symbols: &mut UniqueSymbolC
             }
         }
         Expr::Atom(_) => {}
-    }
-}
-
-fn collect_expr_symbols_unique(expr: &Expr, symbols: &mut UniqueSymbolCollector) {
-    match expr {
-        Expr::Atom(Atom::Symbol(symbol)) => symbols.push(*symbol),
-        Expr::Atom(_) => {}
-        Expr::Call { head, args } => {
-            collect_expr_symbols_unique(head, symbols);
-
-            for arg in args {
-                collect_expr_symbols_unique(arg, symbols);
-            }
-        }
     }
 }
 

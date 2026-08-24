@@ -18,6 +18,50 @@ fn upvalues_lists_and_applies_tagged_definitions() {
 }
 
 #[test]
+fn upvalue_dispatch_ignores_tags_that_appear_only_below_direct_arguments() {
+    let mut session = Session::new();
+
+    session.eval_text("tag /: hit[tag] := fired").unwrap();
+    session
+        .eval_text("SetAttributes[wrapper, HoldAll]")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("wrapper[nested[tag]]")
+            .unwrap()
+            .value
+            .to_string(),
+        "wrapper[nested[tag]]"
+    );
+    assert_eq!(
+        session.eval_text("hit[tag]").unwrap().value.to_string(),
+        "fired"
+    );
+}
+
+#[test]
+fn upvalue_candidate_filter_preserves_matching_order_for_valid_tags() {
+    let mut session = Session::new();
+
+    session
+        .eval_text("g /: f[nested[g], h, g] := fromG")
+        .unwrap();
+    session
+        .eval_text("h /: f[nested[g], h, g] := fromH")
+        .unwrap();
+
+    assert_eq!(
+        session
+            .eval_text("f[nested[g], h, g]")
+            .unwrap()
+            .value
+            .to_string(),
+        "fromG"
+    );
+}
+
+#[test]
 fn tagset_immediate_captures_rhs_before_later_changes() {
     let mut session = Session::new();
 
