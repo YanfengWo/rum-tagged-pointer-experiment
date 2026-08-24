@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+
 use rum_core::Expr;
 use rum_runtime::kernel_api::system_expr;
 
 use super::TomlParseError;
+
+const ENTRY_INDEX_THRESHOLD: usize = 16;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum TableKind {
@@ -14,6 +18,15 @@ pub(super) enum TableKind {
 pub(super) struct TomlTable {
     kind: TableKind,
     entries: Vec<(String, TomlValue)>,
+    /// Lookup mirror for `entries` (key -> position), built lazily once a
+    /// table holds more than `ENTRY_INDEX_THRESHOLD` keys. Invalidation rule:
+    /// decoding only ever *appends* entries (through `push_entry`, which
+    /// maintains the mirror) and replaces values in place — keys are never
+    /// renamed, removed, or reordered — so the mirror never needs to be
+    /// invalidated or dropped once built. Below the threshold it stays `None`
+    /// and `entry_index` keeps the linear scan, so small tables (a five-key
+    /// document, every inline table in practice) allocate nothing extra.
+    index: Option<HashMap<String, usize>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,6 +42,7 @@ impl TomlTable {
         Self {
             kind: TableKind::Explicit,
             entries: Vec::new(),
+            index: None,
         }
     }
 
@@ -36,6 +50,7 @@ impl TomlTable {
         Self {
             kind: TableKind::Implicit,
             entries: Vec::new(),
+            index: None,
         }
     }
 
@@ -43,6 +58,7 @@ impl TomlTable {
         Self {
             kind: TableKind::Explicit,
             entries: Vec::new(),
+            index: None,
         }
     }
 
@@ -50,17 +66,33 @@ impl TomlTable {
         Self {
             kind: TableKind::Inline,
             entries: Vec::new(),
+            index: None,
         }
     }
 
     pub(super) fn entry_index(&self, key: &str) -> Option<usize> {
+        if let Some(index) = &self.index {
+            return index.get(key).copied();
+        }
         self.entries
             .iter()
             .position(|(existing, _)| existing == key)
     }
 
     pub(super) fn push_entry(&mut self, key: String, value: TomlValue) {
+        if let Some(index) = self.index.as_mut() {
+            index.insert(key.clone(), self.entries.len());
+        }
         self.entries.push((key, value));
+        if self.index.is_none() && self.entries.len() > ENTRY_INDEX_THRESHOLD {
+            self.index = Some(
+                self.entries
+                    .iter()
+                    .enumerate()
+                    .map(|(position, (existing, _))| (existing.clone(), position))
+                    .collect(),
+            );
+        }
     }
 }
 

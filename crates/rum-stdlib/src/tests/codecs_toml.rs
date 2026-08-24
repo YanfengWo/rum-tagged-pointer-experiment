@@ -306,6 +306,104 @@ fn to_toml_golden_error_corpus_is_byte_stable() {
     }
 }
 
+/// Golden corpus captured from the unmodified decoder before the adaptive
+/// entry-index rework (brief-312): 7 output shapes plus 7 error shapes. The
+/// expected strings are byte-for-byte what the decoder emitted at capture
+/// time — including the byte offsets inside error messages; any drift is a
+/// behavior change in decoded structure or diagnostics, not a formatting
+/// nit. The corpus ran green against the unmodified decoder first, so the
+/// goldens cannot have been fitted to the new code.
+#[test]
+fn from_toml_golden_corpus_is_byte_stable() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        (
+            "z = 1\na = 2\nm = 3\n",
+            "Association[Rule[\"z\", 1], Rule[\"a\", 2], Rule[\"m\", 3]]",
+        ),
+        (
+            "[a.b]\ny = 2\n\n[a]\nx = 1\n",
+            "Association[Rule[\"a\", Association[Rule[\"b\", Association[Rule[\"y\", 2]]], Rule[\"x\", 1]]]]",
+        ),
+        (
+            "a.b = 1\na.c = 2\n",
+            "Association[Rule[\"a\", Association[Rule[\"b\", 1], Rule[\"c\", 2]]]]",
+        ),
+        (
+            "[[servers]]\nname = \"edge\"\n\n[[servers]]\nname = \"batch\"\n",
+            "Association[Rule[\"servers\", List[Association[Rule[\"name\", \"edge\"]], Association[Rule[\"name\", \"batch\"]]]]]",
+        ),
+        (
+            "[[a.b]]\nx = 1\n",
+            "Association[Rule[\"a\", Association[Rule[\"b\", List[Association[Rule[\"x\", 1]]]]]]]",
+        ),
+        (
+            "meta = { role = \"primary\", weight = 0.5, nested = { k = 1 } }\n",
+            "Association[Rule[\"meta\", Association[Rule[\"role\", \"primary\"], Rule[\"weight\", 1/2], Rule[\"nested\", Association[Rule[\"k\", 1]]]]]]",
+        ),
+        (
+            "title = \"x\"\n[server]\nports = [1, 2]\n",
+            "Association[Rule[\"title\", \"x\"], Rule[\"server\", Association[Rule[\"ports\", List[1, 2]]]]]",
+        ),
+    ] {
+        assert_eq!(
+            from_toml_to_string(&mut session, source),
+            expected,
+            "golden corpus case: {source:?}"
+        );
+    }
+}
+
+#[test]
+fn from_toml_golden_error_corpus_is_byte_stable() {
+    let mut session = core_session();
+
+    for (source, message) in [
+        (
+            "a = 1\na = 2\n",
+            "Invalid TOML at byte offset 6: duplicate key \"a\".",
+        ),
+        (
+            "[t]\nx = 1\nx = 2\n",
+            "Invalid TOML at byte offset 10: duplicate key \"x\".",
+        ),
+        (
+            "[t]\nx = 1\n[t]\ny = 2\n",
+            "Invalid TOML at byte offset 10: duplicate table \"t\".",
+        ),
+        (
+            "m = { x = 1, x = 2 }\n",
+            "Invalid TOML at byte offset 13: duplicate key \"x\".",
+        ),
+        (
+            "a =\n",
+            "Invalid TOML at byte offset 3: expected a TOML value.",
+        ),
+        ("= 1\n", "Invalid TOML at byte offset 0: expected TOML key."),
+        (
+            "[a\n",
+            "Invalid TOML at byte offset 2: expected ']' to close table header.",
+        ),
+    ] {
+        let value = session.evaluate(from_toml_call(source)).unwrap();
+        let messages = session.take_messages();
+        assert_eq!(
+            value.to_string(),
+            "$Failed",
+            "golden error case: {source:?}"
+        );
+        assert_eq!(
+            messages
+                .iter()
+                .map(|message| message.text.as_str())
+                .collect::<Vec<_>>(),
+            vec![message],
+            "golden error case: {source:?}"
+        );
+    }
+}
+
 #[test]
 fn toml_codecs_compose_with_json() {
     let mut session = core_session();
