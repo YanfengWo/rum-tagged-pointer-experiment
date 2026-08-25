@@ -73,8 +73,15 @@ Files you MAY modify:
 - `crates/rum-stdlib/src/associations/resumable/key_sort.rs`
 - `crates/rum-stdlib/src/associations/transforms.rs` and
   `crates/rum-stdlib/src/associations/resumable.rs` if wiring requires it
-- `crates/rum-stdlib/src/structure_ops/resumable_merge_sort.rs` — only if the
-  engine needs a genuinely general extension; say so and justify it
+- `crates/rum-stdlib/src/structure_ops/mod.rs` — **visibility wiring only.**
+  The engine is behind a private `mod` declaration and its API is
+  `pub(super)`, so the Association modules, being siblings, cannot reach it.
+  Prefer a narrow `pub(crate)` re-export of just the entry point and the types
+  it requires over making the whole module `pub(crate)`; the engine's internals
+  should stay private. Say which you chose.
+- `crates/rum-stdlib/src/structure_ops/resumable_merge_sort.rs` — the
+  visibility changes the above requires, plus a genuinely general extension if
+  the engine needs one; justify any behavior change.
 - `scripts/core-language-microbench.sh`
 - test modules under `crates/rum-stdlib/src/tests/`
 
