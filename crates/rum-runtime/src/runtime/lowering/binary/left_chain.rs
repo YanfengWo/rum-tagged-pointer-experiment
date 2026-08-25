@@ -5,6 +5,65 @@ struct LeftChainLink<'a> {
     rhs: &'a SyntaxExpr,
 }
 
+enum LeftChainAccumulator {
+    Opaque(Expr),
+    Additive(Vec<Expr>),
+    Multiplicative(Vec<Expr>),
+    RightComposition(Vec<Expr>),
+}
+
+impl LeftChainAccumulator {
+    fn into_expr(self) -> Expr {
+        match self {
+            Self::Opaque(expr) => expr,
+            Self::Additive(args) => canonical_call(heads::arithmetic::PLUS, args),
+            Self::Multiplicative(args) => canonical_call(heads::arithmetic::TIMES, args),
+            Self::RightComposition(args) => canonical_call("RightComposition", args),
+        }
+    }
+
+    fn append_additive(self, rhs: Expr) -> Self {
+        match self {
+            Self::Additive(mut args) => {
+                args.push(rhs);
+                Self::Additive(args)
+            }
+            other => Self::Additive(vec![other.into_expr(), rhs]),
+        }
+    }
+
+    fn append_multiplicative(self, rhs: Expr) -> Self {
+        match self {
+            Self::Multiplicative(mut args) => {
+                args.push(rhs);
+                Self::Multiplicative(args)
+            }
+            other => Self::Multiplicative(vec![other.into_expr(), rhs]),
+        }
+    }
+
+    fn divide(self, rhs: Expr) -> Self {
+        match self {
+            Self::Opaque(lhs) => divide_opaque_accumulator(lhs, rhs),
+            Self::Multiplicative(mut args) => {
+                args.push(reciprocal(rhs));
+                Self::Multiplicative(args)
+            }
+            other => divide_opaque_accumulator(other.into_expr(), rhs),
+        }
+    }
+
+    fn append_right_composition(self, rhs: Expr) -> Self {
+        match self {
+            Self::RightComposition(mut args) => {
+                args.push(rhs);
+                Self::RightComposition(args)
+            }
+            other => Self::RightComposition(vec![other.into_expr(), rhs]),
+        }
+    }
+}
+
 pub(super) fn is_iterative_left_chain_op(op: BinaryOp) -> bool {
     matches!(
         op,
@@ -37,7 +96,8 @@ where
     F: FnMut(&str) -> Option<Symbol>,
 {
     let (base, links) = collect_left_spine(op, lhs, rhs);
-    let mut accumulator = lower_syntax_expr_with(base, resolve_symbol)?;
+    let mut accumulator =
+        LeftChainAccumulator::Opaque(lower_syntax_expr_with(base, resolve_symbol)?);
 
     for link in links {
         let lowered_rhs = lower_syntax_expr_with(link.rhs, resolve_symbol)?;
@@ -45,7 +105,7 @@ where
             apply_left_chain_link(link.op, accumulator, lowered_rhs, link.rhs, resolve_symbol)?;
     }
 
-    Ok(accumulator)
+    Ok(accumulator.into_expr())
 }
 
 fn collect_left_spine<'a>(
@@ -78,104 +138,117 @@ fn collect_left_spine<'a>(
 
 fn apply_left_chain_link<F>(
     op: BinaryOp,
-    accumulator: Expr,
+    accumulator: LeftChainAccumulator,
     lowered_rhs: Expr,
     raw_rhs: &SyntaxExpr,
     resolve_symbol: &mut F,
-) -> Result<Expr, EvalError>
+) -> Result<LeftChainAccumulator, EvalError>
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
     match op {
-        BinaryOp::MessageName => Ok(message_name_expr(
+        BinaryOp::Add => return Ok(accumulator.append_additive(lowered_rhs)),
+        BinaryOp::Subtract => {
+            return Ok(accumulator.append_additive(canonical_call(
+                heads::arithmetic::TIMES,
+                vec![Expr::integer(BigInt::from(-1)), lowered_rhs],
+            )));
+        }
+        BinaryOp::Times => return Ok(accumulator.append_multiplicative(lowered_rhs)),
+        BinaryOp::Divide => return Ok(accumulator.divide(lowered_rhs)),
+        BinaryOp::RightComposition => {
+            return Ok(accumulator.append_right_composition(lowered_rhs));
+        }
+        _ => {}
+    }
+
+    let accumulator = accumulator.into_expr();
+    match op {
+        BinaryOp::MessageName => Ok(LeftChainAccumulator::Opaque(message_name_expr(
             match accumulator {
                 Expr::Atom(Atom::Symbol(symbol)) => symbol,
                 other => {
-                    return Ok(canonical_call(
+                    return Ok(LeftChainAccumulator::Opaque(canonical_call(
                         heads::messages::MESSAGE_NAME,
                         vec![other, lower_message_tag_expr(raw_rhs, resolve_symbol)?],
-                    ));
+                    )));
                 }
             },
             lower_message_tag_string(raw_rhs),
-        )),
-        BinaryOp::ReplaceAll => Ok(canonical_call(
+        ))),
+        BinaryOp::ReplaceAll => Ok(LeftChainAccumulator::Opaque(canonical_call(
             heads::rules::REPLACE_ALL,
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::ReplaceRepeated => Ok(canonical_call(
+        ))),
+        BinaryOp::ReplaceRepeated => Ok(LeftChainAccumulator::Opaque(canonical_call(
             heads::rules::REPLACE_REPEATED,
             vec![accumulator, lowered_rhs],
-        )),
+        ))),
         BinaryOp::Pattern => {
             if matches!(&accumulator, Expr::Atom(Atom::Symbol(_))) {
-                Ok(canonical_call(
+                Ok(LeftChainAccumulator::Opaque(canonical_call(
                     heads::patterns::PATTERN,
                     vec![accumulator, lowered_rhs],
-                ))
+                )))
             } else {
-                Ok(canonical_call("Optional", vec![accumulator, lowered_rhs]))
+                Ok(LeftChainAccumulator::Opaque(canonical_call(
+                    "Optional",
+                    vec![accumulator, lowered_rhs],
+                )))
             }
         }
-        BinaryOp::Alternatives => Ok(canonical_call(
+        BinaryOp::Alternatives => Ok(LeftChainAccumulator::Opaque(canonical_call(
             "Alternatives",
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::PatternTest => Ok(canonical_call(
+        ))),
+        BinaryOp::PatternTest => Ok(LeftChainAccumulator::Opaque(canonical_call(
             "PatternTest",
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::StringExpression => Ok(canonical_call(
+        ))),
+        BinaryOp::StringExpression => Ok(LeftChainAccumulator::Opaque(canonical_call(
             "StringExpression",
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::StringJoin => Ok(canonical_call("StringJoin", vec![accumulator, lowered_rhs])),
-        BinaryOp::PostfixApply => Ok(Expr::call(lowered_rhs, vec![accumulator])),
-        BinaryOp::RightComposition => Ok(canonical_call(
-            "RightComposition",
+        ))),
+        BinaryOp::StringJoin => Ok(LeftChainAccumulator::Opaque(canonical_call(
+            "StringJoin",
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::Add => Ok(canonical_call(
-            heads::arithmetic::PLUS,
+        ))),
+        BinaryOp::PostfixApply => Ok(LeftChainAccumulator::Opaque(Expr::call(
+            lowered_rhs,
+            vec![accumulator],
+        ))),
+        BinaryOp::Dot => Ok(LeftChainAccumulator::Opaque(canonical_call(
+            "Dot",
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::Subtract => Ok(canonical_call(
-            heads::arithmetic::PLUS,
-            vec![
-                accumulator,
-                canonical_call(
-                    heads::arithmetic::TIMES,
-                    vec![Expr::integer(BigInt::from(-1)), lowered_rhs],
-                ),
-            ],
-        )),
-        BinaryOp::Times => Ok(canonical_call(
-            heads::arithmetic::TIMES,
-            vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::Dot => Ok(canonical_call("Dot", vec![accumulator, lowered_rhs])),
-        BinaryOp::NonCommutativeMultiply => Ok(canonical_call(
+        ))),
+        BinaryOp::NonCommutativeMultiply => Ok(LeftChainAccumulator::Opaque(canonical_call(
             "NonCommutativeMultiply",
             vec![accumulator, lowered_rhs],
-        )),
-        BinaryOp::Divide => {
-            if let Some(quotient) = divided_numeric_literals(&accumulator, &lowered_rhs) {
-                Ok(quotient)
-            } else {
-                Ok(canonical_call(
-                    heads::arithmetic::TIMES,
-                    vec![
-                        accumulator,
-                        canonical_call(
-                            heads::arithmetic::POWER,
-                            vec![lowered_rhs, Expr::integer(BigInt::from(-1))],
-                        ),
-                    ],
-                ))
-            }
+        ))),
+        BinaryOp::Add
+        | BinaryOp::Subtract
+        | BinaryOp::Times
+        | BinaryOp::Divide
+        | BinaryOp::RightComposition => {
+            unreachable!("flat-family link handled before materializing")
         }
         _ => unreachable!("non-iterative operator in left-chain fold"),
     }
+}
+
+fn divide_opaque_accumulator(lhs: Expr, rhs: Expr) -> LeftChainAccumulator {
+    if let Some(quotient) = divided_numeric_literals(&lhs, &rhs) {
+        LeftChainAccumulator::Opaque(quotient)
+    } else {
+        LeftChainAccumulator::Multiplicative(vec![lhs, reciprocal(rhs)])
+    }
+}
+
+fn reciprocal(expr: Expr) -> Expr {
+    canonical_call(
+        heads::arithmetic::POWER,
+        vec![expr, Expr::integer(BigInt::from(-1))],
+    )
 }
 
 fn numeric_literal_rational(expr: &Expr) -> Option<Rational> {

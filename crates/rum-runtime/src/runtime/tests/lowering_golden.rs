@@ -14,15 +14,15 @@ fn assert_lowered_display(source: &str, expected: &str) {
 #[test]
 fn lowering_golden_forms_cover_three_link_left_chains() {
     let cases = [
-        ("a + b + c + d", "Plus[Plus[Plus[a, b], c], d]"),
+        ("a + b + c + d", "Plus[a, b, c, d]"),
         (
             "a - b - c - d",
-            "Plus[Plus[Plus[a, Times[-1, b]], Times[-1, c]], Times[-1, d]]",
+            "Plus[a, Times[-1, b], Times[-1, c], Times[-1, d]]",
         ),
-        ("a * b * c * d", "Times[Times[Times[a, b], c], d]"),
+        ("a * b * c * d", "Times[a, b, c, d]"),
         (
             "a / b / c / d",
-            "Times[Times[Times[a, Power[b, -1]], Power[c, -1]], Power[d, -1]]",
+            "Times[a, Power[b, -1], Power[c, -1], Power[d, -1]]",
         ),
         ("8 / 2 / 4 / 2", "1/2"),
         ("a . b . c . d", "Dot[Dot[Dot[a, b], c], d]"),
@@ -57,9 +57,34 @@ fn lowering_golden_forms_cover_three_link_left_chains() {
             "StringExpression[StringExpression[StringExpression[a, b], c], d]",
         ),
         ("a // b // c // d", "d[c[b[a]]]"),
+        ("a /* b /* c /* d", "RightComposition[a, b, c, d]"),
+    ];
+
+    for (source, expected) in cases {
+        assert_lowered_display(source, expected);
+    }
+}
+
+#[test]
+fn lowering_golden_forms_cover_flat_arithmetic_family_transitions() {
+    let cases = [
+        ("a + b - c + d", "Plus[a, b, Times[-1, c], d]"),
+        ("a - b + c - d", "Plus[a, Times[-1, b], c, Times[-1, d]]"),
+        ("a * b / c * d", "Times[a, b, Power[c, -1], d]"),
+        ("a / b * c / d", "Times[a, Power[b, -1], c, Power[d, -1]]"),
+        ("a + b * c + d", "Plus[a, Times[b, c], d]"),
+        ("a * b + c * d", "Plus[Times[a, b], Times[c, d]]"),
+        ("8 / 2 / 4", "1"),
+        ("8 * 2 / 4", "Times[8, 2, Power[4, -1]]"),
+        ("8 / 2 * x", "Times[4, x]"),
+        ("a / 2 / 4", "Times[a, Power[2, -1], Power[4, -1]]"),
+        ("Plus[a, b] + c", "Plus[Plus[a, b], c]"),
+        ("a + Plus[b, c]", "Plus[a, Plus[b, c]]"),
+        ("Times[a, b] * c", "Times[Times[a, b], c]"),
+        ("a * Times[b, c]", "Times[a, Times[b, c]]"),
         (
-            "a /* b /* c /* d",
-            "RightComposition[RightComposition[RightComposition[a, b], c], d]",
+            "RightComposition[f, g] /* h",
+            "RightComposition[RightComposition[f, g], h]",
         ),
     ];
 

@@ -91,6 +91,19 @@ rewritten further. For example:
 - `-x` -> `Times[-1, x]`
 - unary `+x` lowers to `x`
 
+Chains of three or more operands use one n-ary call for the additive,
+multiplicative, and right-composition families:
+
+- `a + b - c + d` -> `Plus[a, b, Times[-1, c], d]`
+- `a * b / c * d` -> `Times[a, b, Power[c, -1], d]`
+- `f /* g /* h` -> `RightComposition[f, g, h]`
+
+Only surface-syntax chain links are collected. A direct canonical call remains
+an opaque operand, so `Plus[a, b] + c + d` becomes
+`Plus[Plus[a, b], c, d]`, not `Plus[a, b, c, d]`. Exact-literal division also
+retains its narrower lowering rule: `8 / 2 / 4` becomes `1`, while
+`8 * 2 / 4` becomes `Times[8, 2, Power[4, -1]]`.
+
 ### Messages, contexts, and package constructs
 
 - `FindFile::notfound` -> `MessageName[FindFile, "notfound"]`

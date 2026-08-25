@@ -141,6 +141,16 @@ Arithmetic operators lower into ordinary calls:
 - `a ^ b` lowers to `Power[a, b]`
 - `-x` lowers to `Times[-1, x]`
 
+For chains of three or more operands, consecutive additive and multiplicative
+links lower to one n-ary call. Right-composition chains do the same:
+
+- `a + b - c + d` lowers to `Plus[a, b, Times[-1, c], d]`
+- `a * b / c * d` lowers to `Times[a, b, Power[c, -1], d]`
+- `f /* g /* h` lowers to `RightComposition[f, g, h]`
+
+An explicitly written canonical call remains one opaque operand. For example,
+`Plus[a, b] + c + d` lowers to `Plus[Plus[a, b], c, d]`.
+
 The evaluator may simplify those calls.
 
 For exact arithmetic, the result remains exact when the operation is supported.
