@@ -58,18 +58,35 @@ impl Session {
         self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
     }
 
-    pub(in crate::runtime) fn try_apply_rewrite_rules_once_owned(
+    pub(in crate::runtime) fn shared_rewrite_rule_applier(
+        rules: Vec<RewriteRule>,
+    ) -> impl Clone
+    + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
+    + Send
+    + 'static {
+        let rules = if rules
+            .iter()
+            .any(|rule| matches!(rule.matcher, MatcherNode::Exact(_)))
+        {
+            RewriteRulePlan::from_slice(&rules)
+        } else {
+            RewriteRulePlan::linear(rules)
+        };
+        move |session, expr, source| {
+            session.try_apply_rewrite_rules_once_owned(expr, rules.clone(), source)
+        }
+    }
+
+    fn try_apply_rewrite_rules_once_owned(
         &mut self,
         expr: Expr,
-        rules: Vec<RewriteRule>,
+        rules: RewriteRulePlan,
         source: RuleApplicationSource,
     ) -> Result<Option<Expr>, EvalError> {
         let normalized_expr = self.normalize_match_expr(&expr);
-        // Replace and ReplaceAt currently hand this helper a fresh rule Vec for
-        // each target. Building an index here would merely replace one linear
-        // scan with one linear index build; ReplaceAll shares its plan across
-        // the whole traversal and is the indexed caller.
-        let rules = RewriteRulePlan::linear(rules);
+        // Replace and ReplaceAt build this indexed, Arc-backed plan once per
+        // traversal; their cloneable applier carries the same plan across
+        // targets and suspension frames.
         let cursor = rules.start_scan(&normalized_expr);
         self.apply_rules_once_from_list(expr, normalized_expr, rules, source, cursor)
     }

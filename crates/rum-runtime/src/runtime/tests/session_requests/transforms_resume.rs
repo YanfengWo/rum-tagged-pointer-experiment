@@ -226,6 +226,25 @@ fn resume_eval_request_with_input_can_finish_replace_after_suspending_levelspec(
 }
 
 #[test]
+fn replace_and_replaceat_indexed_rule_plans_survive_mid_traversal_suspension() {
+    let exact_rules = (100..132)
+        .map(|value| format!("{value} -> exact{value}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let rules = format!(
+        "{{x_Integer /; MatchQ[InputString[\"match: \"], \"yes\"] :> hit[x], x_Integer :> miss[x], {exact_rules}}}"
+    );
+    let sources = [
+        format!("Replace[f[1, 2], {rules}, {{1}}]"),
+        format!("ReplaceAt[f[1, 2], {rules}, {{{{1}}, {{2}}}}]"),
+    ];
+
+    for source in sources {
+        assert_suspend_resume_matches_queued(&source, &["no", "yes"], "f[miss[1], hit[2]]");
+    }
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_replacelist_after_suspending_delayed_rhs() {
     let mut session = session_with_test_control_builtins();
 

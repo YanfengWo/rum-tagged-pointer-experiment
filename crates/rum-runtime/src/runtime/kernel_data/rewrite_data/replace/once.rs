@@ -78,6 +78,7 @@ impl Session {
         let rules = self
             .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
             .expect("normalized rewrite rule expressions should recompile");
+        let apply_rules = Self::shared_rewrite_rule_applier(rules);
 
         let default_include_heads = self.system_option_bool("Replace", "Heads", false)?;
         let heads_result =
@@ -103,7 +104,7 @@ impl Session {
                 };
 
                 let replaced_result =
-                    session.replace_owned(target, rules, levels, 0, include_heads);
+                    session.replace_owned(target, apply_rules, levels, 0, include_heads);
                 session.drive_internal_value(replaced_result, move |session, outcome| {
                     let evaluated_result = session.evaluate(outcome.expr);
                     session.suspend_with_frame(evaluated_result, |_, value| Ok(value))
@@ -148,25 +149,27 @@ impl Session {
         })
     }
 
-    fn replace_owned(
+    fn replace_owned<F>(
         &mut self,
         expr: Expr,
-        rules: Vec<RewriteRule>,
+        apply_rules: F,
         levels: CasesLevelSpec,
         level: usize,
         include_heads: bool,
-    ) -> Result<ReplaceOutcome, EvalError> {
+    ) -> Result<ReplaceOutcome, EvalError>
+    where
+        F: Clone
+            + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
+            + Send
+            + 'static,
+    {
         let depth = if include_heads {
             replace_expr_depth_with_heads(&expr)
         } else {
             replace_expr_depth(&expr)
         };
         if levels.matches(level, depth) {
-            let replaced_result = self.try_apply_rewrite_rules_once_owned(
-                expr.clone(),
-                rules.clone(),
-                RuleApplicationSource::Replace,
-            );
+            let replaced_result = apply_rules(self, expr.clone(), RuleApplicationSource::Replace);
             return self.drive_internal_value(replaced_result, move |session, replaced| {
                 if let Some(replaced) = replaced {
                     let depth = if include_heads {
@@ -180,22 +183,34 @@ impl Session {
                         changed: true,
                     })
                 } else {
-                    session.replace_children_owned(expr, rules, levels, level + 1, include_heads)
+                    session.replace_children_owned(
+                        expr,
+                        apply_rules,
+                        levels,
+                        level + 1,
+                        include_heads,
+                    )
                 }
             });
         }
 
-        self.replace_children_owned(expr, rules, levels, level + 1, include_heads)
+        self.replace_children_owned(expr, apply_rules, levels, level + 1, include_heads)
     }
 
-    fn replace_children_owned(
+    fn replace_children_owned<F>(
         &mut self,
         expr: Expr,
-        rules: Vec<RewriteRule>,
+        apply_rules: F,
         levels: CasesLevelSpec,
         child_level: usize,
         include_heads: bool,
-    ) -> Result<ReplaceOutcome, EvalError> {
+    ) -> Result<ReplaceOutcome, EvalError>
+    where
+        F: Clone
+            + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
+            + Send
+            + 'static,
+    {
         match expr {
             Expr::Atom(_) => Ok(ReplaceOutcome {
                 expr,
@@ -206,13 +221,18 @@ impl Session {
                 let head = head.into_owned();
                 let args = args.into_vec();
                 if include_heads {
-                    let head_result =
-                        self.replace_owned(head, rules.clone(), levels, child_level, include_heads);
+                    let head_result = self.replace_owned(
+                        head,
+                        apply_rules.clone(),
+                        levels,
+                        child_level,
+                        include_heads,
+                    );
                     self.drive_internal_value(head_result, move |session, outcome| {
                         session.replace_association_children_owned(
                             outcome.expr,
                             args,
-                            rules,
+                            apply_rules,
                             levels,
                             child_level,
                             include_heads,
@@ -227,7 +247,7 @@ impl Session {
                     self.replace_association_children_owned(
                         head,
                         args,
-                        rules,
+                        apply_rules,
                         levels,
                         child_level,
                         include_heads,
@@ -243,14 +263,19 @@ impl Session {
                 let head = head.into_owned();
                 let args = args.into_vec();
                 if include_heads {
-                    let head_result =
-                        self.replace_owned(head, rules.clone(), levels, child_level, include_heads);
+                    let head_result = self.replace_owned(
+                        head,
+                        apply_rules.clone(),
+                        levels,
+                        child_level,
+                        include_heads,
+                    );
                     self.drive_internal_value(head_result, move |session, outcome| {
                         session.replace_call_children_owned(
                             outcome.expr,
                             args,
                             0,
-                            rules,
+                            apply_rules,
                             levels,
                             child_level,
                             include_heads,
@@ -265,7 +290,7 @@ impl Session {
                         head,
                         args,
                         0,
-                        rules,
+                        apply_rules,
                         levels,
                         child_level,
                         include_heads,
@@ -284,12 +309,12 @@ impl Session {
     /// carries an already-computed child outcome across a suspension resume,
     /// so the merge step runs exactly once per element on both the live and
     /// the resumed paths.
-    fn replace_call_children_owned(
+    fn replace_call_children_owned<F>(
         &mut self,
         head: Expr,
         args: Vec<Expr>,
         mut child_index: usize,
-        rules: Vec<RewriteRule>,
+        apply_rules: F,
         levels: CasesLevelSpec,
         child_level: usize,
         include_heads: bool,
@@ -297,7 +322,13 @@ impl Session {
         mut max_child_depth: usize,
         mut changed: bool,
         mut pending: Option<ReplaceOutcome>,
-    ) -> Result<ReplaceOutcome, EvalError> {
+    ) -> Result<ReplaceOutcome, EvalError>
+    where
+        F: Clone
+            + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
+            + Send
+            + 'static,
+    {
         loop {
             if let Some(outcome) = pending.take() {
                 let child_changed = outcome.changed;
@@ -334,8 +365,13 @@ impl Session {
                 });
             };
 
-            let child_result =
-                self.replace_owned(child, rules.clone(), levels, child_level, include_heads);
+            let child_result = self.replace_owned(
+                child,
+                apply_rules.clone(),
+                levels,
+                child_level,
+                include_heads,
+            );
 
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
@@ -347,7 +383,7 @@ impl Session {
                                 head,
                                 args,
                                 child_index,
-                                rules,
+                                apply_rules,
                                 levels,
                                 child_level,
                                 include_heads,
@@ -368,11 +404,11 @@ impl Session {
     /// Iterative association-entry walk; `pending` carries an already-computed
     /// entry outcome across a suspension resume so the merge step runs exactly
     /// once per entry on both the live and the resumed paths.
-    fn replace_association_children_owned(
+    fn replace_association_children_owned<F>(
         &mut self,
         head: Expr,
         args: Vec<Expr>,
-        rules: Vec<RewriteRule>,
+        apply_rules: F,
         levels: CasesLevelSpec,
         child_level: usize,
         include_heads: bool,
@@ -381,7 +417,13 @@ impl Session {
         mut changed: bool,
         mut index: usize,
         mut pending: Option<ReplaceOutcome>,
-    ) -> Result<ReplaceOutcome, EvalError> {
+    ) -> Result<ReplaceOutcome, EvalError>
+    where
+        F: Clone
+            + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
+            + Send
+            + 'static,
+    {
         loop {
             if let Some(outcome) = pending.take() {
                 match args.get(index) {
@@ -422,8 +464,13 @@ impl Session {
                 }
                 other => other,
             };
-            let entry_result =
-                self.replace_owned(child, rules.clone(), levels, child_level, include_heads);
+            let entry_result = self.replace_owned(
+                child,
+                apply_rules.clone(),
+                levels,
+                child_level,
+                include_heads,
+            );
 
             match entry_result {
                 Ok(outcome) => pending = Some(outcome),
@@ -434,7 +481,7 @@ impl Session {
                             .replace_association_children_owned(
                                 head,
                                 args,
-                                rules,
+                                apply_rules,
                                 levels,
                                 child_level,
                                 include_heads,

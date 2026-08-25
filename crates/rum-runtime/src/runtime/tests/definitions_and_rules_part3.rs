@@ -91,6 +91,30 @@ fn replaceall_exact_rule_index_preserves_first_rule_priority() {
 }
 
 #[test]
+fn replace_and_replaceat_exact_rule_index_preserve_first_rule_priority() {
+    let filler_exact_rules = (2..=33)
+        .map(|value| format!("{value} -> exact{value}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let rules = format!(
+        "{{35 -> earlyExact, x_Integer -> pattern, 34 -> lateExact, 35 -> duplicate, {filler_exact_rules}}}"
+    );
+    let mut session = session_with_test_control_builtins();
+
+    let replace = format!("Replace[f[35, 34], {rules}, {{1}}]");
+    assert_eq!(
+        session.eval_text(&replace).unwrap().value.to_string(),
+        "f[earlyExact, pattern]"
+    );
+
+    let replace_at = format!("ReplaceAt[f[35, 34], {rules}, {{{{1}}, {{2}}}}]");
+    assert_eq!(
+        session.eval_text(&replace_at).unwrap().value.to_string(),
+        "f[earlyExact, pattern]"
+    );
+}
+
+#[test]
 fn replaceall_traverses_nested_expressions() {
     let mut session = session_with_test_control_builtins();
 
