@@ -3,6 +3,26 @@ use super::*;
 mod iteration;
 mod iteration_aggregate;
 
+#[derive(Clone, Copy)]
+enum WhilePhase {
+    Test,
+    Body,
+}
+
+#[derive(Clone, Copy)]
+enum UntilPhase {
+    Body,
+    Test,
+}
+
+#[derive(Clone, Copy)]
+enum ForPhase {
+    Start,
+    Test,
+    Body,
+    Increment,
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_compound_expression(
         &mut self,
@@ -68,7 +88,7 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("While", args, 1, 2));
         }
 
-        self.resume_while_test(args.to_vec())
+        self.resume_while_loop(args.to_vec(), WhilePhase::Test, None)
     }
 
     pub(in crate::runtime) fn eval_until(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -76,7 +96,7 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("Until", args, 1, 2));
         }
 
-        self.resume_until_body(args.to_vec())
+        self.resume_until_loop(args.to_vec(), UntilPhase::Body, None)
     }
 
     pub(in crate::runtime) fn eval_for(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -84,195 +104,191 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("For", args, 3, 4));
         }
 
-        let start_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame(start_result, {
-            let args = args.to_vec();
-            move |session, outcome| session.resume_for_after_start(args, outcome)
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_for_after_start(args.to_vec(), outcome),
-        }
+        self.resume_for_loop(args.to_vec(), ForPhase::Start, None)
     }
 
-    fn resume_while_test(&mut self, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let runtime_profile_test = runtime_path_timing_start("while.test.evaluate");
-        let test_result = self.evaluate(args[0].clone());
-        record_profile_runtime_path_timing(
-            runtime_profile_test,
-            runtime_profile_outcome_for_expr_result(&test_result),
-        );
-        let runtime_profile_suspend = runtime_path_timing_start("while.test.suspend");
-        let test_result = self.suspend_with_frame_lazy(test_result, || {
-            let args = args.clone();
-            move |session, test| session.resume_while_after_test(args, test)
-        });
-        record_profile_runtime_path_timing(
-            runtime_profile_suspend,
-            runtime_profile_outcome_for_expr_result(&test_result),
-        );
-        let test = test_result?;
-
-        self.resume_while_after_test(args, test)
-    }
-
-    fn resume_while_after_test(&mut self, args: Vec<Expr>, test: Expr) -> Result<Expr, EvalError> {
-        if !is_system_symbol_name(&test, "True") {
-            return Ok(system_expr("Null"));
-        }
-
-        let body = args.get(1).cloned().unwrap_or_else(|| system_expr("Null"));
-        let runtime_profile_body = runtime_path_timing_start("while.body.evaluate");
-        let body_result = self.evaluate(body);
-        record_profile_runtime_path_timing(
-            runtime_profile_body,
-            runtime_profile_outcome_for_expr_result(&body_result),
-        );
-        let runtime_profile_suspend = runtime_path_timing_start("while.body.suspend");
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let args = args.clone();
-            move |session, outcome| session.resume_while_after_body(args, outcome)
-        });
-        record_profile_runtime_path_timing(
-            runtime_profile_suspend,
-            runtime_profile_outcome_for_expr_result(&outcome),
-        );
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_while_after_body(args, outcome),
-        }
-    }
-
-    fn resume_while_after_body(
+    fn resume_while_loop(
         &mut self,
         args: Vec<Expr>,
-        outcome: Result<Expr, EvalError>,
+        mut phase: WhilePhase,
+        mut pending: Option<Result<Expr, EvalError>>,
     ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(_) | Err(EvalError::Continue) => self.resume_while_test(args),
-            Err(EvalError::Break) => Ok(system_expr("Null")),
-            Err(error) => Err(error),
+        loop {
+            if let Some(outcome) = pending.take() {
+                match phase {
+                    WhilePhase::Test => match outcome {
+                        Ok(test) if is_system_symbol_name(&test, "True") => {
+                            phase = WhilePhase::Body;
+                        }
+                        Ok(_) => return Ok(system_expr("Null")),
+                        Err(error) => return Err(error),
+                    },
+                    WhilePhase::Body => match outcome {
+                        Ok(_) | Err(EvalError::Continue) => phase = WhilePhase::Test,
+                        Err(EvalError::Break) => return Ok(system_expr("Null")),
+                        Err(error) => return Err(error),
+                    },
+                }
+                continue;
+            }
+
+            if self.interrupt_armed {
+                self.poll_host_interrupt_if_due()?;
+            }
+            let outcome = match phase {
+                WhilePhase::Test => {
+                    let runtime_profile_test = runtime_path_timing_start("while.test.evaluate");
+                    let result = self.evaluate(args[0].clone());
+                    record_profile_runtime_path_timing(
+                        runtime_profile_test,
+                        runtime_profile_outcome_for_expr_result(&result),
+                    );
+                    let runtime_profile_suspend = runtime_path_timing_start("while.test.suspend");
+                    let outcome = self.suspend_with_result_frame_lazy(result, || {
+                        let args = args.clone();
+                        move |session, outcome| {
+                            session.resume_while_loop(args, WhilePhase::Test, Some(outcome))
+                        }
+                    });
+                    record_profile_runtime_path_timing(
+                        runtime_profile_suspend,
+                        runtime_profile_outcome_for_expr_result(&outcome),
+                    );
+                    outcome
+                }
+                WhilePhase::Body => {
+                    let body = args.get(1).cloned().unwrap_or_else(|| system_expr("Null"));
+                    let runtime_profile_body = runtime_path_timing_start("while.body.evaluate");
+                    let result = self.evaluate(body);
+                    record_profile_runtime_path_timing(
+                        runtime_profile_body,
+                        runtime_profile_outcome_for_expr_result(&result),
+                    );
+                    let runtime_profile_suspend = runtime_path_timing_start("while.body.suspend");
+                    let outcome = self.suspend_with_result_frame_lazy(result, || {
+                        let args = args.clone();
+                        move |session, outcome| {
+                            session.resume_while_loop(args, WhilePhase::Body, Some(outcome))
+                        }
+                    });
+                    record_profile_runtime_path_timing(
+                        runtime_profile_suspend,
+                        runtime_profile_outcome_for_expr_result(&outcome),
+                    );
+                    outcome
+                }
+            };
+
+            match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    return Err(EvalError::InputRequired { request });
+                }
+                outcome => pending = Some(outcome),
+            }
         }
     }
 
-    fn resume_until_body(&mut self, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let body = args.get(1).cloned().unwrap_or_else(|| system_expr("Null"));
-        let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
-            let args = args.clone();
-            move |session, outcome| session.resume_until_after_body(args, outcome)
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_until_after_body(args, outcome),
-        }
-    }
-
-    fn resume_until_after_body(
+    fn resume_until_loop(
         &mut self,
         args: Vec<Expr>,
-        outcome: Result<Expr, EvalError>,
+        mut phase: UntilPhase,
+        mut pending: Option<Result<Expr, EvalError>>,
     ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(_) | Err(EvalError::Continue) => self.resume_until_test(args),
-            Err(EvalError::Break) => Ok(system_expr("Null")),
-            Err(error) => Err(error),
+        loop {
+            if let Some(outcome) = pending.take() {
+                match phase {
+                    UntilPhase::Body => match outcome {
+                        Ok(_) | Err(EvalError::Continue) => phase = UntilPhase::Test,
+                        Err(EvalError::Break) => return Ok(system_expr("Null")),
+                        Err(error) => return Err(error),
+                    },
+                    UntilPhase::Test => match outcome {
+                        Ok(test) if is_system_symbol_name(&test, "True") => {
+                            return Ok(system_expr("Null"));
+                        }
+                        Ok(_) => phase = UntilPhase::Body,
+                        Err(error) => return Err(error),
+                    },
+                }
+                continue;
+            }
+
+            if self.interrupt_armed {
+                self.poll_host_interrupt_if_due()?;
+            }
+            let current = match phase {
+                UntilPhase::Body => args.get(1).cloned().unwrap_or_else(|| system_expr("Null")),
+                UntilPhase::Test => args[0].clone(),
+            };
+            let result = self.evaluate(current);
+            let outcome = self.suspend_with_result_frame_lazy(result, || {
+                let args = args.clone();
+                move |session, outcome| session.resume_until_loop(args, phase, Some(outcome))
+            });
+
+            match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    return Err(EvalError::InputRequired { request });
+                }
+                outcome => pending = Some(outcome),
+            }
         }
     }
 
-    fn resume_until_test(&mut self, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let test_result = self.evaluate(args[0].clone());
-        let test = self.suspend_with_frame(test_result, {
-            let args = args.clone();
-            move |session, test| session.resume_until_after_test(args, test)
-        })?;
-
-        self.resume_until_after_test(args, test)
-    }
-
-    fn resume_until_after_test(&mut self, args: Vec<Expr>, test: Expr) -> Result<Expr, EvalError> {
-        if is_system_symbol_name(&test, "True") {
-            Ok(system_expr("Null"))
-        } else {
-            self.resume_until_body(args)
-        }
-    }
-
-    fn resume_for_after_start(
+    fn resume_for_loop(
         &mut self,
         args: Vec<Expr>,
-        outcome: Result<Expr, EvalError>,
+        mut phase: ForPhase,
+        mut pending: Option<Result<Expr, EvalError>>,
     ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(_) => self.resume_for_test(args),
-            Err(error) => Err(error),
-        }
-    }
+        loop {
+            if let Some(outcome) = pending.take() {
+                match phase {
+                    ForPhase::Start => match outcome {
+                        Ok(_) => phase = ForPhase::Test,
+                        Err(error) => return Err(error),
+                    },
+                    ForPhase::Test => match outcome {
+                        Ok(test) if is_system_symbol_name(&test, "True") => {
+                            phase = ForPhase::Body;
+                        }
+                        Ok(_) => return Ok(system_expr("Null")),
+                        Err(error) => return Err(error),
+                    },
+                    ForPhase::Body => match outcome {
+                        Ok(_) | Err(EvalError::Continue) => phase = ForPhase::Increment,
+                        Err(EvalError::Break) => return Ok(system_expr("Null")),
+                        Err(error) => return Err(error),
+                    },
+                    ForPhase::Increment => match outcome {
+                        Ok(_) => phase = ForPhase::Test,
+                        Err(error) => return Err(error),
+                    },
+                }
+                continue;
+            }
 
-    fn resume_for_test(&mut self, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let test_result = self.evaluate(args[1].clone());
-        let test = self.suspend_with_frame(test_result, {
-            let args = args.clone();
-            move |session, test| session.resume_for_after_test(args, test)
-        })?;
+            if self.interrupt_armed {
+                self.poll_host_interrupt_if_due()?;
+            }
+            let current = match phase {
+                ForPhase::Start => args[0].clone(),
+                ForPhase::Test => args[1].clone(),
+                ForPhase::Body => args.get(3).cloned().unwrap_or_else(|| system_expr("Null")),
+                ForPhase::Increment => args[2].clone(),
+            };
+            let result = self.evaluate(current);
+            let outcome = self.suspend_with_result_frame_lazy(result, || {
+                let args = args.clone();
+                move |session, outcome| session.resume_for_loop(args, phase, Some(outcome))
+            });
 
-        self.resume_for_after_test(args, test)
-    }
-
-    fn resume_for_after_test(&mut self, args: Vec<Expr>, test: Expr) -> Result<Expr, EvalError> {
-        if !is_system_symbol_name(&test, "True") {
-            return Ok(system_expr("Null"));
-        }
-
-        let body = args.get(3).cloned().unwrap_or_else(|| system_expr("Null"));
-        let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
-            let args = args.clone();
-            move |session, outcome| session.resume_for_after_body(args, outcome)
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_for_after_body(args, outcome),
-        }
-    }
-
-    fn resume_for_after_body(
-        &mut self,
-        args: Vec<Expr>,
-        outcome: Result<Expr, EvalError>,
-    ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(_) | Err(EvalError::Continue) => self.resume_for_increment(args),
-            Err(EvalError::Break) => Ok(system_expr("Null")),
-            Err(error) => Err(error),
-        }
-    }
-
-    fn resume_for_increment(&mut self, args: Vec<Expr>) -> Result<Expr, EvalError> {
-        let increment_result = self.evaluate(args[2].clone());
-        let outcome = self.suspend_with_result_frame(increment_result, {
-            let args = args.clone();
-            move |session, outcome| session.resume_for_after_increment(args, outcome)
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_for_after_increment(args, outcome),
-        }
-    }
-
-    fn resume_for_after_increment(
-        &mut self,
-        args: Vec<Expr>,
-        outcome: Result<Expr, EvalError>,
-    ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(_) => self.resume_for_test(args),
-            Err(error) => Err(error),
+            match outcome {
+                Err(EvalError::InputRequired { request }) => {
+                    return Err(EvalError::InputRequired { request });
+                }
+                outcome => pending = Some(outcome),
+            }
         }
     }
 

@@ -53,8 +53,14 @@ impl Session {
         });
 
         let runtime_profile_total = runtime_path_timing_start("module.eval.total");
-        let result =
-            self.resume_module_initializers(items, args[1].clone(), renames, activation_depth, 0);
+        let result = self.resume_module_initializers(
+            items,
+            args[1].clone(),
+            renames,
+            activation_depth,
+            0,
+            None,
+        );
         record_profile_eval_module(profile_start);
         record_profile_eval_module_by_source(eval_cache_profile_start);
         record_profile_runtime_path_timing(
@@ -71,9 +77,28 @@ impl Session {
         renames: SymbolExprMap,
         activation_depth: usize,
         mut index: usize,
+        mut pending: Option<Result<Expr, EvalError>>,
     ) -> Result<Expr, EvalError> {
         let runtime_profile_resume = runtime_path_timing_start("module.resume_initializers");
         loop {
+            if let Some(outcome) = pending.take() {
+                let symbol = items[index].0.clone();
+                match outcome {
+                    Ok(value) => {
+                        self.store_module_initializer_value(&renames, &symbol, value);
+                        index += 1;
+                    }
+                    Err(error) => {
+                        let result = self.finish_module_scope(activation_depth, Err(error));
+                        record_profile_runtime_path_timing(
+                            runtime_profile_resume,
+                            runtime_profile_outcome_for_expr_result(&result),
+                        );
+                        return result;
+                    }
+                }
+            }
+
             record_profile_module_resume_entry(index);
             if index >= items.len() {
                 let profile_start = lexical_profile_start();
@@ -106,7 +131,7 @@ impl Session {
                 return result;
             }
 
-            let (symbol, init) = items[index].clone();
+            let init = items[index].1.clone();
             if let Some(init) = init {
                 let profile_start = lexical_profile_start();
                 let eval_cache_profile_start = evaluation_cache_profile_source_timing_start(
@@ -125,61 +150,33 @@ impl Session {
                     let items = items.clone();
                     let body = body.clone();
                     let renames = renames.clone();
-                    let symbol = symbol.clone();
                     move |session, outcome| {
-                        session.resume_module_after_initializer(
+                        session.resume_module_initializers(
                             items,
                             body,
                             renames,
                             activation_depth,
                             index,
-                            symbol,
-                            outcome,
+                            Some(outcome),
                         )
                     }
                 });
 
-                let result = match outcome {
+                match outcome {
                     Err(EvalError::InputRequired { request }) => {
-                        Err(EvalError::InputRequired { request })
+                        let result = Err(EvalError::InputRequired { request });
+                        record_profile_runtime_path_timing(
+                            runtime_profile_resume,
+                            runtime_profile_outcome_for_expr_result(&result),
+                        );
+                        return result;
                     }
-                    outcome => self.resume_module_after_initializer(
-                        items,
-                        body,
-                        renames,
-                        activation_depth,
-                        index,
-                        symbol,
-                        outcome,
-                    ),
-                };
-                record_profile_runtime_path_timing(
-                    runtime_profile_resume,
-                    runtime_profile_outcome_for_expr_result(&result),
-                );
-                return result;
+                    outcome => pending = Some(outcome),
+                }
+                continue;
             }
 
             index += 1;
-        }
-    }
-
-    fn resume_module_after_initializer(
-        &mut self,
-        items: Vec<(Symbol, Option<Expr>)>,
-        body: Expr,
-        renames: SymbolExprMap,
-        activation_depth: usize,
-        index: usize,
-        symbol: Symbol,
-        outcome: Result<Expr, EvalError>,
-    ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(value) => {
-                self.store_module_initializer_value(&renames, &symbol, value);
-                self.resume_module_initializers(items, body, renames, activation_depth, index + 1)
-            }
-            Err(error) => self.finish_module_scope(activation_depth, Err(error)),
         }
     }
 
