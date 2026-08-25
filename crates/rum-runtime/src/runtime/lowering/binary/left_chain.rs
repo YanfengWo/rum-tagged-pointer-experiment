@@ -1,4 +1,5 @@
 use super::*;
+use rum_syntax::MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS;
 
 struct LeftChainLink<'a> {
     op: BinaryOp,
@@ -113,7 +114,7 @@ pub(super) fn lower_left_chain<F>(
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
-    let (base, links) = collect_left_spine(op, lhs, rhs);
+    let (base, links) = collect_left_spine(op, lhs, rhs)?;
     let mut accumulator =
         LeftChainAccumulator::Opaque(lower_syntax_expr_with(base, resolve_symbol)?);
 
@@ -130,7 +131,7 @@ fn collect_left_spine<'a>(
     root_op: BinaryOp,
     mut lhs: &'a SyntaxExpr,
     rhs: &'a SyntaxExpr,
-) -> (&'a SyntaxExpr, Vec<LeftChainLink<'a>>) {
+) -> Result<(&'a SyntaxExpr, Vec<LeftChainLink<'a>>), EvalError> {
     let mut links = vec![LeftChainLink { op: root_op, rhs }];
 
     loop {
@@ -140,6 +141,13 @@ fn collect_left_spine<'a>(
                 lhs: next_lhs,
                 rhs: next_rhs,
             } if is_iterative_left_chain_op(*op) => {
+                if links.len() >= MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS {
+                    return Err(SyntaxError::LeftAssociativeChainTooLong {
+                        max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+                        span: lhs.span(),
+                    }
+                    .into());
+                }
                 links.push(LeftChainLink {
                     op: *op,
                     rhs: next_rhs,
@@ -151,7 +159,7 @@ fn collect_left_spine<'a>(
     }
 
     links.reverse();
-    (lhs, links)
+    Ok((lhs, links))
 }
 
 fn apply_left_chain_link<F>(

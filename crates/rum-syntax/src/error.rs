@@ -28,6 +28,8 @@ pub enum SyntaxError {
         "statement chain exceeded limit {max} at bytes {span}; split the statements across separate lines"
     )]
     StatementChainTooLong { max: usize, span: Span },
+    #[error("left-associative chain exceeded limit {max} at bytes {span}")]
+    LeftAssociativeChainTooLong { max: usize, span: Span },
     #[error("unexpected character `{found}` at bytes {span}")]
     UnexpectedCharacter { found: char, span: Span },
     #[error("unterminated string at bytes {span}")]
@@ -56,6 +58,7 @@ impl SyntaxError {
             | Self::TrailingInput { span }
             | Self::ParseDepthExceeded { span, .. }
             | Self::StatementChainTooLong { span, .. }
+            | Self::LeftAssociativeChainTooLong { span, .. }
             | Self::UnexpectedCharacter { span, .. }
             | Self::UnterminatedString { span }
             | Self::UnterminatedComment { span } => Some(*span),

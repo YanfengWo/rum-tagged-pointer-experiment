@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::SyntaxExprKind;
+use crate::{MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS, ast::SyntaxExprKind};
 
 const SPAN_PRECEDENCE: u8 = 45;
 const INFIX_APPLICATION_PRECEDENCE: u8 = 67;
@@ -220,6 +220,10 @@ impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
         // spine elsewhere (`f[a;b]` vs `g[c;d]`) parses through a nested
         // call with its own fresh count.
         let mut statement_chain_links: usize = 0;
+        // Every explicit left-associative operator and implicit `Times` link
+        // consumed by this loop extends the same lhs spine. Nested and rhs
+        // parses enter another call and therefore start a fresh count.
+        let mut left_associative_chain_links: usize = 0;
 
         loop {
             if allow_function_postfix && PostfixOp::Function.precedence() >= min_precedence {
@@ -256,6 +260,10 @@ impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
                         && times.precedence() >= min_precedence
                         && !self.at_form_boundary()
                     {
+                        count_left_associative_chain_link(
+                            &mut left_associative_chain_links,
+                            self.current().span,
+                        )?;
                         let next_min_precedence = next_min_precedence_for_binary_op(times);
                         let rhs = self.parse_nested_binary_expr_internal(
                             next_min_precedence,
@@ -274,6 +282,13 @@ impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
                 break;
             }
 
+            let operator_span = self.current().span;
+            if !op.is_right_associative() {
+                count_left_associative_chain_link(
+                    &mut left_associative_chain_links,
+                    operator_span,
+                )?;
+            }
             self.bump();
 
             if matches!(op, BinaryOp::CompoundExpression) {
@@ -782,4 +797,16 @@ fn can_follow_function_postfix(op: BinaryOp) -> bool {
         op,
         BinaryOp::Apply | BinaryOp::Map | BinaryOp::ApplyHead | BinaryOp::MapApply
     )
+}
+
+fn count_left_associative_chain_link(links: &mut usize, span: Span) -> Result<(), SyntaxError> {
+    if *links >= MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS {
+        return Err(SyntaxError::LeftAssociativeChainTooLong {
+            max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+            span,
+        });
+    }
+
+    *links += 1;
+    Ok(())
 }

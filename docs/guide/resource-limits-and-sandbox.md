@@ -110,7 +110,7 @@ TerminatedEvaluation["IterationLimit"]
 
 ## Parse Depth
 
-The parser has three independent guards.
+The parser has four independent guards.
 
 `MAX_DELIMITER_NESTING_DEPTH = 128` bounds delimiter nesting —
 `[...]`, `[[...]]`, `(...)`, `{...}`, and `<|...|>`.
@@ -121,6 +121,18 @@ cap is sized by the native stack budget, not by the evaluator's recursion
 limit: the parser spends about 4.6 KiB of stack per chain link, and a
 2 MiB thread — Rust's default for a spawned thread — aborts at roughly
 452 links. 128 fails gracefully well before the stack runs out.
+
+`MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS = 4096` bounds the binary links in one
+precedence-climbing lhs spine, including implicit multiplication. Exactly
+4,096 links are accepted; link 4,097 reports its explicit operator token, or
+the first token of the rejected operand for juxtaposition. Nested and rhs
+spines start fresh. The same bound applies during lowering to syntax trees
+built directly by a host, including the total operators collected from
+comparison subtrees. Hitting it reports —
+
+```text
+left-associative chain exceeded limit 4096 at bytes 8193..8194
+```
 
 `MAX_STATEMENT_CHAIN_DEPTH = 256` bounds how many `;`-separated statements
 a single form may hold. The parser collects `;` chains iteratively, so
@@ -136,8 +148,9 @@ statement chain exceeded limit 256 at bytes 0..4321; split the statements across
 line, so writing the statements on separate lines parses and runs the same
 program.
 
-All three guards fail closed at parse time: overflow is a syntax failure
-with a source span, not a normal evaluated expression.
+All four source guards fail closed at parse time: overflow is a syntax failure
+with a source span, not a normal evaluated expression. A host-built syntax tree
+that bypasses parsing receives the same syntax failure during lowering.
 
 ## Match Depth
 

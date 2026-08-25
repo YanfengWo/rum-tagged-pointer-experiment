@@ -1,5 +1,5 @@
 use super::*;
-use rum_syntax::Span;
+use rum_syntax::{FormatterOptions, MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS, Span, format_parsed_source};
 
 const AFFECTED_OPERATORS: [(BinaryOp, &str); 16] = [
     (BinaryOp::Add, "+"),
@@ -218,18 +218,18 @@ fn flat_chain_evaluated_results_remain_unchanged() {
 }
 
 #[test]
-fn left_chain_lowering_handles_long_source_chains_for_all_operators() {
-    const LINK_COUNT: usize = 20_000;
+fn left_chain_lowering_accepts_the_boundary_for_all_operators() {
+    const LINK_COUNT: usize = MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS;
 
     for (op, token) in AFFECTED_OPERATORS {
         let source = repeated_chain_source(token, LINK_COUNT);
         let syntax = parse_expr(&source)
-            .unwrap_or_else(|error| panic!("long {token:?} left chain should parse: {error}"));
+            .unwrap_or_else(|error| panic!("boundary {token:?} left chain should parse: {error}"));
         let lowered = match lower_syntax_expr(&syntax) {
             Ok(lowered) => lowered,
             Err(error) => {
                 drop_left_binary_chain(syntax);
-                panic!("long {token:?} left chain should lower: {error}");
+                panic!("boundary {token:?} left chain should lower: {error}");
             }
         };
 
@@ -240,8 +240,27 @@ fn left_chain_lowering_handles_long_source_chains_for_all_operators() {
 }
 
 #[test]
-fn left_chain_lowering_handles_a_deep_hand_built_alternating_ast() {
+fn left_chain_parser_rejects_20_000_links_gracefully_for_all_operators() {
     const LINK_COUNT: usize = 20_000;
+
+    for (_, token) in AFFECTED_OPERATORS {
+        let source = repeated_chain_source(token, LINK_COUNT);
+        let error = parse_expr(&source)
+            .expect_err("20,000-link source chain should be rejected without aborting");
+        assert!(matches!(
+            error,
+            SyntaxError::LeftAssociativeChainTooLong {
+                max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+                ..
+            }
+        ));
+        assert!(!error.is_incomplete(), "{token:?}");
+    }
+}
+
+#[test]
+fn left_chain_lowering_accepts_a_boundary_hand_built_alternating_ast() {
+    const LINK_COUNT: usize = MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS;
 
     let mut syntax = SyntaxExpr::symbol("a", Span::default());
     for index in 0..LINK_COUNT {
@@ -266,6 +285,101 @@ fn left_chain_lowering_handles_a_deep_hand_built_alternating_ast() {
 
     drop_left_binary_chain(syntax);
     drop_expr_iteratively(lowered);
+}
+
+#[test]
+fn left_chain_lowering_rejects_a_20_000_link_hand_built_ast_gracefully() {
+    const LINK_COUNT: usize = 20_000;
+
+    let mut syntax = SyntaxExpr::symbol("a", Span::default());
+    for index in 0..LINK_COUNT {
+        syntax = SyntaxExpr::binary(
+            AFFECTED_OPERATORS[index % AFFECTED_OPERATORS.len()].0,
+            syntax,
+            SyntaxExpr::symbol("a", Span::point(index)),
+            Span::new(index, index + 1),
+        );
+    }
+
+    let error = lower_syntax_expr(&syntax)
+        .expect_err("20,000-link direct AST should be rejected without aborting");
+    let rejected_index = LINK_COUNT - MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS - 1;
+    assert!(matches!(
+        error,
+        EvalError::Syntax(SyntaxError::LeftAssociativeChainTooLong {
+            max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+            span,
+        }) if span == Span::new(rejected_index, rejected_index + 1)
+    ));
+
+    drop_left_binary_chain(syntax);
+}
+
+#[test]
+#[ignore = "release-only deployment-stack probe; run explicitly with --release"]
+fn left_chain_two_mib_full_round_trip_accepts_and_rejects_without_abort() {
+    let accepted = run_on_two_mib_thread("left-chain-accepted", || {
+        let source = repeated_chain_source("+", MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS);
+        let parsed = rum_syntax::parse_with_diagnostics(source)
+            .expect("4,096-link source should parse on a 2 MiB stack");
+        let lowered = lower_syntax_expr(parsed.syntax())
+            .expect("4,096-link syntax should lower on a 2 MiB stack");
+        assert_homogeneous_chain_shape(&lowered, BinaryOp::Add, MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS);
+        let formatted = format_parsed_source(&parsed, FormatterOptions::default());
+        assert!(!formatted.is_empty());
+
+        drop_expr_iteratively(lowered);
+        drop(formatted);
+        drop(parsed);
+        "2 MiB accepted: 4096 links parsed, lowered, formatted, and dropped".to_string()
+    });
+    println!("{accepted}");
+
+    for link_count in [MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS + 1, 20_000] {
+        let result = run_on_two_mib_thread("left-chain-rejected", move || {
+            let source = repeated_chain_source("+", link_count);
+            let diagnostic = match rum_syntax::parse_with_diagnostics(source) {
+                Ok(parsed) => {
+                    drop(parsed);
+                    panic!("{link_count}-link source should be rejected");
+                }
+                Err(diagnostic) => diagnostic,
+            };
+            let span = match diagnostic.error() {
+                SyntaxError::LeftAssociativeChainTooLong {
+                    max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+                    span,
+                } => *span,
+                error => panic!("unexpected {link_count}-link error: {error}"),
+            };
+            assert_eq!(diagnostic.source().text(span), Some("+"));
+            let rendered = diagnostic.render();
+            assert!(
+                rendered.contains("error: left-associative chain exceeded limit 4096 at bytes")
+            );
+            assert!(
+                rendered
+                    .lines()
+                    .last()
+                    .is_some_and(|line| line.ends_with('^'))
+            );
+
+            drop(rendered);
+            drop(diagnostic);
+            format!("2 MiB rejected: {link_count} links diagnosed and dropped")
+        });
+        println!("{result}");
+    }
+}
+
+fn run_on_two_mib_thread(name: &str, action: impl FnOnce() -> String + Send + 'static) -> String {
+    std::thread::Builder::new()
+        .name(name.to_string())
+        .stack_size(2 * 1024 * 1024)
+        .spawn(action)
+        .expect("2 MiB probe thread should spawn")
+        .join()
+        .unwrap_or_else(|_| panic!("2 MiB probe thread {name:?} panicked"))
 }
 
 fn repeated_chain_source(token: &str, link_count: usize) -> String {
@@ -442,5 +556,33 @@ fn drop_expr_iteratively(expr: Expr) {
             work.push(head);
             work.extend(args);
         }
+    }
+}
+
+/// The 2 MiB round trip above uses `+`, which lowers to one flat `Plus` and so
+/// never exercises a recursive `Expr` drop. The seven operators that stay
+/// nested build a 4,096-deep `Expr`, and that is what a host actually drops at
+/// the accepted boundary — so it is dropped naturally here, not dismantled.
+#[test]
+#[ignore = "release-only deployment-stack probe; run explicitly with --release"]
+fn left_chain_two_mib_nested_expr_drops_naturally_at_the_boundary() {
+    for token in ["/.", "//.", "//", "?", "::", "**", ":"] {
+        let message = run_on_two_mib_thread("nested-natural-drop", move || {
+            let source = repeated_chain_source(token, MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS);
+            let parsed = rum_syntax::parse_with_diagnostics(source)
+                .expect("4,096-link source should parse on a 2 MiB stack");
+            let lowered = lower_syntax_expr(parsed.syntax())
+                .expect("4,096-link syntax should lower on a 2 MiB stack");
+            let formatted = format_parsed_source(&parsed, FormatterOptions::default());
+            assert!(!formatted.is_empty());
+
+            drop(lowered);
+            drop(formatted);
+            drop(parsed);
+            format!(
+                "2 MiB nested `{token}`: 4096 links parsed, lowered, formatted, dropped naturally"
+            )
+        });
+        println!("{message}");
     }
 }

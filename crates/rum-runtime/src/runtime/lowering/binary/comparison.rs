@@ -1,4 +1,5 @@
 use super::*;
+use rum_syntax::MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS;
 
 pub(super) fn comparison_head(op: BinaryOp) -> Option<&'static str> {
     match op {
@@ -25,7 +26,7 @@ where
 {
     let mut operands = Vec::new();
     let mut ops = Vec::new();
-    collect_comparison_chain(op, lhs, rhs, &mut operands, &mut ops);
+    collect_comparison_chain(op, lhs, rhs, &mut operands, &mut ops)?;
 
     if ops.len() == 1 {
         return Ok(canonical_call(
@@ -77,7 +78,8 @@ fn collect_comparison_chain<'a>(
     rhs: &'a SyntaxExpr,
     operands: &mut Vec<&'a SyntaxExpr>,
     ops: &mut Vec<BinaryOp>,
-) {
+) -> Result<(), EvalError> {
+    let mut operator_count = 1;
     let mut work = vec![
         ComparisonWork::Visit(rhs),
         ComparisonWork::EmitOp(root_op),
@@ -88,6 +90,14 @@ fn collect_comparison_chain<'a>(
         match item {
             ComparisonWork::Visit(expr) => match &expr.kind {
                 SyntaxExprKind::Binary { op, lhs, rhs } if comparison_head(*op).is_some() => {
+                    if operator_count >= MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS {
+                        return Err(SyntaxError::LeftAssociativeChainTooLong {
+                            max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+                            span: expr.span(),
+                        }
+                        .into());
+                    }
+                    operator_count += 1;
                     work.push(ComparisonWork::Visit(rhs));
                     work.push(ComparisonWork::EmitOp(*op));
                     work.push(ComparisonWork::Visit(lhs));
@@ -97,4 +107,7 @@ fn collect_comparison_chain<'a>(
             ComparisonWork::EmitOp(op) => ops.push(op),
         }
     }
+
+    debug_assert_eq!(ops.len(), operator_count);
+    Ok(())
 }

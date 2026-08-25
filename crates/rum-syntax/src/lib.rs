@@ -14,6 +14,9 @@ mod parser;
 mod span;
 mod trivia;
 
+/// Maximum number of binary links in one left-associative chain.
+pub const MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS: usize = 4_096;
+
 pub use ast::{BinaryOp, BlankKind, PostfixOp, PrefixOp, SlotSpec, SyntaxExpr, SyntaxExprKind};
 pub use document::{
     ParsedSource, SourceDiagnostic, SourceDiagnosticSpan, SourceLocation, SourceText,
