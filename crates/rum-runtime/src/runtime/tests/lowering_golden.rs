@@ -46,6 +46,18 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
         ("x === y === z", "SameQ[x, y, z]"),
         ("x =!= y =!= z", "UnsameQ[x, y, z]"),
         ("x == y != z", "And[Equal[x, y], Unequal[y, z]]"),
+        // Parentheses are transparent to comparison-chain collection. These four
+        // rows record that as it stands today; they are not the intended
+        // semantics. `1 == (1 == 1)` yields True, while the `1 == True` it
+        // should reduce to stays unevaluated — rum disagrees with itself here.
+        // The right-hand cases are reachable: a left-associative chain only
+        // extends through its lhs, so a comparison on the rhs came from explicit
+        // grouping. The left-hand ones are not distinguishable after parsing,
+        // since `(a == b) == c` and `a == b == c` share one AST.
+        ("(a == b) == c", "Equal[a, b, c]"),
+        ("a == (b == c)", "Equal[a, b, c]"),
+        ("(a < b) <= c", "And[Less[a, b], LessEqual[b, c]]"),
+        ("a < (b <= c)", "And[Less[a, b], LessEqual[b, c]]"),
         (
             "typeSubstImpl[theta, #] & /@ args",
             "Map[Function[typeSubstImpl[theta, Slot[1]]], args]",
