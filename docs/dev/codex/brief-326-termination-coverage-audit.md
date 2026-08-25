@@ -1,9 +1,10 @@
-# brief-326 — robustness against malformed and extreme input
+# brief-326 — termination and resource-ceiling coverage audit
 
 ## Goal
 
-Find inputs that make the process die, hang, or consume unbounded resources
-instead of returning a value or a message. This is a **diagnostic survey**: a
+Audit whether every evaluation path terminates through one of its two
+documented outcomes — a value or a message — and whether the resource ceilings
+that should bound it are actually reached. This is a **diagnostic survey**: a
 ranked list of reproducible cases with `path:line` attribution and drafted
 implementation briefs — not a code change.
 
@@ -18,27 +19,28 @@ confirmed twice.
 ## What counts as a finding
 
 rum's documented contract is that evaluation either returns a value or reports a
-message, and that resource ceilings refuse work gracefully. A finding is an
-input that breaks that contract:
+message, and that resource ceilings refuse work gracefully. A finding is a path where that contract does not hold:
 
-1. **Process death.** A native stack overflow, an abort, or a panic escaping to
-   the process. `exit=-6`, `exit=134`, `thread 'main' has overflowed its stack`,
+1. **Non-graceful termination.** A native stack overflow, an abort, or a panic
+   escaping to the process. `exit=-6`, `exit=134`, `thread 'main' has overflowed its stack`,
    or any `panicked at` reaching the top level.
-2. **A hang.** Evaluation that neither completes nor hits a documented limit.
+2. **Non-termination.** Evaluation that neither completes nor reaches a
+   documented limit.
    Distinguish this from slow: if it finishes at a smaller size and the growth
    is a curve, it belongs in the complexity survey, not here.
-3. **Unbounded resource use.** Memory or handles growing without a ceiling
-   refusing the work — including a ceiling that exists but is never reached
+3. **An unbounded growth path.** Memory or handles growing with no ceiling
+   bounding the work — including a ceiling that exists but is never reached
    because the growth happens somewhere it does not measure.
 4. **A limit that reports the wrong thing.** A guard that fires but names an
    unrelated cause, or a message whose text points the user at the wrong fix,
    is a real defect: it costs a user more than a clear failure would.
 
-Ordinary rejected input that produces a clear message is **not** a finding.
+Input that is rejected with a clear message is working correctly and is **not**
+a finding.
 
 ## Ground already covered — do not re-report
 
-Thirteen builtins used to abort on wide input and were made iterative:
+Thirteen builtins used to terminate non-gracefully on wide input and were made iterative:
 `Replace`, `ReplaceAll`, `Cases`, `Count`, `Position`, `DeleteCases`,
 `ReplaceList`, `Reap` rendering, `UpValue`/`SubValue` dispatch, `StringReplace`,
 `StringCases`, `StringApply`. The parser's depth guard was split into delimiter,
@@ -47,18 +49,19 @@ were made iterative.
 
 Known and already recorded, so report only if the assessment is wrong:
 
-- `Module` bindings **with** initializers still recurse and abort near 8000 —
+- `Module` bindings **with** initializers still recurse and exhaust the native
+  stack near 8000 —
   found by the parallel complexity survey, already confirmed.
 - Deep `Expr` trees built through the Rust API can overflow on drop; three
   iterative `Drop` designs regressed the hot path 20-50% and were rejected.
 
 ## Where to look
 
-Weight the effort by what a user can actually feed the system:
+Weight the effort by the input surfaces an ordinary user reaches:
 
-- **Source text**: deeply nested or pathological syntax, very long lines,
-  unterminated constructs, CRLF, unusual whitespace, control characters,
-  malformed escapes, invalid or truncated UTF-8, a BOM, an empty file.
+- **Source text**: deep nesting, very long lines, unterminated constructs,
+  CRLF, unusual whitespace, control characters, incomplete escapes, invalid or
+  truncated UTF-8, a BOM, an empty file.
 - **Numbers**: enormous exponents, huge rationals, zero and negative arguments
   where a count is expected, values near integer type boundaries, and anything
   that turns a size argument into an allocation.
@@ -69,12 +72,12 @@ Weight the effort by what a user can actually feed the system:
   evaluation: patterns with conditions, delayed rules, format and print,
   comparison and sorting predicates, and the codec decoders.
 - **The codecs** (`FromToml`, `FromJson`, `FromYaml`, `FromCsv`, `FromIni`) on
-  truncated, deeply nested, and adversarially shaped documents.
+  truncated and deeply nested documents.
 - **Resource ceilings themselves**: what happens exactly at, and one past, each
   limit; whether a limit that refuses one operation leaves the session usable.
 
-Prefer breadth here: a single reproducible abort is worth more than a careful
-account of an input that merely returns a message.
+Prefer breadth: one reproducible non-graceful termination is worth more than a
+careful account of an input that correctly returns a message.
 
 ## What each finding must carry
 
@@ -88,11 +91,10 @@ account of an input that merely returns a message.
    the host API? Both matter; say which.
 6. **Whether an existing guard should have caught it**, and why it did not.
 
-Rank by (severity × reachability). A crash reachable from a plain script
-outranks a crash reachable only by building a pathological tree through the
-Rust API.
+Rank by (severity × reachability). A case reachable from an ordinary script
+outranks one reachable only by constructing a deep tree through the Rust API.
 
-**Report the negative cases too** — inputs you expected to break something and
+**Report the negative cases too** — paths you expected to terminate poorly and
 that behaved correctly. That list is what stops the next survey re-walking the
 same ground.
 
@@ -110,8 +112,8 @@ same ground.
 
 - **Minimize before reporting.** An unminimized case wastes the implementation
   brief's budget and often hides the real trigger.
-- **Distinguish slow from stuck.** Measure at two sizes before calling something
-  a hang.
+- **Distinguish slow from non-terminating.** Measure at two sizes before
+  reporting non-termination.
 - **A guard that fires is not a bug** — unless it names the wrong cause.
 - **Findings age.** 103 commits landed recently; confirm behavior on the current
   tree rather than on any earlier report.
