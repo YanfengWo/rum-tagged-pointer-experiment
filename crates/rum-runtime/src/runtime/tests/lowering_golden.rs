@@ -25,15 +25,12 @@ fn lowering_golden_forms_cover_three_link_left_chains() {
             "Times[a, Power[b, -1], Power[c, -1], Power[d, -1]]",
         ),
         ("8 / 2 / 4 / 2", "1/2"),
-        ("a . b . c . d", "Dot[Dot[Dot[a, b], c], d]"),
+        ("a . b . c . d", "Dot[a, b, c, d]"),
         (
             "a ** b ** c ** d",
             "NonCommutativeMultiply[NonCommutativeMultiply[NonCommutativeMultiply[a, b], c], d]",
         ),
-        (
-            "a <> b <> c <> d",
-            "StringJoin[StringJoin[StringJoin[a, b], c], d]",
-        ),
+        ("a <> b <> c <> d", "StringJoin[a, b, c, d]"),
         ("a::b::c::d", "a::b::c::d"),
         (
             "a /. b /. c /. d",
@@ -44,18 +41,12 @@ fn lowering_golden_forms_cover_three_link_left_chains() {
             "ReplaceRepeated[ReplaceRepeated[ReplaceRepeated[a, b], c], d]",
         ),
         ("a : b : c : d", "Optional[Optional[Pattern[a, b], c], d]"),
-        (
-            "a | b | c | d",
-            "Alternatives[Alternatives[Alternatives[a, b], c], d]",
-        ),
+        ("a | b | c | d", "Alternatives[a, b, c, d]"),
         (
             "a ? b ? c ? d",
             "PatternTest[PatternTest[PatternTest[a, b], c], d]",
         ),
-        (
-            "a ~~ b ~~ c ~~ d",
-            "StringExpression[StringExpression[StringExpression[a, b], c], d]",
-        ),
+        ("a ~~ b ~~ c ~~ d", "StringExpression[a, b, c, d]"),
         ("a // b // c // d", "d[c[b[a]]]"),
         ("a /* b /* c /* d", "RightComposition[a, b, c, d]"),
     ];
@@ -108,7 +99,7 @@ fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
         ("a // f /. r", "ReplaceAll[f, r][a]"),
         ("a ^= b", "UpSet[a, b]"),
         ("a ^:= b", "UpSetDelayed[a, b]"),
-        ("a . b . c", "Dot[Dot[a, b], c]"),
+        ("a . b . c", "Dot[a, b, c]"),
         ("a . b * c", "Times[Dot[a, b], c]"),
         ("a . b ^ c", "Dot[a, Power[b, c]]"),
         ("a ** b * c", "Times[NonCommutativeMultiply[a, b], c]"),

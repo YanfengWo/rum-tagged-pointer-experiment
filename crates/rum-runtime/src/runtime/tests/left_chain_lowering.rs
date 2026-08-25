@@ -63,6 +63,19 @@ fn left_chain_lowering_keeps_direct_canonical_calls_opaque() {
             "RightComposition[f, g] /* h /* k",
             "RightComposition[RightComposition[f, g], h, k]",
         ),
+        ("Dot[a, b] . c . d", "Dot[Dot[a, b], c, d]"),
+        (
+            "StringJoin[a, b] <> c <> d",
+            "StringJoin[StringJoin[a, b], c, d]",
+        ),
+        (
+            "Alternatives[a, b] | c | d",
+            "Alternatives[Alternatives[a, b], c, d]",
+        ),
+        (
+            "StringExpression[a, b] ~~ c ~~ d",
+            "StringExpression[StringExpression[a, b], c, d]",
+        ),
     ];
 
     for (source, expected) in cases {
@@ -108,6 +121,74 @@ fn held_sameq_explicitly_observes_flat_chain_shapes() {
         let value = session
             .eval_text(source)
             .expect("held SameQ case should evaluate");
+        assert_eq!(value.value.to_string(), expected, "{source}");
+    }
+}
+
+#[test]
+fn held_sameq_explicitly_observes_variadic_non_flat_chain_shapes() {
+    let mut session = Session::new();
+    crate::runtime::test_builtins::register_test_sameq_builtin(&mut session);
+
+    let cases = [
+        (
+            "SameQ[HoldComplete[a . b . c], HoldComplete[System`Dot[a, b, c]]]",
+            "True",
+        ),
+        (
+            "SameQ[HoldComplete[a . b . c], HoldComplete[System`Dot[System`Dot[a, b], c]]]",
+            "False",
+        ),
+        (
+            "SameQ[HoldComplete[a <> b <> c], HoldComplete[System`StringJoin[a, b, c]]]",
+            "True",
+        ),
+        (
+            "SameQ[HoldComplete[a <> b <> c], HoldComplete[System`StringJoin[System`StringJoin[a, b], c]]]",
+            "False",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        let value = session
+            .eval_text(source)
+            .expect("held variadic non-Flat SameQ case should evaluate");
+        assert_eq!(value.value.to_string(), expected, "{source}");
+    }
+}
+
+#[test]
+fn variadic_non_flat_chain_matching_shapes_are_explicit() {
+    let mut session = session_with_test_rewrite_builtins();
+    let cases = [
+        ("MatchQ[b, a | b | c]", "True"),
+        ("MatchQ[c, a | b | c]", "True"),
+        ("MatchQ[d, a | b | c]", "False"),
+        ("MatchQ[b, Alternatives[Alternatives[a, b], c]]", "True"),
+        ("MatchQ[c, Alternatives[Alternatives[a, b], c]]", "True"),
+        ("MatchQ[d, Alternatives[Alternatives[a, b], c]]", "False"),
+        (
+            "MatchQ[HoldComplete[a <> b <> c], HoldComplete[Verbatim[System`StringJoin][_, _]]]",
+            "False",
+        ),
+        (
+            "MatchQ[HoldComplete[a <> b <> c], HoldComplete[Verbatim[System`StringJoin][_, _, _]]]",
+            "True",
+        ),
+        (
+            "MatchQ[HoldComplete[a ~~ b ~~ c], HoldComplete[Verbatim[System`StringExpression][_, _]]]",
+            "False",
+        ),
+        (
+            "MatchQ[HoldComplete[a ~~ b ~~ c], HoldComplete[Verbatim[System`StringExpression][_, _, _]]]",
+            "True",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        let value = session
+            .eval_text(source)
+            .expect("variadic non-Flat matching case should evaluate");
         assert_eq!(value.value.to_string(), expected, "{source}");
     }
 }
@@ -205,6 +286,10 @@ fn assert_homogeneous_chain_shape(expr: &Expr, op: BinaryOp, link_count: usize) 
             | BinaryOp::Subtract
             | BinaryOp::Times
             | BinaryOp::Divide
+            | BinaryOp::Dot
+            | BinaryOp::StringJoin
+            | BinaryOp::Alternatives
+            | BinaryOp::StringExpression
             | BinaryOp::RightComposition
     ) {
         assert_flat_homogeneous_chain_shape(expr, op, link_count);
@@ -225,8 +310,12 @@ fn assert_flat_homogeneous_chain_shape(expr: &Expr, op: BinaryOp, link_count: us
     let expected_head = match op {
         BinaryOp::Add | BinaryOp::Subtract => heads::arithmetic::PLUS,
         BinaryOp::Times | BinaryOp::Divide => heads::arithmetic::TIMES,
+        BinaryOp::Dot => "Dot",
+        BinaryOp::StringJoin => "StringJoin",
+        BinaryOp::Alternatives => "Alternatives",
+        BinaryOp::StringExpression => "StringExpression",
         BinaryOp::RightComposition => "RightComposition",
-        _ => unreachable!("only flat-family operators reach this helper"),
+        _ => unreachable!("only flattened operators reach this helper"),
     };
     assert!(is_system_symbol_name(head, expected_head));
     assert_eq!(args.len(), link_count + 1);
@@ -234,12 +323,18 @@ fn assert_flat_homogeneous_chain_shape(expr: &Expr, op: BinaryOp, link_count: us
 
     for arg in &args[1..] {
         match op {
-            BinaryOp::Add | BinaryOp::Times | BinaryOp::RightComposition => {
+            BinaryOp::Add
+            | BinaryOp::Times
+            | BinaryOp::Dot
+            | BinaryOp::StringJoin
+            | BinaryOp::Alternatives
+            | BinaryOp::StringExpression
+            | BinaryOp::RightComposition => {
                 assert_global_a(arg);
             }
             BinaryOp::Subtract => assert_negated_global_a(arg),
             BinaryOp::Divide => assert_reciprocal_global_a(arg),
-            _ => unreachable!("only flat-family operators reach this helper"),
+            _ => unreachable!("only flattened operators reach this helper"),
         }
     }
 }

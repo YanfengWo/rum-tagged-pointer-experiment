@@ -148,8 +148,17 @@ links lower to one n-ary call. Right-composition chains do the same:
 - `a * b / c * d` lowers to `Times[a, b, Power[c, -1], d]`
 - `f /* g /* h` lowers to `RightComposition[f, g, h]`
 
+Four other variadic heads use the same n-ary chain shape:
+
+- `a . b . c` lowers to `Dot[a, b, c]`
+- `a <> b <> c` lowers to `StringJoin[a, b, c]`
+- `a | b | c` lowers to `Alternatives[a, b, c]`
+- `a ~~ b ~~ c` lowers to `StringExpression[a, b, c]`
+
 An explicitly written canonical call remains one opaque operand. For example,
-`Plus[a, b] + c + d` lowers to `Plus[Plus[a, b], c, d]`.
+`Plus[a, b] + c + d` lowers to `Plus[Plus[a, b], c, d]`, and
+`StringJoin[a, b] <> c <> d` lowers to
+`StringJoin[StringJoin[a, b], c, d]`.
 
 The evaluator may simplify those calls.
 

@@ -10,6 +10,7 @@ enum LeftChainAccumulator {
     Additive(Vec<Expr>),
     Multiplicative(Vec<Expr>),
     RightComposition(Vec<Expr>),
+    Variadic { head: &'static str, args: Vec<Expr> },
 }
 
 impl LeftChainAccumulator {
@@ -19,6 +20,7 @@ impl LeftChainAccumulator {
             Self::Additive(args) => canonical_call(heads::arithmetic::PLUS, args),
             Self::Multiplicative(args) => canonical_call(heads::arithmetic::TIMES, args),
             Self::RightComposition(args) => canonical_call("RightComposition", args),
+            Self::Variadic { head, args } => canonical_call(head, args),
         }
     }
 
@@ -60,6 +62,22 @@ impl LeftChainAccumulator {
                 Self::RightComposition(args)
             }
             other => Self::RightComposition(vec![other.into_expr(), rhs]),
+        }
+    }
+
+    fn append_variadic(self, head: &'static str, rhs: Expr) -> Self {
+        match self {
+            Self::Variadic {
+                head: active_head,
+                mut args,
+            } if active_head == head => {
+                args.push(rhs);
+                Self::Variadic { head, args }
+            }
+            other => Self::Variadic {
+                head,
+                args: vec![other.into_expr(), rhs],
+            },
         }
     }
 }
@@ -159,6 +177,16 @@ where
         BinaryOp::RightComposition => {
             return Ok(accumulator.append_right_composition(lowered_rhs));
         }
+        BinaryOp::Dot => return Ok(accumulator.append_variadic("Dot", lowered_rhs)),
+        BinaryOp::StringJoin => {
+            return Ok(accumulator.append_variadic("StringJoin", lowered_rhs));
+        }
+        BinaryOp::Alternatives => {
+            return Ok(accumulator.append_variadic("Alternatives", lowered_rhs));
+        }
+        BinaryOp::StringExpression => {
+            return Ok(accumulator.append_variadic("StringExpression", lowered_rhs));
+        }
         _ => {}
     }
 
@@ -197,29 +225,13 @@ where
                 )))
             }
         }
-        BinaryOp::Alternatives => Ok(LeftChainAccumulator::Opaque(canonical_call(
-            "Alternatives",
-            vec![accumulator, lowered_rhs],
-        ))),
         BinaryOp::PatternTest => Ok(LeftChainAccumulator::Opaque(canonical_call(
             "PatternTest",
-            vec![accumulator, lowered_rhs],
-        ))),
-        BinaryOp::StringExpression => Ok(LeftChainAccumulator::Opaque(canonical_call(
-            "StringExpression",
-            vec![accumulator, lowered_rhs],
-        ))),
-        BinaryOp::StringJoin => Ok(LeftChainAccumulator::Opaque(canonical_call(
-            "StringJoin",
             vec![accumulator, lowered_rhs],
         ))),
         BinaryOp::PostfixApply => Ok(LeftChainAccumulator::Opaque(Expr::call(
             lowered_rhs,
             vec![accumulator],
-        ))),
-        BinaryOp::Dot => Ok(LeftChainAccumulator::Opaque(canonical_call(
-            "Dot",
-            vec![accumulator, lowered_rhs],
         ))),
         BinaryOp::NonCommutativeMultiply => Ok(LeftChainAccumulator::Opaque(canonical_call(
             "NonCommutativeMultiply",
@@ -229,8 +241,12 @@ where
         | BinaryOp::Subtract
         | BinaryOp::Times
         | BinaryOp::Divide
+        | BinaryOp::Dot
+        | BinaryOp::StringJoin
+        | BinaryOp::Alternatives
+        | BinaryOp::StringExpression
         | BinaryOp::RightComposition => {
-            unreachable!("flat-family link handled before materializing")
+            unreachable!("variadic-family link handled before materializing")
         }
         _ => unreachable!("non-iterative operator in left-chain fold"),
     }
