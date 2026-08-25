@@ -136,6 +136,7 @@ mod holding_and_control_io;
 mod holding_and_control_part2;
 mod hygiene;
 mod iterative_loop_drivers;
+mod left_chain_lowering;
 mod lowering_and_context;
 mod lowering_golden;
 mod messages;

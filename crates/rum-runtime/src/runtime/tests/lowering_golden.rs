@@ -12,6 +12,63 @@ fn assert_lowered_display(source: &str, expected: &str) {
 }
 
 #[test]
+fn lowering_golden_forms_cover_three_link_left_chains() {
+    let cases = [
+        ("a + b + c + d", "Plus[Plus[Plus[a, b], c], d]"),
+        (
+            "a - b - c - d",
+            "Plus[Plus[Plus[a, Times[-1, b]], Times[-1, c]], Times[-1, d]]",
+        ),
+        ("a * b * c * d", "Times[Times[Times[a, b], c], d]"),
+        (
+            "a / b / c / d",
+            "Times[Times[Times[a, Power[b, -1]], Power[c, -1]], Power[d, -1]]",
+        ),
+        ("8 / 2 / 4 / 2", "1/2"),
+        ("a . b . c . d", "Dot[Dot[Dot[a, b], c], d]"),
+        (
+            "a ** b ** c ** d",
+            "NonCommutativeMultiply[NonCommutativeMultiply[NonCommutativeMultiply[a, b], c], d]",
+        ),
+        (
+            "a <> b <> c <> d",
+            "StringJoin[StringJoin[StringJoin[a, b], c], d]",
+        ),
+        ("a::b::c::d", "a::b::c::d"),
+        (
+            "a /. b /. c /. d",
+            "ReplaceAll[ReplaceAll[ReplaceAll[a, b], c], d]",
+        ),
+        (
+            "a //. b //. c //. d",
+            "ReplaceRepeated[ReplaceRepeated[ReplaceRepeated[a, b], c], d]",
+        ),
+        ("a : b : c : d", "Optional[Optional[Pattern[a, b], c], d]"),
+        (
+            "a | b | c | d",
+            "Alternatives[Alternatives[Alternatives[a, b], c], d]",
+        ),
+        (
+            "a ? b ? c ? d",
+            "PatternTest[PatternTest[PatternTest[a, b], c], d]",
+        ),
+        (
+            "a ~~ b ~~ c ~~ d",
+            "StringExpression[StringExpression[StringExpression[a, b], c], d]",
+        ),
+        ("a // b // c // d", "d[c[b[a]]]"),
+        (
+            "a /* b /* c /* d",
+            "RightComposition[RightComposition[RightComposition[a, b], c], d]",
+        ),
+    ];
+
+    for (source, expected) in cases {
+        assert_lowered_display(source, expected);
+    }
+}
+
+#[test]
 fn lowering_golden_forms_cover_rules_patterns_slots_and_scoping() {
     let cases = [
         ("f[a, b]", "f[a, b]"),

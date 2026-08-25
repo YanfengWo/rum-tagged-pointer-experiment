@@ -1,22 +1,10 @@
 use super::*;
 
 mod comparison;
+mod left_chain;
 
 use comparison::{comparison_head, lower_comparison_chain};
-
-fn numeric_literal_rational(expr: &Expr) -> Option<Rational> {
-    match expr {
-        Expr::Atom(Atom::Integer(value)) => Some(Rational::from_integer(value.to_bigint())),
-        Expr::Atom(Atom::Rational(value)) => Some(value.as_ref().clone()),
-        _ => None,
-    }
-}
-
-fn divided_numeric_literals(lhs: &Expr, rhs: &Expr) -> Option<Expr> {
-    Some(Expr::rational(
-        numeric_literal_rational(lhs)?.div(&numeric_literal_rational(rhs)?)?,
-    ))
-}
+use left_chain::{is_iterative_left_chain_op, lower_left_chain};
 
 pub(super) fn lower_binary_sugar<F>(
     op: BinaryOp,
@@ -35,22 +23,14 @@ where
         return lower_compound_expression_sugar(lhs, rhs, resolve_symbol);
     }
 
+    if is_iterative_left_chain_op(op) {
+        return lower_left_chain(op, lhs, rhs, resolve_symbol);
+    }
+
     let lowered_lhs = lower_syntax_expr_with(lhs, resolve_symbol)?;
     let lowered_rhs = lower_syntax_expr_with(rhs, resolve_symbol)?;
 
     match op {
-        BinaryOp::MessageName => Ok(message_name_expr(
-            match lowered_lhs {
-                Expr::Atom(Atom::Symbol(symbol)) => symbol,
-                other => {
-                    return Ok(canonical_call(
-                        heads::messages::MESSAGE_NAME,
-                        vec![other, lower_message_tag_expr(rhs, resolve_symbol)?],
-                    ));
-                }
-            },
-            lower_message_tag_string(rhs),
-        )),
         BinaryOp::TagSet => lower_tag_set_sugar(lowered_lhs, lowered_rhs),
         BinaryOp::Set => Ok(canonical_call(
             heads::rules::SET,
@@ -73,14 +53,6 @@ where
             "UpSetDelayed",
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::ReplaceAll => Ok(canonical_call(
-            heads::rules::REPLACE_ALL,
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::ReplaceRepeated => Ok(canonical_call(
-            heads::rules::REPLACE_REPEATED,
-            vec![lowered_lhs, lowered_rhs],
-        )),
         BinaryOp::Rule => Ok(canonical_call(
             heads::rules::RULE,
             vec![lowered_lhs, lowered_rhs],
@@ -95,31 +67,7 @@ where
         )),
         BinaryOp::Or => Ok(canonical_call("Or", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::And => Ok(canonical_call("And", vec![lowered_lhs, lowered_rhs])),
-        BinaryOp::Pattern => {
-            if matches!(&lowered_lhs, Expr::Atom(Atom::Symbol(_))) {
-                Ok(canonical_call(
-                    heads::patterns::PATTERN,
-                    vec![lowered_lhs, lowered_rhs],
-                ))
-            } else {
-                Ok(canonical_call("Optional", vec![lowered_lhs, lowered_rhs]))
-            }
-        }
-        BinaryOp::Alternatives => Ok(canonical_call(
-            "Alternatives",
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::PatternTest => Ok(canonical_call(
-            "PatternTest",
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::StringExpression => Ok(canonical_call(
-            "StringExpression",
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::StringJoin => Ok(canonical_call("StringJoin", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::Apply => Ok(Expr::call(lowered_lhs, vec![lowered_rhs])),
-        BinaryOp::PostfixApply => Ok(Expr::call(lowered_rhs, vec![lowered_lhs])),
         BinaryOp::Map => Ok(canonical_call("Map", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::MapAll => Ok(canonical_call("MapAll", vec![lowered_lhs, lowered_rhs])),
         BinaryOp::ApplyHead => Ok(canonical_call("Apply", vec![lowered_lhs, lowered_rhs])),
@@ -128,49 +76,6 @@ where
             "Composition",
             vec![lowered_lhs, lowered_rhs],
         )),
-        BinaryOp::RightComposition => Ok(canonical_call(
-            "RightComposition",
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::Add => Ok(canonical_call(
-            heads::arithmetic::PLUS,
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::Subtract => Ok(canonical_call(
-            heads::arithmetic::PLUS,
-            vec![
-                lowered_lhs,
-                canonical_call(
-                    heads::arithmetic::TIMES,
-                    vec![Expr::integer(BigInt::from(-1)), lowered_rhs],
-                ),
-            ],
-        )),
-        BinaryOp::Times => Ok(canonical_call(
-            heads::arithmetic::TIMES,
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::Dot => Ok(canonical_call("Dot", vec![lowered_lhs, lowered_rhs])),
-        BinaryOp::NonCommutativeMultiply => Ok(canonical_call(
-            "NonCommutativeMultiply",
-            vec![lowered_lhs, lowered_rhs],
-        )),
-        BinaryOp::Divide => {
-            if let Some(quotient) = divided_numeric_literals(&lowered_lhs, &lowered_rhs) {
-                Ok(quotient)
-            } else {
-                Ok(canonical_call(
-                    heads::arithmetic::TIMES,
-                    vec![
-                        lowered_lhs,
-                        canonical_call(
-                            heads::arithmetic::POWER,
-                            vec![lowered_rhs, Expr::integer(BigInt::from(-1))],
-                        ),
-                    ],
-                ))
-            }
-        }
         BinaryOp::Power => Ok(canonical_call(
             heads::arithmetic::POWER,
             vec![lowered_lhs, lowered_rhs],
@@ -190,6 +95,22 @@ where
         BinaryOp::CompoundExpression => {
             unreachable!("compound expression handled before lowering operands")
         }
+        BinaryOp::MessageName
+        | BinaryOp::ReplaceAll
+        | BinaryOp::ReplaceRepeated
+        | BinaryOp::Pattern
+        | BinaryOp::Alternatives
+        | BinaryOp::PatternTest
+        | BinaryOp::StringExpression
+        | BinaryOp::StringJoin
+        | BinaryOp::PostfixApply
+        | BinaryOp::RightComposition
+        | BinaryOp::Add
+        | BinaryOp::Subtract
+        | BinaryOp::Times
+        | BinaryOp::Dot
+        | BinaryOp::NonCommutativeMultiply
+        | BinaryOp::Divide => unreachable!("left-chain ops handled before lowering operands"),
     }
 }
 
