@@ -38,7 +38,7 @@ pub(crate) use self::{
     mutation::{eval_associate_to, eval_key_drop_from},
     resumable::{
         eval_association_map, eval_counts_by, eval_key_select, eval_key_sort_by, eval_merge,
-        eval_merge_nested, resume_key_sort_with_ordering_from_index,
+        eval_merge_nested, sort_key_entries_with_ordering,
     },
     transforms::{
         eval_association_thread, eval_key_complement, eval_key_intersection, eval_key_map,

@@ -4,19 +4,21 @@ use rum_runtime::kernel_api::{EvalError, Session};
 use super::is_true_expr;
 
 #[derive(Clone, Copy)]
-pub(super) enum ComparatorResultPolicy {
+pub(crate) enum ComparatorResultPolicy {
     ExactTrue,
+    Custom(fn(&Expr) -> bool),
 }
 
 impl ComparatorResultPolicy {
     fn strictly_precedes(self, value: &Expr) -> bool {
         match self {
             Self::ExactTrue => is_true_expr(value),
+            Self::Custom(decision) => decision(value),
         }
     }
 }
 
-pub(super) trait MergeSortItem {
+pub(crate) trait MergeSortItem {
     fn ordering_value(&self) -> &Expr;
 }
 
@@ -72,7 +74,7 @@ struct MergeSortState<T, C> {
     next_runs: Vec<Run<T>>,
 }
 
-pub(super) fn sort_with_comparator<T, C>(
+pub(crate) fn sort_with_comparator<T, C>(
     session: &mut Session,
     items: Vec<T>,
     ordering: Expr,

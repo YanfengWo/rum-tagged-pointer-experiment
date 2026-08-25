@@ -1,4 +1,5 @@
 use super::*;
+use crate::structure_ops::{ComparatorResultPolicy, MergeSortItem, sort_with_comparator};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum KeySortOrderingDecision {
@@ -12,9 +13,28 @@ struct KeySortByEntry {
     sort_key: Expr,
 }
 
+impl MergeSortItem for AssociationEntryForm {
+    fn ordering_value(&self) -> &Expr {
+        &self.key
+    }
+}
+
+impl MergeSortItem for KeySortByEntry {
+    fn ordering_value(&self) -> &Expr {
+        &self.sort_key
+    }
+}
+
+struct KeySortByOrderingState {
+    function: Expr,
+    ordering: Expr,
+    remaining: std::vec::IntoIter<AssociationEntryForm>,
+    decorated: Vec<KeySortByEntry>,
+}
+
 pub(crate) fn eval_key_sort_by(
     session: &mut Session,
-    head: &Expr,
+    _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     match args {
@@ -45,15 +65,15 @@ pub(crate) fn eval_key_sort_by(
                 ));
             };
 
-            resume_key_sort_by_ordering_from_index(
+            let decorated = Vec::with_capacity(entries.len());
+            resume_key_sort_by_ordering(
                 session,
-                head.clone(),
-                args.to_vec(),
-                function.clone(),
-                ordering.clone(),
-                entries,
-                0,
-                Vec::new(),
+                KeySortByOrderingState {
+                    function: function.clone(),
+                    ordering: ordering.clone(),
+                    remaining: entries.into_iter(),
+                    decorated,
+                },
             )
         }
         _ => Ok(session.invalid_call_with_message(
@@ -65,129 +85,18 @@ pub(crate) fn eval_key_sort_by(
     }
 }
 
-pub(crate) fn resume_key_sort_with_ordering_from_index(
+pub(crate) fn sort_key_entries_with_ordering(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     ordering: Expr,
     entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<AssociationEntryForm>,
 ) -> Result<Expr, EvalError> {
-    let Some(candidate) = entries.get(index).cloned() else {
-        return Ok(render_association_entry_forms_preserving_heads(sorted));
-    };
-
-    resume_key_sort_with_ordering_insert(
-        session, head, call_args, ordering, entries, index, sorted, candidate, 0,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_key_sort_with_ordering_insert(
-    session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
-    ordering: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<AssociationEntryForm>,
-    candidate: AssociationEntryForm,
-    insert_index: usize,
-) -> Result<Expr, EvalError> {
-    let Some(existing) = sorted.get(insert_index).cloned() else {
-        let mut next_sorted = sorted;
-        next_sorted.push(candidate);
-        return resume_key_sort_with_ordering_from_index(
-            session,
-            head,
-            call_args,
-            ordering,
-            entries,
-            index + 1,
-            next_sorted,
-        );
-    };
-
-    let compare_result = session.evaluate(Expr::call(
-        ordering.clone(),
-        vec![candidate.key.clone(), existing.key],
-    ));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_ordering = ordering.clone();
-    let suspended_entries = entries.clone();
-    let suspended_sorted = sorted.clone();
-    let suspended_candidate = candidate.clone();
-    let compare_value =
-        session.suspend_with_frame(compare_result, move |session, compare_value| {
-            resume_key_sort_with_ordering_after_compare(
-                session,
-                suspended_head,
-                suspended_call_args,
-                suspended_ordering,
-                suspended_entries,
-                index,
-                suspended_sorted,
-                suspended_candidate,
-                insert_index,
-                compare_value,
-            )
-        })?;
-
-    resume_key_sort_with_ordering_after_compare(
+    sort_with_comparator(
         session,
-        head,
-        call_args,
-        ordering,
         entries,
-        index,
-        sorted,
-        candidate,
-        insert_index,
-        compare_value,
+        ordering,
+        ComparatorResultPolicy::Custom(key_sort_ordering_precedes),
+        render_association_entry_forms_preserving_heads,
     )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_key_sort_with_ordering_after_compare(
-    session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
-    ordering: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<AssociationEntryForm>,
-    candidate: AssociationEntryForm,
-    insert_index: usize,
-    compare_value: Expr,
-) -> Result<Expr, EvalError> {
-    match key_sort_ordering_decision(&compare_value) {
-        KeySortOrderingDecision::InsertBefore => {
-            let mut next_sorted = sorted;
-            next_sorted.insert(insert_index, candidate);
-            resume_key_sort_with_ordering_from_index(
-                session,
-                head,
-                call_args,
-                ordering,
-                entries,
-                index + 1,
-                next_sorted,
-            )
-        }
-        KeySortOrderingDecision::KeepScanning => resume_key_sort_with_ordering_insert(
-            session,
-            head,
-            call_args,
-            ordering,
-            entries,
-            index,
-            sorted,
-            candidate,
-            insert_index + 1,
-        ),
-    }
 }
 
 fn resume_key_sort_by_from_index(
@@ -239,191 +148,46 @@ fn resume_key_sort_by_with_value(
     resume_key_sort_by_from_index(session, function, entries, index + 1, decorated)
 }
 
-#[allow(clippy::too_many_arguments)]
-fn resume_key_sort_by_ordering_from_index(
+fn resume_key_sort_by_ordering(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
-    function: Expr,
-    ordering: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<KeySortByEntry>,
+    mut state: KeySortByOrderingState,
 ) -> Result<Expr, EvalError> {
-    let Some(entry) = entries.get(index).cloned() else {
-        return Ok(render_association_entry_forms_preserving_heads(
-            sorted.into_iter().map(|entry| entry.entry).collect(),
-        ));
-    };
-
-    let sort_key_result = session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()]));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_function = function.clone();
-    let suspended_ordering = ordering.clone();
-    let suspended_entries = entries.clone();
-    let suspended_sorted = sorted.clone();
-    let suspended_entry = entry.clone();
-    let sort_key = session.suspend_with_frame(sort_key_result, move |session, sort_key| {
-        resume_key_sort_by_ordering_with_key(
-            session,
-            suspended_head,
-            suspended_call_args,
-            suspended_function,
-            suspended_ordering,
-            suspended_entries,
-            index,
-            suspended_sorted,
-            suspended_entry,
-            sort_key,
-        )
-    })?;
-
-    resume_key_sort_by_ordering_with_key(
-        session, head, call_args, function, ordering, entries, index, sorted, entry, sort_key,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_key_sort_by_ordering_with_key(
-    session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
-    function: Expr,
-    ordering: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<KeySortByEntry>,
-    entry: AssociationEntryForm,
-    sort_key: Expr,
-) -> Result<Expr, EvalError> {
-    resume_key_sort_by_ordering_insert(
-        session,
-        head,
-        call_args,
-        function,
-        ordering,
-        entries,
-        index,
-        sorted,
-        KeySortByEntry { entry, sort_key },
-        0,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_key_sort_by_ordering_insert(
-    session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
-    function: Expr,
-    ordering: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<KeySortByEntry>,
-    candidate: KeySortByEntry,
-    insert_index: usize,
-) -> Result<Expr, EvalError> {
-    let Some(existing) = sorted.get(insert_index).cloned() else {
-        let mut next_sorted = sorted;
-        next_sorted.push(candidate);
-        return resume_key_sort_by_ordering_from_index(
-            session,
-            head,
-            call_args,
-            function,
-            ordering,
-            entries,
-            index + 1,
-            next_sorted,
-        );
-    };
-
-    let compare_result = session.evaluate(Expr::call(
-        ordering.clone(),
-        vec![candidate.sort_key.clone(), existing.sort_key],
-    ));
-    let suspended_head = head.clone();
-    let suspended_call_args = call_args.clone();
-    let suspended_function = function.clone();
-    let suspended_ordering = ordering.clone();
-    let suspended_entries = entries.clone();
-    let suspended_sorted = sorted.clone();
-    let suspended_candidate = candidate.clone();
-    let compare_value =
-        session.suspend_with_frame(compare_result, move |session, compare_value| {
-            resume_key_sort_by_ordering_after_compare(
+    loop {
+        let Some(entry) = state.remaining.next() else {
+            return sort_with_comparator(
                 session,
-                suspended_head,
-                suspended_call_args,
-                suspended_function,
-                suspended_ordering,
-                suspended_entries,
-                index,
-                suspended_sorted,
-                suspended_candidate,
-                insert_index,
-                compare_value,
-            )
-        })?;
+                state.decorated,
+                state.ordering,
+                ComparatorResultPolicy::Custom(key_sort_ordering_precedes),
+                |sorted| {
+                    render_association_entry_forms_preserving_heads(
+                        sorted.into_iter().map(|entry| entry.entry).collect(),
+                    )
+                },
+            );
+        };
 
-    resume_key_sort_by_ordering_after_compare(
-        session,
-        head,
-        call_args,
-        function,
-        ordering,
-        entries,
-        index,
-        sorted,
-        candidate,
-        insert_index,
-        compare_value,
-    )
-}
+        let sort_key =
+            match session.evaluate(Expr::call(state.function.clone(), vec![entry.key.clone()])) {
+                Ok(sort_key) => sort_key,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, sort_key| {
+                            state.decorated.push(KeySortByEntry { entry, sort_key });
+                            resume_key_sort_by_ordering(session, state)
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
 
-#[allow(clippy::too_many_arguments)]
-fn resume_key_sort_by_ordering_after_compare(
-    session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
-    function: Expr,
-    ordering: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    sorted: Vec<KeySortByEntry>,
-    candidate: KeySortByEntry,
-    insert_index: usize,
-    compare_value: Expr,
-) -> Result<Expr, EvalError> {
-    match key_sort_ordering_decision(&compare_value) {
-        KeySortOrderingDecision::InsertBefore => {
-            let mut next_sorted = sorted;
-            next_sorted.insert(insert_index, candidate);
-            resume_key_sort_by_ordering_from_index(
-                session,
-                head,
-                call_args,
-                function,
-                ordering,
-                entries,
-                index + 1,
-                next_sorted,
-            )
-        }
-        KeySortOrderingDecision::KeepScanning => resume_key_sort_by_ordering_insert(
-            session,
-            head,
-            call_args,
-            function,
-            ordering,
-            entries,
-            index,
-            sorted,
-            candidate,
-            insert_index + 1,
-        ),
+        state.decorated.push(KeySortByEntry { entry, sort_key });
     }
+}
+
+fn key_sort_ordering_precedes(value: &Expr) -> bool {
+    key_sort_ordering_decision(value) == KeySortOrderingDecision::InsertBefore
 }
 
 fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {

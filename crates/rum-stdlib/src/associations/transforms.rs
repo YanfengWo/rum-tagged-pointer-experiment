@@ -82,7 +82,7 @@ pub(crate) fn eval_key_value_map(
 
 pub(crate) fn eval_key_sort(
     session: &mut Session,
-    head: &Expr,
+    _head: &Expr,
     args: &[Expr],
 ) -> Result<Expr, EvalError> {
     match args {
@@ -109,15 +109,7 @@ pub(crate) fn eval_key_sort(
                 ));
             };
 
-            resume_key_sort_with_ordering_from_index(
-                session,
-                head.clone(),
-                args.to_vec(),
-                ordering.clone(),
-                entries,
-                0,
-                Vec::new(),
-            )
+            sort_key_entries_with_ordering(session, ordering.clone(), entries)
         }
         _ => Ok(session.invalid_call_with_message(
             "KeySort",
