@@ -410,6 +410,7 @@ fn association_lvalue_absent_stale_and_dirty_proofs_recover_by_recomputation() {
         session_with_stable_association("absentProofAssociation");
     absent_session.clear_evaluation_caches();
     let absent_before = association_definition_args_key(&absent_session, &absent_target);
+    let absent_key_before = association_definition_cache_key(&absent_session, &absent_target);
     absent_session
         .eval_text("absentProofAssociation[x] = 2")
         .unwrap();
@@ -421,14 +422,22 @@ fn association_lvalue_absent_stale_and_dirty_proofs_recover_by_recomputation() {
         own_value_text(&absent_session, &absent_target),
         "Association[Rule[x, 2]]"
     );
-    assert!(absent_session.has_valid_call_stability_proof_for_key(
-        association_definition_cache_key(&absent_session, &absent_target,)
-    ));
+    // The cache key covers the head as well as the args, so recomputing it
+    // here would hide a moved head behind a missing-proof failure. Pin the
+    // allocation first, then look the proof up under the key it was seeded
+    // with.
+    assert_eq!(
+        association_definition_cache_key(&absent_session, &absent_target),
+        absent_key_before,
+        "the recovering write must leave the head and args allocations in place"
+    );
+    assert!(absent_session.has_valid_call_stability_proof_for_key(absent_key_before));
 
     let (mut stale_session, stale_target) =
         session_with_stable_association("staleProofAssociation");
     stale_session.call_stability_generation += 1;
     let stale_before = association_definition_args_key(&stale_session, &stale_target);
+    let stale_key_before = association_definition_cache_key(&stale_session, &stale_target);
     stale_session
         .eval_text("staleProofAssociation[x] = 2")
         .unwrap();
@@ -440,14 +449,22 @@ fn association_lvalue_absent_stale_and_dirty_proofs_recover_by_recomputation() {
         own_value_text(&stale_session, &stale_target),
         "Association[Rule[x, 2]]"
     );
-    assert!(stale_session.has_valid_call_stability_proof_for_key(
-        association_definition_cache_key(&stale_session, &stale_target,)
-    ));
+    // The cache key covers the head as well as the args, so recomputing it
+    // here would hide a moved head behind a missing-proof failure. Pin the
+    // allocation first, then look the proof up under the key it was seeded
+    // with.
+    assert_eq!(
+        association_definition_cache_key(&stale_session, &stale_target),
+        stale_key_before,
+        "the recovering write must leave the head and args allocations in place"
+    );
+    assert!(stale_session.has_valid_call_stability_proof_for_key(stale_key_before));
 
     let (mut dirty_session, dirty_target) =
         session_with_stable_association("dirtyProofAssociation");
     dirty_session.bump_evaluation_epoch_for_symbol(&Symbol::new(GLOBAL_CONTEXT, "x"));
     let dirty_before = association_definition_args_key(&dirty_session, &dirty_target);
+    let dirty_key_before = association_definition_cache_key(&dirty_session, &dirty_target);
     dirty_session
         .eval_text("dirtyProofAssociation[x] = 2")
         .unwrap();
@@ -459,9 +476,16 @@ fn association_lvalue_absent_stale_and_dirty_proofs_recover_by_recomputation() {
         own_value_text(&dirty_session, &dirty_target),
         "Association[Rule[x, 2]]"
     );
-    assert!(dirty_session.has_valid_call_stability_proof_for_key(
-        association_definition_cache_key(&dirty_session, &dirty_target,)
-    ));
+    // The cache key covers the head as well as the args, so recomputing it
+    // here would hide a moved head behind a missing-proof failure. Pin the
+    // allocation first, then look the proof up under the key it was seeded
+    // with.
+    assert_eq!(
+        association_definition_cache_key(&dirty_session, &dirty_target),
+        dirty_key_before,
+        "the recovering write must leave the head and args allocations in place"
+    );
+    assert!(dirty_session.has_valid_call_stability_proof_for_key(dirty_key_before));
 }
 
 #[test]
