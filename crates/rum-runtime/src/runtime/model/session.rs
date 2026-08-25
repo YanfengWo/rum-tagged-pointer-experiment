@@ -109,7 +109,8 @@ pub struct Session {
     pub(in crate::runtime) eval_timeout: Option<Duration>,
     pub(in crate::runtime) eval_deadline: Option<Instant>,
     pub(in crate::runtime) interrupt_poll_counter: u64,
-    pub(in crate::runtime) iteration_product_budget: std::cell::Cell<usize>,
+    // Running iteration product paired with its `IterationConsumer` tag.
+    pub(in crate::runtime) iteration_product_budget: std::cell::Cell<(usize, u8)>,
     pub(in crate::runtime) capability_policy: CapabilityPolicy,
 }
 

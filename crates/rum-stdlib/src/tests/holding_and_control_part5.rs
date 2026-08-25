@@ -354,12 +354,12 @@ fn multi_iterator_control_siblings_charge_iteration_product() {
 }
 
 #[test]
-fn evaluated_iterator_counts_charge_the_running_product() {
+fn large_iteration_products_still_refuse() {
     for (source, termination, message) in [
         (
-            "n = 10^4; Do[0, {i, 1, n}, {j, 1, n}]",
-            "TerminatedEvaluation[\"IterationWorkLimit\"]",
-            "evaluation exceeded iteration work limit (100000)",
+            "Table[0, {i, 1, 10^4}, {j, 1, 10^4}]",
+            "TerminatedEvaluation[\"GeneratedElementLimit\"]",
+            "evaluation exceeded generated element limit (100000)",
         ),
         (
             "n = 10^4; Table[0, {i, 1, n}, {j, 1, n}]",
@@ -367,14 +367,24 @@ fn evaluated_iterator_counts_charge_the_running_product() {
             "evaluation exceeded generated element limit (100000)",
         ),
         (
-            "n = 10^4; Sum[1, {i, 1, n}, {j, 1, n}]",
-            "TerminatedEvaluation[\"IterationWorkLimit\"]",
-            "evaluation exceeded iteration work limit (100000)",
+            "n = 10^4; Table[Table[0, {j, 1, n}], {i, 1, n}]",
+            "TerminatedEvaluation[\"GeneratedElementLimit\"]",
+            "evaluation exceeded generated element limit (100000)",
         ),
         (
             "Table[0, {i, 1, 10^4}, {j, 1, i}]",
             "TerminatedEvaluation[\"GeneratedElementLimit\"]",
             "evaluation exceeded generated element limit (100000)",
+        ),
+        (
+            "n = 10^4; Do[0, {i, 1, n}, {j, 1, n}]",
+            "TerminatedEvaluation[\"IterationWorkLimit\"]",
+            "evaluation exceeded iteration work limit (100000)",
+        ),
+        (
+            "n = 10^4; Sum[1, {i, 1, n}, {j, 1, n}]",
+            "TerminatedEvaluation[\"IterationWorkLimit\"]",
+            "evaluation exceeded iteration work limit (100000)",
         ),
     ] {
         let mut session = core_session();
@@ -389,6 +399,31 @@ fn evaluated_iterator_counts_charge_the_running_product() {
             "{source} messages {:?}",
             refused.messages
         );
+    }
+}
+
+#[test]
+fn non_retaining_consumers_do_not_propagate_their_product_into_table() {
+    for (source, expected) in [
+        ("Do[Table[i, {i, 1, 1000}], {200}]", "Null"),
+        ("Do[Length[Table[i, {i, 1, 500}]], {500}]", "Null"),
+    ] {
+        let mut session = core_session();
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(outcome.messages.is_empty(), "{source}");
+    }
+
+    for (source, expected) in [
+        ("Sum[Length[Table[i, {i, 1, 3}]], {2}]", "6"),
+        ("Product[Length[Table[i, {i, 1, 3}]], {2}]", "9"),
+    ] {
+        let mut session = core_session();
+        session.set_generated_element_limit(5);
+        session.set_iteration_work_limit(5);
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(outcome.messages.is_empty(), "{source}");
     }
 }
 

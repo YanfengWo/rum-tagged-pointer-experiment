@@ -463,7 +463,7 @@ impl Session {
             next_source_unit_epoch: 0,
             restoring_snapshot: false,
             resource_limits: ResourceLimits::default(),
-            iteration_product_budget: std::cell::Cell::new(1),
+            iteration_product_budget: std::cell::Cell::new((1, 0)),
             evaluation_depth: 0,
             match_depth: 0,
             native_stack_base: 0,

@@ -14,17 +14,17 @@ impl Session {
     where
         F: FnOnce(&mut Session) -> Result<Expr, EvalError>,
     {
-        let parent_product = self.iteration_product_budget.get();
+        let parent_budget = self.iteration_product_budget.get();
         match evaluate(self) {
             Err(EvalError::InputRequired { request }) => {
                 self.push_suspension_frame(move |session, outcome| {
-                    session.iteration_product_budget.set(parent_product);
+                    session.iteration_product_budget.set(parent_budget);
                     outcome
                 });
                 Err(EvalError::InputRequired { request })
             }
             outcome => {
-                self.iteration_product_budget.set(parent_product);
+                self.iteration_product_budget.set(parent_budget);
                 outcome
             }
         }
@@ -38,6 +38,7 @@ pub(super) enum DoSpec {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub(super) enum IterationConsumer {
     Do,
     Product,
@@ -55,6 +56,15 @@ impl DoSpec {
 }
 
 impl IterationConsumer {
+    fn product_scope_tag(self) -> u8 {
+        self as u8 + 1
+    }
+
+    fn inherits_product_from(self, enclosing_consumer_tag: u8) -> bool {
+        enclosing_consumer_tag == self.product_scope_tag()
+            || enclosing_consumer_tag == Self::Table.product_scope_tag()
+    }
+
     fn accepts_bare_count(self) -> bool {
         matches!(self, Self::Do | Self::Table)
     }

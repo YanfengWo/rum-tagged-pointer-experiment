@@ -273,12 +273,18 @@ fn checked_iteration_count(
     count: &BigInt,
     consumer: IterationConsumer,
 ) -> Result<usize, EvalError> {
-    let parent_product = session.iteration_product_budget.get();
+    let (scoped_product, enclosing_consumer_tag) = session.iteration_product_budget.get();
+    let consumer_tag = consumer.product_scope_tag();
+    let parent_product = if consumer.inherits_product_from(enclosing_consumer_tag) {
+        scoped_product
+    } else {
+        1
+    };
     if parent_product == 1 {
         enforce_iteration_count_limits(session, count, consumer, true)?;
         let count = bigint_count_to_usize(count)
             .expect("resource limit prechecks keep iteration counts representable");
-        session.iteration_product_budget.set(count);
+        session.iteration_product_budget.set((count, consumer_tag));
         return Ok(count);
     }
 
@@ -296,7 +302,9 @@ fn checked_iteration_count(
         unreachable!("an overflowing running product must exceed a usize resource limit");
     };
     enforce_iteration_count_limits_for_count(session, accumulated_count, consumer)?;
-    session.iteration_product_budget.set(accumulated_count);
+    session
+        .iteration_product_budget
+        .set((accumulated_count, consumer_tag));
 
     Ok(count)
 }
