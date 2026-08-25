@@ -1,6 +1,6 @@
 use rum_core::Expr;
 
-use super::{YamlParseError, association_expr, list_expr, symbol_value};
+use super::{MAX_YAML_DEPTH, YamlParseError, association_expr, list_expr, symbol_value};
 use crate::adaptive_set::StringFingerprintIndex;
 
 mod lines;
@@ -73,7 +73,7 @@ impl<'a> Parser<'a> {
             ));
         }
 
-        let value = self.parse_block(first.indent)?;
+        let value = self.parse_block(first.indent, 0)?;
         if let Some(line) = self.peek_content() {
             return Err(YamlParseError::new(
                 line.content_start,
@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
         Ok(value)
     }
 
-    fn parse_block(&mut self, indent: usize) -> Result<Expr, YamlParseError> {
+    fn parse_block(&mut self, indent: usize, depth: usize) -> Result<Expr, YamlParseError> {
         let Some(line) = self.peek_content() else {
             return Ok(symbol_value("Null"));
         };
@@ -95,22 +95,25 @@ impl<'a> Parser<'a> {
         }
 
         if is_sequence_marker(line.text) {
-            return self.parse_sequence(indent);
+            let child_depth = next_depth(depth, line.content_start)?;
+            return self.parse_sequence(indent, child_depth);
         }
         if find_mapping_colon(line.text).is_some() {
+            let child_depth = next_depth(depth, line.content_start)?;
             return self
-                .parse_mapping_entries(indent, Vec::new())
+                .parse_mapping_entries(indent, Vec::new(), child_depth)
                 .map(association_expr);
         }
 
         self.index += 1;
-        self.parse_value_text(line.text, line.content_start, indent)
+        self.parse_value_text(line.text, line.content_start, indent, depth)
     }
 
     fn parse_mapping_entries(
         &mut self,
         indent: usize,
         mut entries: Vec<(String, Expr)>,
+        depth: usize,
     ) -> Result<Vec<(String, Expr)>, YamlParseError> {
         let mut seen_keys = MappingKeyIndex::new();
 
@@ -141,7 +144,8 @@ impl<'a> Parser<'a> {
                 ));
             };
             self.index += 1;
-            let entry = self.parse_mapping_pair(line.text, line.content_start, colon, indent)?;
+            let entry =
+                self.parse_mapping_pair(line.text, line.content_start, colon, indent, depth)?;
             if !seen_keys.insert(&entries, &entry.0) {
                 return Err(YamlParseError::new(
                     line.content_start,
@@ -159,6 +163,7 @@ impl<'a> Parser<'a> {
         offset: usize,
         colon: usize,
         parent_indent: usize,
+        depth: usize,
     ) -> Result<(String, Expr), YamlParseError> {
         let key = parse_key(&text[..colon], offset)?;
         if key == "<<" {
@@ -170,7 +175,7 @@ impl<'a> Parser<'a> {
 
         let value_text = &text[colon + 1..];
         let value_offset = offset + colon + 1;
-        let value = self.parse_mapping_value(value_text, value_offset, parent_indent)?;
+        let value = self.parse_mapping_value(value_text, value_offset, parent_indent, depth)?;
         Ok((key, value))
     }
 
@@ -179,27 +184,32 @@ impl<'a> Parser<'a> {
         value_text: &str,
         value_offset: usize,
         parent_indent: usize,
+        depth: usize,
     ) -> Result<Expr, YamlParseError> {
         let leading = count_leading_spaces(value_text);
         let text = &value_text[leading..];
         let offset = value_offset + leading;
         if text.is_empty() || text.starts_with('#') {
-            return self.parse_nested_or_null(parent_indent);
+            return self.parse_nested_or_null(parent_indent, depth);
         }
-        self.parse_value_text(text, offset, parent_indent)
+        self.parse_value_text(text, offset, parent_indent, depth)
     }
 
-    fn parse_nested_or_null(&mut self, parent_indent: usize) -> Result<Expr, YamlParseError> {
+    fn parse_nested_or_null(
+        &mut self,
+        parent_indent: usize,
+        depth: usize,
+    ) -> Result<Expr, YamlParseError> {
         let Some(line) = self.peek_content() else {
             return Ok(symbol_value("Null"));
         };
         if line.indent <= parent_indent {
             return Ok(symbol_value("Null"));
         }
-        self.parse_block(line.indent)
+        self.parse_block(line.indent, depth)
     }
 
-    fn parse_sequence(&mut self, indent: usize) -> Result<Expr, YamlParseError> {
+    fn parse_sequence(&mut self, indent: usize, depth: usize) -> Result<Expr, YamlParseError> {
         let mut items = Vec::new();
 
         loop {
@@ -225,24 +235,34 @@ impl<'a> Parser<'a> {
             }
 
             self.index += 1;
-            items.push(self.parse_sequence_item(line)?);
+            items.push(self.parse_sequence_item(line, depth)?);
         }
 
         Ok(list_expr(items))
     }
 
-    fn parse_sequence_item(&mut self, line: Line<'a>) -> Result<Expr, YamlParseError> {
+    fn parse_sequence_item(
+        &mut self,
+        line: Line<'a>,
+        depth: usize,
+    ) -> Result<Expr, YamlParseError> {
         let item_start = if line.text == "-" { 1 } else { 2 };
         let item_text = &line.text[item_start..];
         let item_offset = line.content_start + item_start;
         if item_text.is_empty() || item_text.starts_with('#') {
-            return self.parse_nested_or_null(line.indent);
+            return self.parse_nested_or_null(line.indent, depth);
         }
 
         if let Some(colon) = find_mapping_colon(item_text) {
+            let child_depth = next_depth(depth, item_offset)?;
             let logical_indent = line.indent + 2;
-            let mut entries =
-                vec![self.parse_mapping_pair(item_text, item_offset, colon, logical_indent)?];
+            let mut entries = vec![self.parse_mapping_pair(
+                item_text,
+                item_offset,
+                colon,
+                logical_indent,
+                child_depth,
+            )?];
 
             if let Some(next) = self.peek_content() {
                 if next.indent > line.indent {
@@ -252,14 +272,14 @@ impl<'a> Parser<'a> {
                             "inconsistent indentation",
                         ));
                     }
-                    entries = self.parse_mapping_entries(logical_indent, entries)?;
+                    entries = self.parse_mapping_entries(logical_indent, entries, child_depth)?;
                 }
             }
 
             return Ok(association_expr(entries));
         }
 
-        self.parse_value_text(item_text, item_offset, line.indent)
+        self.parse_value_text(item_text, item_offset, line.indent, depth)
     }
 
     fn parse_value_text(
@@ -267,6 +287,7 @@ impl<'a> Parser<'a> {
         text: &str,
         offset: usize,
         parent_indent: usize,
+        depth: usize,
     ) -> Result<Expr, YamlParseError> {
         if text.is_empty() || text.starts_with('#') {
             return Ok(symbol_value("Null"));
@@ -279,6 +300,10 @@ impl<'a> Parser<'a> {
                 offset,
                 "folded block scalars are unsupported; use literal | or |-",
             )),
+            b'{' | b'[' => {
+                next_depth(depth, offset)?;
+                parse_plain_scalar(text, offset)
+            }
             _ => parse_plain_scalar(text, offset),
         }
     }
@@ -343,4 +368,11 @@ impl<'a> Parser<'a> {
         }
         None
     }
+}
+
+fn next_depth(depth: usize, offset: usize) -> Result<usize, YamlParseError> {
+    if depth >= MAX_YAML_DEPTH {
+        return Err(YamlParseError::depth(offset));
+    }
+    Ok(depth + 1)
 }

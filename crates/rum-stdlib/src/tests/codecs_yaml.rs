@@ -68,6 +68,60 @@ svc:
     line2
 "#;
 
+const CODEC_DEPTH_LIMIT: usize = 256;
+
+fn nested_yaml_blocks(levels: usize, marker: &str) -> (String, Option<usize>) {
+    let mut source = String::new();
+    let mut first_past_limit_offset = None;
+    for indent in 0..levels {
+        let content_offset = source.len() + indent;
+        if indent == CODEC_DEPTH_LIMIT {
+            first_past_limit_offset = Some(content_offset);
+        }
+        source.push_str(&" ".repeat(indent));
+        source.push_str(marker);
+        source.push('\n');
+    }
+    (source, first_past_limit_offset)
+}
+
+fn nested_yaml_sequence_leaf(sequence_levels: usize, leaf: &str) -> (String, usize) {
+    let mut source = String::new();
+    for indent in 0..sequence_levels - 1 {
+        source.push_str(&" ".repeat(indent));
+        source.push_str("-\n");
+    }
+    let indent = sequence_levels - 1;
+    let item_offset = source.len() + indent + 2;
+    source.push_str(&" ".repeat(indent));
+    source.push_str("- ");
+    source.push_str(leaf);
+    source.push('\n');
+    (source, item_offset)
+}
+
+fn assert_yaml_depth_failure(session: &mut Session, source: &str, offset: usize) {
+    let value = session.evaluate(from_yaml_call(source)).unwrap();
+    let messages = session.take_messages();
+    assert_eq!(value.to_string(), "$Failed");
+    assert_eq!(messages.len(), 1, "{source}: {messages:?}");
+    assert_eq!(messages[0].symbol, "FromYaml");
+    assert_eq!(messages[0].tag, "depth");
+    assert_eq!(
+        messages[0].text,
+        format!(
+            "YAML nesting exceeds the fixed depth limit of {CODEC_DEPTH_LIMIT} at byte offset {offset}."
+        )
+    );
+}
+
+fn assert_yaml_depth_success(session: &mut Session, source: &str) {
+    let value = session.evaluate(from_yaml_call(source)).unwrap();
+    let messages = session.take_messages();
+    assert_ne!(value.to_string(), "$Failed");
+    assert!(messages.is_empty(), "{source}: {messages:?}");
+}
+
 #[test]
 fn from_yaml_parses_k8s_flavored_config() {
     let mut session = core_session();
@@ -160,6 +214,146 @@ fn from_yaml_rejects_unsupported_yaml_fail_closed() {
         let messages = session.take_messages();
         assert_failed_with_message(value, messages, "FromYaml", "yaml", needle);
     }
+}
+
+/// Golden corpus captured from the unmodified decoder before depth limits
+/// were added (brief-329): 7 output shapes plus 7 error shapes. The expected
+/// strings pin decoded structure, key order, diagnostics, and byte offsets.
+#[test]
+fn from_yaml_golden_corpus_is_byte_stable() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        (
+            "z: 1\na: 2\nm: 3\n",
+            "Association[Rule[\"z\", 1], Rule[\"a\", 2], Rule[\"m\", 3]]",
+        ),
+        (
+            "a:\n  b:\n    c: 1\n  d: 2\n",
+            "Association[Rule[\"a\", Association[Rule[\"b\", Association[Rule[\"c\", 1]]], Rule[\"d\", 2]]]]",
+        ),
+        (
+            "items:\n  - 1\n  - 2\n",
+            "Association[Rule[\"items\", List[1, 2]]]",
+        ),
+        (
+            "items:\n  - name: first\n    values:\n      - 1\n      - 2\n  - name: second\n",
+            "Association[Rule[\"items\", List[Association[Rule[\"name\", \"first\"], Rule[\"values\", List[1, 2]]], Association[Rule[\"name\", \"second\"]]]]]",
+        ),
+        (
+            "emptyMap: {}\nemptyList: []\nnullish:\n",
+            "Association[Rule[\"emptyMap\", Association[]], Rule[\"emptyList\", List[]], Rule[\"nullish\", Null]]",
+        ),
+        (
+            "clip: |\n  line1\n  line2\nstrip: |-\n  line1\n  line2\n",
+            "Association[Rule[\"clip\", \"line1\\nline2\\n\"], Rule[\"strip\", \"line1\\nline2\"]]",
+        ),
+        (
+            "\"q:key\": 'no'\nnum: 0.125\nbool: true\n",
+            "Association[Rule[\"q:key\", \"no\"], Rule[\"num\", 1/8], Rule[\"bool\", True]]",
+        ),
+    ] {
+        assert_eq!(
+            from_yaml_to_string(&mut session, source),
+            expected,
+            "golden corpus case: {source:?}"
+        );
+    }
+}
+
+#[test]
+fn from_yaml_golden_error_corpus_is_byte_stable() {
+    let mut session = core_session();
+
+    for (source, message) in [
+        (
+            "a: 1\na: 2\n",
+            "Invalid YAML at byte offset 5: duplicate mapping key \"a\".",
+        ),
+        (
+            "a:\n    b: 1\n  c: 2\n",
+            "Invalid YAML at byte offset 14: inconsistent indentation.",
+        ),
+        (
+            "a: [1, 2]\n",
+            "Invalid YAML at byte offset 3: non-empty flow collections are outside rum's YAML subset.",
+        ),
+        (
+            "a: *x\n",
+            "Invalid YAML at byte offset 3: YAML aliases are unsupported.",
+        ),
+        (
+            "- a\nb: c\n",
+            "Invalid YAML at byte offset 4: sequence items and mapping keys cannot appear at the same indentation.",
+        ),
+        (
+            "a: \"unterminated\n",
+            "Invalid YAML at byte offset 3: unterminated double-quoted string.",
+        ),
+        (
+            "  a: 1\n",
+            "Invalid YAML at byte offset 2: top-level YAML content must start at indentation 0.",
+        ),
+    ] {
+        let value = session.evaluate(from_yaml_call(source)).unwrap();
+        let messages = session.take_messages();
+        assert_eq!(
+            value.to_string(),
+            "$Failed",
+            "golden error case: {source:?}"
+        );
+        assert_eq!(
+            messages
+                .iter()
+                .map(|message| message.text.as_str())
+                .collect::<Vec<_>>(),
+            vec![message],
+            "golden error case: {source:?}"
+        );
+    }
+}
+
+#[test]
+fn from_yaml_depth_limit_accepts_every_collection_descent_at_the_limit() {
+    let mut session = core_session();
+
+    let (mappings, _) = nested_yaml_blocks(CODEC_DEPTH_LIMIT, "k:");
+    assert_yaml_depth_success(&mut session, &mappings);
+
+    let (sequences, _) = nested_yaml_blocks(CODEC_DEPTH_LIMIT, "-");
+    assert_yaml_depth_success(&mut session, &sequences);
+
+    let (sequence_mapping, _) = nested_yaml_sequence_leaf(CODEC_DEPTH_LIMIT - 1, "k: 0");
+    assert_yaml_depth_success(&mut session, &sequence_mapping);
+
+    let (sequence_flow, _) = nested_yaml_sequence_leaf(CODEC_DEPTH_LIMIT - 1, "{}");
+    assert_yaml_depth_success(&mut session, &sequence_flow);
+}
+
+#[test]
+fn from_yaml_depth_limit_rejects_every_collection_descent_one_past() {
+    let mut session = core_session();
+
+    let (mappings, mapping_offset) = nested_yaml_blocks(CODEC_DEPTH_LIMIT + 1, "k:");
+    assert_yaml_depth_failure(&mut session, &mappings, mapping_offset.unwrap());
+
+    let (sequences, sequence_offset) = nested_yaml_blocks(CODEC_DEPTH_LIMIT + 1, "-");
+    assert_yaml_depth_failure(&mut session, &sequences, sequence_offset.unwrap());
+
+    let (sequence_mapping, mapping_item_offset) =
+        nested_yaml_sequence_leaf(CODEC_DEPTH_LIMIT, "k: 0");
+    assert_yaml_depth_failure(&mut session, &sequence_mapping, mapping_item_offset);
+
+    let (sequence_flow, flow_item_offset) = nested_yaml_sequence_leaf(CODEC_DEPTH_LIMIT, "{}");
+    assert_yaml_depth_failure(&mut session, &sequence_flow, flow_item_offset);
+}
+
+#[test]
+fn from_yaml_depth_limit_rejects_the_far_past_stack_exhaustion_shape() {
+    let mut session = core_session();
+    let (source, first_past_limit_offset) = nested_yaml_blocks(8_001, "k:");
+
+    assert_yaml_depth_failure(&mut session, &source, first_past_limit_offset.unwrap());
 }
 
 #[test]

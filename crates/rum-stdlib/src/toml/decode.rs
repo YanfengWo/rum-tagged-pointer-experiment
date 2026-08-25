@@ -3,7 +3,6 @@ use std::str::FromStr;
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::system_expr;
 
-use super::TomlParseError;
 use super::model::{
     TomlTable, TomlValue, add_array_table_path, bare_key_byte, define_table_path,
     insert_value_path, list_expr, table_at_path_mut, table_expr,
@@ -13,6 +12,7 @@ use super::temporal::{
     SECONDS_PER_HOUR, SECONDS_PER_MINUTE, looks_like_full_date, looks_like_local_time,
     timestamp_from_parts, validate_ymd, validate_ymd_offsets,
 };
+use super::{MAX_TOML_DEPTH, TomlParseError};
 
 pub(super) fn from_toml(source: &str) -> Result<Expr, TomlParseError> {
     let table = Parser::new(source).parse()?;
@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
         self.expect_byte(b'[', "expected table header")?;
         let array = self.consume(b'[');
         self.skip_inline_ws();
-        let path = self.parse_key_path()?;
+        let path = self.parse_key_path(MAX_TOML_DEPTH)?;
         self.skip_inline_ws();
 
         if array {
@@ -75,18 +75,21 @@ impl<'a> Parser<'a> {
 
     fn parse_key_value_line(&mut self) -> Result<(), TomlParseError> {
         let key_offset = self.pos;
-        let path = self.parse_key_path()?;
+        let enclosing_depth = self.current_path.len();
+        let path = self.parse_key_path(MAX_TOML_DEPTH - enclosing_depth + 1)?;
         self.skip_inline_ws();
         self.expect_byte(b'=', "expected '=' after key")?;
         self.skip_inline_ws();
-        let value = self.parse_value()?;
+        let value_depth = enclosing_depth + path.len() - 1;
+        let value = self.parse_value(value_depth)?;
         self.finish_line()?;
 
         let table = table_at_path_mut(&mut self.root, &self.current_path, key_offset)?;
         insert_value_path(table, &path, value, key_offset)
     }
 
-    fn parse_key_path(&mut self) -> Result<Vec<String>, TomlParseError> {
+    fn parse_key_path(&mut self, max_parts: usize) -> Result<Vec<String>, TomlParseError> {
+        debug_assert!(max_parts > 0);
         let mut parts = vec![self.parse_key_segment()?];
         loop {
             self.skip_inline_ws();
@@ -94,6 +97,9 @@ impl<'a> Parser<'a> {
                 break;
             }
             self.skip_inline_ws();
+            if parts.len() >= max_parts {
+                return Err(TomlParseError::depth(self.pos));
+            }
             parts.push(self.parse_key_segment()?);
         }
         Ok(parts)
@@ -114,7 +120,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_value(&mut self) -> Result<TomlValue, TomlParseError> {
+    fn parse_value(&mut self, depth: usize) -> Result<TomlValue, TomlParseError> {
         self.skip_inline_ws();
         if let Some(value) = self.parse_temporal_value()? {
             return Ok(value);
@@ -127,8 +133,14 @@ impl<'a> Parser<'a> {
             Some(b'\'') => self
                 .parse_literal_string(true)
                 .map(|value| TomlValue::Scalar(Expr::string(value))),
-            Some(b'[') => self.parse_array(),
-            Some(b'{') => self.parse_inline_table(),
+            Some(b'[') => {
+                let child_depth = next_depth(depth, self.pos)?;
+                self.parse_array(child_depth)
+            }
+            Some(b'{') => {
+                let child_depth = next_depth(depth, self.pos)?;
+                self.parse_inline_table(child_depth)
+            }
             Some(b't') if self.starts_with("true") => {
                 self.pos += 4;
                 Ok(TomlValue::Scalar(system_expr("True")))
@@ -144,7 +156,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_array(&mut self) -> Result<TomlValue, TomlParseError> {
+    fn parse_array(&mut self, depth: usize) -> Result<TomlValue, TomlParseError> {
         self.expect_byte(b'[', "expected array start")?;
         self.skip_ws_comments();
         let mut values = Vec::new();
@@ -154,7 +166,7 @@ impl<'a> Parser<'a> {
         }
 
         loop {
-            values.push(self.parse_value()?);
+            values.push(self.parse_value(depth)?);
             self.skip_ws_comments();
             if self.consume(b',') {
                 self.skip_ws_comments();
@@ -175,7 +187,7 @@ impl<'a> Parser<'a> {
         Ok(TomlValue::Array(values))
     }
 
-    fn parse_inline_table(&mut self) -> Result<TomlValue, TomlParseError> {
+    fn parse_inline_table(&mut self, depth: usize) -> Result<TomlValue, TomlParseError> {
         self.expect_byte(b'{', "expected inline table start")?;
         self.skip_ws_comments();
         let mut table = TomlTable::inline();
@@ -186,11 +198,12 @@ impl<'a> Parser<'a> {
 
         loop {
             let key_offset = self.pos;
-            let path = self.parse_key_path()?;
+            let path = self.parse_key_path(MAX_TOML_DEPTH - depth + 1)?;
             self.skip_inline_ws();
             self.expect_byte(b'=', "expected '=' after inline table key")?;
             self.skip_inline_ws();
-            let value = self.parse_value()?;
+            let value_depth = depth + path.len() - 1;
+            let value = self.parse_value(value_depth)?;
             insert_value_path(&mut table, &path, value, key_offset)?;
             self.skip_ws_comments();
 
@@ -747,6 +760,13 @@ impl<'a> Parser<'a> {
     fn is_eof(&self) -> bool {
         self.pos >= self.bytes.len()
     }
+}
+
+fn next_depth(depth: usize, offset: usize) -> Result<usize, TomlParseError> {
+    if depth >= MAX_TOML_DEPTH {
+        return Err(TomlParseError::depth(offset));
+    }
+    Ok(depth + 1)
 }
 
 fn hex_value(byte: u8) -> Option<u8> {

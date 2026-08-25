@@ -5,25 +5,52 @@ mod decode;
 mod encode;
 mod number;
 
+const MAX_YAML_DEPTH: usize = 256;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct YamlParseError {
     offset: usize,
-    message: String,
+    kind: YamlParseErrorKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum YamlParseErrorKind {
+    Syntax(String),
+    Depth,
 }
 
 impl YamlParseError {
     fn new(offset: usize, message: impl Into<String>) -> Self {
         Self {
             offset,
-            message: message.into(),
+            kind: YamlParseErrorKind::Syntax(message.into()),
+        }
+    }
+
+    fn depth(offset: usize) -> Self {
+        Self {
+            offset,
+            kind: YamlParseErrorKind::Depth,
+        }
+    }
+
+    fn message_tag(&self) -> &'static str {
+        match self.kind {
+            YamlParseErrorKind::Syntax(_) => "yaml",
+            YamlParseErrorKind::Depth => "depth",
         }
     }
 
     fn message(&self) -> String {
-        format!(
-            "Invalid YAML at byte offset {}: {}.",
-            self.offset, self.message
-        )
+        match &self.kind {
+            YamlParseErrorKind::Syntax(message) => {
+                format!("Invalid YAML at byte offset {}: {message}.", self.offset)
+            }
+            YamlParseErrorKind::Depth => format!(
+                "YAML nesting exceeds the fixed depth limit of {MAX_YAML_DEPTH} at byte offset {}.",
+                self.offset
+            ),
+        }
     }
 }
 
@@ -53,6 +80,7 @@ pub(crate) fn eval_from_yaml(
         return Ok(fail_yaml(
             session,
             "FromYaml",
+            "yaml",
             "FromYaml expects exactly one string argument.",
         ));
     };
@@ -61,13 +89,19 @@ pub(crate) fn eval_from_yaml(
         return Ok(fail_yaml(
             session,
             "FromYaml",
+            "yaml",
             "FromYaml expects a YAML text string.",
         ));
     };
 
     match decode::from_yaml(source) {
         Ok(expr) => Ok(expr),
-        Err(error) => Ok(fail_yaml(session, "FromYaml", error.message())),
+        Err(error) => Ok(fail_yaml(
+            session,
+            "FromYaml",
+            error.message_tag(),
+            error.message(),
+        )),
     }
 }
 
@@ -80,18 +114,24 @@ pub(crate) fn eval_to_yaml(
         return Ok(fail_yaml(
             session,
             "ToYaml",
+            "yaml",
             "ToYaml expects exactly one expression argument.",
         ));
     };
 
     match encode::to_yaml(expr) {
         Ok(output) => Ok(Expr::string(output)),
-        Err(error) => Ok(fail_yaml(session, "ToYaml", error.message())),
+        Err(error) => Ok(fail_yaml(session, "ToYaml", "yaml", error.message())),
     }
 }
 
-fn fail_yaml(session: &mut Session, symbol: &str, message: impl Into<String>) -> Expr {
-    session.push_message(symbol, "yaml", message);
+fn fail_yaml(
+    session: &mut Session,
+    symbol: &str,
+    tag: &'static str,
+    message: impl Into<String>,
+) -> Expr {
+    session.push_message(symbol, tag, message);
     system_expr("$Failed")
 }
 

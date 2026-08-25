@@ -9,10 +9,16 @@ pub(crate) const YAML_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty().with(Attribute::Protected),
         yaml::eval_from_yaml,
     )
-    .with_messages(&[BuiltinMessageSpec {
-        tag: "yaml",
-        template: "Reports a YAML decoding or argument failure.",
-    }]),
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "depth",
+            template: "YAML nesting exceeds the fixed depth limit of 256 at byte offset `1`.",
+        },
+        BuiltinMessageSpec {
+            tag: "yaml",
+            template: "Reports a YAML decoding or argument failure.",
+        },
+    ]),
     BuiltinSpec::ordinary_with_attributes(
         "ToYaml",
         "Renders the YAML-representable subset of rum values as YAML text.",

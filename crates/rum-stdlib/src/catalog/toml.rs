@@ -9,10 +9,16 @@ pub(crate) const TOML_BUILTINS: &[BuiltinSpec] = &[
         AttributeSet::empty().with(Attribute::Protected),
         toml::eval_from_toml,
     )
-    .with_messages(&[BuiltinMessageSpec {
-        tag: "toml",
-        template: "Reports a TOML decoding or argument failure.",
-    }]),
+    .with_messages(&[
+        BuiltinMessageSpec {
+            tag: "depth",
+            template: "TOML nesting exceeds the fixed depth limit of 256 at byte offset `1`.",
+        },
+        BuiltinMessageSpec {
+            tag: "toml",
+            template: "Reports a TOML decoding or argument failure.",
+        },
+    ]),
     BuiltinSpec::ordinary_with_attributes(
         "ToToml",
         "Renders the TOML-representable subset of rum Associations as TOML text.",

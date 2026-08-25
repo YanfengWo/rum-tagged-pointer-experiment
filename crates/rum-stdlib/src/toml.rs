@@ -7,25 +7,52 @@ mod model;
 mod number;
 mod temporal;
 
+const MAX_TOML_DEPTH: usize = 256;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct TomlParseError {
     offset: usize,
-    message: String,
+    kind: TomlParseErrorKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum TomlParseErrorKind {
+    Syntax(String),
+    Depth,
 }
 
 impl TomlParseError {
     fn new(offset: usize, message: impl Into<String>) -> Self {
         Self {
             offset,
-            message: message.into(),
+            kind: TomlParseErrorKind::Syntax(message.into()),
+        }
+    }
+
+    fn depth(offset: usize) -> Self {
+        Self {
+            offset,
+            kind: TomlParseErrorKind::Depth,
+        }
+    }
+
+    fn message_tag(&self) -> &'static str {
+        match self.kind {
+            TomlParseErrorKind::Syntax(_) => "toml",
+            TomlParseErrorKind::Depth => "depth",
         }
     }
 
     fn message(&self) -> String {
-        format!(
-            "Invalid TOML at byte offset {}: {}.",
-            self.offset, self.message
-        )
+        match &self.kind {
+            TomlParseErrorKind::Syntax(message) => {
+                format!("Invalid TOML at byte offset {}: {message}.", self.offset)
+            }
+            TomlParseErrorKind::Depth => format!(
+                "TOML nesting exceeds the fixed depth limit of {MAX_TOML_DEPTH} at byte offset {}.",
+                self.offset
+            ),
+        }
     }
 }
 
@@ -55,6 +82,7 @@ pub(crate) fn eval_from_toml(
         return Ok(fail_toml(
             session,
             "FromToml",
+            "toml",
             "FromToml expects exactly one string argument.",
         ));
     };
@@ -63,13 +91,19 @@ pub(crate) fn eval_from_toml(
         return Ok(fail_toml(
             session,
             "FromToml",
+            "toml",
             "FromToml expects a TOML text string.",
         ));
     };
 
     match decode::from_toml(source) {
         Ok(expr) => Ok(expr),
-        Err(error) => Ok(fail_toml(session, "FromToml", error.message())),
+        Err(error) => Ok(fail_toml(
+            session,
+            "FromToml",
+            error.message_tag(),
+            error.message(),
+        )),
     }
 }
 
@@ -82,17 +116,23 @@ pub(crate) fn eval_to_toml(
         return Ok(fail_toml(
             session,
             "ToToml",
+            "toml",
             "ToToml expects exactly one Association argument.",
         ));
     };
 
     match encode::to_toml(expr) {
         Ok(output) => Ok(Expr::string(output)),
-        Err(error) => Ok(fail_toml(session, "ToToml", error.message())),
+        Err(error) => Ok(fail_toml(session, "ToToml", "toml", error.message())),
     }
 }
 
-fn fail_toml(session: &mut Session, symbol: &str, message: impl Into<String>) -> Expr {
-    session.push_message(symbol, "toml", message);
+fn fail_toml(
+    session: &mut Session,
+    symbol: &str,
+    tag: &'static str,
+    message: impl Into<String>,
+) -> Expr {
+    session.push_message(symbol, tag, message);
     system_expr("$Failed")
 }

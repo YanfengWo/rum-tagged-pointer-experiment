@@ -47,6 +47,44 @@ fn assert_failed_with_message(
     );
 }
 
+const CODEC_DEPTH_LIMIT: usize = 256;
+
+fn nested_toml_arrays(levels: usize) -> String {
+    format!("a = {}{}\n", "[".repeat(levels), "]".repeat(levels))
+}
+
+fn nested_toml_inline_tables(levels: usize) -> String {
+    format!("a = {}0{}\n", "{ k = ".repeat(levels), " }".repeat(levels))
+}
+
+fn dotted_toml_path(parts: usize) -> String {
+    std::iter::repeat_n("k", parts)
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn assert_toml_depth_failure(session: &mut Session, source: &str, offset: usize) {
+    let value = session.evaluate(from_toml_call(source)).unwrap();
+    let messages = session.take_messages();
+    assert_eq!(value.to_string(), "$Failed");
+    assert_eq!(messages.len(), 1, "{source}: {messages:?}");
+    assert_eq!(messages[0].symbol, "FromToml");
+    assert_eq!(messages[0].tag, "depth");
+    assert_eq!(
+        messages[0].text,
+        format!(
+            "TOML nesting exceeds the fixed depth limit of {CODEC_DEPTH_LIMIT} at byte offset {offset}."
+        )
+    );
+}
+
+fn assert_toml_depth_success(session: &mut Session, source: &str) {
+    let value = session.evaluate(from_toml_call(source)).unwrap();
+    let messages = session.take_messages();
+    assert_ne!(value.to_string(), "$Failed");
+    assert!(messages.is_empty(), "{source}: {messages:?}");
+}
+
 #[test]
 fn from_toml_parses_realistic_config() {
     let mut session = core_session();
@@ -402,6 +440,58 @@ fn from_toml_golden_error_corpus_is_byte_stable() {
             "golden error case: {source:?}"
         );
     }
+}
+
+#[test]
+fn from_toml_depth_limit_accepts_each_descent_at_the_limit() {
+    let mut session = core_session();
+
+    assert_toml_depth_success(&mut session, &nested_toml_arrays(CODEC_DEPTH_LIMIT));
+    assert_toml_depth_success(&mut session, &nested_toml_inline_tables(CODEC_DEPTH_LIMIT));
+
+    let header = format!("[{}]\nx = 0\n", dotted_toml_path(CODEC_DEPTH_LIMIT));
+    assert_toml_depth_success(&mut session, &header);
+
+    let dotted_assignment = format!("{} = 0\n", dotted_toml_path(CODEC_DEPTH_LIMIT + 1));
+    assert_toml_depth_success(&mut session, &dotted_assignment);
+
+    let inline_dotted = format!("a = {{ {} = 0 }}\n", dotted_toml_path(CODEC_DEPTH_LIMIT));
+    assert_toml_depth_success(&mut session, &inline_dotted);
+}
+
+#[test]
+fn from_toml_depth_limit_rejects_each_descent_one_past() {
+    let mut session = core_session();
+
+    let arrays = nested_toml_arrays(CODEC_DEPTH_LIMIT + 1);
+    assert_toml_depth_failure(&mut session, &arrays, 4 + CODEC_DEPTH_LIMIT);
+
+    let inline_tables = nested_toml_inline_tables(CODEC_DEPTH_LIMIT + 1);
+    assert_toml_depth_failure(&mut session, &inline_tables, 4 + 6 * CODEC_DEPTH_LIMIT);
+
+    let header = format!("[{}]\nx = 0\n", dotted_toml_path(CODEC_DEPTH_LIMIT + 1));
+    assert_toml_depth_failure(&mut session, &header, 1 + 2 * CODEC_DEPTH_LIMIT);
+
+    let dotted_assignment = format!("{} = 0\n", dotted_toml_path(CODEC_DEPTH_LIMIT + 2));
+    assert_toml_depth_failure(
+        &mut session,
+        &dotted_assignment,
+        2 * (CODEC_DEPTH_LIMIT + 1),
+    );
+
+    let inline_dotted = format!(
+        "a = {{ {} = 0 }}\n",
+        dotted_toml_path(CODEC_DEPTH_LIMIT + 1)
+    );
+    assert_toml_depth_failure(&mut session, &inline_dotted, 6 + 2 * CODEC_DEPTH_LIMIT);
+}
+
+#[test]
+fn from_toml_depth_limit_rejects_the_far_past_stack_exhaustion_shape() {
+    let mut session = core_session();
+    let source = nested_toml_arrays(15_000);
+
+    assert_toml_depth_failure(&mut session, &source, 4 + CODEC_DEPTH_LIMIT);
 }
 
 #[test]

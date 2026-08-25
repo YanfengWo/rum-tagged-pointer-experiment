@@ -2033,6 +2033,7 @@ Parses rum's documented fail-closed TOML subset into exact rum values.
 - Capability: `Pure`
 - Limits: implements rum's documented TOML 1.0 folk subset only: tables, arrays-of-tables, inline tables, strings, exact integers/decimals, booleans, and date/time tokens; inf/nan and unsupported TOML surface fail closed. Offset date-times decode as exact Unix-second instants, while local dates/times decode as Lists.
 - Messages:
+  - FromToml::depth — TOML nesting exceeds the fixed depth limit of 256 at byte offset `1`.
   - FromToml::toml — Reports a TOML decoding or argument failure.
 
 ### FromXml
@@ -2053,6 +2054,7 @@ Parses rum's documented fail-closed YAML block subset into exact rum values.
 - Capability: `Pure`
 - Limits: implements rum's documented YAML sane block subset only: block mappings and sequences, plain and quoted scalars, literal | and |- blocks, comments, and empty flow {} / []; anchors, aliases, tags, directives, document markers, merge keys, folded blocks, non-empty flow collections, duplicate keys, tabs in indentation, and ambiguous same-indent collection mixes fail closed.
 - Messages:
+  - FromYaml::depth — YAML nesting exceeds the fixed depth limit of 256 at byte offset `1`.
   - FromYaml::yaml — Reports a YAML decoding or argument failure.
 
 ### FullForm
