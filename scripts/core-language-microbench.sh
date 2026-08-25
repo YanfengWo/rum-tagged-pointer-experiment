@@ -563,10 +563,14 @@ run_engine() {
 
   start=$(perl -MTime::HiRes=time -e 'printf "%.6f\n", time')
   set +e
+  # stdin must be closed explicitly. rum-cli binds non-TTY stdin as
+  # Global`$ScriptInput when given a program argument, so an inherited pipe that
+  # never reaches EOF leaves the benchmark waiting until its timeout, producing
+  # an empty run that looks like a slow machine rather than a stuck read.
   env "${disable_profile_env[@]}" \
     "${bounded_runner}" --timeout "${timeout_seconds}" -- \
     "${rum_cli_bin}" --file "${bench_rum}" \
-    >"${stdout_path}" 2>"${stderr_path}"
+    >"${stdout_path}" 2>"${stderr_path}" </dev/null
   exit_code=$?
   set -e
   elapsed=$(perl -MTime::HiRes=time -e 'printf "%.6f\n", time - $ARGV[0]' "${start}")
