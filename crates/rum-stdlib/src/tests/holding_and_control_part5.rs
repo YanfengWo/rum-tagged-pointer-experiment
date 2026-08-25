@@ -260,6 +260,99 @@ fn do_and_table_respect_resource_limits() {
 }
 
 #[test]
+fn multi_iterator_table_charges_the_generated_product() {
+    let mut session = core_session();
+    session.set_generated_element_limit(5);
+
+    assert_eq!(
+        session
+            .eval_text("Table[i + j, {i, 2}, {j, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[2, 3], List[3, 4]]"
+    );
+
+    let refused = session.eval_text("Table[0, {i, 2}, {j, 3}]").unwrap();
+    assert_eq!(
+        refused.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert!(refused.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "reslim"
+            && message.text == "evaluation exceeded generated element limit (5)"
+    }));
+}
+
+#[test]
+fn multi_iterator_table_precharges_exact_arithmetic_counts() {
+    let mut session = core_session();
+    session.set_generated_element_limit(9_999);
+    session.eval_text("calls = 0").unwrap();
+
+    let refused = session
+        .eval_text("Table[calls = calls + 1, {i, 1, 10^2}, {j, 1, 10^2}]")
+        .unwrap();
+    assert_eq!(
+        refused.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert_eq!(session.eval_text("calls").unwrap().value.to_string(), "0");
+
+    let mut overflow_session = core_session();
+    overflow_session.set_generated_element_limit(usize::MAX);
+    let factor = 1_usize << (usize::BITS / 2);
+    let source = format!("Table[0, {{i, {factor}}}, {{j, {factor}}}]");
+    let refused_overflow = overflow_session.eval_text(&source).unwrap();
+    assert_eq!(
+        refused_overflow.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+}
+
+#[test]
+fn multi_iterator_control_siblings_charge_iteration_product() {
+    for (accepted_source, accepted_value, refused_source) in [
+        (
+            "calls = 0; Do[calls = calls + 1, {i, 2}, {j, 2}]; calls",
+            "4",
+            "Do[Null, {i, 2}, {j, 3}]",
+        ),
+        ("Sum[1, {i, 2}, {j, 2}]", "4", "Sum[1, {i, 2}, {j, 3}]"),
+        (
+            "Product[2, {i, 2}, {j, 2}]",
+            "16",
+            "Product[2, {i, 2}, {j, 3}]",
+        ),
+    ] {
+        let mut session = core_session();
+        session.set_iteration_work_limit(5);
+        assert_eq!(
+            session
+                .eval_text(accepted_source)
+                .unwrap()
+                .value
+                .to_string(),
+            accepted_value,
+            "{accepted_source}"
+        );
+
+        let refused = session.eval_text(refused_source).unwrap();
+        assert_eq!(
+            refused.value.to_string(),
+            "TerminatedEvaluation[\"IterationWorkLimit\"]",
+            "{refused_source}"
+        );
+        assert!(refused.messages.iter().any(|message| {
+            message.symbol == "General"
+                && message.tag == "reslim"
+                && message.text == "evaluation exceeded iteration work limit (5)"
+        }));
+    }
+}
+
+#[test]
 fn table_memory_constraint_uses_projected_list_size_before_materialization() {
     let mut session = core_session();
 

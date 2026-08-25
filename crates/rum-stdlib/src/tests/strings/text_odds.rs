@@ -23,6 +23,50 @@ fn string_pad_right_mirrors_left_padding_subset() {
 }
 
 #[test]
+fn string_padding_respects_generated_element_limit_boundaries() {
+    for (accepted_source, accepted_value, refused_source) in [
+        (
+            "StringPadLeft[\"x\", 3]",
+            "\"  x\"",
+            "StringPadLeft[\"x\", 5]",
+        ),
+        (
+            "StringPadRight[\"x\", 3]",
+            "\"x  \"",
+            "StringPadRight[\"x\", 5]",
+        ),
+    ] {
+        let mut session = core_session();
+        session.set_generated_element_limit(4);
+
+        assert_eq!(
+            eval_to_string(&mut session, accepted_source),
+            accepted_value
+        );
+        let refused = session.eval_text(refused_source).unwrap();
+        assert_eq!(
+            refused.value.to_string(),
+            "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+        );
+        assert!(refused.messages.iter().any(|message| {
+            message.symbol == "General"
+                && message.tag == "reslim"
+                && message.text == "evaluation exceeded generated element limit (4)"
+        }));
+    }
+
+    let mut list_session = core_session();
+    list_session.set_generated_element_limit(5);
+    let refused = list_session
+        .eval_text("StringPadLeft[{\"a\", \"b\"}, 3]")
+        .unwrap();
+    assert_eq!(
+        refused.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+}
+
+#[test]
 fn string_lines_splits_lf_and_crlf_with_trailing_newline_rule() {
     let mut session = core_session();
 
@@ -109,6 +153,27 @@ fn decimal_string_invalid_forms_remain_inert() {
             .iter()
             .any(|message| message.symbol == "DecimalString" && message.tag == "argx")
     );
+}
+
+#[test]
+fn decimal_string_respects_generated_element_limit_boundaries() {
+    let mut session = core_session();
+    session.set_generated_element_limit(4);
+
+    assert_eq!(
+        eval_to_string(&mut session, "DecimalString[1/2, 3]"),
+        "\"0.500\""
+    );
+    let refused = session.eval_text("DecimalString[1/2, 5]").unwrap();
+    assert_eq!(
+        refused.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert!(refused.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "reslim"
+            && message.text == "evaluation exceeded generated element limit (4)"
+    }));
 }
 
 #[test]

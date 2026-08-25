@@ -42,14 +42,25 @@ pub(crate) fn eval_string_indent(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
     let prefix = if let Some(prefix) = expr_as_string(prefix) {
-        prefix.to_string()
+        StringIndentPrefix::Text(prefix)
     } else if let Some(count) = expr_as_non_negative_usize(prefix) {
-        " ".repeat(count)
+        StringIndentPrefix::Spaces(count)
     } else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
     let Some(options) = parse_string_indent_options(session, option_args)? else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
+    };
+    let prefix = match prefix {
+        StringIndentPrefix::Text(prefix) => prefix.to_string(),
+        StringIndentPrefix::Spaces(count) => {
+            let line_count = text
+                .split('\n')
+                .filter(|line| options.blank_lines || !line.trim().is_empty())
+                .count();
+            enforce_generated_product(session, count, line_count)?;
+            " ".repeat(count)
+        }
     };
 
     Ok(Expr::string(indent_lines(
@@ -100,6 +111,7 @@ pub(crate) fn eval_string_expand_tabs(
         ));
     }
 
+    enforce_expanded_tab_space_count(session, text, width)?;
     Ok(Expr::string(expand_tabs(text, width)))
 }
 
@@ -127,6 +139,11 @@ struct StringWrapOptions {
 
 struct StringIndentOptions {
     blank_lines: bool,
+}
+
+enum StringIndentPrefix<'a> {
+    Text(&'a str),
+    Spaces(usize),
 }
 
 struct AlignColumnsOptions {
@@ -242,6 +259,48 @@ fn bool_option_value(expr: &Expr) -> Option<bool> {
     } else {
         None
     }
+}
+
+fn enforce_generated_product(
+    session: &Session,
+    count: usize,
+    repetitions: usize,
+) -> Result<(), EvalError> {
+    if let Some(generated_count) = count.checked_mul(repetitions) {
+        return session.enforce_generated_element_limit_for_count(generated_count);
+    }
+
+    let generated_count = BigInt::from(count) * BigInt::from(repetitions);
+    session.enforce_generated_element_limit_for_big_count(&generated_count)
+}
+
+fn enforce_expanded_tab_space_count(
+    session: &Session,
+    text: &str,
+    width: usize,
+) -> Result<(), EvalError> {
+    let Some(generated_count) = expanded_tab_space_count(text, width) else {
+        let overflow_count = BigInt::from(usize::MAX) + BigInt::from(1_u8);
+        return session.enforce_generated_element_limit_for_big_count(&overflow_count);
+    };
+    session.enforce_generated_element_limit_for_count(generated_count)
+}
+
+fn expanded_tab_space_count(text: &str, width: usize) -> Option<usize> {
+    let mut generated_count = 0_usize;
+    let mut column = 0_usize;
+    for ch in text.chars() {
+        match ch {
+            '\t' => {
+                let spaces = width - (column % width);
+                generated_count = generated_count.checked_add(spaces)?;
+                column = column.checked_add(spaces)?;
+            }
+            '\n' | '\r' => column = 0,
+            _ => column = column.checked_add(1)?,
+        }
+    }
+    Some(generated_count)
 }
 
 fn string_wrap_value(text: &str, width: usize) -> String {

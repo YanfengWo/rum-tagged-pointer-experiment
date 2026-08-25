@@ -3,6 +3,8 @@ use rum_runtime::kernel_api::{
     EvalError, Session, ToPrimitive, expr_as_exact_integer, system_expr,
 };
 
+use crate::number_theory::IntegerWorkBudget;
+
 pub(crate) fn eval_binomial(
     session: &mut Session,
     head: &Expr,
@@ -36,6 +38,8 @@ pub(crate) fn eval_fibonacci(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
+    let mut budget = IntegerWorkBudget::new(session.resource_limits().integer_work_limit);
+    budget.charge_bigint_magnitude_units(&index)?;
     Ok(Expr::integer(fibonacci_integer(&index)))
 }
 

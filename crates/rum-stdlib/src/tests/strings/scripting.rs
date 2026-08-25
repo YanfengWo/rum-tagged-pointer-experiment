@@ -87,6 +87,55 @@ fn text_shaping_utilities_cover_wrap_indent_dedent_tabs_and_tables() {
 }
 
 #[test]
+fn numeric_text_padding_respects_generated_element_limit_boundaries() {
+    let mut indent_session = core_session();
+    indent_session.set_generated_element_limit(5);
+    assert_eq!(
+        eval_to_string(&mut indent_session, "StringIndent[\"x\", 4]"),
+        "\"    x\""
+    );
+    let refused_indent = indent_session.eval_text("StringIndent[\"x\", 6]").unwrap();
+    assert_eq!(
+        refused_indent.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+
+    let mut indent_product_session = core_session();
+    indent_product_session.set_generated_element_limit(5);
+    let refused_indent_product = indent_product_session
+        .eval_text("StringIndent[\"a\\nb\", 3]")
+        .unwrap();
+    assert_eq!(
+        refused_indent_product.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+
+    let mut tabs_session = core_session();
+    tabs_session.set_generated_element_limit(5);
+    assert_eq!(
+        eval_to_string(&mut tabs_session, "StringExpandTabs[\"\\t\", 4]"),
+        "\"    \""
+    );
+    let refused_tabs = tabs_session
+        .eval_text("StringExpandTabs[\"\\t\", 6]")
+        .unwrap();
+    assert_eq!(
+        refused_tabs.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+
+    let mut tabs_product_session = core_session();
+    tabs_product_session.set_generated_element_limit(5);
+    let refused_tabs_product = tabs_product_session
+        .eval_text("StringExpandTabs[\"\\t\\t\", 3]")
+        .unwrap();
+    assert_eq!(
+        refused_tabs_product.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+}
+
+#[test]
 fn html_shell_path_url_and_args_utilities_cover_boundaries() {
     let mut session = core_session();
 

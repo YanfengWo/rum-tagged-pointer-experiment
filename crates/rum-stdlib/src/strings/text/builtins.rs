@@ -214,12 +214,14 @@ pub(crate) fn eval_string_pad_left(
     };
 
     if let Some(value) = expr_as_string(&args[0]) {
+        enforce_string_padding_width(session, width, 1)?;
         return Ok(Expr::string(string_pad_left_with_spec(
             value, width, &padding,
         )));
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
+        enforce_string_padding_width(session, width, values.len())?;
         return Ok(string_list_expr(
             values
                 .into_iter()
@@ -248,12 +250,14 @@ pub(crate) fn eval_string_pad_right(
     };
 
     if let Some(value) = expr_as_string(&args[0]) {
+        enforce_string_padding_width(session, width, 1)?;
         return Ok(Expr::string(string_pad_right_with_spec(
             value, width, &padding,
         )));
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
+        enforce_string_padding_width(session, width, values.len())?;
         return Ok(string_list_expr(
             values
                 .into_iter()
@@ -263,6 +267,19 @@ pub(crate) fn eval_string_pad_right(
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
+}
+
+fn enforce_string_padding_width(
+    session: &Session,
+    width: usize,
+    value_count: usize,
+) -> Result<(), EvalError> {
+    if let Some(generated_count) = width.checked_mul(value_count) {
+        return session.enforce_generated_element_limit_for_count(generated_count);
+    }
+
+    let generated_count = BigInt::from(width) * BigInt::from(value_count);
+    session.enforce_generated_element_limit_for_big_count(&generated_count)
 }
 
 enum StringPaddingSpec<'a> {

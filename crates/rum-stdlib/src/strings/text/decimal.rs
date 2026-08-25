@@ -16,6 +16,7 @@ pub(crate) fn eval_decimal_string(
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
 
+    session.enforce_generated_element_limit_for_count(fraction_digits)?;
     Ok(Expr::string(decimal_string_value(&value, fraction_digits)))
 }
 

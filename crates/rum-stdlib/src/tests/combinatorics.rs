@@ -212,6 +212,26 @@ fn binomial_respects_integer_work_limit() {
 }
 
 #[test]
+fn fibonacci_respects_integer_work_limit_boundaries() {
+    let mut session = core_session();
+    session.set_integer_work_limit(10);
+
+    assert_eq!(eval_to_string(&mut session, "Fibonacci[9]"), "34");
+    assert_eq!(eval_to_string(&mut session, "Fibonacci[-9]"), "34");
+
+    let limited = session.eval_text("Fibonacci[11]").unwrap();
+    assert_eq!(
+        limited.value.to_string(),
+        "TerminatedEvaluation[\"IntegerWorkLimit\"]"
+    );
+    assert!(limited.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "reslim"
+            && message.text == "evaluation exceeded integer work limit (10)"
+    }));
+}
+
+#[test]
 fn recurrence_combinatorics_respect_integer_work_limit() {
     let mut session = core_session();
     session.set_integer_work_limit(3);

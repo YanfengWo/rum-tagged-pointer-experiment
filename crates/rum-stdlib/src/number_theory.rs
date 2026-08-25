@@ -291,13 +291,13 @@ fn push_prime_intpp_message(session: &mut Session, head: &Expr, args: &[Expr]) {
 }
 
 #[derive(Debug)]
-struct IntegerWorkBudget {
+pub(crate) struct IntegerWorkBudget {
     limit: usize,
     used: usize,
 }
 
 impl IntegerWorkBudget {
-    fn new(limit: usize) -> Self {
+    pub(crate) fn new(limit: usize) -> Self {
         Self { limit, used: 0 }
     }
 
@@ -317,6 +317,16 @@ impl IntegerWorkBudget {
             return Ok(());
         }
         let Some(units) = units.to_usize() else {
+            return Err(EvalError::IntegerWorkLimitExceeded { limit: self.limit });
+        };
+        self.charge(units)
+    }
+
+    pub(crate) fn charge_bigint_magnitude_units(
+        &mut self,
+        units: &BigInt,
+    ) -> Result<(), EvalError> {
+        let Some(units) = units.magnitude().to_usize() else {
             return Err(EvalError::IntegerWorkLimitExceeded { limit: self.limit });
         };
         self.charge(units)
