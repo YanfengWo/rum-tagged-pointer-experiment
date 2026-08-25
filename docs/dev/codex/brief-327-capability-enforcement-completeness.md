@@ -5,7 +5,7 @@
 rum's stated position is that a restricted session can evaluate untrusted code:
 capabilities gate every effect, and resource ceilings bound every cost. That
 claim is only as strong as its weakest enforcement point. Audit whether it
-holds — systematically, path by path, rather than label by label.
+holds — against behavior, not against declarations.
 
 This is a **diagnostic survey**. Produce a ranked list of enforcement gaps with
 `path:line` attribution and reproductions, plus drafted implementation briefs.
@@ -26,7 +26,7 @@ which is the reason to look again rather than to assume:
 - `Pause[10^100]` terminated the host process through a `Duration` overflow.
 
 Both were found by auditing *behavior against the declared contract*, not by
-reading declarations. Repeat that method.
+reading declarations.
 
 ## The model as it stands
 
@@ -46,24 +46,30 @@ Two boundaries are **not** part of this model and must not be confused with it:
 ## The question, stated precisely
 
 For each capability, the claim is: **no evaluation reachable under a policy that
-withholds it can produce the effect it names.** Audit that claim in the
-direction that finds gaps — from the effect back to the gate, not from the gate
-forward:
+withholds it can produce the effect it names.** Audit that claim. A gap is any
+path that reaches a gated effect without passing an enforcement point, and a
+builtin whose declared capability differs from what its behavior needs.
 
-1. **Enumerate the sinks.** Every place the runtime or stdlib actually performs
-   a gated effect — reads or writes a file, lists a directory, reads a clock,
-   draws randomness, spawns or exits a process, requests host input, or exposes
-   diagnostic internals. Include the provider seams, not just the builtins.
-2. **For each sink, walk back to every path that reaches it**, and record
-   whether each path passes an enforcement point before arriving.
-3. **Report every path that does not.** That is the finding: a sink reachable
-   without its gate.
+**Choose your own method.** Build whatever understanding of the system you need
+first — trace a request end to end, map the layers, whatever gets you oriented —
+then go deep where that understanding says the risk is. The requirements below
+are about what a finding must carry, not about how you arrive at it.
 
-A builtin whose declared capability differs from the one its behavior needs is
-also a finding, but the path-based direction is what catches the cases label
-review misses — helpers shared between a gated and an ungated caller, effects
-reached through evaluation of an argument, restoration and snapshot paths, and
-loader or codec paths that call back into evaluation.
+Two angles are offered because they have found real gaps here before, not as a
+prescribed procedure:
+
+- **Backwards from the effect.** Enumerate where the runtime and stdlib actually
+  perform gated effects — file reads and writes, directory listing, clock reads,
+  randomness, process control, host input, diagnostic internals — including the
+  provider seams rather than only the builtins, then walk back through every
+  path that reaches each one. Auditing forward from the gates tends to find only
+  the paths someone already thought to gate.
+- **Where layers meet.** Both gaps found here so far lived at a seam: the loader
+  reaching a file read through a package declaration, and an argument whose
+  magnitude terminated the host process. Shared helpers with one gated and one
+  ungated caller, effects triggered while evaluating an argument, snapshot and
+  restoration paths, and loader or codec paths that call back into evaluation
+  are the shapes that label review misses.
 
 ## Also in scope
 
@@ -79,7 +85,7 @@ loader or codec paths that call back into evaluation.
 
 ## What each finding must carry
 
-1. **The sink** and the capability that should gate it, with `path:line`.
+1. **The effect** and the capability that should gate it, with `path:line`.
 2. **The path that reaches it ungated**, with each hop.
 3. **A reproduction** under a restricted policy, verbatim, or an explicit
    statement that you could not construct one — an unreproduced path is a lead,
@@ -90,15 +96,15 @@ loader or codec paths that call back into evaluation.
 
 Rank by (severity × reachability). Script-reachable gaps outrank host-API ones.
 
-**Report the negative results too.** Sinks you traced and found properly gated
+**Report the negative results too.** Effects you traced and found properly gated
 are the more valuable half of this audit: they are what lets the project state
 the guarantee with evidence rather than hope.
 
 ## Deliverable
 
-1. The sink inventory, with the gate covering each.
+1. An inventory of the gated effects you covered, and the gate for each.
 2. The ranked gap table.
-3. The negative list — sinks confirmed gated.
+3. The negative list — effects confirmed gated.
 4. A batching plan and drafted implementation briefs in `TEMPLATE.md` shape.
 5. Open questions.
 
@@ -111,8 +117,8 @@ should describe the fix and the affected code, not carry a working exploit.
 
 ## Pitfalls (read twice)
 
-- **Trace from the effect backwards.** Auditing forward from the gates finds
-  only the paths someone already thought to gate.
+- **A gate you can see is rarely the one that is missing.** Whatever method you
+  use, make sure it can surface a path nobody thought to gate.
 - **A declaration is not evidence.** Confirm behavior with a probe under a
   restricted policy wherever you can construct one.
 - **Do not report `Protected`, or ordinary error paths, as capability gaps.**
@@ -134,8 +140,9 @@ should describe the fix and the affected code, not carry a working exploit.
 
 ## Report format (your final message)
 
-1. Method — the sinks you enumerated and how you traced them.
+1. Method — how you oriented yourself, what you covered, and what you
+   deliberately skipped.
 2. The gap table, ranked.
-3. The negative list — sinks confirmed gated, with the gate for each.
+3. The negative list — effects confirmed gated, with the gate for each.
 4. The batching plan and drafted briefs.
 5. Open questions for the director.
