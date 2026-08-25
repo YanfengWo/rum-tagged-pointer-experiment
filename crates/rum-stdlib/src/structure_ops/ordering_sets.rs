@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
+use super::resumable_merge_sort::{ComparatorResultPolicy, MergeSortItem, sort_with_comparator};
 use super::*;
 
 const SET_MEMBERSHIP_INDEX_THRESHOLD: usize = 16;
@@ -10,6 +11,12 @@ struct SortByEntry {
     item: Expr,
     key: Expr,
     index: usize,
+}
+
+impl MergeSortItem for SortByEntry {
+    fn ordering_value(&self) -> &Expr {
+        &self.key
+    }
 }
 
 struct AdaptiveSetMembership<'a> {
@@ -102,17 +109,15 @@ pub(crate) fn eval_sort(
                 return Ok(invalid_ordering_normal_call(session, "Sort", args, 1));
             };
 
-            let items = expr_args.to_vec();
-            let before = vec![vec![false; items.len()]; items.len()];
-            resume_sort_comparator_from_pair(
+            sort_with_comparator(
                 session,
-                args.to_vec(),
-                expr_head.as_ref().clone(),
+                expr_args.to_vec(),
                 ordering.clone(),
-                items,
-                0,
-                0,
-                before,
+                ComparatorResultPolicy::ExactTrue,
+                {
+                    let expr_head = expr_head.as_ref().clone();
+                    move |items| Expr::call(expr_head, items)
+                },
             )
         }
         _ => Ok(session.invalid_call_with_arg_range("Sort", args, 1, 2)),
@@ -710,9 +715,17 @@ fn resume_sort_by_ordering_from_index(
 ) -> Result<Expr, EvalError> {
     loop {
         let Some(item) = items.get(index).cloned() else {
-            let before = vec![vec![false; decorated.len()]; decorated.len()];
-            return resume_sort_by_key_comparator_from_pair(
-                session, expr_head, ordering, decorated, 0, 0, before,
+            return sort_with_comparator(
+                session,
+                decorated,
+                ordering,
+                ComparatorResultPolicy::ExactTrue,
+                move |entries| {
+                    Expr::call(
+                        expr_head,
+                        entries.into_iter().map(|entry| entry.item).collect(),
+                    )
+                },
             );
         };
 
@@ -758,157 +771,6 @@ fn resume_sort_by_ordering_with_key(
         items,
         index + 1,
         decorated,
-    )
-}
-
-fn resume_sort_by_key_comparator_from_pair(
-    session: &mut Session,
-    expr_head: Expr,
-    ordering: Expr,
-    entries: Vec<SortByEntry>,
-    mut lhs_index: usize,
-    mut rhs_index: usize,
-    mut before: Vec<Vec<bool>>,
-) -> Result<Expr, EvalError> {
-    loop {
-        if lhs_index >= entries.len() {
-            return Ok(sort_by_key_comparator_table(expr_head, entries, &before));
-        }
-        if rhs_index >= entries.len() {
-            lhs_index += 1;
-            rhs_index = 0;
-            continue;
-        }
-        if lhs_index != rhs_index {
-            let comparison_result = eval_binary_predicate(
-                session,
-                &ordering,
-                &entries[lhs_index].key,
-                &entries[rhs_index].key,
-            );
-            let value = match comparison_result {
-                Ok(value) => value,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
-                        Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_sort_by_key_comparator_with_value(
-                                session, expr_head, ordering, entries, lhs_index, rhs_index,
-                                before, value,
-                            )
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
-
-            if is_true_expr(&value) {
-                before[lhs_index][rhs_index] = true;
-            }
-        }
-        rhs_index += 1;
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_sort_by_key_comparator_with_value(
-    session: &mut Session,
-    expr_head: Expr,
-    ordering: Expr,
-    entries: Vec<SortByEntry>,
-    lhs_index: usize,
-    rhs_index: usize,
-    mut before: Vec<Vec<bool>>,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        before[lhs_index][rhs_index] = true;
-    }
-
-    resume_sort_by_key_comparator_from_pair(
-        session,
-        expr_head,
-        ordering,
-        entries,
-        lhs_index,
-        rhs_index + 1,
-        before,
-    )
-}
-
-fn resume_sort_comparator_from_pair(
-    session: &mut Session,
-    call_args: Vec<Expr>,
-    expr_head: Expr,
-    ordering: Expr,
-    items: Vec<Expr>,
-    mut lhs_index: usize,
-    mut rhs_index: usize,
-    mut before: Vec<Vec<bool>>,
-) -> Result<Expr, EvalError> {
-    loop {
-        if lhs_index >= items.len() {
-            return Ok(sort_by_comparator_table(expr_head, items, &before));
-        }
-        if rhs_index >= items.len() {
-            lhs_index += 1;
-            rhs_index = 0;
-            continue;
-        }
-        if lhs_index != rhs_index {
-            let comparison_result = session.evaluate(Expr::call(
-                ordering.clone(),
-                vec![items[lhs_index].clone(), items[rhs_index].clone()],
-            ));
-            let value = match comparison_result {
-                Ok(value) => value,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
-                        Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_sort_comparator_with_value(
-                                session, call_args, expr_head, ordering, items, lhs_index,
-                                rhs_index, before, value,
-                            )
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
-
-            if is_system_symbol_name(&value, "True") {
-                before[lhs_index][rhs_index] = true;
-            }
-        }
-        rhs_index += 1;
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_sort_comparator_with_value(
-    session: &mut Session,
-    call_args: Vec<Expr>,
-    expr_head: Expr,
-    ordering: Expr,
-    items: Vec<Expr>,
-    lhs_index: usize,
-    rhs_index: usize,
-    mut before: Vec<Vec<bool>>,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    if is_system_symbol_name(&value, "True") {
-        before[lhs_index][rhs_index] = true;
-    }
-
-    resume_sort_comparator_from_pair(
-        session,
-        call_args,
-        expr_head,
-        ordering,
-        items,
-        lhs_index,
-        rhs_index + 1,
-        before,
     )
 }
 
@@ -983,44 +845,6 @@ fn sorted_unique_exprs(mut items: Vec<Expr>) -> Vec<Expr> {
     items.sort_by(compare_structural_order);
     items.dedup();
     items
-}
-
-fn sort_by_comparator_table(expr_head: Expr, items: Vec<Expr>, before: &[Vec<bool>]) -> Expr {
-    let mut indices = (0..items.len()).collect::<Vec<_>>();
-    indices.sort_by(|lhs, rhs| match (before[*lhs][*rhs], before[*rhs][*lhs]) {
-        (true, false) => Ordering::Less,
-        (false, true) => Ordering::Greater,
-        _ => lhs.cmp(rhs),
-    });
-
-    Expr::call(
-        expr_head,
-        indices
-            .into_iter()
-            .map(|index| items[index].clone())
-            .collect(),
-    )
-}
-
-fn sort_by_key_comparator_table(
-    expr_head: Expr,
-    entries: Vec<SortByEntry>,
-    before: &[Vec<bool>],
-) -> Expr {
-    let mut indices = (0..entries.len()).collect::<Vec<_>>();
-    indices.sort_by(|lhs, rhs| match (before[*lhs][*rhs], before[*rhs][*lhs]) {
-        (true, false) => Ordering::Less,
-        (false, true) => Ordering::Greater,
-        _ => lhs.cmp(rhs),
-    });
-
-    Expr::call(
-        expr_head,
-        indices
-            .into_iter()
-            .map(|index| entries[index].item.clone())
-            .collect(),
-    )
 }
 
 pub(super) fn compare_structural_order(lhs: &Expr, rhs: &Expr) -> Ordering {

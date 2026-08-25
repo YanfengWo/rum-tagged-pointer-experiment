@@ -73,21 +73,68 @@ fn sort_and_sortby_cover_current_top_level_subset() {
 }
 
 #[test]
-fn custom_sort_comparators_preserve_wide_pair_counts_without_growing_the_stack() {
+fn custom_sort_comparators_obey_the_merge_bound_without_growing_the_stack() {
     let mut session = core_session();
 
     assert_eq!(
         eval_to_string(
             &mut session,
-            r#"n = 120;
+            r#"n = 4097;
                calls = 0;
                ordering = Function[{a, b}, calls = calls + 1; Less[a, b]];
                sorted = Sort[Reverse[Range[n]], ordering];
                sortCalls = calls;
                calls = 0;
                sortedBy = SortBy[Reverse[Range[n]], Identity, ordering];
-               SameQ[{sorted, sortedBy, sortCalls, calls},
-                     {Range[n], Range[n], n (n - 1), n (n - 1)}]"#,
+               SameQ[{sorted, sortedBy}, {Range[n], Range[n]}] &&
+                 sortCalls > 0 && sortCalls <= n * 13 &&
+                 calls > 0 && calls <= n * 13"#,
+        ),
+        "True"
+    );
+}
+
+#[test]
+fn custom_sort_and_sort_by_cover_boundaries_and_stable_tagged_ties() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            r#"input = {{2, a}, {1, b}, {2, c}, {1, d}};
+               expected = {{1, b}, {1, d}, {2, a}, {2, c}};
+               keyTrace = {};
+               sortedBy = SortBy[
+                 input,
+                 Function[item, keyTrace = Append[keyTrace, item]; First[item]],
+                 Less
+               ];
+               SameQ[
+                 {
+                   Sort[{}, Less],
+                   Sort[{1}, Less],
+                   Sort[{1, 2, 3, 4}, Less],
+                   Sort[{4, 3, 2, 1}, Less],
+                   Sort[{3, 1, 4, 2}, Less],
+                   Sort[input, Function[{left, right}, Less[First[left], First[right]]]],
+                   SortBy[{}, Identity, Less],
+                   SortBy[{1}, Identity, Less],
+                   sortedBy,
+                   keyTrace
+                 },
+                 {
+                   {},
+                   {1},
+                   {1, 2, 3, 4},
+                   {1, 2, 3, 4},
+                   {1, 2, 3, 4},
+                   expected,
+                   {},
+                   {1},
+                   expected,
+                   input
+                 }
+               ]"#,
         ),
         "True"
     );

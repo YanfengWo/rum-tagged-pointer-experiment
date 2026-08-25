@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use super::ordering_sets::compare_structural_order;
+use super::resumable_merge_sort::{ComparatorResultPolicy, sort_with_comparator};
 use super::stable_groups::{StableCounts, StableGroups};
 use super::*;
 
@@ -223,15 +224,15 @@ pub(crate) fn eval_reverse_sort(
     };
 
     if let Some(ordering) = ordering {
-        let before = vec![vec![false; items.len()]; items.len()];
-        return resume_reverse_sort_comparator_from_pair(
+        return sort_with_comparator(
             session,
-            expr_head,
-            ordering.clone(),
             items,
-            0,
-            0,
-            before,
+            ordering.clone(),
+            ComparatorResultPolicy::ExactTrue,
+            move |mut items| {
+                items.reverse();
+                Expr::call(expr_head, items)
+            },
         );
     }
 
@@ -358,99 +359,6 @@ pub(crate) fn eval_riffle(
     }
 
     Ok(Expr::call(expr_head, riffled))
-}
-
-fn resume_reverse_sort_comparator_from_pair(
-    session: &mut Session,
-    expr_head: Expr,
-    ordering: Expr,
-    items: Vec<Expr>,
-    mut lhs_index: usize,
-    mut rhs_index: usize,
-    mut before: Vec<Vec<bool>>,
-) -> Result<Expr, EvalError> {
-    loop {
-        if lhs_index >= items.len() {
-            return Ok(reverse_sort_by_comparator_table(expr_head, items, &before));
-        }
-        if rhs_index >= items.len() {
-            lhs_index += 1;
-            rhs_index = 0;
-            continue;
-        }
-        if lhs_index != rhs_index {
-            let comparison_result =
-                eval_binary_predicate(session, &ordering, &items[lhs_index], &items[rhs_index]);
-            let value = match comparison_result {
-                Ok(value) => value,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
-                        Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_reverse_sort_comparator_with_value(
-                                session, expr_head, ordering, items, lhs_index, rhs_index, before,
-                                value,
-                            )
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
-
-            if is_true_expr(&value) {
-                before[lhs_index][rhs_index] = true;
-            }
-        }
-        rhs_index += 1;
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn resume_reverse_sort_comparator_with_value(
-    session: &mut Session,
-    expr_head: Expr,
-    ordering: Expr,
-    items: Vec<Expr>,
-    lhs_index: usize,
-    rhs_index: usize,
-    mut before: Vec<Vec<bool>>,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        before[lhs_index][rhs_index] = true;
-    }
-
-    resume_reverse_sort_comparator_from_pair(
-        session,
-        expr_head,
-        ordering,
-        items,
-        lhs_index,
-        rhs_index + 1,
-        before,
-    )
-}
-
-fn reverse_sort_by_comparator_table(
-    expr_head: Expr,
-    items: Vec<Expr>,
-    before: &[Vec<bool>],
-) -> Expr {
-    let mut indices = (0..items.len()).collect::<Vec<_>>();
-    indices.sort_by(|lhs, rhs| match (before[*lhs][*rhs], before[*rhs][*lhs]) {
-        (true, false) => Ordering::Less,
-        (false, true) => Ordering::Greater,
-        _ => lhs.cmp(rhs),
-    });
-    indices.reverse();
-
-    Expr::call(
-        expr_head,
-        indices
-            .into_iter()
-            .map(|index| items[index].clone())
-            .collect(),
-    )
 }
 
 fn resume_gather_by_function_list_from_position(

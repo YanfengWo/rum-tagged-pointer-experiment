@@ -113,6 +113,27 @@ Upvalues run before ordinary downvalues for ordinary calls unless
 
 Subvalues run after downvalues once the nested head is stable.
 
+## Ordering Callbacks
+
+The binary ordering callback accepted by `Sort`, the three-argument form of
+`SortBy`, and `ReverseSort` is expected to define a deterministic strict weak
+order over the values or evaluated keys it compares. For a callback satisfying
+that contract, the ordered result is defined; the implementation's comparison
+schedule is not. The implementation may select, omit, reorder, or reverse
+comparison pairs. Comparator call count, direction, order, and relative timing
+are therefore not a sequencing API, and programs must not depend on comparator
+side effects occurring in a particular schedule.
+
+`Sort` and custom `SortBy` preserve input order when the callback does not say
+that either tied value strictly precedes the other. `SortBy` evaluates its key
+specification exactly once per input element, in input order, before comparator
+sorting begins. `ReverseSort` produces the complete ascending arrangement and
+then reverses it, so reversing also reverses the input order of a tied run.
+
+If a selected callback comparison requests input, evaluation preserves that
+pending comparison and the partial sort state. Resuming continues that
+invocation, applies its result, and proceeds without restarting the sort.
+
 ## Messages
 
 Messages are runtime outputs attached to an evaluation.

@@ -18,6 +18,7 @@ mod list_lookup;
 mod list_plumbing;
 mod ordering_sets;
 mod reordering;
+mod resumable_merge_sort;
 mod selectors;
 mod sequence;
 pub(crate) mod stable_groups;

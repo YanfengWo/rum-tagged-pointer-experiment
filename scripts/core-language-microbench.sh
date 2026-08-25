@@ -216,7 +216,16 @@ ClearAll[
   gMicroSetPartFixed100Len100,
   gMicroSetPartFixed100Len800,
   gMicroSetPartFillSmall,
-  gMicroSetPartFillLarge
+  gMicroSetPartFillLarge,
+  gMicroSortCallbackSmall,
+  gMicroSortCallbackLarge,
+  gMicroSortByCallbackSmall,
+  gMicroSortByCallbackLarge,
+  gMicroReverseSortCallbackSmall,
+  gMicroReverseSortCallbackLarge,
+  gMicroSortDefaultWide,
+  gMicroSortByDefaultWide,
+  gMicroReverseSortDefaultWide
 ];
 
 rumMicroScale = ${scale};
@@ -530,6 +539,72 @@ ClearAll[
   gMicroUpvalueProbe,
   gMicroUpvalueNonce
 ];
+
+gMicroSortCallbackSmall = Reverse[Range[rumMicroN[100]]];
+gMicroSortCallbackLarge = Reverse[Range[rumMicroN[200]]];
+gMicroSortByCallbackSmall = Reverse[Range[rumMicroN[100]]];
+gMicroSortByCallbackLarge = Reverse[Range[rumMicroN[200]]];
+gMicroReverseSortCallbackSmall = Range[rumMicroN[100]];
+gMicroReverseSortCallbackLarge = Range[rumMicroN[200]];
+gMicroSortDefaultWide = Reverse[Range[rumMicroN[1600]]];
+gMicroSortByDefaultWide = Reverse[Range[rumMicroN[1600]]];
+gMicroReverseSortDefaultWide = Range[rumMicroN[1600]];
+
+rumMicroOnce[
+  "sort-callback-small",
+  rumMicroN[100],
+  Sort[gMicroSortCallbackSmall, Less]
+];
+If[SameQ[rumMicroSink, Range[rumMicroN[100]]], Null, Exit[2]];
+rumMicroOnce[
+  "sort-callback-large",
+  rumMicroN[200],
+  Sort[gMicroSortCallbackLarge, Less]
+];
+If[SameQ[rumMicroSink, Range[rumMicroN[200]]], Null, Exit[2]];
+rumMicroOnce[
+  "sortby-callback-small",
+  rumMicroN[100],
+  SortBy[gMicroSortByCallbackSmall, Identity, Less]
+];
+If[SameQ[rumMicroSink, Range[rumMicroN[100]]], Null, Exit[2]];
+rumMicroOnce[
+  "sortby-callback-large",
+  rumMicroN[200],
+  SortBy[gMicroSortByCallbackLarge, Identity, Less]
+];
+If[SameQ[rumMicroSink, Range[rumMicroN[200]]], Null, Exit[2]];
+rumMicroOnce[
+  "reversesort-callback-small",
+  rumMicroN[100],
+  ReverseSort[gMicroReverseSortCallbackSmall, Less]
+];
+If[SameQ[rumMicroSink, Reverse[Range[rumMicroN[100]]]], Null, Exit[2]];
+rumMicroOnce[
+  "reversesort-callback-large",
+  rumMicroN[200],
+  ReverseSort[gMicroReverseSortCallbackLarge, Less]
+];
+If[SameQ[rumMicroSink, Reverse[Range[rumMicroN[200]]]], Null, Exit[2]];
+
+rumMicroOnce[
+  "sort-default-wide",
+  rumMicroN[1600],
+  Sort[gMicroSortDefaultWide]
+];
+If[SameQ[rumMicroSink, Range[rumMicroN[1600]]], Null, Exit[2]];
+rumMicroOnce[
+  "sortby-default-wide",
+  rumMicroN[1600],
+  SortBy[gMicroSortByDefaultWide, Identity]
+];
+If[SameQ[rumMicroSink, Range[rumMicroN[1600]]], Null, Exit[2]];
+rumMicroOnce[
+  "reversesort-default-wide",
+  rumMicroN[1600],
+  ReverseSort[gMicroReverseSortDefaultWide]
+];
+If[SameQ[rumMicroSink, Reverse[Range[rumMicroN[1600]]]], Null, Exit[2]];
 
 Print["RUM_CORE_MICRO_END"];
 EOF

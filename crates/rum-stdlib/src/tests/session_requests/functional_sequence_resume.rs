@@ -77,34 +77,94 @@ fn resume_eval_request_with_input_can_finish_sortby_key_loop() {
 }
 
 #[test]
-fn resume_eval_request_with_input_can_finish_custom_sort_comparator_loops() {
-    for (source, expected) in [
+fn every_custom_sort_comparison_resumes_with_the_uninterrupted_trace() {
+    for (uninterrupted_source, suspended_source) in [
         (
-            r#"calls = 0;
-               {Sort[{2, 1}, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["sort-compare: "], "yes"], Less[a, b]]]], calls}"#,
-            "List[List[1, 2], 2]",
+            r#"trace = {}; calls = 0;
+               result = Sort[
+                 {4, 1, 3, 2, 5},
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; Less[a, b]]
+               ];
+               {result, trace}"#,
+            r#"trace = {}; calls = 0;
+               result = Sort[
+                 {4, 1, 3, 2, 5},
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; InputString["sort-compare: "]; Less[a, b]]
+               ];
+               {result, trace}"#,
         ),
         (
-            r#"calls = 0;
-               {SortBy[{2, 1}, Identity, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["sort-compare: "], "yes"], Less[a, b]]]], calls}"#,
-            "List[List[1, 2], 2]",
+            r#"trace = {}; calls = 0;
+               result = SortBy[
+                 {4, 1, 3, 2, 5},
+                 Identity,
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; Less[a, b]]
+               ];
+               {result, trace}"#,
+            r#"trace = {}; calls = 0;
+               result = SortBy[
+                 {4, 1, 3, 2, 5},
+                 Identity,
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; InputString["sort-compare: "]; Less[a, b]]
+               ];
+               {result, trace}"#,
         ),
         (
-            r#"calls = 0;
-               {ReverseSort[{1, 2}, Function[{a, b}, calls = calls + 1; If[calls == 1, SameQ[InputString["sort-compare: "], "yes"], Less[a, b]]]], calls}"#,
-            "List[List[2, 1], 2]",
+            r#"trace = {}; calls = 0;
+               result = ReverseSort[
+                 {4, 1, 3, 2, 5},
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; Less[a, b]]
+               ];
+               {result, trace}"#,
+            r#"trace = {}; calls = 0;
+               result = ReverseSort[
+                 {4, 1, 3, 2, 5},
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; InputString["sort-compare: "]; Less[a, b]]
+               ];
+               {result, trace}"#,
         ),
     ] {
-        let mut session = core_session();
-        let failure = session
-            .eval_request(source)
-            .expect_err("custom comparator should suspend on its first comparison");
-        assert_input_prompt(&failure.error, "sort-compare: ");
+        let mut uninterrupted_session = core_session();
+        let uninterrupted = uninterrupted_session
+            .eval_text(uninterrupted_source)
+            .expect("uninterrupted custom sort should finish");
+        let expected_comparisons = uninterrupted_session
+            .eval_text("calls")
+            .expect("uninterrupted custom sort should retain its call count")
+            .value
+            .to_string()
+            .parse::<usize>()
+            .expect("custom sort call count should be an exact non-negative integer");
+        assert!(expected_comparisons > 0);
+        assert!(expected_comparisons <= 5 * 3);
 
-        let response = session
-            .resume_eval_request_with_input("no")
-            .expect("custom comparator should finish after resuming");
-        assert_eq!(response.value.to_string(), expected);
+        let mut session = core_session();
+        let mut outcome = session.eval_request(suspended_source);
+        let mut suspensions = 0;
+
+        let response = loop {
+            match outcome {
+                Ok(response) => break response,
+                Err(failure) => {
+                    assert_input_prompt(&failure.error, "sort-compare: ");
+                    suspensions += 1;
+                    assert!(suspensions <= 5 * 3);
+                    outcome = session.resume_eval_request_with_input("ignored");
+                }
+            }
+        };
+
+        assert_eq!(response.value, uninterrupted.value);
+        assert_eq!(suspensions, expected_comparisons);
+        assert_eq!(
+            session
+                .eval_text("calls")
+                .expect("resumed custom sort should retain its call count")
+                .value
+                .to_string(),
+            expected_comparisons.to_string()
+        );
+        assert!(session.pending_input_request().is_none());
     }
 }
 

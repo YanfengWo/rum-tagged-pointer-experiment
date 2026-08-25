@@ -107,17 +107,50 @@ fn by_extrema_take_and_reverse_sort_cover_ties_and_boundaries() {
 }
 
 #[test]
-fn custom_reverse_sort_comparator_preserves_wide_pair_count_without_growing_the_stack() {
+fn custom_reverse_sort_comparator_obeys_the_merge_bound_without_growing_the_stack() {
     let mut session = core_session();
 
     assert_eq!(
         eval_to_string(
             &mut session,
-            r#"n = 120;
+            r#"n = 4097;
                calls = 0;
                ordering = Function[{a, b}, calls = calls + 1; Less[a, b]];
                sorted = ReverseSort[Range[n], ordering];
-               SameQ[{sorted, calls}, {Reverse[Range[n]], n (n - 1)}]"#,
+               SameQ[sorted, Reverse[Range[n]]] &&
+                 calls > 0 && calls <= n * 13"#,
+        ),
+        "True"
+    );
+}
+
+#[test]
+fn custom_reverse_sort_covers_boundaries_and_reverses_stable_tagged_ties() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            r#"input = {{2, a}, {1, b}, {2, c}, {1, d}};
+               comparator = Function[{left, right}, Less[First[left], First[right]]];
+               SameQ[
+                 {
+                   ReverseSort[{}, Less],
+                   ReverseSort[{1}, Less],
+                   ReverseSort[{1, 2, 3, 4}, Less],
+                   ReverseSort[{4, 3, 2, 1}, Less],
+                   ReverseSort[{3, 1, 4, 2}, Less],
+                   ReverseSort[input, comparator]
+                 },
+                 {
+                   {},
+                   {1},
+                   {4, 3, 2, 1},
+                   {4, 3, 2, 1},
+                   {4, 3, 2, 1},
+                   {{2, c}, {2, a}, {1, d}, {1, b}}
+                 }
+               ]"#,
         ),
         "True"
     );
