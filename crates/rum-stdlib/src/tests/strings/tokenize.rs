@@ -119,6 +119,33 @@ fn rum_tokens_reports_total_ascending_spans_across_inputs() {
 }
 
 #[test]
+fn rum_tokens_matches_pre_change_offset_goldens() {
+    let mut session = core_session();
+
+    for (input, expected) in [
+        ("RumTokens[\"\"]", "List[]"),
+        (
+            "RumTokens[\"f[x]\"]",
+            "List[List[\"symbol\", List[1, 1]], List[\"[\", List[2, 2]], List[\"symbol\", List[3, 3]], List[\"]\", List[4, 4]]]",
+        ),
+        (
+            "RumTokens[\"f[\\\"中文\\\"]\"]",
+            "List[List[\"symbol\", List[1, 1]], List[\"[\", List[2, 2]], List[\"string\", List[3, 6]], List[\"]\", List[7, 7]]]",
+        ),
+        (
+            "RumTokens[\"a (* c *) + b\"]",
+            "List[List[\"symbol\", List[1, 1]], List[\"whitespace\", List[2, 2]], List[\"comment\", List[3, 9]], List[\"whitespace\", List[10, 10]], List[\"+\", List[11, 11]], List[\"whitespace\", List[12, 12]], List[\"symbol\", List[13, 13]]]",
+        ),
+        (
+            "RumTokens[\"identifier\"]",
+            "List[List[\"symbol\", List[1, 10]]]",
+        ),
+    ] {
+        assert_eq!(eval_to_string(&mut session, input), expected);
+    }
+}
+
+#[test]
 fn rum_tokens_preserves_trivia_and_operator_coverage() {
     let mut session = core_session();
 

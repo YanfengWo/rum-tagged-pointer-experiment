@@ -25,6 +25,29 @@ struct ByteTokenSpan {
     end: usize,
 }
 
+struct ByteToCharOffsetCursor<'a> {
+    source: &'a str,
+    byte_position: usize,
+    char_position: usize,
+}
+
+impl<'a> ByteToCharOffsetCursor<'a> {
+    fn new(source: &'a str) -> Self {
+        Self {
+            source,
+            byte_position: 0,
+            char_position: 0,
+        }
+    }
+
+    fn advance_to(&mut self, byte_offset: usize) -> usize {
+        debug_assert!(self.byte_position <= byte_offset);
+        self.char_position += self.source[self.byte_position..byte_offset].chars().count();
+        self.byte_position = byte_offset;
+        self.char_position
+    }
+}
+
 pub(crate) fn eval_tokenize_with(
     session: &mut Session,
     _head: &Expr,
@@ -188,10 +211,19 @@ fn token_span_expr(span: TokenSpan) -> Expr {
 }
 
 fn rum_tokens_expr(source: &str) -> Expr {
+    let spans = rum_token_spans(source);
+    let mut offset_cursor = ByteToCharOffsetCursor::new(source);
+
     list_expr(
-        rum_token_spans(source)
+        spans
             .into_iter()
-            .map(|span| byte_token_span_expr(source, span))
+            .map(|span| {
+                debug_assert!(
+                    offset_cursor.byte_position <= span.start && span.start <= span.end,
+                    "RumTokens spans must be ordered and non-overlapping"
+                );
+                byte_token_span_expr(&mut offset_cursor, span)
+            })
             .collect(),
     )
 }
@@ -282,12 +314,15 @@ fn nonempty_error_end(source: &str, error: &SyntaxError, span: Span) -> usize {
     }
 }
 
-fn byte_token_span_expr(source: &str, span: ByteTokenSpan) -> Expr {
+fn byte_token_span_expr(
+    offset_cursor: &mut ByteToCharOffsetCursor<'_>,
+    span: ByteTokenSpan,
+) -> Expr {
     list_expr(vec![
         Expr::string(span.kind),
         inclusive_span_expr(
-            byte_to_char_offset(source, span.start),
-            byte_to_char_offset(source, span.end),
+            offset_cursor.advance_to(span.start),
+            offset_cursor.advance_to(span.end),
         ),
     ])
 }
@@ -297,10 +332,6 @@ fn inclusive_span_expr(start: usize, end: usize) -> Expr {
         Expr::integer(BigInt::from(start + 1)),
         Expr::integer(BigInt::from(end)),
     ])
-}
-
-fn byte_to_char_offset(source: &str, byte_offset: usize) -> usize {
-    source[..byte_offset].chars().count()
 }
 
 fn trivia_kind_label(kind: TriviaKind) -> &'static str {
