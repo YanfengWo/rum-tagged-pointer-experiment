@@ -1,4 +1,5 @@
 use super::*;
+use rum_runtime::SessionRequestError;
 
 fn core_session() -> Session {
     let mut session = Session::new();
@@ -349,6 +350,162 @@ fn multi_iterator_control_siblings_charge_iteration_product() {
                 && message.tag == "reslim"
                 && message.text == "evaluation exceeded iteration work limit (5)"
         }));
+    }
+}
+
+#[test]
+fn evaluated_iterator_counts_charge_the_running_product() {
+    for (source, termination, message) in [
+        (
+            "n = 10^4; Do[0, {i, 1, n}, {j, 1, n}]",
+            "TerminatedEvaluation[\"IterationWorkLimit\"]",
+            "evaluation exceeded iteration work limit (100000)",
+        ),
+        (
+            "n = 10^4; Table[0, {i, 1, n}, {j, 1, n}]",
+            "TerminatedEvaluation[\"GeneratedElementLimit\"]",
+            "evaluation exceeded generated element limit (100000)",
+        ),
+        (
+            "n = 10^4; Sum[1, {i, 1, n}, {j, 1, n}]",
+            "TerminatedEvaluation[\"IterationWorkLimit\"]",
+            "evaluation exceeded iteration work limit (100000)",
+        ),
+        (
+            "Table[0, {i, 1, 10^4}, {j, 1, i}]",
+            "TerminatedEvaluation[\"GeneratedElementLimit\"]",
+            "evaluation exceeded generated element limit (100000)",
+        ),
+    ] {
+        let mut session = core_session();
+        let refused = session.eval_text(source).unwrap();
+        assert_eq!(refused.value.to_string(), termination, "{source}");
+        assert!(
+            refused.messages.iter().any(|candidate| {
+                candidate.symbol == "General"
+                    && candidate.tag == "reslim"
+                    && candidate.text == message
+            }),
+            "{source} messages {:?}",
+            refused.messages
+        );
+    }
+}
+
+#[test]
+fn nested_iteration_constructs_share_the_running_product() {
+    let mut session = core_session();
+    session.set_generated_element_limit(5);
+
+    let refused = session
+        .eval_text("n = 3; Table[Table[0, {j, 1, n}], {i, 1, n}]")
+        .unwrap();
+    assert_eq!(
+        refused.value.to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert!(refused.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "reslim"
+            && message.text == "evaluation exceeded generated element limit (5)"
+    }));
+}
+
+#[test]
+fn iteration_product_scope_resets_between_statements_and_after_errors() {
+    let mut session = core_session();
+    session.set_generated_element_limit(5);
+
+    let separate = session
+        .eval_text("a = Table[0, {i, 3}]; b = Table[1, {j, 3}]; {a, b}")
+        .unwrap();
+    assert_eq!(
+        separate.value.to_string(),
+        "List[List[0, 0, 0], List[1, 1, 1]]"
+    );
+    assert!(separate.messages.is_empty());
+
+    assert_eq!(
+        session
+            .eval_text("Table[0, {i, 3}, {j, 2}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "TerminatedEvaluation[\"GeneratedElementLimit\"]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Table[2, {k, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[2, 2, 2]"
+    );
+}
+
+#[test]
+fn suspended_nested_loop_retains_and_then_resets_the_running_product() {
+    let mut session = core_session();
+    session.set_iteration_work_limit(5);
+
+    let failure = session
+        .eval_request("Do[If[SameQ[i, 1], InputString[\"budget: \"], Do[Null, {j, 3}]], {i, 2}]")
+        .expect_err("the first outer iteration should request input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "budget: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let resumed = session
+        .resume_eval_request_with_input("ready")
+        .expect("the resumed loop should terminate through the retained budget");
+    assert_eq!(
+        resumed.value.to_string(),
+        "TerminatedEvaluation[\"IterationWorkLimit\"]"
+    );
+    assert!(resumed.messages.iter().any(|message| {
+        message.symbol == "General"
+            && message.tag == "reslim"
+            && message.text == "evaluation exceeded iteration work limit (5)"
+    }));
+    assert_eq!(
+        session
+            .eval_text("Do[Null, {k, 3}]")
+            .unwrap()
+            .value
+            .to_string(),
+        "Null"
+    );
+}
+
+#[test]
+fn ordinary_nested_iteration_results_are_unchanged() {
+    for (source, expected) in [
+        (
+            "n = 3; Table[i + j, {i, 1, n}, {j, 1, n}]",
+            "List[List[2, 3, 4], List[3, 4, 5], List[4, 5, 6]]",
+        ),
+        (
+            "Table[i + j, {i, 1, 3}, {j, 1, i}]",
+            "List[List[2], List[3, 4], List[4, 5, 6]]",
+        ),
+        (
+            "Table[Table[i + j, {j, 1, 2}], {i, 1, 2}]",
+            "List[List[2, 3], List[3, 4]]",
+        ),
+        (
+            "n = 3; calls = 0; Do[calls = calls + 1, {i, 1, n}, {j, 1, n}]; calls",
+            "9",
+        ),
+        ("Sum[i + j, {i, 1, 3}, {j, 1, 3}]", "36"),
+        ("Product[i + j, {i, 1, 2}, {j, 1, 2}]", "72"),
+    ] {
+        let mut session = core_session();
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(outcome.messages.is_empty(), "{source}");
     }
 }
 

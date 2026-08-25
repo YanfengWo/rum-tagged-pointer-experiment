@@ -80,7 +80,9 @@ impl Session {
             ControlDataBuiltin::ConfirmMatch => self.eval_confirm_match(args),
             ControlDataBuiltin::ConfirmQuiet => self.eval_confirm_quiet(args),
             ControlDataBuiltin::Continue => self.eval_continue(head, args),
-            ControlDataBuiltin::Do => self.eval_do(args),
+            ControlDataBuiltin::Do => {
+                self.with_iteration_product_scope(|session| session.eval_do(args))
+            }
             ControlDataBuiltin::Enclose => self.eval_enclose(args),
             ControlDataBuiltin::ExceptionTypes => self.eval_exception_types(head, args),
             ControlDataBuiltin::Exit => self.eval_exit(args),
@@ -89,15 +91,21 @@ impl Session {
             ControlDataBuiltin::FailureQ => self.eval_failure_q(head, args),
             ControlDataBuiltin::For => self.eval_for(args),
             ControlDataBuiltin::If => self.eval_if(args),
-            ControlDataBuiltin::Product => self.eval_product(args),
+            ControlDataBuiltin::Product => {
+                self.with_iteration_product_scope(|session| session.eval_product(args))
+            }
             ControlDataBuiltin::RegisterExceptionType => {
                 self.eval_register_exception_type(head, args)
             }
             ControlDataBuiltin::Return => self.eval_return(head, args),
             ControlDataBuiltin::Success => self.eval_success(head, args),
-            ControlDataBuiltin::Sum => self.eval_sum(args),
+            ControlDataBuiltin::Sum => {
+                self.with_iteration_product_scope(|session| session.eval_sum(args))
+            }
             ControlDataBuiltin::Switch => self.eval_switch(args),
-            ControlDataBuiltin::Table => self.eval_table(args),
+            ControlDataBuiltin::Table => {
+                self.with_iteration_product_scope(|session| session.eval_table(args))
+            }
             ControlDataBuiltin::TerminatedEvaluation => self.eval_terminated_evaluation(head, args),
             ControlDataBuiltin::Throw => self.eval_throw(head, args),
             ControlDataBuiltin::ThrowException => self.eval_throw_exception(head, args),

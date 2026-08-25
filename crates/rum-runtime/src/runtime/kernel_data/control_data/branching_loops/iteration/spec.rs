@@ -273,28 +273,83 @@ fn checked_iteration_count(
     count: &BigInt,
     consumer: IterationConsumer,
 ) -> Result<usize, EvalError> {
+    let parent_product = session.iteration_product_budget.get();
+    if parent_product == 1 {
+        enforce_iteration_count_limits(session, count, consumer, true)?;
+        let count = bigint_count_to_usize(count)
+            .expect("resource limit prechecks keep iteration counts representable");
+        session.iteration_product_budget.set(count);
+        return Ok(count);
+    }
+
+    if matches!(consumer, IterationConsumer::Table) {
+        enforce_table_memory_projection(session, count)?;
+    }
+    let Some(count) = bigint_count_to_usize(count) else {
+        let accumulated_count = BigInt::from(parent_product) * count;
+        enforce_iteration_count_limits(session, &accumulated_count, consumer, false)?;
+        unreachable!("an unrepresentable count must exceed a usize resource limit");
+    };
+    let Some(accumulated_count) = parent_product.checked_mul(count) else {
+        let accumulated_count = BigInt::from(parent_product) * BigInt::from(count);
+        enforce_iteration_count_limits(session, &accumulated_count, consumer, false)?;
+        unreachable!("an overflowing running product must exceed a usize resource limit");
+    };
+    enforce_iteration_count_limits_for_count(session, accumulated_count, consumer)?;
+    session.iteration_product_budget.set(accumulated_count);
+
+    Ok(count)
+}
+
+fn enforce_iteration_count_limits_for_count(
+    session: &Session,
+    count: usize,
+    consumer: IterationConsumer,
+) -> Result<(), EvalError> {
+    if matches!(consumer, IterationConsumer::Table) {
+        session.enforce_generated_element_limit_for_count(count)?;
+    }
+    let limit = session.resource_limits().iteration_work_limit;
+    if count > limit {
+        return Err(EvalError::IterationWorkLimitExceeded { limit });
+    }
+
+    Ok(())
+}
+
+fn enforce_table_memory_projection(session: &Session, count: &BigInt) -> Result<(), EvalError> {
+    let Some(limit) = session.current_memory_limit else {
+        return Ok(());
+    };
+    if count > &BigInt::from(usize::MAX) {
+        return Err(EvalError::MemoryConstraintExceeded { limit });
+    }
+    let count = bigint_count_to_usize(count)
+        .expect("Table count was checked against usize::MAX before conversion");
+    session
+        .enforce_active_memory_limit_for_projected_bytes(generated_list_memory_proxy_bytes(count))
+}
+
+fn enforce_iteration_count_limits(
+    session: &Session,
+    count: &BigInt,
+    consumer: IterationConsumer,
+    project_table_memory: bool,
+) -> Result<(), EvalError> {
     match consumer {
         IterationConsumer::Do | IterationConsumer::Product | IterationConsumer::Sum => {
             session.enforce_iteration_work_limit_for_big_count(count)?;
         }
         IterationConsumer::Table => {
-            if let Some(limit) = session.current_memory_limit {
-                if count > &BigInt::from(usize::MAX) {
-                    return Err(EvalError::MemoryConstraintExceeded { limit });
-                }
-                let count = bigint_count_to_usize(count)
-                    .expect("Table count was checked against usize::MAX before conversion");
-                session.enforce_active_memory_limit_for_projected_bytes(
-                    generated_list_memory_proxy_bytes(count),
-                )?;
+            if project_table_memory {
+                enforce_table_memory_projection(session, count)?;
             }
             session.enforce_generated_element_limit_for_big_count(count)?;
             session.enforce_iteration_work_limit_for_big_count(count)?;
         }
     }
 
-    Ok(bigint_count_to_usize(count)
-        .expect("resource limit prechecks keep iteration counts representable"))
+    Ok(())
 }
 
 fn integer_range_count(start: &BigInt, end: &BigInt, step: &BigInt) -> Option<BigInt> {
