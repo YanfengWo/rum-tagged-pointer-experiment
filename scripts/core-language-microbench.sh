@@ -174,6 +174,16 @@ wide_exact_match_expr() {
   printf 'MatchQ[gMicroWideMatcher[%s], gMicroWideMatcher[%s]]' "${args}" "${args}"
 }
 
+value_q_ownvalue_definitions() {
+  local first=$1
+  local last=$2
+  local index
+
+  for ((index = first; index <= last; index++)); do
+    printf 'gMicroValueQDefinition%s = %s;\n' "${index}" "${index}"
+  done
+}
+
 module_chain_small_width=96
 module_chain_large_width=192
 module_chain_small_expr=$(module_chain_expr "${module_chain_small_width}")
@@ -186,6 +196,8 @@ matcher_single_small_width=800
 matcher_single_large_width=1600
 matcher_single_small_expr=$(wide_exact_match_expr "${matcher_single_small_width}")
 matcher_single_large_expr=$(wide_exact_match_expr "${matcher_single_large_width}")
+value_q_definitions_small=$(value_q_ownvalue_definitions 1 2000)
+value_q_definitions_large=$(value_q_ownvalue_definitions 2001 8000)
 
 cat > "${bench_rum}" <<EOF
 ClearAll[
@@ -796,6 +808,24 @@ rumMicroOnce[
   KeySortBy[gMicroKeySortByDefaultWide, Identity]
 ];
 If[SameQ[Keys[rumMicroSink], Range[rumMicroN[1600]]] && Length[rumMicroSink] == rumMicroN[1600], Null, Exit[2]];
+
+${value_q_definitions_small}
+If[SameQ[gMicroValueQDefinition1, 1] && SameQ[gMicroValueQDefinition2000, 2000], Null, Exit[2]];
+rumMicroBench[
+  "valueq-undefined-symbol-definitions-2000",
+  rumMicroN[20],
+  ValueQ[gMicroValueQUndefined]
+];
+If[SameQ[rumMicroSink, False], Null, Exit[2]];
+
+${value_q_definitions_large}
+If[SameQ[gMicroValueQDefinition8000, 8000], Null, Exit[2]];
+rumMicroBench[
+  "valueq-undefined-symbol-definitions-8000",
+  rumMicroN[20],
+  ValueQ[gMicroValueQUndefined]
+];
+If[SameQ[rumMicroSink, False], Null, Exit[2]];
 
 Print["RUM_CORE_MICRO_END"];
 EOF

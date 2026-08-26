@@ -1,5 +1,31 @@
 use super::super::*;
 
+#[cfg(test)]
+std::thread_local! {
+    static VALUE_Q_ROLLBACK_SNAPSHOT_CAPTURES: std::cell::Cell<u64> =
+        const { std::cell::Cell::new(0) };
+    static VALUE_Q_SUPPRESSION_SETUPS: std::cell::Cell<u64> =
+        const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+fn record_value_q_rollback_snapshot_capture() {
+    VALUE_Q_ROLLBACK_SNAPSHOT_CAPTURES.with(|count| count.set(count.get() + 1));
+}
+
+#[cfg(test)]
+fn record_value_q_suppression_setup() {
+    VALUE_Q_SUPPRESSION_SETUPS.with(|count| count.set(count.get() + 1));
+}
+
+#[cfg(test)]
+pub(in crate::runtime) fn take_value_q_trial_setup_counts() -> (u64, u64) {
+    (
+        VALUE_Q_ROLLBACK_SNAPSHOT_CAPTURES.with(|count| count.replace(0)),
+        VALUE_Q_SUPPRESSION_SETUPS.with(|count| count.replace(0)),
+    )
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_definition(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
@@ -41,6 +67,14 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count("ValueQ", args, 1));
         };
 
+        if self.cached_expr_is_evaluation_stable(target) {
+            return Ok(system_expr("False"));
+        }
+
+        Ok(self.eval_value_q_via_trial(target))
+    }
+
+    pub(in crate::runtime) fn eval_value_q_via_trial(&mut self, target: &Expr) -> Expr {
         let original = target.clone();
         let outcome = self.evaluate_value_q_trial(original.clone());
 
@@ -50,16 +84,20 @@ impl Session {
             Err(_) => false,
         };
 
-        Ok(system_expr(if value_q { "True" } else { "False" }))
+        system_expr(if value_q { "True" } else { "False" })
     }
 
     fn evaluate_value_q_trial(&mut self, target: Expr) -> Result<Expr, EvalError> {
+        #[cfg(test)]
+        record_value_q_rollback_snapshot_capture();
         let snapshot = self.capture_evaluation_rollback_snapshot();
         let saved_prng_state = self.prng_state;
         let saved_print_sink = self.print_sink.take();
         let saved_capability_policy = self.capability_policy;
         let saved_effect_suppression = self.value_q_effect_suppression_active;
 
+        #[cfg(test)]
+        record_value_q_suppression_setup();
         self.value_q_effect_suppression_active = true;
         self.capability_policy =
             saved_capability_policy.denying([Capability::FileWrite, Capability::Process]);
