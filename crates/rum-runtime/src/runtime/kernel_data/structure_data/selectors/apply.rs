@@ -7,6 +7,7 @@ const ASSOCIATION_BATCH_KEY_INDEX_MIN_KEYS: usize = 8;
 const NO_ASSOCIATION_KEY_POSITION: usize = usize::MAX;
 
 pub(in crate::runtime::kernel_data::structure_data) fn apply_part_selectors(
+    session: &mut Session,
     expr: &Expr,
     selectors: &[PartSelector],
 ) -> Option<Expr> {
@@ -14,23 +15,27 @@ pub(in crate::runtime::kernel_data::structure_data) fn apply_part_selectors(
         return Some(expr.clone());
     };
 
-    match select_parts_for_selector(expr, first)? {
-        SelectedPartShape::Leaf(selected) => apply_part_selectors(&selected, rest),
+    match select_parts_for_selector(session, expr, first)? {
+        SelectedPartShape::Leaf(selected) => apply_part_selectors(session, &selected, rest),
         SelectedPartShape::Branch(selected) => Some(selected_shape_to_expr(
-            SelectedPartShape::Branch(apply_part_selectors_to_shape(selected, rest)?),
-            Some(selected_shape_head_for_expr(expr, first)),
+            SelectedPartShape::Branch(apply_part_selectors_to_shape(session, selected, rest)?),
+            Some(selected_shape_head_for_expr(session, expr, first)),
         )),
         SelectedPartShape::AssociationBranch(selected) => Some(selected_shape_to_expr(
             SelectedPartShape::AssociationBranch(apply_part_selectors_to_keyed_shape(
-                selected, rest,
+                session, selected, rest,
             )?),
             None,
         )),
     }
 }
 
-fn selected_shape_head_for_expr(expr: &Expr, selector: &PartSelector) -> Expr {
-    if association_entries_from_expr(expr).is_some() && selector_contains_key(selector) {
+fn selected_shape_head_for_expr(
+    session: &mut Session,
+    expr: &Expr,
+    selector: &PartSelector,
+) -> Expr {
+    if selector_contains_key(selector) && session.association_entry_cursor(expr).is_some() {
         system_expr("Association")
     } else {
         structural_head_expr(expr)
@@ -38,6 +43,7 @@ fn selected_shape_head_for_expr(expr: &Expr, selector: &PartSelector) -> Expr {
 }
 
 pub(super) fn collect_missing_key_selections(
+    session: &mut Session,
     expr: &Expr,
     selectors: &[PartSelector],
     missing_keys: &mut Vec<(Expr, Expr)>,
@@ -46,16 +52,17 @@ pub(super) fn collect_missing_key_selections(
         return;
     };
 
-    if collect_missing_key_selections_for_key_selector(expr, first, rest, missing_keys) {
+    if collect_missing_key_selections_for_key_selector(session, expr, first, rest, missing_keys) {
         return;
     }
 
-    if let Some(shape) = select_parts_for_selector(expr, first) {
-        collect_missing_key_selections_in_shape(shape, rest, missing_keys);
+    if let Some(shape) = select_parts_for_selector(session, expr, first) {
+        collect_missing_key_selections_in_shape(session, shape, rest, missing_keys);
     }
 }
 
 fn collect_missing_key_selections_for_key_selector(
+    session: &mut Session,
     expr: &Expr,
     selector: &PartSelector,
     rest: &[PartSelector],
@@ -63,20 +70,20 @@ fn collect_missing_key_selections_for_key_selector(
 ) -> bool {
     match selector {
         PartSelector::Key(key) => {
-            collect_missing_key_selection_for_key(expr, key, rest, missing_keys);
+            collect_missing_key_selection_for_key(session, expr, key, rest, missing_keys);
             true
         }
         PartSelector::Multi(specs)
-            if association_entries_from_expr(expr).is_some()
-                && specs
-                    .iter()
-                    .all(|spec| matches!(spec, PartSelector::Key(_))) =>
+            if specs
+                .iter()
+                .all(|spec| matches!(spec, PartSelector::Key(_)))
+                && session.association_entry_cursor(expr).is_some() =>
         {
             for spec in specs {
                 let PartSelector::Key(key) = spec else {
                     continue;
                 };
-                collect_missing_key_selection_for_key(expr, key, rest, missing_keys);
+                collect_missing_key_selection_for_key(session, expr, key, rest, missing_keys);
             }
             true
         }
@@ -85,39 +92,41 @@ fn collect_missing_key_selections_for_key_selector(
 }
 
 fn collect_missing_key_selection_for_key(
+    session: &mut Session,
     expr: &Expr,
     key: &Expr,
     rest: &[PartSelector],
     missing_keys: &mut Vec<(Expr, Expr)>,
 ) {
-    let Some(entries) = association_entries_from_expr(expr) else {
+    let Some(value) = session.lookup_association_key_value(expr, key) else {
         return;
     };
 
-    if let Some((_, value)) = entries.iter().find(|(entry_key, _)| entry_key == key) {
-        collect_missing_key_selections(value, rest, missing_keys);
+    if let Some(value) = value {
+        collect_missing_key_selections(session, &value, rest, missing_keys);
     } else {
         missing_keys.push((key.clone(), expr.clone()));
     }
 }
 
 fn collect_missing_key_selections_in_shape(
+    session: &mut Session,
     shape: SelectedPartShape,
     selectors: &[PartSelector],
     missing_keys: &mut Vec<(Expr, Expr)>,
 ) {
     match shape {
         SelectedPartShape::Leaf(expr) => {
-            collect_missing_key_selections(&expr, selectors, missing_keys);
+            collect_missing_key_selections(session, &expr, selectors, missing_keys);
         }
         SelectedPartShape::Branch(children) => {
             for child in children {
-                collect_missing_key_selections_in_shape(child, selectors, missing_keys);
+                collect_missing_key_selections_in_shape(session, child, selectors, missing_keys);
             }
         }
         SelectedPartShape::AssociationBranch(children) => {
             for (_, child) in children {
-                collect_missing_key_selections_in_shape(child, selectors, missing_keys);
+                collect_missing_key_selections_in_shape(session, child, selectors, missing_keys);
             }
         }
     }
@@ -146,38 +155,41 @@ pub(super) fn selector_mixes_key_and_non_key(selector: &PartSelector) -> bool {
 }
 
 fn apply_part_selectors_to_shape(
+    session: &mut Session,
     selected: Vec<SelectedPartShape>,
     selectors: &[PartSelector],
 ) -> Option<Vec<SelectedPartShape>> {
     selected
         .into_iter()
-        .map(|shape| apply_part_selectors_to_selected_shape(shape, selectors))
-        .collect()
+        .map(|shape| apply_part_selectors_to_selected_shape(session, shape, selectors))
+        .collect::<Option<Vec<_>>>()
 }
 
 fn apply_part_selectors_to_selected_shape(
+    session: &mut Session,
     shape: SelectedPartShape,
     selectors: &[PartSelector],
 ) -> Option<SelectedPartShape> {
     match shape {
         SelectedPartShape::Leaf(expr) => Some(SelectedPartShape::Leaf(apply_part_selectors(
-            &expr, selectors,
+            session, &expr, selectors,
         )?)),
         SelectedPartShape::Branch(children) => Some(SelectedPartShape::Branch(
             children
                 .into_iter()
-                .map(|child| apply_part_selectors_to_selected_shape(child, selectors))
+                .map(|child| apply_part_selectors_to_selected_shape(session, child, selectors))
                 .collect::<Option<Vec<_>>>()?,
         )),
         SelectedPartShape::AssociationBranch(children) => {
             Some(SelectedPartShape::AssociationBranch(
-                apply_part_selectors_to_keyed_shape(children, selectors)?,
+                apply_part_selectors_to_keyed_shape(session, children, selectors)?,
             ))
         }
     }
 }
 
 fn apply_part_selectors_to_keyed_shape(
+    session: &mut Session,
     selected: Vec<(Expr, SelectedPartShape)>,
     selectors: &[PartSelector],
 ) -> Option<Vec<(Expr, SelectedPartShape)>> {
@@ -186,7 +198,7 @@ fn apply_part_selectors_to_keyed_shape(
         .map(|(key, shape)| {
             Some((
                 key,
-                apply_part_selectors_to_selected_shape(shape, selectors)?,
+                apply_part_selectors_to_selected_shape(session, shape, selectors)?,
             ))
         })
         .collect()
@@ -212,10 +224,18 @@ fn selected_shape_to_expr(shape: SelectedPartShape, root_head: Option<Expr>) -> 
 }
 
 pub(super) fn select_parts_for_selector(
+    session: &mut Session,
     expr: &Expr,
     selector: &PartSelector,
 ) -> Option<SelectedPartShape> {
-    if let Some(entries) = association_entries_from_expr(expr) {
+    if let PartSelector::Key(key) = selector {
+        let value = session.lookup_association_key_value(expr, key)?;
+        return Some(SelectedPartShape::Leaf(
+            value.unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
+        ));
+    }
+
+    if let Some(entries) = session.association_entry_cursor(expr) {
         return select_association_parts_for_selector(expr, &entries, selector);
     }
 
@@ -231,48 +251,11 @@ pub(super) fn select_parts_for_selector(
                     .collect(),
             )),
         },
-        PartSelector::Key(key) => {
-            let entries = association_entries_from_expr(expr)?;
-            Some(SelectedPartShape::Leaf(
-                entries
-                    .iter()
-                    .find(|(entry_key, _)| entry_key == key)
-                    .map(|(_, value)| value.clone())
-                    .unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
-            ))
-        }
+        PartSelector::Key(_) => None,
         PartSelector::Multi(specs) => {
-            if let Some(entries) = association_entries_from_expr(expr) {
-                if specs
-                    .iter()
-                    .all(|spec| matches!(spec, PartSelector::Key(_)))
-                {
-                    return Some(SelectedPartShape::AssociationBranch(
-                        specs
-                            .iter()
-                            .filter_map(|spec| match spec {
-                                PartSelector::Key(key) => Some((
-                                    key.clone(),
-                                    SelectedPartShape::Leaf(
-                                        entries
-                                            .iter()
-                                            .find(|(entry_key, _)| entry_key == key)
-                                            .map(|(_, value)| value.clone())
-                                            .unwrap_or_else(|| {
-                                                missing_key_absent_expr(key_expr(key.clone()))
-                                            }),
-                                    ),
-                                )),
-                                _ => None,
-                            })
-                            .collect(),
-                    ));
-                }
-            }
-
             let mut selected = Vec::new();
             for spec in specs {
-                match (spec, select_parts_for_selector(expr, spec)?) {
+                match (spec, select_parts_for_selector(session, expr, spec)?) {
                     (
                         PartSelector::Single(_) | PartSelector::Key(_),
                         SelectedPartShape::Leaf(expr),
@@ -301,14 +284,14 @@ pub(super) fn select_parts_for_selector(
 
 fn select_association_parts_for_selector(
     expr: &Expr,
-    entries: &[(Expr, Expr)],
+    entries: &AssociationEntryCursor<'_>,
     selector: &PartSelector,
 ) -> Option<SelectedPartShape> {
     match selector {
         PartSelector::Key(key) => Some(SelectedPartShape::Leaf(
             entries
                 .iter()
-                .find(|(entry_key, _)| entry_key == key)
+                .find(|(entry_key, _)| *entry_key == key)
                 .map(|(_, value)| value.clone())
                 .unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
         )),
@@ -354,7 +337,7 @@ fn select_association_parts_for_selector(
 }
 
 fn select_association_entries_for_keys(
-    entries: &[(Expr, Expr)],
+    entries: &AssociationEntryCursor<'_>,
     specs: &[PartSelector],
 ) -> Vec<(Expr, SelectedPartShape)> {
     if entries.len() < ASSOCIATION_BATCH_KEY_INDEX_MIN_ENTRIES
@@ -368,7 +351,7 @@ fn select_association_entries_for_keys(
                     SelectedPartShape::Leaf(
                         entries
                             .iter()
-                            .find(|(entry_key, _)| entry_key == key)
+                            .find(|(entry_key, _)| *entry_key == key)
                             .map(|(_, value)| value.clone())
                             .unwrap_or_else(|| missing_key_absent_expr(key_expr(key.clone()))),
                     ),
@@ -396,7 +379,7 @@ fn select_association_entries_for_keys(
     }
 
     let mut selected_values = vec![None; specs.len()];
-    for (entry_key, value) in entries {
+    for (entry_key, value) in entries.iter() {
         let Some(&first_position) = first_position_by_key.get(entry_key) else {
             continue;
         };
@@ -432,31 +415,43 @@ fn select_association_entries_for_keys(
         .collect()
 }
 
-fn association_entry_by_index(entries: &[(Expr, Expr)], index: isize) -> Option<(Expr, Expr)> {
+fn association_entry_by_index(
+    entries: &AssociationEntryCursor<'_>,
+    index: isize,
+) -> Option<(Expr, Expr)> {
     if index == 0 {
         return None;
     }
 
     let normalized = normalize_structural_arg_position(index, entries.len())?;
-    entries.get(normalized).cloned()
+    entries
+        .entry(normalized)
+        .map(|(key, value)| (key.clone(), value.clone()))
 }
 
 fn select_association_entries_for_atomic_spec(
-    entries: &[(Expr, Expr)],
+    entries: &AssociationEntryCursor<'_>,
     spec: &AtomicPartSpec,
 ) -> Option<Vec<(Expr, Expr)>> {
     match spec {
         AtomicPartSpec::Index(index) => {
             association_entry_by_index(entries, *index).map(|entry| vec![entry])
         }
-        AtomicPartSpec::All => Some(entries.to_vec()),
+        AtomicPartSpec::All => Some(
+            entries
+                .iter()
+                .map(|(key, value)| (key.clone(), value.clone()))
+                .collect(),
+        ),
         AtomicPartSpec::Span(span) => {
             let components = spans::resolve_span_components(*span, entries.len())?;
             components
                 .into_iter()
                 .map(|component| {
                     let index = normalize_structural_arg_position(component, entries.len())?;
-                    entries.get(index).cloned()
+                    entries
+                        .entry(index)
+                        .map(|(key, value)| (key.clone(), value.clone()))
                 })
                 .collect()
         }

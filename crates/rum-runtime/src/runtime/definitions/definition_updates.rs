@@ -357,7 +357,7 @@ impl Session {
         };
 
         let Some(current) =
-            selected_expr_from_part_target_selector_exprs(&current_target, &selector_exprs)
+            selected_expr_from_part_target_selector_exprs(self, &current_target, &selector_exprs)
         else {
             return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
         };

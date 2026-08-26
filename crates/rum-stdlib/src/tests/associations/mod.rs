@@ -7,6 +7,7 @@ fn core_session() -> Session {
     session
 }
 
+mod association_part_cursor;
 mod associations;
 mod associations_aggregate_diagnostics;
 mod associations_basic_diagnostics;

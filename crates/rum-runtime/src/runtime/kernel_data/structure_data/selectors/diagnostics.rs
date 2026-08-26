@@ -2,11 +2,12 @@ use super::apply::{key_expr, select_parts_for_selector};
 use super::*;
 
 pub(super) fn diagnose_part_selection_failure(
+    session: &mut Session,
     expr: &Expr,
     selectors: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
     let (first, rest) = selectors.split_first()?;
-    let failure = diagnose_selector_failure(expr, first, rest)?;
+    let failure = diagnose_selector_failure(session, expr, first, rest)?;
     Some(match failure {
         PartSelectionFailure::PartD { .. } => PartSelectionFailure::PartD {
             spec: Some(selector_path_to_expr(selectors)),
@@ -16,17 +17,19 @@ pub(super) fn diagnose_part_selection_failure(
 }
 
 fn diagnose_selector_failure(
+    session: &mut Session,
     expr: &Expr,
     selector: &PartSelector,
     rest: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
-    match select_parts_for_selector(expr, selector) {
-        Some(shape) => diagnose_selected_shape_failure(shape, rest),
-        None => diagnose_failed_selector(expr, selector),
+    match select_parts_for_selector(session, expr, selector) {
+        Some(shape) => diagnose_selected_shape_failure(session, shape, rest),
+        None => diagnose_failed_selector(session, expr, selector),
     }
 }
 
 fn diagnose_selected_shape_failure(
+    session: &mut Session,
     shape: SelectedPartShape,
     rest: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
@@ -35,9 +38,10 @@ fn diagnose_selected_shape_failure(
     }
 
     match shape {
-        SelectedPartShape::Leaf(expr) => diagnose_part_selection_failure(&expr, rest),
-        SelectedPartShape::Branch(children) => diagnose_children_failure(children, rest),
+        SelectedPartShape::Leaf(expr) => diagnose_part_selection_failure(session, &expr, rest),
+        SelectedPartShape::Branch(children) => diagnose_children_failure(session, children, rest),
         SelectedPartShape::AssociationBranch(children) => diagnose_children_failure(
+            session,
             children
                 .into_iter()
                 .map(|(_, child)| child)
@@ -48,6 +52,7 @@ fn diagnose_selected_shape_failure(
 }
 
 fn diagnose_children_failure(
+    session: &mut Session,
     children: Vec<SelectedPartShape>,
     rest: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
@@ -57,10 +62,14 @@ fn diagnose_children_failure(
 
     children
         .into_iter()
-        .find_map(|child| diagnose_selected_shape_failure(child, rest))
+        .find_map(|child| diagnose_selected_shape_failure(session, child, rest))
 }
 
-fn diagnose_failed_selector(expr: &Expr, selector: &PartSelector) -> Option<PartSelectionFailure> {
+fn diagnose_failed_selector(
+    session: &mut Session,
+    expr: &Expr,
+    selector: &PartSelector,
+) -> Option<PartSelectionFailure> {
     match selector {
         PartSelector::Key(_) => Some(PartSelectionFailure::Pspec1 {
             spec: selector_to_expr(selector),
@@ -73,7 +82,9 @@ fn diagnose_failed_selector(expr: &Expr, selector: &PartSelector) -> Option<Part
             span: *span,
             target: expr.clone(),
         }),
-        PartSelector::Multi(specs) => diagnose_failed_multi_selector(expr, selector, specs),
+        PartSelector::Multi(specs) => {
+            diagnose_failed_multi_selector(session, expr, selector, specs)
+        }
     }
 }
 
@@ -96,11 +107,12 @@ fn diagnose_failed_index(expr: &Expr, index: isize) -> Option<PartSelectionFailu
 }
 
 fn diagnose_failed_multi_selector(
+    session: &mut Session,
     expr: &Expr,
     selector: &PartSelector,
     specs: &[PartSelector],
 ) -> Option<PartSelectionFailure> {
-    if association_entries_from_expr(expr).is_some() {
+    if session.association_entry_cursor(expr).is_some() {
         if let Some(index) = specs.iter().find_map(selector_zero_index) {
             return Some(PartSelectionFailure::PartW {
                 part: Expr::integer(BigInt::from(index)),
@@ -110,11 +122,11 @@ fn diagnose_failed_multi_selector(
     }
 
     for spec in specs {
-        if select_parts_for_selector(expr, spec).is_some() {
+        if select_parts_for_selector(session, expr, spec).is_some() {
             continue;
         }
 
-        let failure = diagnose_failed_selector(expr, spec)?;
+        let failure = diagnose_failed_selector(session, expr, spec)?;
         return Some(match failure {
             PartSelectionFailure::PartW { target, .. } => PartSelectionFailure::PartW {
                 part: selector_to_expr(selector),

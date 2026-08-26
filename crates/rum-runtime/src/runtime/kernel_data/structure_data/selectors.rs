@@ -81,7 +81,7 @@ impl Session {
         let Some(selectors) = parse_part_selectors_for_part(selector_exprs) else {
             return false;
         };
-        let Some(failure) = diagnose_part_selection_failure(target, &selectors) else {
+        let Some(failure) = diagnose_part_selection_failure(self, target, &selectors) else {
             return false;
         };
 
@@ -151,8 +151,8 @@ impl Session {
             }
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
-        if association_entries_from_expr(&args[0]).is_some()
-            && selectors.iter().any(selector_mixes_key_and_non_key)
+        if selectors.iter().any(selector_mixes_key_and_non_key)
+            && self.association_entry_cursor(&args[0]).is_some()
         {
             self.push_message(
                 "Part",
@@ -163,8 +163,8 @@ impl Session {
         }
 
         let original = Expr::call(head.clone(), args.to_vec());
-        let Some(value) = apply_part_selectors(&args[0], &selectors) else {
-            if let Some(failure) = diagnose_part_selection_failure(&args[0], &selectors) {
+        let Some(value) = apply_part_selectors(self, &args[0], &selectors) else {
+            if let Some(failure) = diagnose_part_selection_failure(self, &args[0], &selectors) {
                 self.push_part_selection_failure("Part", failure, &original);
             }
             return Ok(original);
@@ -214,8 +214,10 @@ impl Session {
         let extracted = if position_spec.multiple {
             let mut items = Vec::new();
             for selectors in &position_spec.position_specs {
-                let Some(value) = apply_part_selectors(&args[0], selectors) else {
-                    if let Some(failure) = diagnose_part_selection_failure(&args[0], selectors) {
+                let Some(value) = apply_part_selectors(self, &args[0], selectors) else {
+                    if let Some(failure) =
+                        diagnose_part_selection_failure(self, &args[0], selectors)
+                    {
                         let original = Expr::call(head.clone(), args.to_vec());
                         self.push_part_selection_failure("Extract", failure, &original);
                     }
@@ -226,11 +228,14 @@ impl Session {
             }
             Expr::call(system_expr("List"), items)
         } else {
-            let Some(value) = apply_part_selectors(&args[0], &position_spec.position_specs[0])
+            let Some(value) =
+                apply_part_selectors(self, &args[0], &position_spec.position_specs[0])
             else {
-                if let Some(failure) =
-                    diagnose_part_selection_failure(&args[0], &position_spec.position_specs[0])
-                {
+                if let Some(failure) = diagnose_part_selection_failure(
+                    self,
+                    &args[0],
+                    &position_spec.position_specs[0],
+                ) {
                     let original = Expr::call(head.clone(), args.to_vec());
                     self.push_part_selection_failure("Extract", failure, &original);
                 }
@@ -245,7 +250,7 @@ impl Session {
 
     fn push_extract_missing_key_messages(&mut self, expr: &Expr, selectors: &[PartSelector]) {
         let mut missing_keys = Vec::new();
-        collect_missing_key_selections(expr, selectors, &mut missing_keys);
+        collect_missing_key_selections(self, expr, selectors, &mut missing_keys);
         for (key, target) in missing_keys {
             self.push_message(
                 "Extract",
@@ -378,7 +383,7 @@ fn fast_exact_integer_part_path(args: &[Expr]) -> Option<Expr> {
     let mut selected = None;
     for selector in selector_exprs {
         let current = selected.as_ref().unwrap_or(&args[0]);
-        if association_entries_from_expr(current).is_some() {
+        if has_association_head(current) {
             return None;
         }
         let index = expr_as_signed_isize(selector)?;

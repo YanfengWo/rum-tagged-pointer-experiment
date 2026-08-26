@@ -229,6 +229,8 @@ ClearAll[
   gMicroGuardedRewriteFallbackRules,
   gMicroWideTraversal,
   gMicroWideAssociation,
+  gMicroAssociationPartWidth4000,
+  gMicroAssociationPartWidth32000,
   gMicroReplacePartRules,
   gMicroGuardedReplacePartRule,
   gMicroGuardedReplacePartFallbackRules,
@@ -351,6 +353,8 @@ gMicroWideTraversal = Range[rumMicroN[1600]];
 gMicroWideAssociation = AssociationThread[
   Range[rumMicroN[1600]] -> Range[rumMicroN[1600]]
 ];
+gMicroAssociationPartWidth4000 = AssociationThread[Range[4000], Range[4000]];
+gMicroAssociationPartWidth32000 = AssociationThread[Range[32000], Range[32000]];
 gMicroReplacePartRules = Table[{1} -> i, {i, 1, rumMicroN[1600]}];
 gMicroGuardedReplacePartRule = 1 :> 1 /; True;
 gMicroGuardedReplacePartFallbackRules = {1 -> 0, 1 :> 1 /; False};
@@ -384,6 +388,37 @@ Default[gMicroGuardedDefault] := 1 /; True;
 gMicroGuardedDefault[x_.] := x;
 
 Print["RUM_CORE_MICRO_BEGIN"];
+
+rumMicroOnce[
+  "association-part-key-read-width4000",
+  rumMicroN[40],
+  Do[
+    Part[gMicroAssociationPartWidth4000, System\`Key[3999]],
+    {i, 1, rumMicroN[40]}
+  ]
+];
+If[SameQ[Part[gMicroAssociationPartWidth4000, System\`Key[3999]], 3999], Null, Exit[2]];
+rumMicroOnce[
+  "association-part-key-read-width32000",
+  rumMicroN[40],
+  Do[
+    Part[gMicroAssociationPartWidth32000, System\`Key[31999]],
+    {i, 1, rumMicroN[40]}
+  ]
+];
+If[SameQ[Part[gMicroAssociationPartWidth32000, System\`Key[31999]], 31999], Null, Exit[2]];
+rumMicroOnce[
+  "association-part-positional-read-width4000",
+  rumMicroN[40],
+  Do[Part[gMicroAssociationPartWidth4000, 3999], {i, 1, rumMicroN[40]}]
+];
+If[SameQ[Part[gMicroAssociationPartWidth4000, 3999], 3999], Null, Exit[2]];
+rumMicroOnce[
+  "association-part-positional-read-width32000",
+  rumMicroN[40],
+  Do[Part[gMicroAssociationPartWidth32000, 31999], {i, 1, rumMicroN[40]}]
+];
+If[SameQ[Part[gMicroAssociationPartWidth32000, 31999], 31999], Null, Exit[2]];
 
 rumMicroBench["loop-empty", rumMicroN[5000], Null];
 rumMicroOnce["do-count-null", rumMicroN[10000], Do[Null, {10000 * rumMicroScale}]];

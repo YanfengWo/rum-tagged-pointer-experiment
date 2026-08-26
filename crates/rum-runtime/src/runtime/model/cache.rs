@@ -128,6 +128,44 @@ struct AssociationKeyIndex {
 }
 
 impl AssociationLookupCache {
+    /// Probes the read-side admission state without looking up a key.
+    /// `Indexed(None)` means the `SharedArgs` identity already has a validated
+    /// index; no key position was requested.
+    pub(in crate::runtime) fn probe_args(
+        &mut self,
+        args: &SharedArgs,
+    ) -> AssociationLookupCacheProbe {
+        self.remove_stale_entries();
+
+        if let Some(index) = self
+            .entries
+            .iter()
+            .position(|entry| entry.args.ptr_eq(args))
+        {
+            let entry = self.entries.remove(index);
+            self.entries.push(entry);
+            return AssociationLookupCacheProbe::Indexed(None);
+        }
+
+        if args.len() <= ASSOCIATION_LOOKUP_INDEX_THRESHOLD
+            || args.len() > ASSOCIATION_LOOKUP_CACHE_MAX_KEYS
+        {
+            return AssociationLookupCacheProbe::Scan;
+        }
+
+        if self
+            .pending
+            .as_ref()
+            .is_some_and(|pending| pending.ptr_eq(args))
+        {
+            self.pending = None;
+            return AssociationLookupCacheProbe::Build;
+        }
+
+        self.pending = Some(args.downgrade());
+        AssociationLookupCacheProbe::Scan
+    }
+
     pub(in crate::runtime) fn probe(
         &mut self,
         args: &SharedArgs,

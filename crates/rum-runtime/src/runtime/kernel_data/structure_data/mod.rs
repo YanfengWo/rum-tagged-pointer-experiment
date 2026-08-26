@@ -51,11 +51,12 @@ pub(in crate::runtime) fn invalid_part_target_selector_expr(
 }
 
 pub(in crate::runtime) fn selected_expr_from_part_target_selector_exprs(
+    session: &mut Session,
     expr: &Expr,
     selector_exprs: &[Expr],
 ) -> Option<Expr> {
     let selectors = parse_part_selectors_for_part(selector_exprs)?;
-    apply_part_selectors(expr, &selectors)
+    apply_part_selectors(session, expr, &selectors)
 }
 
 pub fn exact_expr_at_path(expr: &Expr, path: &[isize]) -> Option<Expr> {

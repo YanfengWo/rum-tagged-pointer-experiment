@@ -13,6 +13,42 @@ pub struct AssociationEntryForm {
     pub delayed: bool,
 }
 
+pub(in crate::runtime) struct AssociationEntryCursor<'a> {
+    entries: AssociationEntryCursorStorage<'a>,
+}
+
+enum AssociationEntryCursorStorage<'a> {
+    Borrowed(&'a SharedArgs),
+    Owned(Vec<(Expr, Expr)>),
+}
+
+impl AssociationEntryCursor<'_> {
+    pub(in crate::runtime) fn len(&self) -> usize {
+        match &self.entries {
+            AssociationEntryCursorStorage::Borrowed(args) => args.len(),
+            AssociationEntryCursorStorage::Owned(entries) => entries.len(),
+        }
+    }
+
+    pub(in crate::runtime) fn entry(&self, position: usize) -> Option<(&Expr, &Expr)> {
+        match &self.entries {
+            AssociationEntryCursorStorage::Borrowed(args) => {
+                flat_association_rule_parts(args.get(position)?)
+            }
+            AssociationEntryCursorStorage::Owned(entries) => {
+                entries.get(position).map(|(key, value)| (key, value))
+            }
+        }
+    }
+
+    pub(in crate::runtime) fn iter(&self) -> impl Iterator<Item = (&Expr, &Expr)> {
+        (0..self.len()).map(|position| {
+            self.entry(position)
+                .expect("validated association cursor entries remain rules")
+        })
+    }
+}
+
 pub fn association_entries_from_expr(expr: &Expr) -> Option<Vec<(Expr, Expr)>> {
     let Expr::Call { head, args } = expr else {
         return None;
@@ -344,8 +380,19 @@ impl Session {
     }
 
     fn lookup_association_key(&mut self, expr: &Expr, key: &Expr) -> Option<Expr> {
+        Some(
+            self.lookup_association_key_value(expr, key)?
+                .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+        )
+    }
+
+    pub(in crate::runtime) fn lookup_association_key_value(
+        &mut self,
+        expr: &Expr,
+        key: &Expr,
+    ) -> Option<Option<Expr>> {
         if let Some(value) = self.lookup_flat_association_key(expr, key) {
-            return Some(value.unwrap_or_else(|| missing_key_absent_expr(key.clone())));
+            return Some(value);
         }
 
         let entries = association_entries_from_expr(expr)?;
@@ -353,9 +400,56 @@ impl Session {
             entries
                 .iter()
                 .find(|(entry_key, _)| entry_key == key)
-                .map(|(_, value)| value.clone())
-                .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+                .map(|(_, value)| value.clone()),
         )
+    }
+
+    pub(in crate::runtime) fn association_entry_cursor<'a>(
+        &mut self,
+        expr: &'a Expr,
+    ) -> Option<AssociationEntryCursor<'a>> {
+        let Expr::Call { head, args } = expr else {
+            return None;
+        };
+        if !is_system_symbol_name(head, "Association") {
+            return None;
+        }
+
+        if self.flat_association_args_are_valid(args) {
+            return Some(AssociationEntryCursor {
+                entries: AssociationEntryCursorStorage::Borrowed(args),
+            });
+        }
+
+        Some(AssociationEntryCursor {
+            entries: AssociationEntryCursorStorage::Owned(association_entries_from_expr(expr)?),
+        })
+    }
+
+    fn flat_association_args_are_valid(&mut self, args: &SharedArgs) -> bool {
+        match self.association_lookup_cache.probe_args(args) {
+            AssociationLookupCacheProbe::Indexed(_) => true,
+            AssociationLookupCacheProbe::Build => {
+                if !args
+                    .iter()
+                    .all(|item| flat_association_rule_parts(item).is_some())
+                {
+                    return false;
+                }
+                self.association_lookup_cache.insert_index(
+                    args,
+                    args.iter().map(|item| {
+                        flat_association_rule_parts(item)
+                            .expect("validated flat association rule")
+                            .0
+                    }),
+                );
+                true
+            }
+            AssociationLookupCacheProbe::Scan => args
+                .iter()
+                .all(|item| flat_association_rule_parts(item).is_some()),
+        }
     }
 
     fn lookup_flat_association_key(&mut self, expr: &Expr, key: &Expr) -> Option<Option<Expr>> {
