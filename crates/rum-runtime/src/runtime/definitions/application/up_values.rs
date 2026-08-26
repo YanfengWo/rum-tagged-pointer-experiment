@@ -122,10 +122,12 @@ impl Session {
             let fast_match_start = definition_dispatch_timing_start();
             let fast_outcome = if up_value.matcher_attribute_revision == self.attribute_revision {
                 self.try_fast_definition_match_compiled(&up_value.matcher, &normalized_candidate)
-            } else if up_value.guards.is_empty() {
-                self.try_fast_definition_match(&up_value.lhs, &normalized_candidate)
             } else {
-                None
+                self.try_fast_definition_match(
+                    &up_value.lhs,
+                    &up_value.guards,
+                    &normalized_candidate,
+                )
             };
             record_profile_definition_dispatch_phase_timing(
                 "up_value",

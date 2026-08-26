@@ -7,9 +7,26 @@ fn rhs_guard_whole_line_regression_covers_every_rule_lane() {
     assert_eq!(
         eval_to_string(
             &mut session,
-            "wholeDown[x_] := \"down\" /; True; wholeUpTag /: wholeUpHead[wholeUpTag] := \"up\" /; True; wholeSub[1][x_] := \"sub\" /; True; Default[wholeDefault] := \"default\" /; True; wholeDefault[x_.] := x; wholeOwn := \"own\" /; True; {wholeDown[1], wholeUpHead[wholeUpTag], wholeSub[1][1], wholeDefault[], Replace[1, x_Integer :> (\"rewrite\" /; True)], ReplacePart[{0}, 1 :> (\"part\" /; True)], StringReplace[\"abc\", \"a\" :> (\"S\" /; True)], wholeOwn}",
+            "wholeDownGuard = 0; wholeUpGuard = 0; wholeSubGuard = 0; \
+             wholeDefaultGuard = 0; wholeRewriteGuard = 0; wholePartGuard = 0; \
+             wholeStringGuard = 0; wholeOwnGuard = 0; \
+             wholeDown[x_] := \"down\" /; (wholeDownGuard = wholeDownGuard + 1; True); \
+             wholeUpTag /: wholeUpHead[wholeUpTag] := \"up\" /; (wholeUpGuard = wholeUpGuard + 1; True); \
+             wholeSub[1][x_] := \"sub\" /; (wholeSubGuard = wholeSubGuard + 1; True); \
+             Default[wholeDefault] := \"default\" /; (wholeDefaultGuard = wholeDefaultGuard + 1; True); \
+             wholeDefault[x_.] := x; \
+             wholeOwn := \"own\" /; (wholeOwnGuard = wholeOwnGuard + 1; True); \
+             SetAttributes[wholeRevisionBump, HoldFirst]; \
+             ValueQ[wholeDown[1]]; \
+             {{wholeDown[1], wholeUpHead[wholeUpTag], wholeSub[1][1], wholeDefault[], \
+               Replace[1, x_Integer :> (\"rewrite\" /; (wholeRewriteGuard = wholeRewriteGuard + 1; True))], \
+               ReplacePart[{0}, 1 :> (\"part\" /; (wholePartGuard = wholePartGuard + 1; True))], \
+               StringReplace[\"abc\", \"a\" :> (\"S\" /; (wholeStringGuard = wholeStringGuard + 1; True))], \
+               wholeOwn}, \
+              {wholeDownGuard, wholeUpGuard, wholeSubGuard, wholeDefaultGuard, \
+               wholeRewriteGuard, wholePartGuard, wholeStringGuard, wholeOwnGuard}}",
         ),
-        "List[\"down\", \"up\", \"sub\", \"default\", \"rewrite\", List[\"part\"], \"Sbc\", \"own\"]"
+        "List[List[\"down\", \"up\", \"sub\", \"default\", \"rewrite\", List[\"part\"], \"Sbc\", \"own\"], List[1, 1, 1, 1, 1, 1, 1, 1]]"
     );
 }
 

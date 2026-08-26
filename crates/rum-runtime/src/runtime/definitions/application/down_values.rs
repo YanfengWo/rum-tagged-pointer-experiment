@@ -192,7 +192,11 @@ impl Session {
         let fast_outcome = if down_value.matcher_attribute_revision == self.attribute_revision {
             self.try_fast_definition_match_compiled(&down_value.matcher, &normalized_candidate)
         } else {
-            self.try_fast_definition_match(&down_value.lhs, &normalized_candidate)
+            self.try_fast_definition_match(
+                &down_value.lhs,
+                &down_value.guards,
+                &normalized_candidate,
+            )
         };
         record_profile_definition_dispatch_phase_timing(
             "down_value",

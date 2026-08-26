@@ -131,6 +131,7 @@ mod definitions_and_rules_patterns;
 mod definitions_and_rules_rewrite_inspect;
 mod definitions_and_rules_tags;
 mod definitions_rhs_guards;
+mod definitions_rhs_guards_attribute_revision;
 mod definitions_rhs_guards_default_values;
 mod definitions_rhs_guards_own_values;
 mod definitions_rhs_guards_rewrite_rules;

@@ -104,8 +104,15 @@ impl Session {
     pub(super) fn try_fast_definition_match(
         &self,
         lhs: &Expr,
+        guards: &[Expr],
         candidate: &Expr,
     ) -> Option<CompiledMatchOutcome> {
+        // A stale guarded matcher must be rebuilt from both stored halves of
+        // the definition.  The raw-lhs fast path cannot evaluate rhs guards.
+        if !guards.is_empty() {
+            return None;
+        }
+
         let mut bindings = SymbolExprMap::default();
         let matched =
             self.fast_match_definition_pattern(strip_hold_pattern(lhs), candidate, &mut bindings)?;
