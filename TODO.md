@@ -80,6 +80,23 @@ was an artifact of an invalid probe: rum's custom equivalence test is a
 positional argument, not a `SameTest` option, so the option form silently
 compared nothing. Findings age, and probes lie.
 
+**Rule right-hand-side `Condition` guards — COMPLETE 2026-08-26 (briefs
+347-353, `5ab6afc5` through `7c1e91d8`).** All eight candidate-selecting lanes
+evaluate their guards: `DownValues`, `UpValues`, `SubValues`, `DefaultValues`,
+generic rewrite rules, `ReplacePart`, string rules, and `OwnValues`. One
+substrate, one accept rule (`True` accepts, anything else declines), and a
+decline is indistinguishable from the rule not matching. Per-lane ordering
+contracts are documented in `docs/guide/patterns-and-rules.md`; a single test
+exercises a guarded rule in all eight lanes so a future change cannot break
+one silently. The unguarded path takes no new branch, allocation or clone in
+any lane.
+
+Known limitation, deliberate: one symbol keeps a single own-value slot, so
+multiple guarded own-values do not coexist — a later definition replaces the
+earlier one.
+
+The original diagnosis follows.
+
 **Rule right-hand-side `Condition` guards are not implemented (brief-347,
 diagnosed 2026-08-26).** `f[x_] := rhs /; test` is a standard idiom and rum
 silently does something else: the guard is never evaluated, a false guard never
