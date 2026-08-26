@@ -259,7 +259,7 @@ impl Session {
         let matcher = if down_value.matcher_attribute_revision == self.attribute_revision {
             down_value.matcher.clone()
         } else {
-            self.compile_matcher_for_expr(&down_value.lhs)
+            self.compile_down_value_matcher(&down_value.lhs, &down_value.guards)
         };
         let runtime_profile_compiled_matcher =
             runtime_path_timing_start("down_values.compiled_matcher");

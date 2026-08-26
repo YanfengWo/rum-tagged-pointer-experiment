@@ -282,6 +282,22 @@ fn module_error_path_definition_escape_stays_deferred() {
 }
 
 #[test]
+fn downvalue_rhs_guard_keeps_its_escaped_module_binding_live() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        eval_string(
+            &mut session,
+            "Catch[Module[{gcRhsGuard348 = 1}, gcRhsGuardFn348[y_] := y /; MatchQ[gcRhsGuard348, 1]; Throw[fail]]]"
+        ),
+        "fail"
+    );
+
+    assert_module_gensym_deferred(&session, "gcRhsGuard348$1");
+    assert_eq!(eval_string(&mut session, "gcRhsGuardFn348[7]"), "7");
+}
+
+#[test]
 fn global_root_keeps_escaped_candidate_until_root_is_cleared() {
     let mut session = session_with_test_first();
 

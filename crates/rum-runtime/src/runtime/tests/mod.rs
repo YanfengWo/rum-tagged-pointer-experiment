@@ -130,6 +130,7 @@ mod definitions_and_rules_part4;
 mod definitions_and_rules_patterns;
 mod definitions_and_rules_rewrite_inspect;
 mod definitions_and_rules_tags;
+mod definitions_rhs_guards;
 mod definitions_value_table_assignment;
 mod file_names;
 mod holding_and_control_io;

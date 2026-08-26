@@ -77,6 +77,7 @@ pub struct DownValue {
     pub(in crate::runtime) rhs_may_splice_without_bindings: bool,
     pub(in crate::runtime) matcher: MatcherNode,
     pub(in crate::runtime) matcher_attribute_revision: u64,
+    pub guards: Box<[Expr]>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

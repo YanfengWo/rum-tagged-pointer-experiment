@@ -203,25 +203,24 @@ impl SymbolDefinition {
     pub(in crate::runtime) fn equivalent_down_value_index(
         &self,
         lhs: &Expr,
+        guards: &[Expr],
         lhs_is_ground: bool,
     ) -> Option<usize> {
         if self.down_values.len() < DOWN_VALUE_DISPATCH_INDEX_THRESHOLD {
-            return self
-                .down_values
-                .iter()
-                .position(|entry| down_value_lhs_equivalent(entry, lhs, lhs_is_ground));
+            return self.down_values.iter().position(|entry| {
+                down_value_identity_equivalent(entry, lhs, guards, lhs_is_ground)
+            });
         }
 
         let Some(metadata) = self.down_value_dispatch.as_ref() else {
-            return self
-                .down_values
-                .iter()
-                .position(|entry| down_value_lhs_equivalent(entry, lhs, lhs_is_ground));
+            return self.down_values.iter().position(|entry| {
+                down_value_identity_equivalent(entry, lhs, guards, lhs_is_ground)
+            });
         };
         metadata
             .dispatch_index
             .get_or_init(&self.down_values)
-            .equivalent_rule_index(&self.down_values, lhs, lhs_is_ground)
+            .equivalent_rule_index(&self.down_values, lhs, guards, lhs_is_ground)
     }
 
     pub(in crate::runtime) fn start_indexed_down_value_scan(
@@ -473,6 +472,7 @@ impl DownValueDispatchIndex {
         &self,
         down_values: &[DownValue],
         lhs: &Expr,
+        guards: &[Expr],
         lhs_is_ground: bool,
     ) -> Option<usize> {
         let hash = down_value_lhs_equivalence_hash(&self.hash_builder, lhs, lhs_is_ground);
@@ -480,7 +480,7 @@ impl DownValueDispatchIndex {
 
         while index != NO_DOWN_VALUE_INDEX {
             let down_value = down_values.get(index)?;
-            if down_value_lhs_equivalent(down_value, lhs, lhs_is_ground) {
+            if down_value_identity_equivalent(down_value, lhs, guards, lhs_is_ground) {
                 return Some(index);
             }
             index = *self.next_equivalence_collision.get(index)?;
@@ -549,11 +549,16 @@ fn down_value_lhs_equivalence_hash(
     }
 }
 
-fn down_value_lhs_equivalent(down_value: &DownValue, lhs: &Expr, lhs_is_ground: bool) -> bool {
+fn down_value_identity_equivalent(
+    down_value: &DownValue,
+    lhs: &Expr,
+    guards: &[Expr],
+    lhs_is_ground: bool,
+) -> bool {
     down_value.lhs_is_ground == lhs_is_ground
         && if lhs_is_ground {
-            &down_value.lhs == lhs
+            down_value.guards.is_empty() && guards.is_empty() && &down_value.lhs == lhs
         } else {
-            lhs_patterns_equivalent(&down_value.lhs, lhs)
+            down_value_patterns_equivalent(&down_value.lhs, &down_value.guards, lhs, guards)
         }
 }

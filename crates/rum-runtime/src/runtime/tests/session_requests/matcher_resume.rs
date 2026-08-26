@@ -110,6 +110,31 @@ fn resume_eval_request_with_input_can_finish_conditioned_matchq() {
 }
 
 #[test]
+fn downvalue_rhs_guard_resumes_at_the_same_candidate_cursor() {
+    let mut session = session_with_test_control_builtins();
+    session
+        .eval_text(
+            "guardResumeCount = 0; f[x_] := \"guarded\" /; (guardResumeCount = guardResumeCount + 1; MatchQ[InputString[\"guard: \"], \"yes\"]); f[x_] := \"fallback\"",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("{f[1], guardResumeCount}")
+        .expect_err("rhs guard should suspend when it requests input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "guard: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("declining resumed guard should continue to the fallback candidate");
+    assert_eq!(response.value.to_string(), "List[\"fallback\", 1]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_sequence_conditioned_matchq() {
     let mut session = session_with_test_control_builtins();
 

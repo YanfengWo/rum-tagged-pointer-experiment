@@ -34,6 +34,9 @@ impl Session {
             | MatcherNode::PatternTest { inner, .. } => {
                 self.matcher_could_match_candidate_shape(inner, candidate)
             }
+            MatcherNode::DefinitionCondition(matcher) => {
+                self.matcher_could_match_candidate_shape(&matcher.inner, candidate)
+            }
             MatcherNode::Alternatives(alternatives) => alternatives.iter().any(|alternative| {
                 self.matcher_could_match_candidate_shape(alternative, candidate)
             }),
@@ -192,6 +195,7 @@ impl Session {
                 Some(true)
             }
             MatcherNode::Condition { .. }
+            | MatcherNode::DefinitionCondition(_)
             | MatcherNode::PatternTest { .. }
             | MatcherNode::Except { .. }
             | MatcherNode::Alternatives(_)

@@ -196,6 +196,8 @@ ClearAll[
   rumMicroSink,
   fExact,
   fPattern,
+  fGuarded,
+  fGuardedFallback,
   gMicroWideMatcher,
   gMicroUpvalueTag,
   gMicroUpvalueMarker,
@@ -316,6 +318,9 @@ gMicroWideAssociation = AssociationThread[
 gMicroReplacePartRules = Table[{1} -> i, {i, 1, rumMicroN[1600]}];
 fExact[1] = 2;
 fPattern[x_Integer] := x + 1;
+fGuarded[x_Integer] := x + 1 /; x > 0;
+fGuardedFallback[x_Integer] := x + 1 /; x > 0;
+fGuardedFallback[x_] := x;
 
 Print["RUM_CORE_MICRO_BEGIN"];
 
@@ -366,6 +371,12 @@ rumMicroBench["downvalue-pattern-hit", rumMicroN[1000], fPattern[1]];
 rumMicroBench["downvalue-pattern-miss", rumMicroN[1000], fPattern["x"]];
 rumMicroOnce["downvalue-exact-miss-repeat", rumMicroN[5000], Do[fExact[2], {5000 * rumMicroScale}]];
 rumMicroOnce["downvalue-pattern-miss-repeat", rumMicroN[5000], Do[fPattern["x"], {5000 * rumMicroScale}]];
+rumMicroBench["downvalue-guarded-hit", rumMicroN[1000], fGuarded[1]];
+rumMicroBench[
+  "downvalue-guarded-decline-fallback",
+  rumMicroN[1000],
+  fGuardedFallback[-1]
+];
 
 rumMicroBench["matchq-integer-success", rumMicroN[1000], MatchQ[1, _Integer]];
 rumMicroBench["matchq-integer-fail", rumMicroN[1000], MatchQ["x", _Integer]];

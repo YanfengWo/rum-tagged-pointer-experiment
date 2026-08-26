@@ -124,19 +124,7 @@ impl Session {
 
             let snapshot = outcome.bindings.clone();
             let bindings = outcome.bindings;
-            let condition_expr = substitute_bindings(&condition, &bindings);
-            let condition_result = session.evaluate(condition_expr);
-
-            session.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
-                condition_result,
-                move |_, result| {
-                    Ok(if is_system_symbol_name(&result, "True") {
-                        match_outcome(true, bindings)
-                    } else {
-                        match_outcome(false, snapshot)
-                    })
-                },
-            )
+            session.evaluate_guard_owned(condition, bindings, snapshot, None)
         })
     }
 
@@ -427,29 +415,25 @@ impl Session {
 
         match check {
             SequencePatternCheck::Condition(condition) => {
-                let bindings_for_true = bindings.clone();
-                let snapshot_for_false = snapshot.clone();
                 let checks_for_next = checks.clone();
                 let sequence_for_next = sequence_value.clone();
-                let condition_expr = substitute_bindings(&condition, &bindings);
-                let condition_result = self.evaluate(condition_expr);
+                let snapshot_for_next = snapshot.clone();
+                let condition_result =
+                    self.evaluate_guard_owned(condition, bindings, snapshot, None);
 
-                self.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
-                    condition_result,
-                    move |session, result| {
-                        if is_system_symbol_name(&result, "True") {
-                            session.evaluate_sequence_pattern_checks_owned(
-                                checks_for_next,
-                                sequence_for_next,
-                                bindings_for_true,
-                                snapshot_for_false,
-                                index + 1,
-                            )
-                        } else {
-                            Ok(match_outcome(false, snapshot_for_false))
-                        }
-                    },
-                )
+                self.drive_internal_value(condition_result, move |session, outcome| {
+                    if outcome.matched {
+                        session.evaluate_sequence_pattern_checks_owned(
+                            checks_for_next,
+                            sequence_for_next,
+                            outcome.bindings,
+                            snapshot_for_next,
+                            index + 1,
+                        )
+                    } else {
+                        Ok(outcome)
+                    }
+                })
             }
             SequencePatternCheck::PatternTest(test) => {
                 let checks_for_next = checks.clone();
@@ -497,6 +481,9 @@ impl Session {
             }
             MatcherNode::Condition { inner, condition } => {
                 self.match_compiled_condition_owned(*inner, condition, value, bindings)
+            }
+            MatcherNode::DefinitionCondition(matcher) => {
+                self.match_compiled_definition_condition_owned(*matcher, value, bindings)
             }
             MatcherNode::PatternTest { inner, test } => {
                 self.match_compiled_pattern_test_owned(*inner, test, value, bindings)
@@ -563,6 +550,9 @@ fn collect_matcher_binding_names(matcher: &MatcherNode, names: &mut BTreeSet<Sym
         }
         MatcherNode::Condition { inner, .. } | MatcherNode::PatternTest { inner, .. } => {
             collect_matcher_binding_names(inner, names);
+        }
+        MatcherNode::DefinitionCondition(matcher) => {
+            collect_matcher_binding_names(&matcher.inner, names);
         }
         MatcherNode::Except { excluded, inner } => {
             collect_matcher_binding_names(excluded, names);

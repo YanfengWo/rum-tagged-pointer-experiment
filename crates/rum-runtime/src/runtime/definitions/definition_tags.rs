@@ -204,20 +204,31 @@ impl Session {
                 symbol
             }
             TaggedDefinitionTarget::DownValue(symbol) => {
-                let matcher = self.compile_matcher_for_expr(&lhs);
+                let stores_default_value =
+                    symbol.context() == SYSTEM_CONTEXT && symbol.name() == heads::patterns::DEFAULT;
+                let (stored_rhs, guards) = if stores_default_value {
+                    (rhs.clone(), Box::default())
+                } else {
+                    split_definition_rhs_guards(rhs.clone())
+                };
+                let rhs_may_splice_without_bindings =
+                    rule_rhs_may_splice_without_bindings(&stored_rhs);
+                let matcher = self.compile_down_value_matcher(&lhs, &guards);
                 let matcher_attribute_revision = self.attribute_revision;
-                let lhs_is_ground = !expr_contains_pattern_syntax(strip_hold_pattern(&lhs));
+                let lhs_is_ground =
+                    guards.is_empty() && !expr_contains_pattern_syntax(strip_hold_pattern(&lhs));
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 let down_value = DownValue {
                     lhs: lhs.clone(),
-                    rhs: rhs.clone(),
+                    rhs: stored_rhs,
+                    guards,
                     delayed,
                     lhs_is_ground,
-                    rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
+                    rhs_may_splice_without_bindings,
                     matcher,
                     matcher_attribute_revision,
                 };
-                if symbol.context() == SYSTEM_CONTEXT && symbol.name() == heads::patterns::DEFAULT {
+                if stores_default_value {
                     replace_or_append_definition(
                         &mut definition.down_values,
                         &lhs,
@@ -304,7 +315,9 @@ fn replace_or_insert_down_value(
     lhs: &Expr,
     new_entry: DownValue,
 ) -> (usize, Option<bool>) {
-    if let Some(index) = definition.equivalent_down_value_index(lhs, new_entry.lhs_is_ground) {
+    if let Some(index) =
+        definition.equivalent_down_value_index(lhs, &new_entry.guards, new_entry.lhs_is_ground)
+    {
         let replaced_was_ground = definition.down_values[index].lhs_is_ground;
         definition.down_values[index] = new_entry;
         return (index, Some(replaced_was_ground));

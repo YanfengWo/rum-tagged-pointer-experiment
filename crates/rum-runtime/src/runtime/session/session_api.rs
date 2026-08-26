@@ -428,7 +428,10 @@ impl Session {
                 .iter()
                 .zip(installed_down_values)
                 .all(|(down_value, (lhs, rhs))| {
-                    !down_value.delayed && &down_value.lhs == lhs && &down_value.rhs == rhs
+                    !down_value.delayed
+                        && down_value.guards.is_empty()
+                        && &down_value.lhs == lhs
+                        && &down_value.rhs == rhs
                 })
     }
 

@@ -117,6 +117,35 @@ fn save_writes_textual_state_that_get_can_roundtrip() {
 }
 
 #[test]
+fn save_rebuilds_downvalue_rhs_guards_for_roundtrip() {
+    let dir = TempDirGuard::new("save-downvalue-guard");
+    let file = dir.path().join("guarded.rum");
+    let mut session = Session::new();
+
+    session.eval_text("f[x_] := guarded /; True").unwrap();
+    session.eval_text("f[x_] := fallback").unwrap();
+    session
+        .eval_text(&format!("Save[File[\"{}\"], f]", rum_path(&file)))
+        .unwrap();
+
+    let saved = fs::read_to_string(&file).unwrap();
+    assert!(saved.contains("Condition[guarded, True]"));
+
+    let mut restored = Session::new();
+    restored
+        .eval_text(&format!("Get[File[\"{}\"]]", rum_path(&file)))
+        .unwrap();
+    assert_eq!(
+        restored.eval_text("f[1]").unwrap().value.to_string(),
+        "guarded"
+    );
+    let Expr::Call { args, .. } = restored.eval_text("DownValues[f]").unwrap().value else {
+        panic!("DownValues[f] should be a List");
+    };
+    assert_eq!(args.len(), 2);
+}
+
+#[test]
 fn dump_save_overwrites_file_and_returns_saved_symbols() {
     let dir = TempDirGuard::new("dumpsave");
     let file = dir.write("saved.mx", "junk");

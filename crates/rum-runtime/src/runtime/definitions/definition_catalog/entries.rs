@@ -45,7 +45,7 @@ impl Session {
                 .map(|down_value| DefinitionCatalogEntry {
                     kind: DefinitionKind::DownValue,
                     lhs: down_value.lhs.clone(),
-                    rhs: down_value.rhs.clone(),
+                    rhs: rebuild_definition_rhs_guards(down_value.rhs.clone(), &down_value.guards),
                     delayed: down_value.delayed,
                 }),
         );

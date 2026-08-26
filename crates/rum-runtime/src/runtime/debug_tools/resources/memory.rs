@@ -356,6 +356,13 @@ fn render_downvalue_memory_proxy_bytes(value: &DownValue) -> usize {
     std::mem::size_of::<DownValue>()
         .saturating_add(expr_memory_proxy_bytes(&value.lhs))
         .saturating_add(expr_memory_proxy_bytes(&value.rhs))
+        .saturating_add(
+            value
+                .guards
+                .iter()
+                .map(expr_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
 }
 
 fn render_subvalue_memory_proxy_bytes(value: &SubValue) -> usize {

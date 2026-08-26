@@ -41,19 +41,7 @@ impl Session {
 
             let snapshot = outcome.bindings.clone();
             let bindings = outcome.bindings;
-            let condition_expr = substitute_bindings(&condition, &bindings);
-            let result = session.evaluate(condition_expr);
-
-            session.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
-                result,
-                move |_, result| {
-                    Ok(if is_system_symbol_name(&result, "True") {
-                        interpreted_match_outcome(true, bindings)
-                    } else {
-                        interpreted_match_outcome(false, snapshot)
-                    })
-                },
-            )
+            session.evaluate_guard_owned(condition, bindings, snapshot, None)
         })
     }
 

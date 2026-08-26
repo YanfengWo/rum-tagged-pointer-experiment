@@ -249,6 +249,7 @@ pub(in crate::runtime) enum MatcherNode {
         inner: Box<MatcherNode>,
         condition: Expr,
     },
+    DefinitionCondition(Box<DefinitionConditionMatcher>),
     PatternTest {
         inner: Box<MatcherNode>,
         test: Expr,
@@ -262,6 +263,13 @@ pub(in crate::runtime) enum MatcherNode {
         head: Box<MatcherNode>,
         args: Vec<MatcherArg>,
     },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::runtime) struct DefinitionConditionMatcher {
+    pub(in crate::runtime) inner: MatcherNode,
+    pub(in crate::runtime) lhs: Expr,
+    pub(in crate::runtime) guards: Box<[Expr]>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -238,6 +238,9 @@ pub(in crate::runtime) fn for_each_definition_expr(
     for value in &definition.down_values {
         visit(&value.lhs);
         visit(&value.rhs);
+        for guard in &value.guards {
+            visit(guard);
+        }
     }
     for value in &definition.sub_values {
         visit(&value.lhs);
