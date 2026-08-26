@@ -237,7 +237,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-fn token_can_be_followed_by_raw_string_operand(
+pub(super) fn token_can_be_followed_by_raw_string_operand(
     token: &TokenKind,
     token_started_operand_position: bool,
 ) -> bool {

@@ -439,6 +439,109 @@ fn socket_driver_pumps_heartbeat_and_execute_over_local_session() {
 }
 
 #[test]
+fn socket_driver_observes_shutdown_promptly_during_running_execute() {
+    let bootstrap = KernelBootstrapConfig::from_connection_file(test_connection_file())
+        .with_session_validation("frontend-session");
+    let codec = bootstrap.wire_codec();
+    let mut backend = LocalSocketTransportBackend::new(bootstrap.clone());
+    let frontend = backend.frontend();
+    let mut driver = bootstrap.socket_driver(long_running_cancel_session());
+
+    frontend.queue_incoming(
+        codec
+            .encode_request_envelope(&KernelRequestEnvelope {
+                channel: KernelChannel::Shell,
+                header: KernelMessageHeader::new(
+                    "execute-driver-shutdown-1",
+                    "frontend-session",
+                    "frontend",
+                    "execute_request",
+                ),
+                parent_header: None,
+                metadata: KernelMetadata::new(),
+                request: KernelRequest::Execute(KernelExecuteRequest::new("Do[x = 1, 5000000000]")),
+            })
+            .expect("execute request should encode"),
+    );
+    assert_eq!(
+        driver
+            .pump_once(backend.transport_mut())
+            .expect("execute should start"),
+        Some(KernelSocketPollEvent::Channel(KernelChannel::Shell))
+    );
+    assert!(driver.event_pump().adapter().execute_running());
+
+    let shutdown = codec
+        .encode_request_envelope(&KernelRequestEnvelope {
+            channel: KernelChannel::Control,
+            header: KernelMessageHeader::new(
+                "shutdown-driver-running-1",
+                "frontend-session",
+                "frontend",
+                "shutdown_request",
+            ),
+            parent_header: None,
+            metadata: KernelMetadata::new(),
+            request: KernelRequest::Shutdown(KernelShutdownRequest { restart: false }),
+        })
+        .expect("shutdown request should encode");
+    let delayed_frontend = frontend.clone();
+    let sender = thread::spawn(move || {
+        thread::sleep(Duration::from_millis(2));
+        delayed_frontend.queue_incoming(shutdown);
+    });
+
+    let started = Instant::now();
+    let report = driver
+        .pump_until_idle(backend.transport_mut())
+        .expect("shutdown should be observed while execute is running");
+    let elapsed = started.elapsed();
+    sender.join().expect("shutdown sender should not panic");
+
+    assert_eq!(report.control_messages, 1);
+    assert!(driver.event_pump().adapter().shutdown_requested());
+    assert!(
+        elapsed < Duration::from_secs(1),
+        "running execute observed shutdown after {elapsed:?}"
+    );
+    let reply = frontend
+        .pop_outgoing(KernelChannel::Control)
+        .expect("frontend should receive shutdown reply");
+    match decode_response_message(&reply)
+        .expect("shutdown reply should decode")
+        .response
+    {
+        KernelResponse::Shutdown(response) => {
+            assert_eq!(response.status, KernelReplyStatus::Ok);
+            assert!(!response.restart);
+        }
+        other => panic!("expected shutdown reply, got {other:?}"),
+    }
+
+    // Shutdown intentionally does not alter worker cancellation semantics.
+    // Cancel directly so this test never leaves its long-running worker detached.
+    driver
+        .event_pump_mut()
+        .adapter_mut()
+        .interrupt(KernelInterruptRequest);
+    let cleanup_started = Instant::now();
+    loop {
+        assert!(
+            cleanup_started.elapsed() < ASYNC_TEST_TIMEOUT,
+            "shutdown test worker did not cancel within {ASYNC_TEST_TIMEOUT:?}"
+        );
+        if driver
+            .pump_once(backend.transport_mut())
+            .expect("cancelled execute completion should pump")
+            == Some(KernelSocketPollEvent::ExecuteCompletion)
+        {
+            break;
+        }
+        thread::sleep(Duration::from_millis(1));
+    }
+}
+
+#[test]
 fn socket_driver_resumes_stdin_round_trip_over_local_session() {
     let bootstrap = KernelBootstrapConfig::from_connection_file(test_connection_file())
         .with_session_validation("frontend-session");

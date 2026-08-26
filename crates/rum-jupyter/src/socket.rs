@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use rum_host::HostSession;
 
 use crate::{
@@ -5,6 +7,8 @@ use crate::{
     KernelTransportEndpoint, KernelWireError, KernelWireMessage, LocalFrontendConnection,
     LocalSocketTransport,
 };
+
+const RUNNING_IDLE_SLEEP: Duration = Duration::from_millis(10);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KernelSocketKind {
@@ -328,7 +332,7 @@ impl<P: KernelSocketPoller> KernelSocketDriver<P> {
 
             let Some(event) = self.pump_once(session)? else {
                 if self.event_pump.adapter().execute_running() {
-                    std::thread::yield_now();
+                    thread::sleep(RUNNING_IDLE_SLEEP);
                     continue;
                 }
                 break;

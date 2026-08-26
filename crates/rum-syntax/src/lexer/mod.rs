@@ -35,6 +35,17 @@ pub fn lex_with_trivia(input: &str) -> Result<LexedSource, SyntaxError> {
     Ok(LexedSource::new(tokens, trivia))
 }
 
+/// Returns whether a following `'''` token starts a raw string after `token`.
+///
+/// Incremental lexer consumers use this to preserve the lexer's context-sensitive
+/// distinction between a raw string opener and three postfix prime tokens.
+pub fn raw_string_operand_position_after(
+    token: &SyntaxTokenKind,
+    token_started_operand_position: bool,
+) -> bool {
+    core::token_can_be_followed_by_raw_string_operand(token, token_started_operand_position)
+}
+
 pub(crate) fn lex(input: &str) -> Result<Vec<Token>, SyntaxError> {
     Ok(lex_with_trivia(input)?.into_tokens())
 }

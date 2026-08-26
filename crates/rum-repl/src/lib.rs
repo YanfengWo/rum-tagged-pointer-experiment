@@ -17,7 +17,9 @@ use rum_host::{
 use rum_terminal::{render_host_eval_response, render_host_failure, render_host_messages};
 
 mod commands;
+mod completeness;
 use self::commands::*;
+use self::completeness::{CompletenessHint, IncrementalCompleteness};
 
 const HISTORY_ENTRY_PREFIX: &str = ":rum-history-v1:";
 
@@ -63,6 +65,7 @@ where
 
     pub fn run(&mut self, session: &mut HostSession) -> io::Result<()> {
         let mut buffer = String::new();
+        let mut completeness = IncrementalCompleteness::default();
 
         loop {
             let prompt = if buffer.trim().is_empty() {
@@ -112,16 +115,21 @@ where
 
             if !buffer.is_empty() {
                 buffer.push('\n');
+                completeness.append("\n");
             }
 
             buffer.push_str(line);
+            completeness.append(line);
 
             let pending = buffer.trim();
 
-            match session.is_complete(pending).status {
+            match resolve_completeness(&completeness, pending, |pending| {
+                session.is_complete(pending).status
+            }) {
                 HostCompletenessStatus::Complete | HostCompletenessStatus::Invalid => {
                     let input = pending.to_string();
                     buffer.clear();
+                    completeness.reset();
                     self.record_history(&input);
                     self.evaluate_input(session, &input)?;
                 }
@@ -219,6 +227,17 @@ where
         }
 
         Ok(Some(execution))
+    }
+}
+
+fn resolve_completeness(
+    completeness: &IncrementalCompleteness,
+    pending: &str,
+    full_check: impl FnOnce(&str) -> HostCompletenessStatus,
+) -> HostCompletenessStatus {
+    match completeness.hint() {
+        CompletenessHint::DefinitelyIncomplete => HostCompletenessStatus::Incomplete,
+        CompletenessHint::NeedsFullCheck => full_check(pending),
     }
 }
 
