@@ -50,16 +50,19 @@ is a standing decision, not a defect.
 at `c18b01f9`, each probe carrying a liveness assertion:
 
 1. **`ValueQ` clones the whole session per call.** 4.6 us with no definitions,
-   90.6 ms at 2 000, 333 ms at 8 000, and 1.94 s at 32 000 — a cost that
-   depends on session history, not on the question asked.
+   90.6 us at 2 000, 333 us at 8 000, and 1.94 ms at 32 000 — a cost that
+   depends on session history, not on the question asked. Confirmed against
+   the wall clock: 100 calls in a 32 000-definition session move the process
+   from 0.10 s to 0.30 s. A 420x spread that ends at two milliseconds is worth
+   fixing cheaply, not worth a redesign.
 2. **`Part` / `Extract` materialize every association entry per call.** 200
    reads of `a[[Key[7]]]` take 0.26/0.55/1.20/2.42 s at 4k/8k/16k/32k keys, a
    strict doubling; positional `a[[3]]` has the same shape.
 3. **`StringTrim` with a literal *list* leaves the fast path.** At 8 000
-   characters: 342 ms for `{"1", "2"}` against 28 us for the single literal
-   `"1"` and 21 us for whitespace. Linear, not quadratic — the defect is a
-   four-order-of-magnitude constant, so the surveyed "quadratic suffix
-   helper" reading is wrong even though the target is real.
+   characters: 342 us for `{"1", "2"}` against 28 us for the single literal
+   `"1"` and 21 us for whitespace, and 1.45 ms against 77 us at 32 000. Linear,
+   not quadratic — the defect is a 12x-to-18x constant, so the surveyed
+   "quadratic suffix helper" reading is wrong even though the target is real.
 4. **Symbol ordering allocates two `String`s per comparison**
    (`ordering_sets.rs:875`), 6.7x/7.0x/14.2x slower than integer ordering at
    4k/8k/16k. Not a mechanical swap: `Symbol::cmp` compares context then name,
@@ -76,6 +79,24 @@ be already fixed, and one survey finding — "`SameTest` never exits early" —
 was an artifact of an invalid probe: rum's custom equivalence test is a
 positional argument, not a `SameTest` option, so the option form silently
 compared nothing. Findings age, and probes lie.
+
+**`ValueQ` breaks its documented contract three ways (brief-345, all
+reproduced by the director).** The generated reference — normative under the
+testing policy — says `ValueQ` tests "by trial evaluation without committing
+side effects". Session-local state does roll back (`ValueQ[yy = 7]` leaves
+`yy` undefined), but three effects escape the trial:
+
+- **The deterministic PRNG advances.** `SeedRandom[123]; ValueQ[RandomInteger[
+  1000000]]` consumes the first draw, so the next draw returns what should
+  have been the second. `Capability::Pure` cannot serve as an effect proof
+  here — `RandomInteger` and `SeedRandom` are deliberately classified `Pure`.
+- **`Print` reaches the host sink.** Output streams immediately when a sink is
+  installed; the existing rollback test only covers the buffered no-sink case.
+- **`FileWrite` commits.** `ValueQ[DumpSave[path, x]]` writes the file, and no
+  in-memory snapshot can undo it.
+
+These rank ahead of the performance item above. Decide the contract first —
+promote it to a promise, or document the limitation — then repair to match.
 
 **Found while re-probing, and more serious than the list above: iterator
 variables were invisible on an assignment lhs.** `Do[f[i] = i, {i, 1, 3}]`

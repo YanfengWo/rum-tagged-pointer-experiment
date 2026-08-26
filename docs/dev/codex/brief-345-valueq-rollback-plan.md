@@ -2,8 +2,8 @@
 
 ## Goal
 
-`ValueQ[x]` costs 4.6 us in a fresh session and **1.94 seconds** in a session
-holding 32 000 definitions — a cost that scales with session history rather
+`ValueQ[x]` costs 4.6 us in a fresh session and **1.94 milliseconds** in a
+session holding 32 000 definitions — a cost that scales with session history rather
 than with the question asked. It captures a full rollback snapshot, trial-
 evaluates, and restores, on every call. Produce a diagnosis and a
 step-by-step repair plan with drafted follow-up implementation briefs.
@@ -24,9 +24,14 @@ possible question — was called twenty times under `AbsoluteTiming`:
 
 ```text
 defs=0      live v1=False  ValueQ[qq]=False  t20 = 92.143 us    ->   4.6 us/call
-defs=2000   live v1=True   ValueQ[qq]=False  t20 = 1.8126 s     ->  90.6 ms/call
-defs=8000   live v1=True   ValueQ[qq]=False  t20 = 6.6514 s     -> 332.6 ms/call
-defs=32000  live v1=True   ValueQ[qq]=False  t20 = 38.783 s     ->   1.94 s/call
+defs=2000   live v1=True   ValueQ[qq]=False  t20 = 1.8126 ms    ->  90.6 us/call
+defs=8000   live v1=True   ValueQ[qq]=False  t20 = 6.6514 ms    -> 332.6 us/call
+defs=32000  live v1=True   ValueQ[qq]=False  t20 = 38.783 ms    ->   1.94 ms/call
+
+(As dispatched, this table read seconds where it should have read
+milliseconds — a 1000x unit error the director made converting the timing
+rationals. Codex caught it; the wall clock confirms the correction: 100 calls
+in the 32 000-definition session move the process from 0.10 s to 0.30 s.)
 ```
 
 `live v1` proves the definitions were actually installed, and `ValueQ[qq]`
