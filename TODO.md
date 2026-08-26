@@ -81,7 +81,7 @@ positional argument, not a `SameTest` option, so the option form silently
 compared nothing. Findings age, and probes lie.
 
 **Rule right-hand-side `Condition` guards — COMPLETE 2026-08-26 (briefs
-347-353, `5ab6afc5` through `7c1e91d8`).** All eight candidate-selecting lanes
+347-354, `5ab6afc5` through `eb926bff`).** All eight candidate-selecting lanes
 evaluate their guards: `DownValues`, `UpValues`, `SubValues`, `DefaultValues`,
 generic rewrite rules, `ReplacePart`, string rules, and `OwnValues`. One
 substrate, one accept rule (`True` accepts, anything else declines), and a
@@ -94,6 +94,17 @@ any lane.
 Known limitation, deliberate: one symbol keeps a single own-value slot, so
 multiple guarded own-values do not coexist — a later definition replaces the
 earlier one.
+
+**The line's own lesson, worth more than the feature.** After six green gates
+a guarded `DownValue` still stopped enforcing its guard the moment anything
+bumped the attribute revision — any `SetAttributes` in the session, or a
+loader-snapshot restore such as `ValueQ`. Every gate had asserted the guard
+*before* the trigger and never after one, and the whole-line regression test
+had the same shape, so none of them could see it. Brief-354 fixed it
+structurally, by putting the barrier in the single rematch API rather than
+patching another call site, and the regression test now asserts after a bump.
+**For a feature that caches or compiles anything derived from a definition,
+the test has to act after the invalidation, not only before it.**
 
 The original diagnosis follows.
 
