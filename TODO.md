@@ -80,6 +80,35 @@ was an artifact of an invalid probe: rum's custom equivalence test is a
 positional argument, not a `SameTest` option, so the option form silently
 compared nothing. Findings age, and probes lie.
 
+**Rule right-hand-side `Condition` guards are not implemented (brief-347,
+diagnosed 2026-08-26).** `f[x_] := rhs /; test` is a standard idiom and rum
+silently does something else: the guard is never evaluated, a false guard never
+rejects the rule, and the `Condition` leaks into the result — `b[x_] := x^2 /;
+x > 0` makes `b[3]` return `9 /; True` and `b[-3]` return `9 /; False`. Dedup
+compares left-hand sides only, so a rule differing solely by its guard is
+treated as a redefinition of the unguarded one and disappears. `Rule` and
+`RuleDelayed` carry the same hole through the replacement system.
+
+Parsing and lowering are correct; `DownValue` and `RewriteRule` simply have no
+guard field, so the whole `Condition` is stored as the body and substituted as
+one. The guard in *pattern* position works correctly and is the model to
+follow. No existing test encodes the wrong behavior.
+
+Every candidate-selecting lane is affected: `DownValues`, `UpValues`,
+`SubValues`, `DefaultValues`, `OwnValues`, `ReplaceList`, `ReplacePart`,
+string rules, and the exception-handler scan. Director's rulings on the plan:
+only exact `True` accepts and anything else declines (matching the pattern-side
+guard); nested guards flatten to an ordered sequence evaluated left to right;
+a guard shares its body's `OptionValue` scope; identity is syntactic after
+alpha-canonicalization, so `Condition[body, True]` is a distinct candidate from
+an unguarded rule; `Unset` removes all guard variants of an lhs; a bare
+`Condition` expression stays inert; `NValues` and `Dispatch` are out of scope.
+**Guarded `OwnValues` are deliberately narrowed**: no storage-representation
+change and no `symbol.rs` hot-path cost — check the guard only when the stored
+value is itself a `Condition`, and record multiple guarded own-values for one
+symbol as unsupported. This work precedes the `ValueQ` line below, which
+depends on it: `ValueQ[b[-3]]` cannot be right until `b[-3]` evaluates right.
+
 **`ValueQ` is being rebuilt as a lookup — director's ruling 2026-08-26.**
 It will answer without evaluating its argument at all, and it keeps rum's
 precise answer: `f[1] = 3; ValueQ[f[2]]` stays `False`, because no definition
