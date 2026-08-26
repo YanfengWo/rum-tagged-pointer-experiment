@@ -77,11 +77,37 @@ at `c18b01f9`, each probe carrying a liveness assertion:
    4k/8k/16k. Not a mechanical swap: `Symbol::cmp` compares context then name,
    which is not the lexicographic order of the joined qualified name, so a
    repair has to argue output equivalence.
-5. Confirmed by reading: REPL re-parses the whole accumulated buffer per line
-   (`rum-repl/src/lib.rs:117-121`, O(L^2) on a paste), the Jupyter kernel busy
-   spins a full core while a cell runs (`socket.rs:329-334`), and the gensym
-   sweep never rearms after an all-live pass (`gensym_gc.rs`, default
-   threshold 200 000, so reachability is low).
+5. REPL re-parsing, the Jupyter busy-spin, and the gensym sweep — **all FIXED**
+   (`21569ddb`, `3732615a`). The REPL examines only appended text and runs the
+   full check once per form rather than once per line; the kernel sleeps its
+   launcher's 10 ms idle interval instead of yielding; the sweep rearms at a
+   watermark, so per-batch cost stops climbing (base +106% by the third batch,
+   candidate -11%).
+
+**Batch 7 is closed.** Every surveyed item was re-probed, and each was either
+fixed or recorded with its reason. Two defects found along the way outrank
+what the batch was looking for, and both have their own entries above:
+`Do[f[i] = i, …]` installing one raw definition, and rule right-hand-side
+`Condition` guards never being evaluated.
+
+## Opened by batch 7, not yet scheduled
+
+- **Gensyms held only by an opaque continuation frame are not treated as
+  live.** The sweep visits `pending_suspension.active_stack` only, so a gensym
+  captured by a suspended continuation and nothing else can be reclaimed while
+  still needed. Reachable two ways, both demonstrated: a second request can
+  trigger a sweep during a suspension, and an ordinary resumption can itself
+  cross the watermark. A no-suspension control confirmed the root walk is
+  otherwise correct, so this is specific to opaque frames. The fix is a real
+  design choice — enumerate frame roots, refuse request re-entry during a
+  suspension, or defer sweeps while frames are opaque — and needs its own
+  brief.
+- **The `rum-jupyter` native ZeroMQ ordering flake has now appeared three
+  times** (briefs 165, 242, and a workspace run during brief-362). Each time it
+  passes in isolation — three isolated runs and two further workspace runs
+  after the third occurrence were all green. The standing agreement was to
+  brief it on a third occurrence; it is unrelated to the 10 ms idle sleep,
+  which landed after the flake's first two appearances.
 
 **Re-probe each before briefing it.** Two of this batch's items turned out to
 be already fixed, and one survey finding — "`SameTest` never exits early" —
