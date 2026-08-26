@@ -9,6 +9,23 @@ minor versions may include breaking changes; the project aims to follow
 
 ### Changed
 
+- Sorting with a user comparator is `n log n`. `Sort`, `SortBy` and
+  `ReverseSort` built a full all-pairs table — 639 200 comparisons at n=800 —
+  and now run on an iterative, stable, resumable merge engine that stays within
+  `n*ceil(log2 n)`. Ties keep their input order.
+- The ordering-callback schedule is documented as unspecified: a valid strict
+  weak order determines the result, while comparison count, order and direction
+  are not promised. Key functions still run exactly once per entry, in input
+  order.
+- Arithmetic, composition and variadic chains of three or more operands lower
+  to one n-ary call rather than nested binary ones: `a + b - c + d` is
+  `Plus[a, b, Times[-1, c], d]`, and `.`, `<>`, `|` and `~~` flatten likewise.
+  Explicitly written canonical calls stay opaque, so `Plus[a,b] + c` remains
+  `Plus[Plus[a, b], c]`.
+- Left-associative operator chains are bounded at 4 096 links, reported with a
+  dedicated diagnostic. The limit is enforced for programmatically built syntax
+  trees as well as for parsed source.
+
 - Completed the P0 tranche of a safe-Rust repository-wide algorithmic
   performance sweep. Wide
   evaluation, matching, replacement, collection, association, string, and
@@ -42,6 +59,30 @@ minor versions may include breaking changes; the project aims to follow
   quadratic.
 
 ### Fixed
+
+- `While`, `For`, `Until` and `Module` bindings with initializers no longer
+  consume a native stack frame per iteration or binding. A 20 000-iteration
+  loop terminated the process; loops now run iteratively and an unbounded loop
+  reaches an existing deadline or interrupt instead of aborting.
+- Sixteen left-associative operators no longer exhaust the native stack on long
+  chains. The parser's recursion guard never saw them, because such chains are
+  parsed iteratively and the depth was deferred into the syntax tree.
+- `FromYaml` and `FromToml` refuse over-deep documents with a message instead
+  of exhausting the native stack, matching `FromJson`. All three accept 256
+  nested collections and refuse the 257th.
+- `KeySort` and `KeySortBy` with a custom ordering no longer overflow the stack
+  — previously at 110 and 100 keys respectively — and no longer clone the whole
+  sort state per comparison.
+- `StringPadLeft`, `StringPadRight`, `DecimalString`, numeric `StringIndent`,
+  `StringExpandTabs` and `Fibonacci` now charge their work against the existing
+  resource budgets, as their siblings already did.
+- Multi-iterator `Table`, `Do`, `Sum` and `Product` charge the product of their
+  iterator counts, so iterators that each pass the limit can no longer multiply
+  past it. Counts that come from a variable or from an enclosing iterator are
+  included; constructs that discard their inner results are not charged for
+  sequential repetition.
+- Comparison-chain lowering no longer recurses, so long comparison chains no
+  longer overflow the stack while being lowered.
 
 - Added the previously missing `list[[i]] = value` assignment semantics.
 - Bounded recursive operator parsing and made uninitialized `Module` binding

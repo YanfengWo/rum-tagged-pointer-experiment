@@ -4,36 +4,60 @@ This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log),
 and release-facing changes live in [CHANGELOG.md](./CHANGELOG.md).
 
-Status checkpoint: 2026-08-24, committed tree through `e1dc9f62`. Uncommitted
+Status checkpoint: 2026-08-26, committed tree through `765ba51e`. Uncommitted
 performance candidates do not count as completed until their correctness,
 timing, counter, and memory gates have all been reviewed.
 
 ## Active — post-v0.1 algorithmic audit
 
-The P0 tranche and most of P1 are done; the 2026-08-24 entry of
-[PROGRESS.md](./PROGRESS.md) records the second sweep in full. Two classes of
-defect were closed along the way that the original audit had not named: wide
-inputs aborting the process on native stack exhaustion, and a cache-clear cliff
-that made incremental association writes 40x slower past a threshold.
+The P0 tranche and all of P1 are done. Two independent re-surveys (one by each
+worker) then produced a worklist of about thirty items, grouped into batches;
+the 2026-08-26 entry of [PROGRESS.md](./PROGRESS.md) records what each batch
+found and closed.
 
-**Remaining measured work, in this order:**
+**Closed since the last checkpoint**, in order:
 
-1. **`RumTokens` byte-to-character offsets.** `byte_to_char_offset`
-   (`crates/rum-stdlib/src/strings/tokenize.rs:302`) counts characters from the
-   start of the source for every span, twice per token, so tokenizing is
-   superlinear: 0.0495 / 0.1263 / 0.3734 s at 25k / 50k / 90k tokens — 1.8x the
-   input for 2.96x the time. Spans are produced in ascending order, so one
-   monotonic cursor answers all of them in a single pass with no allocation.
-   This was listed in the original P1 item but not done in the second sweep.
-2. **Shared replacement plan for `Replace`.** `ReplaceAll` compiles its rules
-   once per traversal and indexes exact rules; `Replace`, `ReplaceAt` and
-   `ReplaceList` still try each rule at each visited node, so cost scales with
-   the rule count: 0.0026 / 0.0046 / 0.0093 s for 50 / 100 / 200 rules over a
-   500-element list. Share the compiled plan and reuse the exact-rule index.
-   Preserve rule order, held evaluation, suspension, and message behavior.
-   Note the depth half of the original item is **not** a complexity reduction:
-   subtree depth is computed unconditionally, but tree depth is bounded by
-   `DEFAULT_EVALUATION_PASS_LIMIT` (256), so it is a bounded constant factor.
+- Loop and `Module`-initializer drivers made iterative. A 20 000-iteration
+  `While` terminated the process; ordinary loops are ordinary code, so this was
+  a correctness defect before it was anything else.
+- YAML and TOML decoders bounded, matching `FromJson`. All three codecs now
+  accept exactly 256 nested collections and refuse the 257th with a message
+  naming the limit and the byte offset.
+- Left-associative chain lowering, five steps (plan-330). All sixteen affected
+  operators overflowed the stack at 20 000 links; they now fold iteratively,
+  nine of them into n-ary calls, with a 4 096-link ceiling proved on a 2 MiB
+  embedding stack through the complete round trip.
+- Resource budgets made symmetric (plan in briefs 336-338). Padding builtins,
+  `Fibonacci`, and multi-iterator products went uncharged while their siblings
+  charged the same work. A regression this introduced — sequential repetition
+  charged as simultaneous residency — was found and fixed in the same batch.
+- User-callback ordering (plan-339). `Sort`, `SortBy` and `ReverseSort` with a
+  comparator were quadratic on every input; `KeySort` and `KeySortBy`
+  overflowed the stack at 110 and 100 keys. All five now run on one iterative
+  resumable merge engine.
+- The microbench itself never closed stdin, so a run either finished in four
+  seconds or burned its timeout and produced a header-only timings file. Every
+  A/B before `dd4bdefc` was exposed to that.
+
+**Not briefed, and why:** the surveyed "Association 4-to-5" and "65 536-key"
+cliffs no longer exist. Measured across eight operations, every 4-to-5 ratio
+falls between 1.02x and 1.41x and the 65 535/65 536/65 537 boundary is flat.
+They were closed by `c8d34876` and `dc5f6698` earlier in this sweep; the
+worklist was simply stale. Association key lookup remains a linear scan, which
+is a standing decision, not a defect.
+
+**Remaining from the survey, not yet re-probed:**
+
+1. **`Part` / `Extract` materialize a full table** where a cursor would do.
+2. **`ValueQ` clones session state** to answer a question about one symbol.
+3. Scattered items: symbol-ordering allocation, REPL re-parsing, a Jupyter
+   execution-time hot loop, `StringTrim`, and gensym GC.
+
+**Re-probe each before briefing it.** Two of this batch's items turned out to
+be already fixed, and one survey finding — "`SameTest` never exits early" —
+was an artifact of an invalid probe: rum's custom equivalence test is a
+positional argument, not a `SameTest` option, so the option form silently
+compared nothing. Findings age, and probes lie.
 
 **Deferred, with evidence, from the second sweep:**
 
@@ -51,6 +75,17 @@ that made incremental association writes 40x slower past a threshold.
   into one pass would reorder user-visible evaluation or change association-key
   semantics. Their outer walk is iterative, so wide rule lists no longer
   consume a native frame per rule.
+- **Parentheses are transparent to comparison-chain collection.** `1 == (1 ==
+  1)` is True while the `1 == True` it should reduce to stays unevaluated, so
+  rum disagrees with itself. The right-hand cases are fixable — a left chain
+  only extends through its lhs, so a comparison on the rhs came from explicit
+  grouping — while `(a == b) == c` and `a == b == c` share one AST and cannot
+  be told apart after parsing. Recorded in the lowering golden with a comment.
+- **Product propagation is decided from construct nesting, not data flow.**
+  `Table[Length[Table[...1000...]], {i,1,200}]` is refused although the outer
+  `Table` retains only integers. Distinguishing that statically is not
+  something the iteration seam can do, and the safe side of the line is the one
+  that keeps `Table[Table[...]]` refused.
 
 Every item remains subject to the performance gate in
 [docs/testing-strategy.md](./docs/testing-strategy.md): safe Rust only, base
@@ -59,9 +94,13 @@ regressions and space-for-time tradeoffs.
 
 ## Decision-gated or deferred
 
-- **Custom `Sort` / `KeySort` comparisons.** Further reordering or caching can
-  change comparator call order and observable side effects. This is a semantic
-  decision, not an automatic performance patch.
+- **Custom `Sort` / `KeySort` comparisons — settled 2026-08-26.** The ordering
+  callback schedule is unspecified: a valid strict weak order determines the
+  result, while comparison count, order and direction are not promised.
+  Stability is still promised, and key evaluation stays exactly once per entry
+  in input order — the contract relaxed comparisons only. Anything that would
+  change what a comparator's *return value* means, or how many times a *key*
+  function runs, remains a separate semantic decision.
 - **Full polynomial factorization.** Deferred by user decision. The documented
   `Factor` contract remains the current rational-polynomial subset: monomial
   extraction plus recursively discovered linear factors. A substantially more

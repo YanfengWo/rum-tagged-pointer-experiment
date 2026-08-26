@@ -1570,3 +1570,78 @@ from 1862 to 1921, always green.
 
 Two items from the original P1 list remain and are recorded in `TODO.md`:
 `RumTokens` offset conversion and the shared replacement plan for `Replace`.
+
+## 2026-08-26 — third sweep: crashes, chain lowering, and callback ordering
+
+Two independent re-surveys produced about thirty items, worked in batches. Six
+batches ran; one turned out to be already fixed. Every batch below was gated by
+reproducing its evidence directly rather than accepting the report's numbers.
+
+**Closed.** Loop and `Module`-initializer drivers made iterative — a
+20 000-iteration `While` had terminated the process, which is a correctness
+defect before it is a performance one. YAML and TOML decoders bounded to match
+`FromJson`, so all three accept 256 nested collections and refuse the 257th
+with a byte offset. Left-associative chain lowering rebuilt over five steps:
+all sixteen affected operators overflowed the stack at 20 000 links, and they
+now fold iteratively, nine into n-ary calls, under a 4 096-link ceiling proved
+on a 2 MiB embedding stack through parse, lower, format and drop. Resource
+budgets made symmetric across families. User-callback ordering moved onto one
+resumable merge engine: `Sort` and friends were quadratic on every input, and
+`KeySort` overflowed the stack at 110 keys.
+
+**The instrument lied four times, and that is the durable part of this entry.**
+
+1. *The microbench never closed stdin.* `run-bounded.py` launches what it is
+   handed, and rum-cli binds non-TTY stdin as `$ScriptInput` when given a
+   program argument, so an inherited pipe that never reaches EOF left it
+   waiting until the timeout. A run therefore either finished in four seconds
+   or burned its whole timeout and produced a timings file containing only a
+   header — with no mention of stdin, so it read as a loaded machine. A worker
+   spent forty minutes polling `uptime` looking for a quiet window that would
+   not have helped, and every A/B before `dd4bdefc` was exposed to this.
+2. *A probe measured the wrong builtin form.* rum's custom equivalence test is
+   a positional argument, not a `SameTest` option. `DeleteDuplicates[list,
+   SameTest -> f]` passes a `Rule` where a function belongs, so every
+   comparison fails and nothing is deduplicated — which is why an all-identical
+   list appeared to cost the same as an all-distinct one, and why "SameTest
+   never exits early" reached a brief as a finding. With the supported syntax
+   the early exit is obvious: 399 predicate calls versus 79 800 at n=400.
+3. *A trace probe closed over the wrong scope.* `(trace = Append[trace, #]; #
+   &)` binds `&` to the final `#` only, so the assignment ran once, outside the
+   function, and the trace held a bare `Slot`. It would have supported a
+   confident claim that key evaluation count had changed.
+4. *A survey finding was a fossil.* The "Association 4-to-5" and "65 536-key"
+   cliffs did not exist any more; `c8d34876` and `dc5f6698` had closed them
+   earlier in the same sweep. Eight operations measured flat.
+
+The common root is that none of those probes carried an assertion that the work
+they claimed to measure had happened. A call count, a result length, or a
+`Depth` check would have caught all four immediately. That requirement is now
+written into the briefs.
+
+**A regression I introduced, and what it teaches about gates.** Charging nested
+iterator counts as a running product was right for `Table[Table[…]]` and wrong
+for `Do[Table[…], {200}]`: a `Do` discards each value, so 200 sequential rounds
+of 1000 elements are not 200 000 simultaneous ones. The propagation rule is now
+whether the enclosing construct *retains* what the inner one produces. The gate
+that missed it had tested that separate statements do not share an accumulator
+— the same question asked only from the bypass side. Asking it from the
+false-refusal side was a matter of enumerating enclosing-by-inner construct
+combinations, which is now how these are gated.
+
+**Two workers disagreeing with me was worth more than either agreeing.** The
+plan for the chain work refuted three of my premises, including that `:` cannot
+be flattened because its lowering is stateful per link — a detail I had not
+seen. The plan for the ordering work refuted my `SameTest` finding outright and
+found the `KeySort` crash next to it. A worker stopping clean on a `Scope`
+omission — the merge engine sits behind a private `mod`, and the MAY list named
+the engine file but not the module declaring it — cost one redispatch and no
+wrong code.
+
+**Deferred with evidence:** parentheses are transparent to comparison-chain
+collection, so `1 == (1 == 1)` is True while `1 == True` stays unevaluated; the
+rhs half is fixable, the lhs half shares one AST with the unparenthesized form.
+Product propagation is decided from construct nesting rather than data flow, so
+`Table[Length[Table[…]]]` is refused conservatively. Both are recorded in place
+— the first as an annotated golden row — because a defect written into a test
+without comment becomes an expectation the next reader will defend.
