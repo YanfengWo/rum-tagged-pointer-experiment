@@ -240,6 +240,12 @@ ClearAll[
   gMicroStringPatternRule,
   gMicroGuardedStringRule,
   gMicroGuardedStringFallbackRules,
+  gMicroStringTrimLiteralList4000,
+  gMicroStringTrimLiteralList32000,
+  gMicroStringTrimSingleLiteral4000,
+  gMicroStringTrimSingleLiteral32000,
+  gMicroStringTrimWhitespace4000,
+  gMicroStringTrimWhitespace32000,
   gMicroAppendListSmall,
   gMicroAppendListLarge,
   gMicroAppendPartOuter1000Small,
@@ -370,6 +376,24 @@ gMicroGuardedStringFallbackRules = {
   "a" :> ("x" /; False),
   "a" -> "y"
 };
+gMicroStringTrimLiteralList4000 = StringJoin[
+  "1", StringRepeat["x", 3998], "2"
+];
+gMicroStringTrimLiteralList32000 = StringJoin[
+  "1", StringRepeat["x", 31998], "2"
+];
+gMicroStringTrimSingleLiteral4000 = StringJoin[
+  "1", StringRepeat["x", 3998], "1"
+];
+gMicroStringTrimSingleLiteral32000 = StringJoin[
+  "1", StringRepeat["x", 31998], "1"
+];
+gMicroStringTrimWhitespace4000 = StringJoin[
+  " ", StringRepeat["x", 3998], " "
+];
+gMicroStringTrimWhitespace32000 = StringJoin[
+  " ", StringRepeat["x", 31998], " "
+];
 fExact[1] = 2;
 fPattern[x_Integer] := x + 1;
 fGuarded[x_Integer] := x + 1 /; x > 0;
@@ -581,6 +605,42 @@ rumMicroBench[
 
 rumMicroBench["string-repeat-small", rumMicroN[500], StringRepeat["a", 3]];
 rumMicroBench["character-range-small", rumMicroN[200], CharacterRange["a", "z"]];
+rumMicroBench[
+  "stringtrim-literal-list-4000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimLiteralList4000, {"1", "2"}]
+];
+If[SameQ[StringLength[rumMicroSink], 3998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-literal-list-32000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimLiteralList32000, {"1", "2"}]
+];
+If[SameQ[StringLength[rumMicroSink], 31998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-single-literal-4000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimSingleLiteral4000, "1"]
+];
+If[SameQ[StringLength[rumMicroSink], 3998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-single-literal-32000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimSingleLiteral32000, "1"]
+];
+If[SameQ[StringLength[rumMicroSink], 31998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-whitespace-4000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimWhitespace4000]
+];
+If[SameQ[StringLength[rumMicroSink], 3998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-whitespace-32000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimWhitespace32000]
+];
+If[SameQ[StringLength[rumMicroSink], 31998], Null, Exit[2]];
 rumMicroBench[
   "stringreplace-single-literal-unguarded",
   rumMicroN[200],

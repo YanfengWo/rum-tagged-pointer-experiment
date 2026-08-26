@@ -240,6 +240,110 @@ fn string_split_trim_replace_and_cases_cover_common_text_processing_flows() {
 }
 
 #[test]
+fn string_trim_literal_lists_preserve_exact_boundary_semantics() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[\"ababcorebaba\", {\"ab\", \"ba\"}]"
+        ),
+        "\"core\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringTrim[\"abXab\", {\"a\", \"ab\", \"b\"}], StringTrim[\"abXab\", {\"b\", \"ab\", \"a\"}]}"
+        ),
+        "List[\"X\", \"X\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[\"ababaXababa\", {\"ab\", \"aba\"}]"
+        ),
+        "\"baX\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTrim[\"abXab\", {\"ab\", \"ab\"}]"),
+        "\"X\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTrim[\"abc\", {\"\", \"a\"}]"),
+        "StringTrim[\"abc\", List[\"\", \"a\"]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[\"abc\", {\"abcdef\", \"uvwxyz\"}]"
+        ),
+        "\"abc\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTrim[\"middle\", {\"x\", \"y\"}]"),
+        "\"middle\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringTrim[\"leftcore\", {\"left\", \"right\"}], StringTrim[\"coreright\", {\"left\", \"right\"}]}"
+        ),
+        "List[\"core\", \"core\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringTrim[\"foofoobarfoo\", \"foo\"], StringTrim[\"foofoobarfoo\", {\"foo\"}]}"
+        ),
+        "List[\"bar\", \"bar\"]"
+    );
+}
+
+#[test]
+fn string_trim_literal_lists_preserve_unicode_threading_and_general_fallback() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[\"猫🙂core🙂猫\", {\"猫\", \"🙂\"}]"
+        ),
+        "\"core\""
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "StringTrim[\"é🙂coreé🙂\", {\"é\", \"é🙂\"}]"),
+        "\"core\""
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[{\"  alpha  \", \"--beta--\"}, {\"-\", \" \"}]"
+        ),
+        "List[\"alpha\", \"beta\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringTrim[\"11abc22\", {\"1\", DigitCharacter}]"
+        ),
+        "\"abc\""
+    );
+}
+
+#[test]
+fn string_trim_literal_list_handles_a_wide_input() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringLength[StringTrim[StringJoin[\"1\", StringRepeat[\"x\", 99998], \"2\"], {\"1\", \"2\"}]]"
+        ),
+        "99998"
+    );
+}
+
+#[test]
 fn string_search_and_rewrite_builtins_support_wl_operator_forms() {
     let mut session = core_session();
 
