@@ -55,9 +55,18 @@ at `c18b01f9`, each probe carrying a liveness assertion:
    the wall clock: 100 calls in a 32 000-definition session move the process
    from 0.10 s to 0.30 s. A 420x spread that ends at two milliseconds is worth
    fixing cheaply, not worth a redesign.
-2. **`Part` / `Extract` materialize every association entry per call.** 200
-   reads of `a[[Key[7]]]` take 0.26/0.55/1.20/2.42 s at 4k/8k/16k/32k keys, a
-   strict doubling; positional `a[[3]]` has the same shape.
+2. **`Part` / `Extract` materialized every association entry per call — FIXED
+   `4e045135`** (briefs 357-358). Per read: positional 12.61 ms -> 1.00 us at
+   32 000 keys and exactly flat across width; keyed 12.27 ms -> 10.36 us.
+   Allocations per read are now width-invariant (14.03 at both 4 000 and
+   32 000 keys, against 12 083 and 96 101 before).
+
+   **Leftover, deliberate:** keyed reads are sublinear rather than flat —
+   3.7x for 8x width — because a wide association does not always hold the
+   read-side index under cache admission pressure. That policy (`MAX_KEYS`,
+   the retained-entry budget) is a standing decision and was explicitly out of
+   scope. Revisit it only with the memory tradeoff stated, since the surveyed
+   "65 536-key cliff" was already judged a fossil.
 3. **`StringTrim` with a literal *list* leaves the fast path.** At 8 000
    characters: 342 us for `{"1", "2"}` against 28 us for the single literal
    `"1"` and 21 us for whitespace, and 1.45 ms against 77 us at 32 000. Linear,
