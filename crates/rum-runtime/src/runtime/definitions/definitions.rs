@@ -590,12 +590,15 @@ impl Session {
             return Expr::Atom(Atom::Symbol(symbol));
         }
 
-        let Some(value) = self.definitions.get(&symbol).and_then(|definition| {
+        let definition_value = self.definitions.get(&symbol).and_then(|definition| {
             definition
                 .own_value
                 .clone()
                 .or_else(|| definition.delayed_own_value.clone())
-        }) else {
+        });
+        let Some(value) =
+            definition_value.or_else(|| self.dynamic_own_value_binding(&symbol).flatten())
+        else {
             return Expr::Atom(Atom::Symbol(symbol));
         };
 

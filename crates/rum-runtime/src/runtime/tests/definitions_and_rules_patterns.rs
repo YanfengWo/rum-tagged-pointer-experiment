@@ -179,15 +179,16 @@ fn compiled_downvalue_matcher_preserves_exact_vs_pattern_precedence() {
 fn wide_ground_downvalue_index_preserves_pattern_priority_fallback_and_invalidation() {
     let mut session = session_with_test_control_builtins();
 
-    session
+    let installed = session
         .eval_text(
             "ClearAll[f, oneQ]; \
              oneQ[x_] := MatchQ[x, 1]; \
              f[x_Integer?oneQ?oneQ?oneQ?oneQ] := pattern; \
-             Do[With[{k = i}, f[k] = k], {i, 1, 32}]; \
+             Do[f[i] = i, {i, 1, 32}]; \
              f[x_Integer] := fallback",
         )
         .unwrap();
+    assert!(installed.messages.is_empty());
 
     assert_eq!(
         session.eval_text("f[1]").unwrap().value.to_string(),

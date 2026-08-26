@@ -598,3 +598,30 @@ fn confirm_info_is_lazy_and_explicit_tags_are_dynamically_caught() {
         "info"
     );
 }
+
+#[test]
+fn iterator_lhs_normalization_preserves_lazy_and_container_lvalue_controls() {
+    for (source, expected) in [
+        (
+            "ClearAll[i, f]; Normal[LazyTable[f[i] = i, {i, 1, 2}]]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[1]], 1], RuleDelayed[HoldPattern[f[2]], 2]]",
+        ),
+        (
+            "ClearAll[i, list]; list = {0, 0}; Do[list[[i]] = i, {i, 1, 2}]; list",
+            "List[1, 2]",
+        ),
+        (
+            "ClearAll[i, assoc]; assoc = <||>; Do[assoc[i] = i, {i, 1, 2}]; assoc",
+            "Association[Rule[1, 1], Rule[2, 2]]",
+        ),
+    ] {
+        let mut session = core_session();
+        let outcome = session.eval_text(source).unwrap();
+        assert_eq!(outcome.value.to_string(), expected, "{source}");
+        assert!(
+            outcome.messages.is_empty(),
+            "{source} messages {:?}",
+            outcome.messages
+        );
+    }
+}

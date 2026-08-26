@@ -462,3 +462,161 @@ fn definition_inspection_builtins_accept_symbol_name_strings() {
         "List[RuleDelayed[HoldPattern[g[Pattern[z, Blank[]]][Pattern[w, Blank[Integer]]]], pair[z, w]]]"
     );
 }
+
+fn assert_definition_value_without_messages(session: &mut Session, source: &str, expected: &str) {
+    let outcome = session.eval_text(source).unwrap();
+    assert_eq!(outcome.value.to_string(), expected, "{source}");
+    assert!(
+        outcome.messages.is_empty(),
+        "{source} messages {:?}",
+        outcome.messages
+    );
+}
+
+#[test]
+fn iterator_bindings_normalize_set_lhs_for_every_eager_iterator_and_assignment() {
+    let immediate = "List[RuleDelayed[HoldPattern[f[1]], 1], RuleDelayed[HoldPattern[f[2]], 2], RuleDelayed[HoldPattern[f[3]], 3]]";
+    let delayed = "List[RuleDelayed[HoldPattern[f[1]], i], RuleDelayed[HoldPattern[f[2]], i], RuleDelayed[HoldPattern[f[3]], i]]";
+
+    for (iterator, assignment, expected) in [
+        ("Do", "f[i] = i", immediate),
+        ("Do", "f[i] := i", delayed),
+        ("Table", "f[i] = i", immediate),
+        ("Table", "f[i] := i", delayed),
+        ("Sum", "f[i] = i", immediate),
+        ("Sum", "f[i] := i", delayed),
+        ("Product", "f[i] = i", immediate),
+        ("Product", "f[i] := i", delayed),
+    ] {
+        let mut clean_and_dirty = Vec::new();
+        for (setup, restored) in [
+            ("", "List[i, List[]]"),
+            ("i = 99;", "List[99, List[RuleDelayed[HoldPattern[i], 99]]]"),
+        ] {
+            let mut session = session_with_test_control_builtins();
+            let source = format!(
+                "ClearAll[i, f]; {setup} {iterator}[{assignment}, {{i, 1, 3}}]; DownValues[f]"
+            );
+            let outcome = session.eval_text(&source).unwrap();
+            let down_values = outcome.value.to_string();
+            assert_eq!(down_values, expected, "{source}");
+            assert!(
+                outcome.messages.is_empty(),
+                "{source} messages {:?}",
+                outcome.messages
+            );
+            clean_and_dirty.push(down_values);
+
+            assert_definition_value_without_messages(
+                &mut session,
+                "List[i, OwnValues[i]]",
+                restored,
+            );
+        }
+
+        assert_eq!(
+            clean_and_dirty[0], clean_and_dirty[1],
+            "{iterator}[{assignment}, {{i, 1, 3}}] clean/dirty parity"
+        );
+    }
+}
+
+#[test]
+fn iterator_lhs_normalization_covers_nested_and_shadowed_iterators() {
+    for (source, expected, restored) in [
+        (
+            "ClearAll[i, j, f]; Do[f[i, j] = List[i, j], {i, 1, 2}, {j, 1, 2}]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[1, 1]], List[1, 1]], RuleDelayed[HoldPattern[f[1, 2]], List[1, 2]], RuleDelayed[HoldPattern[f[2, 1]], List[2, 1]], RuleDelayed[HoldPattern[f[2, 2]], List[2, 2]]]",
+            "List[i, j]",
+        ),
+        (
+            "ClearAll[i, f]; Do[f[i] = i, {i, 1, 2}, {i, 3, 4}]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[3]], 3], RuleDelayed[HoldPattern[f[4]], 4]]",
+            "List[i, j]",
+        ),
+        (
+            "ClearAll[i, before, inner, after]; Do[before[i] = i; Do[inner[i] = i, {i, 3, 4}]; after[i] = i, {i, 1, 2}]; List[DownValues[before], DownValues[inner], DownValues[after]]",
+            "List[List[RuleDelayed[HoldPattern[before[1]], 1], RuleDelayed[HoldPattern[before[2]], 2]], List[RuleDelayed[HoldPattern[inner[3]], 3], RuleDelayed[HoldPattern[inner[4]], 4]], List[RuleDelayed[HoldPattern[after[1]], 1], RuleDelayed[HoldPattern[after[2]], 2]]]",
+            "List[i, j]",
+        ),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        assert_definition_value_without_messages(&mut session, source, expected);
+        assert_definition_value_without_messages(&mut session, "List[i, j]", restored);
+    }
+}
+
+#[test]
+fn real_iterator_definitions_precede_dynamic_values_and_clear_reveals_them_again() {
+    for (source, expected) in [
+        (
+            "ClearAll[i, f]; Do[i = 5; f[i] = 1, {i, 1, 2}]; List[DownValues[f], i]",
+            "List[List[RuleDelayed[HoldPattern[f[5]], 1]], i]",
+        ),
+        (
+            "ClearAll[i, f]; Do[i = 5; Clear[i]; f[i] = 1, {i, 1, 2}]; List[DownValues[f], i]",
+            "List[List[RuleDelayed[HoldPattern[f[1]], 1], RuleDelayed[HoldPattern[f[2]], 1]], i]",
+        ),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        assert_definition_value_without_messages(&mut session, source, expected);
+    }
+}
+
+#[test]
+fn dynamic_iterator_lhs_values_are_normalized_with_the_existing_cycle_guard() {
+    for (source, expected) in [
+        (
+            "ClearAll[i, j, k, f]; Do[j = k; k = 2; f[i] = 1, {i, {j}}]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[2]], 1]]",
+        ),
+        (
+            "ClearAll[i, f]; Do[f[i] = 1, {i, {i}}]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[i]], 1]]",
+        ),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        assert_definition_value_without_messages(&mut session, source, expected);
+    }
+}
+
+#[test]
+fn non_iterator_lhs_binding_controls_keep_their_exact_results() {
+    for (source, expected) in [
+        (
+            "ClearAll[i, f]; i = 2; f[i] = i; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[2]], 2]]",
+        ),
+        (
+            "ClearAll[i, f]; For[i = 1, True, i = 2, f[i] = i; Break[]]; List[DownValues[f], i]",
+            "List[List[RuleDelayed[HoldPattern[f[1]], 1]], 1]",
+        ),
+        (
+            "ClearAll[i, f]; Module[{i = 2}, f[i] = i]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[2]], 2]]",
+        ),
+        (
+            "ClearAll[i, f]; With[{i = 2}, f[i] = i]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[2]], 2]]",
+        ),
+        (
+            "ClearAll[i, f]; i = 9; Block[{i = 2}, f[i] = i]; List[DownValues[f], i]",
+            "List[List[RuleDelayed[HoldPattern[f[2]], 2]], 9]",
+        ),
+        (
+            "ClearAll[i, f]; i = 9; Block[{i}, f[i] = 1]; List[DownValues[f], i]",
+            "List[List[RuleDelayed[HoldPattern[f[i]], 1]], 9]",
+        ),
+        (
+            "ClearAll[i, f]; Function[{i}, f[i] = i][2]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[2]], 2]]",
+        ),
+        (
+            "ClearAll[i, f, g]; g[i_] := (f[i] = i); g[2]; DownValues[f]",
+            "List[RuleDelayed[HoldPattern[f[2]], 2]]",
+        ),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        assert_definition_value_without_messages(&mut session, source, expected);
+    }
+}

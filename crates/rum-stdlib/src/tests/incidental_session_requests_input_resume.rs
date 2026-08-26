@@ -177,6 +177,43 @@ fn resume_eval_request_with_input_preserves_do_iterator_scope_until_completion()
 }
 
 #[test]
+fn resumed_set_rhs_normalizes_iterator_lhs_once_and_restores_clean_scope() {
+    let mut session = core_session();
+    let setup = session
+        .eval_text("ClearAll[i, f, calls]; calls = 0")
+        .unwrap();
+    assert_eq!(setup.value.to_string(), "0");
+    assert!(setup.messages.is_empty());
+
+    let failure = session
+        .eval_request(
+            "Do[f[i] = List[i, calls = calls + 1, If[SameQ[i, 1], InputString[\"iter-set: \"], done], i], {i, 1, 2}]; List[DownValues[f], calls, i]",
+        )
+        .expect_err("the first Set rhs should suspend inside the clean iterator scope");
+
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "iter-set: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("ok")
+        .expect("resume should finish Set without replaying its rhs");
+
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[RuleDelayed[HoldPattern[f[1]], List[1, 1, \"ok\", 1]], RuleDelayed[HoldPattern[f[2]], List[2, 2, done, 2]]], 2, i]"
+    );
+    assert!(response.messages.is_empty());
+
+    let restored = session.eval_text("List[i, OwnValues[i]]").unwrap();
+    assert_eq!(restored.value.to_string(), "List[i, List[]]");
+    assert!(restored.messages.is_empty());
+}
+
+#[test]
 fn resume_eval_request_with_input_preserves_prepared_lookup_across_default_and_wrapper() {
     let mut session = core_session();
 
