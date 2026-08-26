@@ -80,11 +80,20 @@ was an artifact of an invalid probe: rum's custom equivalence test is a
 positional argument, not a `SameTest` option, so the option form silently
 compared nothing. Findings age, and probes lie.
 
-**`ValueQ` breaks its documented contract three ways (brief-345, all
-reproduced by the director).** The generated reference — normative under the
-testing policy — says `ValueQ` tests "by trial evaluation without committing
-side effects". Session-local state does roll back (`ValueQ[yy = 7]` leaves
-`yy` undefined), but three effects escape the trial:
+**`ValueQ` is being rebuilt as a lookup — director's ruling 2026-08-26.**
+It will answer without evaluating its argument at all, and it keeps rum's
+precise answer: `f[1] = 3; ValueQ[f[2]]` stays `False`, because no definition
+can apply to `f[2]`. A coarser "does the head have any definition" rule was
+considered and rejected as too surprising. This ruling supersedes the repair
+comparison in brief-345: an answer that never evaluates has no side effects to
+roll back and no session to clone, so both the contract breaches below and the
+per-call cost above disappear with it rather than being traded off.
+
+The three breaches are what the ruling closes (brief-345, all reproduced by
+the director). The generated reference — normative under the testing policy —
+says `ValueQ` tests "by trial evaluation without committing side effects".
+Session-local state does roll back (`ValueQ[yy = 7]` leaves `yy` undefined),
+but three effects escape the trial:
 
 - **The deterministic PRNG advances.** `SeedRandom[123]; ValueQ[RandomInteger[
   1000000]]` consumes the first draw, so the next draw returns what should
@@ -95,8 +104,12 @@ side effects". Session-local state does roll back (`ValueQ[yy = 7]` leaves
 - **`FileWrite` commits.** `ValueQ[DumpSave[path, x]]` writes the file, and no
   in-memory snapshot can undo it.
 
-These rank ahead of the performance item above. Decide the contract first —
-promote it to a promise, or document the limitation — then repair to match.
+The open question is the accuracy of the lookup, not the contract. rum already
+has a machine that answers "would evaluating this change it" — the evaluation
+stability check the evaluator uses to skip stable expressions — but it is
+deliberately conservative, and its conservative direction ("might change")
+becomes a wrong `True` here. How precise it is, which shapes need more, and
+what an undecidable shape should answer are the questions to settle.
 
 **Found while re-probing, and more serious than the list above: iterator
 variables were invisible on an assignment lhs.** `Do[f[i] = i, {i, 1, 3}]`
