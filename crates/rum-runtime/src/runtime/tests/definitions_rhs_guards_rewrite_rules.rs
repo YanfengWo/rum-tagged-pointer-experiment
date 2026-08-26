@@ -199,20 +199,19 @@ fn replace_repeated_stops_when_the_only_guard_declines() {
 }
 
 #[test]
-fn rule_shaped_data_and_replace_part_keep_their_existing_condition_forms() {
+fn rule_shaped_data_keeps_its_existing_condition_forms() {
     let mut session = rewrite_guard_session();
 
     assert_eq!(
         session
             .eval_text(
                 "{<|1 -> (\"v\" /; True)|>, \
-                  Options[dataGuard] = {opt -> (\"v\" /; True)}; Options[dataGuard], \
-                  ReplacePart[{a, b}, {1} :> (\"part\" /; True)]}",
+                  Options[dataGuard] = {opt -> (\"v\" /; True)}; Options[dataGuard]}",
             )
             .unwrap()
             .value
             .to_string(),
-        "List[Association[Rule[1, Condition[\"v\", True]]], List[Rule[opt, Condition[\"v\", True]]], List[Condition[\"part\", True], b]]"
+        "List[Association[Rule[1, Condition[\"v\", True]]], List[Rule[opt, Condition[\"v\", True]]]]"
     );
 }
 

@@ -187,7 +187,7 @@ fn collect_planned_exact_paths(
     }
 }
 
-fn insert_replace_plan_target(
+pub(super) fn insert_replace_plan_target(
     node: &mut ReplacePlanNode,
     path: &[isize],
     action: ReplacePlanAction,

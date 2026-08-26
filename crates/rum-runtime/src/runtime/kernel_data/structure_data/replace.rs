@@ -1,5 +1,7 @@
 use super::*;
 
+mod guarded;
+mod guarded_plan;
 mod parsing;
 mod plan;
 mod replace_at;
@@ -9,6 +11,7 @@ mod replace_part;
 struct ReplacePartRule {
     position_specs: Vec<ReplacePartPositionSpec>,
     rhs: Expr,
+    guards: Box<[Expr]>,
     delayed: bool,
     heads: ReplacePartHeadsMode,
 }
@@ -42,4 +45,21 @@ struct ReplacePartTarget {
     path: Vec<isize>,
     rhs: Expr,
     delayed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct GuardedReplacePartTarget {
+    path: Vec<isize>,
+    rule_index: usize,
+    bindings: SymbolExprMap,
+    option_scope: Option<OptionValueScope>,
+    state: GuardedReplacePartTargetState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GuardedReplacePartTargetState {
+    PatternCandidate,
+    PendingGuard,
+    Accepted,
+    Inactive,
 }

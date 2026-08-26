@@ -45,7 +45,12 @@ impl Session {
             }
         };
 
-        self.apply_replace_part_rules_owned(args[0].clone(), rules, 0, None)
+        let has_guards = rules.iter().any(|rule| !rule.guards.is_empty());
+        if has_guards {
+            self.apply_guarded_replace_part_rules_owned(args[0].clone(), rules)
+        } else {
+            self.apply_replace_part_rules_owned(args[0].clone(), rules, 0, None)
+        }
     }
     fn apply_replace_part_rules_owned(
         &mut self,
@@ -241,7 +246,7 @@ impl Session {
         })
     }
 
-    fn apply_replace_plan_owned(
+    pub(super) fn apply_replace_plan_owned(
         &mut self,
         mut expr: Expr,
         mut plan: ReplacePlanNode,

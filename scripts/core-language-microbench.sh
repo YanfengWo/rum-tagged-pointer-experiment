@@ -217,6 +217,8 @@ ClearAll[
   gMicroWideTraversal,
   gMicroWideAssociation,
   gMicroReplacePartRules,
+  gMicroGuardedReplacePartRule,
+  gMicroGuardedReplacePartFallbackRules,
   gMicroAppendListSmall,
   gMicroAppendListLarge,
   gMicroAppendPartOuter1000Small,
@@ -330,6 +332,8 @@ gMicroWideAssociation = AssociationThread[
   Range[rumMicroN[1600]] -> Range[rumMicroN[1600]]
 ];
 gMicroReplacePartRules = Table[{1} -> i, {i, 1, rumMicroN[1600]}];
+gMicroGuardedReplacePartRule = 1 :> 1 /; True;
+gMicroGuardedReplacePartFallbackRules = {1 -> 0, 1 :> 1 /; False};
 fExact[1] = 2;
 fPattern[x_Integer] := x + 1;
 fGuarded[x_Integer] := x + 1 /; x > 0;
@@ -491,6 +495,16 @@ rumMicroOnce[
   "replacepart-wide-rule-list",
   rumMicroN[1600],
   ReplacePart[{0}, gMicroReplacePartRules]
+];
+rumMicroBench[
+  "replacepart-guarded-hit",
+  rumMicroN[500],
+  ReplacePart[{0}, gMicroGuardedReplacePartRule]
+];
+rumMicroBench[
+  "replacepart-guarded-decline-fallback",
+  rumMicroN[500],
+  ReplacePart[{0}, gMicroGuardedReplacePartFallbackRules]
 ];
 
 rumMicroBench["string-repeat-small", rumMicroN[500], StringRepeat["a", 3]];

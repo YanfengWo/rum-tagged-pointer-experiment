@@ -41,10 +41,12 @@ fn parse_replace_part_rule_with_heads(
     } else {
         return Ok(None);
     };
+    let (rhs, guards) = split_definition_rhs_guards(args[1].clone());
 
     Ok(Some(ReplacePartRule {
         position_specs: parse_replace_part_position_specs(&args[0])?,
-        rhs: args[1].clone(),
+        rhs,
+        guards,
         delayed,
         heads,
     }))
