@@ -266,6 +266,10 @@ ClearAll[
   gMicroSortDefaultWide,
   gMicroSortByDefaultWide,
   gMicroReverseSortDefaultWide,
+  gMicroSortSymbolWidth4000,
+  gMicroSortSymbolWidth16000,
+  gMicroSortSymbolExpectedWidth4000,
+  gMicroSortSymbolExpectedWidth16000,
   gMicroKeySortCallbackSmall,
   gMicroKeySortCallbackLarge,
   gMicroKeySortByCallbackSmall,
@@ -792,6 +796,16 @@ gMicroReverseSortCallbackLarge = Range[rumMicroN[200]];
 gMicroSortDefaultWide = Reverse[Range[rumMicroN[1600]]];
 gMicroSortByDefaultWide = Reverse[Range[rumMicroN[1600]]];
 gMicroReverseSortDefaultWide = Range[rumMicroN[1600]];
+gMicroSortSymbolWidth4000 = Reverse[Table[
+  Symbol[StringJoin["gMicroSortSymbol", ToString[i]]],
+  {i, 1, 4000}
+]];
+gMicroSortSymbolWidth16000 = Reverse[Table[
+  Symbol[StringJoin["gMicroSortSymbol", ToString[i]]],
+  {i, 1, 16000}
+]];
+gMicroSortSymbolExpectedWidth4000 = Sort[gMicroSortSymbolWidth4000];
+gMicroSortSymbolExpectedWidth16000 = Sort[gMicroSortSymbolWidth16000];
 gMicroKeySortCallbackSmall = AssociationThread[
   Range[rumMicroN[50]] -> Range[rumMicroN[50]]
 ];
@@ -879,6 +893,18 @@ rumMicroOnce[
   Sort[gMicroSortDefaultWide]
 ];
 If[SameQ[rumMicroSink, Range[rumMicroN[1600]]], Null, Exit[2]];
+rumMicroOnce[
+  "sort-symbol-default-width4000",
+  4000,
+  Sort[gMicroSortSymbolWidth4000]
+];
+If[SameQ[rumMicroSink, gMicroSortSymbolExpectedWidth4000], Null, Exit[2]];
+rumMicroOnce[
+  "sort-symbol-default-width16000",
+  16000,
+  Sort[gMicroSortSymbolWidth16000]
+];
+If[SameQ[rumMicroSink, gMicroSortSymbolExpectedWidth16000], Null, Exit[2]];
 rumMicroOnce[
   "sortby-default-wide",
   rumMicroN[1600],

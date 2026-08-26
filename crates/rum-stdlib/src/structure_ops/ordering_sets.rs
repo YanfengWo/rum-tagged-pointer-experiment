@@ -872,7 +872,7 @@ fn compare_atom_order(lhs: &Atom, rhs: &Atom) -> Ordering {
         .then_with(|| match (lhs, rhs) {
             (Atom::Integer(lhs), Atom::Integer(rhs)) => lhs.cmp(rhs),
             (Atom::String(lhs), Atom::String(rhs)) => lhs.cmp(rhs),
-            (Atom::Symbol(lhs), Atom::Symbol(rhs)) => lhs.to_string().cmp(&rhs.to_string()),
+            (Atom::Symbol(lhs), Atom::Symbol(rhs)) => lhs.cmp_qualified_name(rhs),
             (Atom::Rational(lhs), Atom::Rational(rhs)) => lhs.cmp(rhs),
             _ => lhs.to_string().cmp(&rhs.to_string()),
         })

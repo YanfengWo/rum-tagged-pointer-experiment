@@ -178,6 +178,73 @@ impl Symbol {
             self.fully_qualified_name()
         }
     }
+
+    /// Compares the bytes rendered by [`Self::qualified_name`] without
+    /// allocating either qualified name.
+    ///
+    /// Generated identities are deliberately ignored because they are not
+    /// part of the rendered name.
+    pub fn cmp_qualified_name(&self, other: &Self) -> Ordering {
+        if self.id == other.id {
+            return Ordering::Equal;
+        }
+
+        let lhs_context = if self.is_global() || self.is_system() {
+            ""
+        } else {
+            self.text.context
+        };
+        let rhs_context = if other.is_global() || other.is_system() {
+            ""
+        } else {
+            other.text.context
+        };
+
+        if lhs_context == rhs_context {
+            return self.text.name.as_bytes().cmp(other.text.name.as_bytes());
+        }
+
+        compare_concatenated_bytes(
+            [lhs_context.as_bytes(), self.text.name.as_bytes()],
+            [rhs_context.as_bytes(), other.text.name.as_bytes()],
+        )
+    }
+}
+
+#[inline]
+fn compare_concatenated_bytes(lhs: [&[u8]; 2], rhs: [&[u8]; 2]) -> Ordering {
+    let mut lhs_part = 0;
+    let mut rhs_part = 0;
+    let mut lhs_offset = 0;
+    let mut rhs_offset = 0;
+
+    loop {
+        while lhs_part < lhs.len() && lhs_offset == lhs[lhs_part].len() {
+            lhs_part += 1;
+            lhs_offset = 0;
+        }
+        while rhs_part < rhs.len() && rhs_offset == rhs[rhs_part].len() {
+            rhs_part += 1;
+            rhs_offset = 0;
+        }
+
+        match (lhs.get(lhs_part), rhs.get(rhs_part)) {
+            (None, None) => return Ordering::Equal,
+            (None, Some(_)) => return Ordering::Less,
+            (Some(_), None) => return Ordering::Greater,
+            (Some(lhs_bytes), Some(rhs_bytes)) => {
+                let lhs_remaining = &lhs_bytes[lhs_offset..];
+                let rhs_remaining = &rhs_bytes[rhs_offset..];
+                let compared_len = lhs_remaining.len().min(rhs_remaining.len());
+                let ordering = lhs_remaining[..compared_len].cmp(&rhs_remaining[..compared_len]);
+                if ordering != Ordering::Equal {
+                    return ordering;
+                }
+                lhs_offset += compared_len;
+                rhs_offset += compared_len;
+            }
+        }
+    }
 }
 
 impl PartialEq for Symbol {

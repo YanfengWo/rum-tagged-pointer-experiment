@@ -1,7 +1,279 @@
 use super::*;
+use crate::structure_ops::eval_sort;
+use rum_core::{Atom, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, Symbol};
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
+}
+
+fn sort_symbols_by_qualified_name(mut symbols: Vec<Symbol>) -> Vec<Symbol> {
+    symbols.sort_by(Symbol::cmp_qualified_name);
+    symbols
+}
+
+fn sort_exprs(session: &mut Session, items: Vec<Expr>) -> Expr {
+    let list = Expr::call(Expr::system_symbol("List"), items);
+    eval_sort(session, &Expr::system_symbol("Sort"), &[list]).unwrap()
+}
+
+#[test]
+fn qualified_symbol_name_order_matches_the_allocating_text_order_exactly() {
+    let same_a = Symbol::new("Ctx`", "a");
+    let same_ab = Symbol::new("Ctx`", "ab");
+    let same_b = Symbol::new("Ctx`", "b");
+    assert_eq!(
+        sort_symbols_by_qualified_name(vec![same_b, same_ab, same_a]),
+        vec![same_a, same_ab, same_b]
+    );
+
+    let global_z = Symbol::new(GLOBAL_CONTEXT, "z");
+    let nested_a = Symbol::new("Global`x`", "a");
+    assert_eq!(
+        sort_symbols_by_qualified_name(vec![global_z, nested_a]),
+        vec![nested_a, global_z]
+    );
+
+    let context_underscore = Symbol::new("Ctx`_`", "k");
+    let context_a = Symbol::new("Ctx`a`", "k");
+    assert_eq!(
+        sort_symbols_by_qualified_name(vec![context_a, context_underscore]),
+        vec![context_underscore, context_a]
+    );
+
+    let name_underscore = Symbol::new("Ctx`", "_");
+    let name_backtick = Symbol::new("Ctx`", "`");
+    let name_a = Symbol::new("Ctx`", "a");
+    assert_eq!(
+        sort_symbols_by_qualified_name(vec![name_a, name_backtick, name_underscore]),
+        vec![name_underscore, name_backtick, name_a]
+    );
+
+    let unicode_ascii = Symbol::new("Ctx`", "a");
+    let unicode_latin = Symbol::new("Ctx`", "é");
+    let unicode_cjk = Symbol::new("Ctx`", "中");
+    assert_eq!(
+        sort_symbols_by_qualified_name(vec![unicode_cjk, unicode_latin, unicode_ascii]),
+        vec![unicode_ascii, unicode_latin, unicode_cjk]
+    );
+
+    let cases = [
+        same_a,
+        same_ab,
+        same_b,
+        global_z,
+        nested_a,
+        context_underscore,
+        context_a,
+        name_underscore,
+        name_backtick,
+        unicode_latin,
+        unicode_cjk,
+    ];
+    for lhs in cases {
+        for rhs in cases {
+            assert_eq!(
+                lhs.cmp_qualified_name(&rhs),
+                lhs.qualified_name().cmp(&rhs.qualified_name()),
+                "qualified-name order differs for {lhs:?} and {rhs:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn qualified_symbol_name_ties_ignore_context_elision_and_generated_identity_stably() {
+    let system = Symbol::new(SYSTEM_CONTEXT, "same");
+    let global = Symbol::new(GLOBAL_CONTEXT, "same");
+    assert_eq!(
+        system.cmp_qualified_name(&global),
+        std::cmp::Ordering::Equal
+    );
+    assert_eq!(
+        sort_symbols_by_qualified_name(vec![system, global]),
+        vec![system, global]
+    );
+
+    let generated_two = Symbol::with_identity("Generated`", "g", 2);
+    let generated_one = Symbol::with_identity("Generated`", "g", 1);
+    assert_ne!(generated_two, generated_one);
+    assert_eq!(
+        generated_two.cmp_qualified_name(&generated_one),
+        std::cmp::Ordering::Equal
+    );
+
+    let input = vec![
+        Expr::Atom(Atom::Symbol(generated_two)),
+        Expr::Atom(Atom::Symbol(generated_one)),
+    ];
+    let mut session = core_session();
+    assert_eq!(
+        sort_exprs(&mut session, input.clone()),
+        Expr::call(Expr::system_symbol("List"), input)
+    );
+}
+
+#[test]
+fn symbol_sort_order_and_mixed_atom_fallback_match_the_pinned_lists() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(&mut session, "Sort[{Global`ab, Global`a, Global`b}]"),
+        "List[a, ab, b]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Sort[{Global`z, Global`x`a}]"),
+        "List[Global`x`a, z]"
+    );
+    assert_eq!(
+        eval_to_string(&mut session, "Sort[{a, \"x\", 2, 1/2}]"),
+        "List[1/2, 2, \"x\", a]"
+    );
+
+    let rational = Expr::rational(Rational::new(1.into(), 2.into()).unwrap());
+    let expected = vec![
+        rational.clone(),
+        Expr::small_integer(2),
+        Expr::string("x"),
+        Expr::symbol("a"),
+    ];
+    assert_eq!(
+        sort_exprs(
+            &mut session,
+            vec![
+                Expr::symbol("a"),
+                Expr::string("x"),
+                Expr::small_integer(2),
+                rational,
+            ],
+        ),
+        Expr::call(Expr::system_symbol("List"), expected)
+    );
+}
+
+#[test]
+fn every_default_structural_order_consumer_keeps_qualified_symbol_order() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        (
+            "SortBy[{{Global`a, 1}, {Ctx`z, 2}}, First]",
+            "List[List[Ctx`z, 2], List[a, 1]]",
+        ),
+        ("Union[{Global`a, Ctx`z}]", "List[Ctx`z, a]"),
+        (
+            "Intersection[{Global`a, Ctx`z}, {Ctx`z, Global`a}]",
+            "List[Ctx`z, a]",
+        ),
+        ("Complement[{Global`a, Ctx`z}, {}]", "List[Ctx`z, a]"),
+        (
+            "Union[{Global`a, Ctx`z}, SameTest -> SameQ]",
+            "List[Ctx`z, a]",
+        ),
+        (
+            "Intersection[{Global`a, Ctx`z}, {Ctx`z, Global`a}, SameTest -> SameQ]",
+            "List[Ctx`z, a]",
+        ),
+        (
+            "Complement[{Global`a, Ctx`z}, {}, SameTest -> SameQ]",
+            "List[Ctx`z, a]",
+        ),
+        ("ReverseSort[{Global`a, Ctx`z}]", "List[a, Ctx`z]"),
+        (
+            "ReverseSortBy[{{Global`a, 1}, {Ctx`z, 2}}, First]",
+            "List[List[a, 1], List[Ctx`z, 2]]",
+        ),
+        ("MaxBy[{{Global`a, 1}, {Ctx`z, 2}}, First]", "List[a, 1]"),
+        (
+            "MinBy[{{Global`a, 1}, {Ctx`z, 2}}, First]",
+            "List[Ctx`z, 2]",
+        ),
+        (
+            "MaxBy[{{Global`a, 1}, {Ctx`z, 2}}, First, 2]",
+            "List[List[a, 1], List[Ctx`z, 2]]",
+        ),
+        (
+            "MinBy[{{Global`a, 1}, {Ctx`z, 2}}, First, 2]",
+            "List[List[Ctx`z, 2], List[a, 1]]",
+        ),
+        (
+            "MaximalBy[{{Global`a, 1}, {Ctx`z, 2}}, First]",
+            "List[List[a, 1]]",
+        ),
+        (
+            "MinimalBy[{{Global`a, 1}, {Ctx`z, 2}}, First]",
+            "List[List[Ctx`z, 2]]",
+        ),
+        (
+            "TakeLargestBy[{{Global`a, 1}, {Ctx`z, 2}}, First, 2]",
+            "List[List[a, 1], List[Ctx`z, 2]]",
+        ),
+        (
+            "TakeSmallestBy[{{Global`a, 1}, {Ctx`z, 2}}, First, 2]",
+            "List[List[Ctx`z, 2], List[a, 1]]",
+        ),
+    ] {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn separate_canonical_and_numeric_order_consumers_keep_their_base_outputs() {
+    let mut session = core_session();
+
+    for (source, expected) in [
+        (
+            "Keys[KeySort[Association[Global`a -> 1, Ctx`z -> 2]]]",
+            "List[a, Ctx`z]",
+        ),
+        (
+            "Keys[KeySortBy[Association[Global`a -> 1, Ctx`z -> 2], Identity]]",
+            "List[a, Ctx`z]",
+        ),
+        ("Order[Global`a, Ctx`z]", "1"),
+        ("OrderedQ[{Global`a, Ctx`z}]", "True"),
+        (
+            "SetAttributes[brief360Orderless, Orderless]; brief360Orderless[Ctx`z, Global`a]",
+            "brief360Orderless[a, Ctx`z]",
+        ),
+        ("Min[Global`a, Ctx`z]", "Min[a, Ctx`z]"),
+        ("Max[Global`a, Ctx`z]", "Max[a, Ctx`z]"),
+        ("Ordering[{Ctx`z, Global`a}]", "Ordering[List[Ctx`z, a]]"),
+    ] {
+        assert_eq!(eval_to_string(&mut session, source), expected, "{source}");
+    }
+}
+
+#[test]
+fn wide_symbol_sort_matches_the_full_list_and_pinned_base_rendering() {
+    let mut input = (1..=16_000)
+        .rev()
+        .map(|index| Symbol::from_name(format!("brief360Wide{index}")))
+        .collect::<Vec<_>>();
+    let mut expected = input.clone();
+    expected.sort_by(|lhs, rhs| lhs.name().as_bytes().cmp(rhs.name().as_bytes()));
+
+    let input = input
+        .drain(..)
+        .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+        .collect();
+    let expected = expected
+        .into_iter()
+        .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+        .collect();
+    let mut session = core_session();
+    assert_eq!(
+        sort_exprs(&mut session, input),
+        Expr::call(Expr::system_symbol("List"), expected)
+    );
+
+    // Captured from the unmodified release CLI before replacing the comparator.
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Hash[ToString[Sort[Reverse[Table[Symbol[StringJoin[\"brief360Wide\", ToString[i]]], {i, 1, 16000}]]]], \"SHA256\", \"HexString\"]",
+        ),
+        "\"b6cb5c1ec67c0fba1eeb7ff1f43f9e8bbe2e699631296f458b5984d2a0d50fae\""
+    );
 }
 
 #[test]
