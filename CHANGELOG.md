@@ -7,6 +7,29 @@ minor versions may include breaking changes; the project aims to follow
 
 ## [Unreleased]
 
+### Fixed
+
+- `lhs := rhs /; test` evaluates its guard. Right-hand-side `Condition` guards
+  were stored as part of the body and never examined, so
+  `b[x_] := x^2 /; x > 0` made `b[3]` return `9 /; True` and `b[-3]` return
+  `9 /; False`. All eight candidate-selecting lanes now evaluate them —
+  `DownValues`, `UpValues`, `SubValues`, `DefaultValues`, `Rule`/`RuleDelayed`
+  through the replacement system, `ReplacePart`, string rules, and
+  `OwnValues` — with only `True` accepting and a decline indistinguishable
+  from the rule not matching. `Cases` no longer collects an element whose
+  guard declined. Rules that differ only by their guard now coexist and are
+  tried in order, where previously the later one replaced the earlier.
+  Per-lane ordering contracts are documented in `docs/guide/patterns-and-rules.md`.
+- Iterator variables are visible on an assignment left-hand side.
+  `Do[f[i] = i, {i, 1, 3}]` installed a single `HoldPattern[f[i]] :> 3`
+  without a message; it now installs `f[1]`, `f[2]` and `f[3]`. `Table`, `Sum`
+  and `Product` share the repair. `SetDelayed` resolves the lhs key and leaves
+  its rhs delayed on the iterator symbol.
+- `ValueQ` no longer commits side effects during its trial evaluation: the
+  deterministic PRNG is restored, host print output is suppressed for the
+  trial's duration, and `FileWrite` and `Process` are refused. As a
+  consequence `ValueQ[DumpSave[path, x]]` now answers `False`.
+
 ### Changed
 
 - Sorting with a user comparator is `n log n`. `Sort`, `SortBy` and
@@ -25,6 +48,26 @@ minor versions may include breaking changes; the project aims to follow
 - Left-associative operator chains are bounded at 4 096 links, reported with a
   dedicated diagnostic. The limit is enforced for programmatically built syntax
   trees as well as for parsed source.
+- `ValueQ` answers without evaluating when the evaluator already proves the
+  target unchanged, so its cost no longer scales with session history: at
+  8 000 definitions, 332.6 us to 0.76 us per call.
+- Reading one value out of an association no longer materializes every entry.
+  Allocations per read are now independent of width (14 at both 4 000 and
+  32 000 keys, against 12 083 and 96 101 before); positional reads are flat
+  across width and keyed reads sublinear.
+- `StringTrim` with a list of exact string literals takes the fast path its
+  single-literal form already had, 31.6x at 4 000 characters and 36.1x at
+  32 000.
+- Sorting symbols no longer allocates two strings per comparison. The order is
+  unchanged, including for nested contexts.
+- The REPL runs one full completeness check per form rather than one per
+  appended line, so pasting a multi-line definition is linear in its length.
+- The Jupyter kernel sleeps at its launcher's idle interval while a cell runs
+  instead of spinning a core.
+- The generated-symbol sweep rearms at a watermark after a pass that reclaims
+  nothing, so repeated `Module` calls that retain their symbols no longer each
+  pay a full mark. Reclamation is still bounded: an unreachable symbol is
+  collected within one further threshold of new candidates.
 
 - Completed the P0 tranche of a safe-Rust repository-wide algorithmic
   performance sweep. Wide
