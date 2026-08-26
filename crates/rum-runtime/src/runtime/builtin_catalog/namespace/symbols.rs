@@ -133,7 +133,7 @@ pub(in super::super) const NAMESPACE_SYMBOL_BUILTINS: &[BuiltinSpec] = &[
     .protected(),
     BuiltinSpec::ordinary_with_hold(
         "OwnValues",
-        "Lists stored immediate or delayed ownvalue definitions for a symbol.",
+        "Lists stored immediate or delayed own-value definitions for a symbol, reconstructing right-hand-side guards.",
         HoldAttribute::HoldFirst,
         builtin_own_values,
     )

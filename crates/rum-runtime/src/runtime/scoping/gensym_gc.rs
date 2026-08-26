@@ -231,6 +231,9 @@ pub(in crate::runtime) fn for_each_definition_expr(
     if let Some(expr) = &definition.delayed_own_value {
         visit(expr);
     }
+    for guard in definition.own_value_guards() {
+        visit(guard);
+    }
     for value in &definition.up_values {
         visit(&value.lhs);
         visit(&value.rhs);

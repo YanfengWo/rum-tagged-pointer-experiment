@@ -194,8 +194,7 @@ impl Session {
         };
 
         let definition = self.definitions.entry(fresh_symbol).or_default();
-        definition.own_value = Some(value);
-        definition.delayed_own_value = None;
+        definition.store_own_value(value, Box::default(), false);
         self.bump_evaluation_epoch_for_symbol(&fresh_symbol);
     }
 

@@ -132,6 +132,7 @@ mod definitions_and_rules_rewrite_inspect;
 mod definitions_and_rules_tags;
 mod definitions_rhs_guards;
 mod definitions_rhs_guards_default_values;
+mod definitions_rhs_guards_own_values;
 mod definitions_rhs_guards_rewrite_rules;
 mod definitions_rhs_guards_sub_values;
 mod definitions_rhs_guards_up_values;

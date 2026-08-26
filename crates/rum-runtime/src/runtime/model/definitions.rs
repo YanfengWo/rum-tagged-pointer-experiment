@@ -52,6 +52,7 @@ pub struct MessageCatalogEntry {
 pub struct SymbolDefinition {
     pub own_value: Option<Expr>,
     pub delayed_own_value: Option<Expr>,
+    pub(in crate::runtime) own_value_guards: Option<Box<[Expr]>>,
     pub up_values: Vec<UpValue>,
     pub down_values: Vec<DownValue>,
     down_value_dispatch: Option<Box<DownValueDispatchMetadata>>,
@@ -98,6 +99,32 @@ impl SymbolDefinition {
             own_value: Some(value),
             ..Self::default()
         }
+    }
+
+    pub(in crate::runtime) fn store_own_value(
+        &mut self,
+        value: Expr,
+        guards: Box<[Expr]>,
+        delayed: bool,
+    ) {
+        if delayed {
+            self.own_value = None;
+            self.delayed_own_value = Some(value);
+        } else {
+            self.own_value = Some(value);
+            self.delayed_own_value = None;
+        }
+        self.own_value_guards = (!guards.is_empty()).then_some(guards);
+    }
+
+    pub(in crate::runtime) fn clear_own_values(&mut self) -> bool {
+        let changed = self.own_value.take().is_some() | self.delayed_own_value.take().is_some();
+        self.own_value_guards = None;
+        changed
+    }
+
+    pub(in crate::runtime) fn own_value_guards(&self) -> &[Expr] {
+        self.own_value_guards.as_deref().unwrap_or_default()
     }
 
     pub(in crate::runtime) fn is_empty(&self) -> bool {

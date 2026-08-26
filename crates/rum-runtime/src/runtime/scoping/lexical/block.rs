@@ -322,8 +322,7 @@ impl Session {
         match outcome {
             Ok(value) => {
                 let definition = self.definitions.entry(symbol).or_default();
-                definition.own_value = Some(value);
-                definition.delayed_own_value = None;
+                definition.store_own_value(value, Box::default(), false);
                 self.bump_evaluation_epoch_for_symbol(&symbol);
                 self.resume_block_initializers(items, body, saved_state, dynamic_depth, index + 1)
             }
@@ -346,8 +345,7 @@ impl Session {
         match outcome {
             Ok(value) => {
                 let definition = self.definitions.entry(symbol).or_default();
-                definition.own_value = Some(value);
-                definition.delayed_own_value = None;
+                definition.store_own_value(value, Box::default(), false);
                 self.bump_evaluation_epoch_for_symbol(&symbol);
                 self.resume_single_symbol_block_body(symbol, body, saved_state, dynamic_depth)
             }

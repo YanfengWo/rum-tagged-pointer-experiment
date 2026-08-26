@@ -191,8 +191,7 @@ impl Session {
     pub fn install_system_own_value(&mut self, name: &str, value: Expr) {
         let symbol = Symbol::system(name);
         let definition = self.definitions.entry(symbol).or_default();
-        definition.own_value = Some(value);
-        definition.delayed_own_value = None;
+        definition.store_own_value(value, Box::default(), false);
         self.installed_system_own_values.insert(symbol);
         self.bump_evaluation_epoch_for_symbol(&symbol);
     }
@@ -401,6 +400,7 @@ impl Session {
             && self.symbol_is_protected(symbol)
             && definition.own_value.is_some()
             && definition.delayed_own_value.is_none()
+            && definition.own_value_guards.is_none()
             && definition.up_values.is_empty()
             && definition.down_values.is_empty()
             && definition.sub_values.is_empty()
@@ -420,6 +420,7 @@ impl Session {
         symbol.is_system()
             && definition.own_value.is_none()
             && definition.delayed_own_value.is_none()
+            && definition.own_value_guards.is_none()
             && definition.up_values.is_empty()
             && definition.sub_values.is_empty()
             && definition.down_values.len() == installed_down_values.len()

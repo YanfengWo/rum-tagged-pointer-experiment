@@ -99,11 +99,7 @@ impl Session {
         };
 
         let (changed, removed_up_values) = match kind {
-            ValueTableKind::OwnValues => {
-                let removed_immediate = definition.own_value.take().is_some();
-                let removed_delayed = definition.delayed_own_value.take().is_some();
-                (removed_immediate || removed_delayed, false)
-            }
+            ValueTableKind::OwnValues => (definition.clear_own_values(), false),
             ValueTableKind::DownValues => {
                 let changed = !definition.down_values.is_empty();
                 definition.down_values.clear();

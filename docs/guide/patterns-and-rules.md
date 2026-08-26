@@ -141,6 +141,43 @@ the rule or definition fires:
 
 Use delayed forms when the right side depends on pattern bindings.
 
+## Right-Hand-Side Guards
+
+A `Condition` on the right-hand side guards the stored result rather than
+becoming part of that result. For example:
+
+```text
+lhs := rhs /; test
+```
+
+After `lhs` matches, rum evaluates `test` with the candidate's pattern
+bindings and option scope. Only the exact result `True` accepts the candidate;
+any other result declines it without a message. On acceptance, rum evaluates
+`rhs`. On decline, evaluation proceeds exactly as though that rule or
+definition had not matched. Nested right-hand-side conditions run their tests
+from left to right, stopping at the first decline.
+
+Guards run user code. Their side effects occur when a candidate is tried, and
+a guard can suspend for host input. Use delayed forms when the guard should run
+only when the rule or definition is used: an immediate `Set` or `Rule`
+evaluates its complete right-hand side while constructing the definition or
+rule, before the stored guard is separated.
+
+Candidate ordering depends on the lane:
+
+- Definition tables and rewrite-rule lists try candidates in their normal
+  order; the first accepting candidate wins.
+- At a contested `ReplacePart` position, rules are tried from the last rule to
+  the first. Once a rule accepts, its earlier rivals are not evaluated.
+- String rules are first-match-wins: at each string position, rules are tried
+  in list order.
+- If a `Default` guard declines, the optional argument has no default from that
+  candidate.
+
+An ownvalue has one immediate or delayed storage slot. Consequently, multiple
+guarded ownvalues for one symbol are not retained as candidates: a later
+definition replaces the earlier one.
+
 ## Definition Precedence
 
 The current implemented precedence is:

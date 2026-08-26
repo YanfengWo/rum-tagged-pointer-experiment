@@ -194,6 +194,7 @@ ClearAll[
   rumMicroEmit,
   rumMicroN,
   rumMicroSink,
+  gMicroGuardedOwnValue,
   fExact,
   fPattern,
   fGuarded,
@@ -326,6 +327,7 @@ rumMicroOnce[label_String, nExpr_, expr_] := Module[
 ];
 
 xOwn = 123;
+gMicroGuardedOwnValue := 123 /; True;
 list10 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 rulesSimple = {a -> 1, b -> 2, c -> 3};
 gMicroGuardedRewriteRule = x_Integer :> x + 1 /; x > 0;
@@ -381,6 +383,11 @@ rumMicroOnce["table-iterator-symbol", rumMicroN[1000], Table[j, {j, 1000 * rumMi
 rumMicroBench["literal-integer", rumMicroN[2000], 123];
 rumMicroBench["literal-string", rumMicroN[2000], "abc"];
 rumMicroBench["symbol-ownvalue-read", rumMicroN[2000], xOwn];
+rumMicroBench[
+  "symbol-ownvalue-guarded-read",
+  rumMicroN[1000],
+  gMicroGuardedOwnValue
+];
 rumMicroBench["set-ownvalue", rumMicroN[1000], xOwn = 123];
 
 rumMicroBench["list-literal-small", rumMicroN[1000], {1, 2, 3, 4}];

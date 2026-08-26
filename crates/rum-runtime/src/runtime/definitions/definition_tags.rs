@@ -184,19 +184,17 @@ impl Session {
     ) {
         let symbol = match target {
             TaggedDefinitionTarget::OwnValue(symbol) => {
+                let (stored_rhs, guards) = split_definition_rhs_guards(rhs.clone());
                 let definition = self.definitions.entry(symbol.clone()).or_default();
+                definition.store_own_value(stored_rhs, guards, delayed);
 
                 if delayed {
-                    definition.own_value = None;
-                    definition.delayed_own_value = Some(rhs.clone());
                     self.push_definition_stored_trace(
                         &symbol,
                         DefinitionKind::DelayedOwnValue,
                         || rhs.clone(),
                     );
                 } else {
-                    definition.own_value = Some(rhs.clone());
-                    definition.delayed_own_value = None;
                     self.push_definition_stored_trace(&symbol, DefinitionKind::OwnValue, || {
                         rhs.clone()
                     });

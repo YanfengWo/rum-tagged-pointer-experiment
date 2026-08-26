@@ -417,9 +417,9 @@ impl Session {
         self.installed_system_own_values.remove(&target);
 
         let runtime_profile_store = runtime_path_timing_start("set.symbol_own_value.store");
+        let (stored_rhs, guards) = split_definition_rhs_guards(rhs.clone());
         let definition = self.definitions.entry(target.clone()).or_default();
-        definition.own_value = Some(rhs.clone());
-        definition.delayed_own_value = None;
+        definition.store_own_value(stored_rhs, guards, false);
         record_profile_runtime_path_timing(runtime_profile_store, RuntimeProfileOutcome::Ok);
 
         let runtime_profile_trace = runtime_path_timing_start("set.symbol_own_value.trace");

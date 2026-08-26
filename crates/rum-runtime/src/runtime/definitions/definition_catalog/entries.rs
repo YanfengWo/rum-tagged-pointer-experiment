@@ -12,7 +12,7 @@ impl Session {
             entries.push(DefinitionCatalogEntry {
                 kind: DefinitionKind::OwnValue,
                 lhs: Expr::Atom(Atom::Symbol(symbol.clone())),
-                rhs: rhs.clone(),
+                rhs: rebuild_definition_rhs_guards(rhs.clone(), definition.own_value_guards()),
                 delayed: false,
             });
         }
@@ -21,7 +21,7 @@ impl Session {
             entries.push(DefinitionCatalogEntry {
                 kind: DefinitionKind::DelayedOwnValue,
                 lhs: Expr::Atom(Atom::Symbol(symbol.clone())),
-                rhs: rhs.clone(),
+                rhs: rebuild_definition_rhs_guards(rhs.clone(), definition.own_value_guards()),
                 delayed: true,
             });
         }

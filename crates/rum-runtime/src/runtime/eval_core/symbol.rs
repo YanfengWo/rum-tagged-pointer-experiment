@@ -1,5 +1,10 @@
 use super::*;
 
+enum OwnValueRead {
+    Unguarded(Expr),
+    Guarded { body: Expr, guards: Box<[Expr]> },
+}
+
 impl Session {
     pub(super) fn evaluate_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
         if symbol.context() == SYSTEM_CONTEXT {
@@ -62,28 +67,72 @@ impl Session {
             }
         }
 
-        if let Some(value) = self
-            .definitions
-            .get(&symbol)
-            .and_then(|definition| definition.own_value.clone())
-        {
-            if matches!(&value, Expr::Atom(Atom::Symbol(value_symbol)) if value_symbol == &symbol) {
-                return Ok(value);
-            }
-            return self.evaluate_own_value(value);
+        if let Some(value) = self.definitions.get(&symbol).and_then(|definition| {
+            own_value_read(&definition.own_value, &definition.own_value_guards)
+        }) {
+            return self.evaluate_stored_own_value(symbol, value, false);
         }
 
-        if let Some(value) = self
-            .definitions
-            .get(&symbol)
-            .and_then(|definition| definition.delayed_own_value.clone())
-        {
-            if matches!(&value, Expr::Atom(Atom::Symbol(value_symbol)) if value_symbol == &symbol) {
-                return Ok(value);
-            }
-            return self.evaluate_definition_rhs(None, value);
+        if let Some(value) = self.definitions.get(&symbol).and_then(|definition| {
+            own_value_read(&definition.delayed_own_value, &definition.own_value_guards)
+        }) {
+            return self.evaluate_stored_own_value(symbol, value, true);
         }
 
+        self.evaluate_symbol_after_stored_own_value(symbol)
+    }
+
+    fn evaluate_stored_own_value(
+        &mut self,
+        symbol: Symbol,
+        value: OwnValueRead,
+        delayed: bool,
+    ) -> Result<Expr, EvalError> {
+        match value {
+            OwnValueRead::Unguarded(value) => {
+                self.evaluate_accepted_own_value(&symbol, value, delayed)
+            }
+            OwnValueRead::Guarded { body, guards } => {
+                let symbol_expr = Expr::Atom(Atom::Symbol(symbol));
+                let option_scope =
+                    self.option_value_scope_for_definition(&symbol_expr, &symbol_expr);
+                let guard_result = self.evaluate_guard_sequence_owned(
+                    guards,
+                    SymbolExprMap::default(),
+                    SymbolExprMap::default(),
+                    option_scope,
+                );
+                self.drive_internal_value(guard_result, move |session, outcome| {
+                    if outcome.matched {
+                        session.evaluate_accepted_own_value(&symbol, body, delayed)
+                    } else {
+                        session.evaluate_symbol_after_stored_own_value(symbol)
+                    }
+                })
+            }
+        }
+    }
+
+    fn evaluate_accepted_own_value(
+        &mut self,
+        symbol: &Symbol,
+        value: Expr,
+        delayed: bool,
+    ) -> Result<Expr, EvalError> {
+        if matches!(&value, Expr::Atom(Atom::Symbol(value_symbol)) if value_symbol == symbol) {
+            return Ok(value);
+        }
+        if delayed {
+            self.evaluate_definition_rhs(None, value)
+        } else {
+            self.evaluate_own_value(value)
+        }
+    }
+
+    fn evaluate_symbol_after_stored_own_value(
+        &mut self,
+        symbol: Symbol,
+    ) -> Result<Expr, EvalError> {
         if let Some(value) = self.dynamic_own_value_binding(&symbol) {
             match value {
                 Some(value) => self.evaluate_own_value(value),
@@ -202,4 +251,14 @@ impl Session {
             .map(held_runtime_message_name_expr)
             .collect()
     }
+}
+
+fn own_value_read(value: &Option<Expr>, guards: &Option<Box<[Expr]>>) -> Option<OwnValueRead> {
+    value.as_ref().map(|value| match guards {
+        Some(guards) => OwnValueRead::Guarded {
+            body: value.clone(),
+            guards: guards.clone(),
+        },
+        None => OwnValueRead::Unguarded(value.clone()),
+    })
 }

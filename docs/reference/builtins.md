@@ -3672,7 +3672,7 @@ Represents the current option symbol for overlapping string-match counting.
 
 ### OwnValues
 
-Lists stored immediate or delayed ownvalue definitions for a symbol.
+Lists stored immediate or delayed own-value definitions for a symbol, reconstructing right-hand-side guards.
 
 - Attributes: `HoldFirst`, `Protected`
 - Capability: `Pure`
@@ -4880,7 +4880,7 @@ Applies a list-oriented function to string code points and reassembles string ou
 
 ### StringCases
 
-Extracts non-overlapping exact string matches or immediate exact-string rule outputs in the current first-pass string subset.
+Extracts supported string matches or immediate, delayed, and right-hand-side-guarded rule outputs.
 
 - Attributes: `Protected`
 - Capability: `Pure`
@@ -5086,7 +5086,7 @@ Repeats a string a non-negative number of times.
 
 ### StringReplace
 
-Replaces exact string needles using immediate string rules in the current first-pass string subset.
+Replaces supported exact and pattern string matches using immediate or delayed rules, including right-hand-side guards.
 
 - Attributes: `Protected`
 - Capability: `Pure`

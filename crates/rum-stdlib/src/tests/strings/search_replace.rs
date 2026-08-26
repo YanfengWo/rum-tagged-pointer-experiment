@@ -1,6 +1,19 @@
 use super::*;
 
 #[test]
+fn rhs_guard_whole_line_regression_covers_every_rule_lane() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "wholeDown[x_] := \"down\" /; True; wholeUpTag /: wholeUpHead[wholeUpTag] := \"up\" /; True; wholeSub[1][x_] := \"sub\" /; True; Default[wholeDefault] := \"default\" /; True; wholeDefault[x_.] := x; wholeOwn := \"own\" /; True; {wholeDown[1], wholeUpHead[wholeUpTag], wholeSub[1][1], wholeDefault[], Replace[1, x_Integer :> (\"rewrite\" /; True)], ReplacePart[{0}, 1 :> (\"part\" /; True)], StringReplace[\"abc\", \"a\" :> (\"S\" /; True)], wholeOwn}",
+        ),
+        "List[\"down\", \"up\", \"sub\", \"default\", \"rewrite\", List[\"part\"], \"Sbc\", \"own\"]"
+    );
+}
+
+#[test]
 fn string_repeat_and_exact_substring_predicates_cover_first_tier_two_wave() {
     let mut session = core_session();
 

@@ -146,7 +146,7 @@ fn save_rebuilds_downvalue_rhs_guards_for_roundtrip() {
 }
 
 #[test]
-fn definition_snapshot_rebuilds_remaining_rhs_guards_for_roundtrip() {
+fn definition_snapshot_rebuilds_all_rhs_guards_for_roundtrip() {
     let dir = TempDirGuard::new("snapshot-remaining-definition-guards");
     let mut session = Session::new();
 
@@ -156,12 +156,14 @@ fn definition_snapshot_rebuilds_remaining_rhs_guards_for_roundtrip() {
     session.eval_text("s[1][x_] := \"sub\" /; True").unwrap();
     session.eval_text("Default[d] := 7 /; True").unwrap();
     session.eval_text("d[x_.] := x").unwrap();
+    session.eval_text("guardedOwn := 5 /; True").unwrap();
 
     let saved = session.snapshot_definitions_source().unwrap();
-    assert_eq!(saved.matches("Condition[").count(), 3, "{saved}");
+    assert_eq!(saved.matches("Condition[").count(), 4, "{saved}");
     assert!(saved.contains("Condition[\"up\", True]"));
     assert!(saved.contains("Condition[\"sub\", True]"));
     assert!(saved.contains("Condition[7, True]"));
+    assert!(saved.contains("Condition[5, True]"));
     let file = dir.write("remaining-guards.rum", &saved);
 
     let mut restored = Session::new();
@@ -170,11 +172,11 @@ fn definition_snapshot_rebuilds_remaining_rhs_guards_for_roundtrip() {
         .unwrap();
     assert_eq!(
         restored
-            .eval_text("{h[u, 1], s[1][1], d[]}")
+            .eval_text("{h[u, 1], s[1][1], d[], guardedOwn}")
             .unwrap()
             .value
             .to_string(),
-        "List[\"up\", \"sub\", 7]"
+        "List[\"up\", \"sub\", 7, 5]"
     );
     assert_eq!(
         restored.eval_text("UpValues[u]").unwrap().value.to_string(),
@@ -195,6 +197,14 @@ fn definition_snapshot_rebuilds_remaining_rhs_guards_for_roundtrip() {
             .value
             .to_string(),
         "List[RuleDelayed[HoldPattern[Default[d]], Condition[7, True]]]"
+    );
+    assert_eq!(
+        restored
+            .eval_text("OwnValues[guardedOwn]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[guardedOwn], Condition[5, True]]]"
     );
 }
 

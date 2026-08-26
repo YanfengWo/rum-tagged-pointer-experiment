@@ -105,8 +105,7 @@ impl Session {
             UnsetDefinitionTarget::OwnValue(symbol) => {
                 let mut changed = false;
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
-                    changed = definition.own_value.take().is_some()
-                        || definition.delayed_own_value.take().is_some();
+                    changed = definition.clear_own_values();
                 }
 
                 self.prune_definition_if_empty(&symbol);
@@ -138,8 +137,7 @@ impl Session {
         match classify_tagged_definition(tag, lhs) {
             Ok(TaggedDefinitionTarget::OwnValue(symbol)) => {
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
-                    let changed = definition.own_value.take().is_some()
-                        || definition.delayed_own_value.take().is_some();
+                    let changed = definition.clear_own_values();
                     self.prune_definition_if_empty(&symbol);
                     if changed {
                         self.bump_evaluation_epoch_for_symbol(&symbol);

@@ -124,7 +124,7 @@ pub(crate) const STRING_MATCH_BUILTINS: &[BuiltinSpec] = &[
     ]).protected(),
     BuiltinSpec::ordinary(
         "StringReplace",
-        "Replaces exact string needles using immediate string rules in the current first-pass string subset.",
+        "Replaces supported exact and pattern string matches using immediate or delayed rules, including right-hand-side guards.",
         strings::eval_string_replace,
     )
     .with_messages(&[
@@ -133,7 +133,7 @@ pub(crate) const STRING_MATCH_BUILTINS: &[BuiltinSpec] = &[
     ]).protected(),
     BuiltinSpec::ordinary(
         "StringCases",
-        "Extracts non-overlapping exact string matches or immediate exact-string rule outputs in the current first-pass string subset.",
+        "Extracts supported string matches or immediate, delayed, and right-hand-side-guarded rule outputs.",
         strings::eval_string_cases,
     )
     .with_messages(&[

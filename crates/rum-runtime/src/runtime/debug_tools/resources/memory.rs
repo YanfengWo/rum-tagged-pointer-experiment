@@ -324,6 +324,13 @@ fn render_definition_memory_proxy_bytes(definition: &SymbolDefinition) -> usize 
         )
         .saturating_add(
             definition
+                .own_value_guards()
+                .iter()
+                .map(expr_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
+        .saturating_add(
+            definition
                 .up_values
                 .iter()
                 .map(render_upvalue_memory_proxy_bytes)
