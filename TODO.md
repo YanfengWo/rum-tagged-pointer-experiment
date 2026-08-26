@@ -137,14 +137,26 @@ value is itself a `Condition`, and record multiple guarded own-values for one
 symbol as unsupported. This work precedes the `ValueQ` line below, which
 depends on it: `ValueQ[b[-3]]` cannot be right until `b[-3]` evaluates right.
 
-**`ValueQ` is being rebuilt as a lookup — director's ruling 2026-08-26.**
-It will answer without evaluating its argument at all, and it keeps rum's
-precise answer: `f[1] = 3; ValueQ[f[2]]` stays `False`, because no definition
-can apply to `f[2]`. A coarser "does the head have any definition" rule was
-considered and rejected as too surprising. This ruling supersedes the repair
-comparison in brief-345: an answer that never evaluates has no side effects to
-roll back and no session to clone, so both the contract breaches below and the
-per-call cost above disappear with it rather than being traded off.
+**`ValueQ`: precision and freedom from side effects are the hard
+requirements; not evaluating is not — user ruling 2026-08-26.** The first
+ruling was "answer by lookup, never evaluate", but brief-346 proved the three
+cannot hold together: deciding whether a `Condition` or `PatternTest` rule
+applies *requires* evaluating user code, so a non-evaluating answer must be
+imprecise on the very common `f[x_?NumericQ]` and `f[x_] /; test` shapes.
+Since not-evaluating was only ever a means to the other two, it is the one
+that gives way.
+
+The shape is therefore two-tiered:
+
+1. **Provable shapes answer by lookup, without evaluating.** rum's precise
+   answers are kept — `f[1] = 3; ValueQ[f[2]]` stays `False`. A coarser "does
+   the head have any definition" rule was considered and rejected as too
+   surprising.
+2. **Undecidable shapes are evaluated in an effect-suppressed environment**,
+   so the answer stays exact while nothing escapes the trial.
+
+Tier 2 comes first: it closes the contract breaches below without changing any
+answer. Tier 1 is then pure performance.
 
 The three breaches are what the ruling closes (brief-345, all reproduced by
 the director). The generated reference — normative under the testing policy —
