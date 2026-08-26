@@ -1645,3 +1645,69 @@ Product propagation is decided from construct nesting rather than data flow, so
 `Table[Length[Table[…]]]` is refused conservatively. Both are recorded in place
 — the first as an annotated golden row — because a defect written into a test
 without comment becomes an expectation the next reader will defend.
+
+## 2026-08-27 — batch 7 re-probe, and the two defects it uncovered
+
+Batch 7 of the post-`v0.1.0` sweep was supposed to be six performance items.
+Re-probing them first — the rule this project adopted after two earlier
+findings turned out to be already fixed — is what made the batch worth
+running, because two of the three most valuable results came from probes
+written to measure something else.
+
+**The batch itself, all six re-probed and closed.** `ValueQ` at 8 000
+definitions went from 332.6 us to 0.76 us per call and, more importantly,
+stopped scaling with session history at all. Association `Part` reads went
+from 96 101 allocations to 14, independent of width; positional reads are
+exactly flat across width, keyed reads sublinear. `StringTrim` with a literal
+list got the fast path its single-literal sibling already had, 31.6x and
+36.1x. Symbol ordering stopped allocating two `String`s per comparison with
+byte-identical output. The REPL runs one full completeness check per form
+instead of one per line. The Jupyter kernel sleeps instead of spinning a core,
+and the gensym sweep rearms at a watermark so per-batch cost stops climbing —
++106% by the third batch before, -11% after.
+
+**`Do[f[i] = i, {i, 1, 3}]` never worked.** It installed a single
+`HoldPattern[f[i]] :> 3` and said nothing. A clean iterator symbol is bound in
+a dynamic own-value frame; ordinary evaluation resolves definitions and then
+that frame, but the held-lhs normalizer stopped after definitions — invisible
+exactly where the key is built. The decisive experiment was pre-valuing the
+symbol: that pushes the iterator onto its fallback branch, which installs a
+real definition, and the same code then produces the right keys. The fix is
+the normalizer taking the same third step in the same order.
+
+**Right-hand-side `Condition` guards were not implemented anywhere.**
+`f[x_] := rhs /; test` stored the whole `Condition` as the body and never
+looked at it, so `b[x_] := x^2 /; x > 0` made `b[3]` return `9 /; True` and
+`b[-3]` return `9 /; False`. Dedup compared left-hand sides only, so a rule
+differing solely by its guard replaced the unguarded one and vanished. Eight
+candidate-selecting lanes were affected. `Cases` was the sharpest: it
+collected elements whose guard had declined — a wrong answer, not a leaked
+wrapper. Repaired lane by lane with one substrate and one accept rule, with a
+decline made indistinguishable from a pattern mismatch to every consumer,
+including `ReplaceRepeated`'s fixed-point test and `ReplaceList`'s enumeration.
+
+**The lesson that cost the most.** After six green gates on that line, a
+guarded `DownValue` still stopped enforcing its guard the moment anything
+bumped the attribute revision — any `SetAttributes` in the session, or a
+loader-snapshot restore such as `ValueQ`. The reconstruction written in the
+first step was correct but unreachable: on a stale revision the fast path
+rematched from the lhs alone, succeeded for a simple pattern, and returned
+before reaching it. Every gate, and the whole-line regression test, had
+asserted the guard *before* the trigger and never after one, so none of them
+could see it. The repair put the barrier in the single rematch API rather than
+patching a second call site, and the regression test now carries an
+attribute-bump dimension. For anything that caches or compiles state derived
+from a definition, the test has to act after the invalidation.
+
+**Two instrument failures, both caught by their own guards.** A benchmark row
+added for the gensym work emitted `Do::argform` and measured a failing path
+until a liveness guard was added asserting the batch actually reaped its
+values. And a stop-loss fired on three control labels that had exceeded
+floors computed from two baseline runs; three runs each way put the real
+same-binary spread at 12.6-26.7% and the movements at -1.72%, -0.01% and
+-16.16%. Two runs give one random difference, not a floor.
+
+**Opened, not closed.** Gensyms held only by an opaque continuation frame are
+not treated as live, and it is reachable two ways. The `rum-jupyter` ZeroMQ
+ordering flake reached its third appearance. Both are recorded in `TODO.md`
+with what a fix would have to decide.
