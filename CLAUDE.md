@@ -171,17 +171,30 @@ rather than duplicating them.
 ## Current direction (read these for state)
 
 - **Post-`v0.1.0` safe-Rust algorithmic audit is the active maintenance
-  line (2026-08-22/23).** The 50 accepted performance commits through
-  `d97abd7` cover the P0 tranche and a broad first sweep of evaluator,
-  matcher, replacement, collection, association, string, and polynomial
-  wide paths. The current summary is in `PROGRESS.md`; do not reconstruct
-  status from the historical bullets below.
-- **Remaining P1 order is authoritative in `TODO.md`:** (1) ordered
-  non-`Flat` all-`Single` matcher cursor, (2) shared `RewriteRulePlan` plus
-  negative-level-only depth work for `Replace`, (3) the bounded
-  `RumTokens`/TOML/`Reap` scans. The matcher candidate is not accepted until
-  an uncontended A/B can be run; timing stays paused while competing CPU load
-  is present.
+  line.** Batches 1-7 are closed (through `29c5e174`). `TODO.md` is
+  authoritative for what remains; `PROGRESS.md` has the per-batch narrative.
+  Do not reconstruct status from the historical bullets below.
+- **Batch 7 (briefs 342-363, 2026-08-26/27) was six performance items and
+  produced two correctness lines instead**, both found by probes written to
+  measure something else — which is the argument for the re-probe rule, not
+  an accident. `Do[f[i] = i, {i,1,3}]` had never installed more than one raw
+  definition, and right-hand-side `Condition` guards (`f[x_] := rhs /; test`)
+  were not implemented in any of the eight candidate-selecting lanes. Both are
+  fixed; the guard line took eight briefs and one repair of my own gate.
+- **Open, with the decision stated in `TODO.md`:** gensyms held only by an
+  opaque continuation frame can be swept while still needed (reachable two
+  ways, both demonstrated); the `rum-jupyter` ZeroMQ ordering flake has
+  reached the third occurrence that the standing agreement said to brief on;
+  association keyed reads remain sublinear rather than flat because cache
+  admission is a standing decision.
+- **The gate lesson from batch 7, now in memory as
+  `gate-assert-after-invalidation`:** six green gates missed a guard that
+  stopped being enforced after any `SetAttributes`, because every gate — and
+  the whole-line regression test — asserted the guard *before* the trigger and
+  never after one. For anything that caches or compiles state derived from a
+  definition, the test must act after the invalidation. Also: two runs do not
+  estimate a noise floor; that produced a false stop-loss whose real
+  same-binary spread was 12.6-26.7%.
 - Full polynomial factorization is separately deferred by user decision. The
   current linear-factor/monomial subset stays documented as such until a
   coherent finite-field polynomial layer is designed.
