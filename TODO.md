@@ -137,6 +137,19 @@ value is itself a `Condition`, and record multiple guarded own-values for one
 symbol as unsupported. This work precedes the `ValueQ` line below, which
 depends on it: `ValueQ[b[-3]]` cannot be right until `b[-3]` evaluates right.
 
+**`ValueQ` — COMPLETE 2026-08-26 (briefs 345, 346, 355, 356; `b85569c2`
+and `e67715f1`).** Both tiers landed. The trial no longer commits side
+effects: PRNG state is restored, the host print sink is suppressed for its
+duration, and `FileWrite`/`Process` are refused, with restoration on every
+exit path including panic. Proven-stable targets — `ValueQ[undefinedSymbol]`
+above all — answer without evaluating at all: 332.6 us to 0.76 us per call at
+8 000 definitions, and no longer scaling with session history. rum's precise
+answers are unchanged throughout (`f[1] = 3; ValueQ[f[2]]` is still `False`),
+with one deliberate exception: `ValueQ[DumpSave[path, x]]` now answers `False`
+because the refused capability fails the trial.
+
+The reasoning that got there follows.
+
 **`ValueQ`: precision and freedom from side effects are the hard
 requirements; not evaluating is not — user ruling 2026-08-26.** The first
 ruling was "answer by lookup, never evaluate", but brief-346 proved the three
