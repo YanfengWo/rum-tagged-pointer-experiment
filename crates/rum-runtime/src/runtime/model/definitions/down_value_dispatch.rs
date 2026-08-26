@@ -200,6 +200,12 @@ impl SymbolDefinition {
             .is_some_and(|metadata| metadata.ground_count >= DOWN_VALUE_DISPATCH_INDEX_THRESHOLD)
     }
 
+    pub(in crate::runtime) fn has_non_ground_down_values(&self) -> bool {
+        self.down_value_dispatch
+            .as_ref()
+            .is_some_and(|metadata| metadata.ground_count < self.down_values.len())
+    }
+
     pub(in crate::runtime) fn equivalent_down_value_index(
         &self,
         lhs: &Expr,

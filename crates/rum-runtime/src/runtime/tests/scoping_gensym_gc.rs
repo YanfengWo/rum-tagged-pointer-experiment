@@ -298,6 +298,38 @@ fn downvalue_rhs_guard_keeps_its_escaped_module_binding_live() {
 }
 
 #[test]
+fn upvalue_rhs_guard_keeps_its_escaped_module_binding_live() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        eval_string(
+            &mut session,
+            "Catch[Module[{gcUpRhsGuard349 = 1}, gcUpTag349 /: gcUpFn349[gcUpTag349, y_] := y /; MatchQ[gcUpRhsGuard349, 1]; Throw[fail]]]"
+        ),
+        "fail"
+    );
+
+    assert_module_gensym_deferred(&session, "gcUpRhsGuard349$1");
+    assert_eq!(eval_string(&mut session, "gcUpFn349[gcUpTag349, 7]"), "7");
+}
+
+#[test]
+fn subvalue_rhs_guard_keeps_its_escaped_module_binding_live() {
+    let mut session = session_with_test_control_builtins();
+
+    assert_eq!(
+        eval_string(
+            &mut session,
+            "Catch[Module[{gcSubRhsGuard349 = 1}, gcSubFn349[1][y_] := y /; MatchQ[gcSubRhsGuard349, 1]; Throw[fail]]]"
+        ),
+        "fail"
+    );
+
+    assert_module_gensym_deferred(&session, "gcSubRhsGuard349$1");
+    assert_eq!(eval_string(&mut session, "gcSubFn349[1][7]"), "7");
+}
+
+#[test]
 fn global_root_keeps_escaped_candidate_until_root_is_cleared() {
     let mut session = session_with_test_first();
 

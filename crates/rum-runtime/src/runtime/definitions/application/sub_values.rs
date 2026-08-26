@@ -152,8 +152,10 @@ impl Session {
             let fast_match_start = definition_dispatch_timing_start();
             let fast_outcome = if sub_value.matcher_attribute_revision == self.attribute_revision {
                 self.try_fast_definition_match_compiled(&sub_value.matcher, &normalized_candidate)
-            } else {
+            } else if sub_value.guards.is_empty() {
                 self.try_fast_definition_match(&sub_value.lhs, &normalized_candidate)
+            } else {
+                None
             };
             record_profile_definition_dispatch_phase_timing(
                 "sub_value",
@@ -225,7 +227,7 @@ impl Session {
             let matcher = if sub_value.matcher_attribute_revision == self.attribute_revision {
                 sub_value.matcher.clone()
             } else {
-                self.compile_matcher_for_expr(&sub_value.lhs)
+                self.compile_down_value_matcher(&sub_value.lhs, &sub_value.guards)
             };
             let runtime_profile_compiled_matcher =
                 runtime_path_timing_start("sub_values.compiled_matcher");

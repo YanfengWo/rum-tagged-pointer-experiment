@@ -203,6 +203,13 @@ ClearAll[
   gMicroUpvalueMarker,
   gMicroUpvalueProbe,
   gMicroUpvalueNonce,
+  gMicroGuardedUpvalueTag,
+  gMicroGuardedUpvalueHead,
+  gMicroSubvalue,
+  gMicroGuardedSubvalue,
+  gMicroDefaultHit,
+  gMicroDefaultMiss,
+  gMicroGuardedDefault,
   list10,
   rulesSimple,
   gMicroWideTraversal,
@@ -321,6 +328,17 @@ fPattern[x_Integer] := x + 1;
 fGuarded[x_Integer] := x + 1 /; x > 0;
 fGuardedFallback[x_Integer] := x + 1 /; x > 0;
 fGuardedFallback[x_] := x;
+gMicroGuardedUpvalueTag /: gMicroGuardedUpvalueHead[
+  gMicroGuardedUpvalueTag,
+  x_Integer
+] := x + 1 /; x > 0;
+gMicroSubvalue[1][x_Integer] := x + 1;
+gMicroGuardedSubvalue[1][x_Integer] := x + 1 /; x > 0;
+Default[gMicroDefaultHit] = 1;
+gMicroDefaultHit[x_.] := x;
+gMicroDefaultMiss[x_.] := x;
+Default[gMicroGuardedDefault] := 1 /; True;
+gMicroGuardedDefault[x_.] := x;
 
 Print["RUM_CORE_MICRO_BEGIN"];
 
@@ -376,6 +394,29 @@ rumMicroBench[
   "downvalue-guarded-decline-fallback",
   rumMicroN[1000],
   fGuardedFallback[-1]
+];
+rumMicroBench[
+  "upvalue-guarded-hit",
+  rumMicroN[1000],
+  gMicroGuardedUpvalueHead[gMicroGuardedUpvalueTag, 1]
+];
+rumMicroBench["subvalue-unguarded-hit", rumMicroN[1000], gMicroSubvalue[1][1]];
+rumMicroBench[
+  "subvalue-unguarded-miss",
+  rumMicroN[1000],
+  gMicroSubvalue[1]["x"]
+];
+rumMicroBench[
+  "subvalue-guarded-hit",
+  rumMicroN[1000],
+  gMicroGuardedSubvalue[1][1]
+];
+rumMicroBench["default-unguarded-hit", rumMicroN[1000], gMicroDefaultHit[]];
+rumMicroBench["default-unguarded-miss", rumMicroN[1000], gMicroDefaultMiss[]];
+rumMicroBench[
+  "default-guarded-hit",
+  rumMicroN[1000],
+  gMicroGuardedDefault[]
 ];
 
 rumMicroBench["matchq-integer-success", rumMicroN[1000], MatchQ[1, _Integer]];

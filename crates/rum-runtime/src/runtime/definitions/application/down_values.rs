@@ -49,8 +49,13 @@ impl Session {
         if is_system_symbol_name(head, heads::patterns::DEFAULT) {
             let runtime_profile_default =
                 runtime_path_timing_start("down_values.direct_default_lookup");
+            let has_guarded_default_values = definition.has_non_ground_down_values();
             let down_values = definition.down_values.clone();
-            let direct_default = self.try_apply_direct_default_value(args_slice, &down_values);
+            let direct_default = self.try_apply_direct_default_value(
+                args_slice,
+                &down_values,
+                has_guarded_default_values,
+            );
             record_profile_runtime_path_timing(
                 runtime_profile_default,
                 runtime_profile_outcome_for_option_result(&direct_default),

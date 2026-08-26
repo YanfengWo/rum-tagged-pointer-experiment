@@ -134,7 +134,7 @@ impl Session {
                     system_expr("RuleDelayed"),
                     vec![
                         Expr::call(system_expr("HoldPattern"), vec![entry.lhs.clone()]),
-                        entry.rhs.clone(),
+                        rebuild_definition_rhs_guards(entry.rhs.clone(), &entry.guards),
                     ],
                 )
             })
@@ -249,7 +249,11 @@ impl Session {
             .flat_map(|definition| definition.down_values.iter())
             .filter(|entry| default_value_lhs_targets_symbol(&entry.lhs, symbol))
             .map(|entry| {
-                definition_assignment_expr(entry.delayed, entry.lhs.clone(), entry.rhs.clone())
+                definition_assignment_expr(
+                    entry.delayed,
+                    entry.lhs.clone(),
+                    rebuild_definition_rhs_guards(entry.rhs.clone(), &entry.guards),
+                )
             })
             .collect()
     }

@@ -5,6 +5,7 @@ impl Session {
         &mut self,
         args: &[Expr],
         down_values: &[DownValue],
+        has_guarded_default_values: bool,
     ) -> Result<Option<Expr>, EvalError> {
         let Some(target) = args.first().cloned() else {
             return Ok(None);
@@ -28,7 +29,11 @@ impl Session {
             _ => return Ok(None),
         };
 
-        self.evaluate_first_exact_default_value(down_values, lookup_order)
+        self.evaluate_first_exact_default_value(
+            down_values,
+            lookup_order,
+            has_guarded_default_values,
+        )
     }
 
     pub(in crate::runtime) fn resolve_optional_implicit_default(
@@ -40,6 +45,7 @@ impl Session {
         let Some(definition) = self.definitions.get(&default_symbol) else {
             return Ok(None);
         };
+        let has_guarded_default_values = definition.has_non_ground_down_values();
         let down_values = definition.down_values.clone();
 
         self.evaluate_first_exact_default_value(
@@ -48,6 +54,7 @@ impl Session {
                 default_value_lhs(head.clone(), Some(position)),
                 default_value_lhs(head, None),
             ],
+            has_guarded_default_values,
         )
     }
 
@@ -55,14 +62,110 @@ impl Session {
         &mut self,
         down_values: &[DownValue],
         lookup_order: Vec<Expr>,
+        has_guarded_default_values: bool,
     ) -> Result<Option<Expr>, EvalError> {
-        for lhs in lookup_order {
-            let Some(rhs) = exact_down_value_rhs(down_values, &lhs) else {
+        if !has_guarded_default_values {
+            for lhs in lookup_order {
+                let Some(rhs) = exact_down_value_rhs(down_values, &lhs) else {
+                    continue;
+                };
+                return self.evaluate_definition_rhs(None, rhs).map(Some);
+            }
+            return Ok(None);
+        }
+
+        for (lookup_index, lhs) in lookup_order.iter().enumerate() {
+            let Some((candidate_index, down_value)) = exact_down_value(down_values, lhs) else {
                 continue;
             };
-            return self.evaluate_definition_rhs(None, rhs).map(Some);
+            if down_value.guards.is_empty() {
+                return self
+                    .evaluate_definition_rhs(None, down_value.rhs.clone())
+                    .map(Some);
+            }
+
+            return self.evaluate_first_exact_default_value_from_cursor(
+                down_values.to_vec(),
+                lookup_order,
+                lookup_index,
+                candidate_index,
+                None,
+            );
         }
 
         Ok(None)
     }
+
+    fn evaluate_first_exact_default_value_from_cursor(
+        &mut self,
+        down_values: Vec<DownValue>,
+        lookup_order: Vec<Expr>,
+        mut lookup_index: usize,
+        mut candidate_index: usize,
+        mut pending: Option<(usize, CompiledMatchOutcome)>,
+    ) -> Result<Option<Expr>, EvalError> {
+        loop {
+            if let Some((index, outcome)) = pending.take() {
+                if outcome.matched {
+                    let rhs = down_values[index].rhs.clone();
+                    return self.evaluate_definition_rhs(None, rhs).map(Some);
+                }
+                candidate_index = index + 1;
+            }
+
+            let Some(lhs) = lookup_order.get(lookup_index) else {
+                return Ok(None);
+            };
+            let Some((relative_index, down_value)) =
+                exact_down_value(&down_values[candidate_index..], lhs)
+            else {
+                lookup_index += 1;
+                candidate_index = 0;
+                continue;
+            };
+            let index = candidate_index + relative_index;
+
+            if down_value.guards.is_empty() {
+                return self
+                    .evaluate_definition_rhs(None, down_value.rhs.clone())
+                    .map(Some);
+            }
+
+            let guard_result = self.evaluate_guard_sequence_owned(
+                down_value.guards.clone(),
+                SymbolExprMap::default(),
+                SymbolExprMap::default(),
+                None,
+            );
+            match guard_result {
+                Ok(outcome) => pending = Some((index, outcome)),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                        session
+                            .evaluate_first_exact_default_value_from_cursor(
+                                down_values,
+                                lookup_order,
+                                lookup_index,
+                                candidate_index,
+                                Some((index, outcome)),
+                            )
+                            .map(|result| result.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+}
+
+fn exact_down_value<'a>(
+    down_values: &'a [DownValue],
+    lhs: &Expr,
+) -> Option<(usize, &'a DownValue)> {
+    down_values
+        .iter()
+        .enumerate()
+        .find(|(_, down_value)| down_value.lhs == *lhs)
 }

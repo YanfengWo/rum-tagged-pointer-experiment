@@ -350,6 +350,13 @@ fn render_upvalue_memory_proxy_bytes(value: &UpValue) -> usize {
     std::mem::size_of::<UpValue>()
         .saturating_add(expr_memory_proxy_bytes(&value.lhs))
         .saturating_add(expr_memory_proxy_bytes(&value.rhs))
+        .saturating_add(
+            value
+                .guards
+                .iter()
+                .map(expr_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
 }
 
 fn render_downvalue_memory_proxy_bytes(value: &DownValue) -> usize {
@@ -369,6 +376,13 @@ fn render_subvalue_memory_proxy_bytes(value: &SubValue) -> usize {
     std::mem::size_of::<SubValue>()
         .saturating_add(expr_memory_proxy_bytes(&value.lhs))
         .saturating_add(expr_memory_proxy_bytes(&value.rhs))
+        .saturating_add(
+            value
+                .guards
+                .iter()
+                .map(expr_memory_proxy_bytes)
+                .sum::<usize>(),
+        )
 }
 
 fn render_symbol_options_memory_proxy_bytes(options: &SymbolOptions) -> usize {

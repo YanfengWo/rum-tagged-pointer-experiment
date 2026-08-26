@@ -122,8 +122,10 @@ impl Session {
             let fast_match_start = definition_dispatch_timing_start();
             let fast_outcome = if up_value.matcher_attribute_revision == self.attribute_revision {
                 self.try_fast_definition_match_compiled(&up_value.matcher, &normalized_candidate)
-            } else {
+            } else if up_value.guards.is_empty() {
                 self.try_fast_definition_match(&up_value.lhs, &normalized_candidate)
+            } else {
+                None
             };
             record_profile_definition_dispatch_phase_timing(
                 "up_value",
@@ -180,7 +182,7 @@ impl Session {
             let matcher = if up_value.matcher_attribute_revision == self.attribute_revision {
                 up_value.matcher.clone()
             } else {
-                self.compile_matcher_for_expr(&up_value.lhs)
+                self.compile_down_value_matcher(&up_value.lhs, &up_value.guards)
             };
             let compiled_matcher_start = definition_dispatch_timing_start();
             let match_result = self.match_compiled_owned(

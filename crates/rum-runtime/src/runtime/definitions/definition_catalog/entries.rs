@@ -33,7 +33,7 @@ impl Session {
                 .map(|up_value| DefinitionCatalogEntry {
                     kind: DefinitionKind::UpValue,
                     lhs: up_value.lhs.clone(),
-                    rhs: up_value.rhs.clone(),
+                    rhs: rebuild_definition_rhs_guards(up_value.rhs.clone(), &up_value.guards),
                     delayed: up_value.delayed,
                 }),
         );
@@ -57,7 +57,7 @@ impl Session {
                 .map(|sub_value| DefinitionCatalogEntry {
                     kind: DefinitionKind::SubValue,
                     lhs: sub_value.lhs.clone(),
-                    rhs: sub_value.rhs.clone(),
+                    rhs: rebuild_definition_rhs_guards(sub_value.rhs.clone(), &sub_value.guards),
                     delayed: sub_value.delayed,
                 }),
         );

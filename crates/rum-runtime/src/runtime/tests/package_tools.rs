@@ -146,6 +146,59 @@ fn save_rebuilds_downvalue_rhs_guards_for_roundtrip() {
 }
 
 #[test]
+fn definition_snapshot_rebuilds_remaining_rhs_guards_for_roundtrip() {
+    let dir = TempDirGuard::new("snapshot-remaining-definition-guards");
+    let mut session = Session::new();
+
+    session
+        .eval_text("u /: h[u, x_] := \"up\" /; True")
+        .unwrap();
+    session.eval_text("s[1][x_] := \"sub\" /; True").unwrap();
+    session.eval_text("Default[d] := 7 /; True").unwrap();
+    session.eval_text("d[x_.] := x").unwrap();
+
+    let saved = session.snapshot_definitions_source().unwrap();
+    assert_eq!(saved.matches("Condition[").count(), 3, "{saved}");
+    assert!(saved.contains("Condition[\"up\", True]"));
+    assert!(saved.contains("Condition[\"sub\", True]"));
+    assert!(saved.contains("Condition[7, True]"));
+    let file = dir.write("remaining-guards.rum", &saved);
+
+    let mut restored = Session::new();
+    restored
+        .eval_text(&format!("Get[File[\"{}\"]]", rum_path(&file)))
+        .unwrap();
+    assert_eq!(
+        restored
+            .eval_text("{h[u, 1], s[1][1], d[]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[\"up\", \"sub\", 7]"
+    );
+    assert_eq!(
+        restored.eval_text("UpValues[u]").unwrap().value.to_string(),
+        "List[RuleDelayed[HoldPattern[h[u, Pattern[x, Blank[]]]], Condition[\"up\", True]]]"
+    );
+    assert_eq!(
+        restored
+            .eval_text("SubValues[s]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[s[1][Pattern[x, Blank[]]]], Condition[\"sub\", True]]]"
+    );
+    assert_eq!(
+        restored
+            .eval_text("DefaultValues[d]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[HoldPattern[Default[d]], Condition[7, True]]]"
+    );
+}
+
+#[test]
 fn dump_save_overwrites_file_and_returns_saved_symbols() {
     let dir = TempDirGuard::new("dumpsave");
     let file = dir.write("saved.mx", "junk");

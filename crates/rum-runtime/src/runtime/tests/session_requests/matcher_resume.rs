@@ -135,6 +135,81 @@ fn downvalue_rhs_guard_resumes_at_the_same_candidate_cursor() {
 }
 
 #[test]
+fn upvalue_rhs_guard_resumes_at_the_same_candidate_cursor() {
+    let mut session = session_with_test_control_builtins();
+    session
+        .eval_text(
+            "upGuardResumeCount = 0; u /: h[u, x_] := \"guarded\" /; (upGuardResumeCount = upGuardResumeCount + 1; MatchQ[InputString[\"up guard: \"], \"yes\"]); u /: h[u, x_] := \"fallback\"",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("{h[u, 1], upGuardResumeCount}")
+        .expect_err("upvalue rhs guard should suspend when it requests input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "up guard: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("declining resumed upvalue guard should continue to the fallback candidate");
+    assert_eq!(response.value.to_string(), "List[\"fallback\", 1]");
+}
+
+#[test]
+fn subvalue_rhs_guard_resumes_at_the_same_candidate_cursor() {
+    let mut session = session_with_test_control_builtins();
+    session
+        .eval_text(
+            "subGuardResumeCount = 0; s[1][x_] := \"guarded\" /; (subGuardResumeCount = subGuardResumeCount + 1; MatchQ[InputString[\"sub guard: \"], \"yes\"]); s[1][x_] := \"fallback\"",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("{s[1][1], subGuardResumeCount}")
+        .expect_err("subvalue rhs guard should suspend when it requests input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "sub guard: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("declining resumed subvalue guard should continue to the fallback candidate");
+    assert_eq!(response.value.to_string(), "List[\"fallback\", 1]");
+}
+
+#[test]
+fn defaultvalue_rhs_guard_resumes_during_matching_without_replaying_the_candidate() {
+    let mut session = session_with_test_control_builtins();
+    session
+        .eval_text(
+            "defaultGuardResumeCount = 0; Default[d] := 7 /; (defaultGuardResumeCount = defaultGuardResumeCount + 1; MatchQ[InputString[\"default guard: \"], \"yes\"]); Default[d] := 9; d[x_.] := x",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("{d[], defaultGuardResumeCount}")
+        .expect_err("default rhs guard should suspend while optional matching requests input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "default guard: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("no")
+        .expect("declining resumed default guard should continue to the fallback default");
+    assert_eq!(response.value.to_string(), "List[9, 1]");
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_sequence_conditioned_matchq() {
     let mut session = session_with_test_control_builtins();
 

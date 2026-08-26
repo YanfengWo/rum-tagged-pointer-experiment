@@ -206,11 +206,7 @@ impl Session {
             TaggedDefinitionTarget::DownValue(symbol) => {
                 let stores_default_value =
                     symbol.context() == SYSTEM_CONTEXT && symbol.name() == heads::patterns::DEFAULT;
-                let (stored_rhs, guards) = if stores_default_value {
-                    (rhs.clone(), Box::default())
-                } else {
-                    split_definition_rhs_guards(rhs.clone())
-                };
+                let (stored_rhs, guards) = split_definition_rhs_guards(rhs.clone());
                 let rhs_may_splice_without_bindings =
                     rule_rhs_may_splice_without_bindings(&stored_rhs);
                 let matcher = self.compile_down_value_matcher(&lhs, &guards);
@@ -229,12 +225,7 @@ impl Session {
                     matcher_attribute_revision,
                 };
                 if stores_default_value {
-                    replace_or_append_definition(
-                        &mut definition.down_values,
-                        &lhs,
-                        down_value,
-                        |entry| &entry.lhs,
-                    );
+                    replace_or_append_default_value(&mut definition.down_values, &lhs, down_value);
                     definition.note_down_values_rebuilt(&symbol);
                 } else {
                     let (store_index, replaced_was_ground) =
@@ -255,7 +246,10 @@ impl Session {
                 symbol
             }
             TaggedDefinitionTarget::SubValue(symbol) => {
-                let matcher = self.compile_matcher_for_expr(&lhs);
+                let (stored_rhs, guards) = split_definition_rhs_guards(rhs.clone());
+                let rhs_may_splice_without_bindings =
+                    rule_rhs_may_splice_without_bindings(&stored_rhs);
+                let matcher = self.compile_down_value_matcher(&lhs, &guards);
                 let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 replace_or_insert_sub_value(
@@ -263,11 +257,12 @@ impl Session {
                     &lhs,
                     SubValue {
                         lhs: lhs.clone(),
-                        rhs: rhs.clone(),
+                        rhs: stored_rhs,
                         delayed,
-                        rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
+                        rhs_may_splice_without_bindings,
                         matcher,
                         matcher_attribute_revision,
+                        guards,
                     },
                 );
                 self.push_definition_stored_trace(&symbol, DefinitionKind::SubValue, || {
@@ -279,7 +274,10 @@ impl Session {
                 symbol
             }
             TaggedDefinitionTarget::UpValue(symbol) => {
-                let matcher = self.compile_matcher_for_expr(&lhs);
+                let (stored_rhs, guards) = split_definition_rhs_guards(rhs.clone());
+                let rhs_may_splice_without_bindings =
+                    rule_rhs_may_splice_without_bindings(&stored_rhs);
+                let matcher = self.compile_down_value_matcher(&lhs, &guards);
                 let matcher_attribute_revision = self.attribute_revision;
                 let definition = self.definitions.entry(symbol.clone()).or_default();
                 replace_or_insert_up_value(
@@ -287,11 +285,12 @@ impl Session {
                     &lhs,
                     UpValue {
                         lhs: lhs.clone(),
-                        rhs: rhs.clone(),
+                        rhs: stored_rhs,
                         delayed,
-                        rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&rhs),
+                        rhs_may_splice_without_bindings,
                         matcher,
                         matcher_attribute_revision,
+                        guards,
                     },
                 );
                 self.has_up_value_definitions = true;
@@ -339,26 +338,69 @@ fn replace_or_insert_down_value(
 
 fn replace_or_insert_sub_value(definition: &mut SymbolDefinition, lhs: &Expr, new_entry: SubValue) {
     let lookup = definition.prepare_sub_value_store(lhs);
+    let equivalent_index = guarded_definition_identity_index(
+        &definition.sub_values,
+        lhs,
+        &new_entry.guards,
+        lookup.equivalent_index(),
+        |entry| (&entry.lhs, &entry.guards),
+    );
     let (store_index, replaced) = replace_or_insert_definition_by_specificity(
         &mut definition.sub_values,
         lhs,
         new_entry,
         |entry| &entry.lhs,
-        lookup.equivalent_index(),
+        equivalent_index,
     );
     definition.note_sub_value_stored(store_index, replaced, lookup);
 }
 
 fn replace_or_insert_up_value(definition: &mut SymbolDefinition, lhs: &Expr, new_entry: UpValue) {
     let lookup = definition.prepare_up_value_store(lhs);
+    let equivalent_index = guarded_definition_identity_index(
+        &definition.up_values,
+        lhs,
+        &new_entry.guards,
+        lookup.equivalent_index(),
+        |entry| (&entry.lhs, &entry.guards),
+    );
     let (store_index, replaced) = replace_or_insert_definition_by_specificity(
         &mut definition.up_values,
         lhs,
         new_entry,
         |entry| &entry.lhs,
-        lookup.equivalent_index(),
+        equivalent_index,
     );
     definition.note_up_value_stored(store_index, replaced, lookup);
+}
+
+fn guarded_definition_identity_index<T, F>(
+    entries: &[T],
+    lhs: &Expr,
+    guards: &[Expr],
+    lhs_equivalent_index: Option<usize>,
+    identity_of: F,
+) -> Option<usize>
+where
+    F: Fn(&T) -> (&Expr, &[Expr]),
+{
+    let index = lhs_equivalent_index?;
+    let (stored_lhs, stored_guards) = identity_of(&entries[index]);
+    if down_value_patterns_equivalent(stored_lhs, stored_guards, lhs, guards) {
+        return Some(index);
+    }
+
+    entries
+        .iter()
+        .enumerate()
+        .find_map(|(candidate_index, entry)| {
+            (candidate_index != index)
+                .then(|| identity_of(entry))
+                .and_then(|(stored_lhs, stored_guards)| {
+                    down_value_patterns_equivalent(stored_lhs, stored_guards, lhs, guards)
+                        .then_some(candidate_index)
+                })
+        })
 }
 
 fn replace_or_insert_definition_by_specificity<T, F>(
@@ -424,14 +466,18 @@ fn definition_specificity(expr: &Expr) -> usize {
     }
 }
 
-fn replace_or_append_definition<T, F>(entries: &mut Vec<T>, lhs: &Expr, new_entry: T, lhs_of: F)
-where
-    F: Fn(&T) -> &Expr,
-{
-    if let Some(index) = entries
-        .iter()
-        .position(|entry| lhs_patterns_equivalent(lhs_of(entry), lhs))
-    {
+fn replace_or_append_default_value(entries: &mut Vec<DownValue>, lhs: &Expr, new_entry: DownValue) {
+    let equivalent_index = if new_entry.guards.is_empty() {
+        entries
+            .iter()
+            .position(|entry| entry.guards.is_empty() && lhs_patterns_equivalent(&entry.lhs, lhs))
+    } else {
+        entries.iter().position(|entry| {
+            down_value_patterns_equivalent(&entry.lhs, &entry.guards, lhs, &new_entry.guards)
+        })
+    };
+
+    if let Some(index) = equivalent_index {
         entries[index] = new_entry;
     } else {
         entries.push(new_entry);
