@@ -275,15 +275,16 @@ rumMicroBench[label_String, nExpr_, expr_] := Module[
   n = nExpr;
   rumMicroSink = expr;
   best = -1;
-  Do[
+  k = 1;
+  While[k <= rumMicroReps,
     seconds = First[AbsoluteTiming[
       Do[
         expr,
         {i, 1, n}
       ]
     ]];
-    If[best < 0 || seconds < best, best = seconds],
-    {k, 1, rumMicroReps}
+    If[best < 0 || seconds < best, best = seconds];
+    k = k + 1
   ];
   rumMicroEmit[label, n, best];
 ];
@@ -295,10 +296,11 @@ rumMicroOnce[label_String, nExpr_, expr_] := Module[
   result = expr;
   rumMicroSink = result;
   best = -1;
-  Do[
+  k = 1;
+  While[k <= rumMicroReps,
     seconds = First[AbsoluteTiming[result = expr]];
-    If[best < 0 || seconds < best, best = seconds],
-    {k, 1, rumMicroReps}
+    If[best < 0 || seconds < best, best = seconds];
+    k = k + 1
   ];
   rumMicroSink = result;
   rumMicroEmit[label, n, best];
@@ -672,7 +674,7 @@ EOF
 
 printf 'engine\tstatus\texit_code\telapsed_seconds\tstdout\tstderr\n' > "${runs_tsv}"
 printf 'engine\tlabel\titerations\tseconds\tseconds_raw\tstdout\n' > "${measurements_tsv}"
-printf 'label\titerations\trum_seconds\n' > "${timings_tsv}"
+rm -f "${timings_tsv}"
 
 disable_profile_env=(
   RUM_PROFILE_LEXICAL_SUBSTITUTION=0
@@ -690,6 +692,8 @@ disable_profile_env=(
   RUM_PROFILE_DEFINITION_RULE_TIMING=0
   RUM_PROFILE_BUILTIN_TIMING=0
 )
+
+engine_exit_code=0
 
 run_engine() {
   local engine_name=rum
@@ -752,10 +756,23 @@ run_engine() {
   if [[ "${exit_code}" != "0" ]]; then
     echo "warning: ${engine_name} exited with ${exit_code}; see ${stderr_path}" >&2
   fi
+  engine_exit_code=${exit_code}
 }
 
 run_engine
 
+if [[ "${engine_exit_code}" != "0" ]]; then
+  echo "error: core microbench failed because rum exited with ${engine_exit_code}; no timings.tsv written; see ${raw_dir}/rum.stderr" >&2
+  exit "${engine_exit_code}"
+fi
+
+measurement_rows=$(awk 'END { print NR - 1 }' "${measurements_tsv}")
+if [[ "${measurement_rows}" == "0" ]]; then
+  echo "error: rum exited successfully but emitted zero RUM_CORE_MICRO measurement rows; no timings.tsv written; see ${raw_dir}/rum.stderr" >&2
+  exit 1
+fi
+
+printf 'label\titerations\trum_seconds\n' > "${timings_tsv}"
 awk -F '\t' '
   NR == 1 { next }
   {
