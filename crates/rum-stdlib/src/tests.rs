@@ -176,6 +176,8 @@ mod structure_ops;
 mod structured_exceptions;
 #[path = "tests/traversal.rs"]
 mod traversal;
+#[path = "tests/valueq_effect_suppression.rs"]
+mod valueq_effect_suppression;
 
 #[test]
 fn installs_identity_builtin() {

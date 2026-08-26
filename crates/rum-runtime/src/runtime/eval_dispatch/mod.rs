@@ -135,6 +135,11 @@ impl Session {
         if !self.capability_policy.is_unrestricted()
             && !self.capability_policy.allows(spec.capability)
         {
+            if self.value_q_refuses_capability(spec.capability) {
+                // `ValueQ` consumes every non-input error. Cancellation is a
+                // private terminal signal here and never reaches the host.
+                return Err(EvalError::Cancelled);
+            }
             return Ok(Some(self.sandbox_denied_builtin(head, spec)));
         }
 

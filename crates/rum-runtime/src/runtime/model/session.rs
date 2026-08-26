@@ -112,6 +112,7 @@ pub struct Session {
     // Running iteration product paired with its `IterationConsumer` tag.
     pub(in crate::runtime) iteration_product_budget: std::cell::Cell<(usize, u8)>,
     pub(in crate::runtime) capability_policy: CapabilityPolicy,
+    pub(in crate::runtime) value_q_effect_suppression_active: bool,
 }
 
 impl Session {

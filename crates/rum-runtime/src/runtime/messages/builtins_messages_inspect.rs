@@ -42,9 +42,7 @@ impl Session {
         };
 
         let original = target.clone();
-        let snapshot = self.capture_evaluation_rollback_snapshot();
-        let outcome = self.evaluate(original.clone());
-        self.restore_evaluation_rollback_snapshot(snapshot);
+        let outcome = self.evaluate_value_q_trial(original.clone());
 
         let value_q = match outcome {
             Ok(value) => value != original,
@@ -53,6 +51,37 @@ impl Session {
         };
 
         Ok(system_expr(if value_q { "True" } else { "False" }))
+    }
+
+    fn evaluate_value_q_trial(&mut self, target: Expr) -> Result<Expr, EvalError> {
+        let snapshot = self.capture_evaluation_rollback_snapshot();
+        let saved_prng_state = self.prng_state;
+        let saved_print_sink = self.print_sink.take();
+        let saved_capability_policy = self.capability_policy;
+        let saved_effect_suppression = self.value_q_effect_suppression_active;
+
+        self.value_q_effect_suppression_active = true;
+        self.capability_policy =
+            saved_capability_policy.denying([Capability::FileWrite, Capability::Process]);
+
+        let trial =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.evaluate(target)));
+
+        self.prng_state = saved_prng_state;
+        self.print_sink = saved_print_sink;
+        self.capability_policy = saved_capability_policy;
+        self.value_q_effect_suppression_active = saved_effect_suppression;
+        self.restore_evaluation_rollback_snapshot(snapshot);
+
+        match trial {
+            Ok(outcome) => outcome,
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
+    }
+
+    pub(in crate::runtime) fn value_q_refuses_capability(&self, capability: Capability) -> bool {
+        self.value_q_effect_suppression_active
+            && matches!(capability, Capability::FileWrite | Capability::Process)
     }
 
     pub(in crate::runtime) fn eval_own_values(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {

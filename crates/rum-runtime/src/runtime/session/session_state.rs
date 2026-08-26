@@ -508,6 +508,7 @@ impl Session {
             eval_deadline: None,
             interrupt_poll_counter: 0,
             capability_policy: CapabilityPolicy::unrestricted(),
+            value_q_effect_suppression_active: false,
         }
     }
 }

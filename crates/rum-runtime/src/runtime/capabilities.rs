@@ -81,6 +81,22 @@ impl CapabilityPolicy {
     pub const fn allows(self, capability: Capability) -> bool {
         self.unrestricted || self.allowed_bits & capability.bit() != 0
     }
+
+    pub(in crate::runtime) fn denying<I>(mut self, capabilities: I) -> Self
+    where
+        I: IntoIterator<Item = Capability>,
+    {
+        if self.unrestricted {
+            self.unrestricted = false;
+            self.allowed_bits = u8::MAX;
+        }
+
+        for capability in capabilities {
+            self.allowed_bits &= !capability.bit();
+        }
+
+        self
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -172,6 +188,38 @@ mod tests {
             CapabilityPolicyBuilder::default().build(),
             CapabilityPolicy::allow([])
         );
+    }
+
+    #[test]
+    fn capability_policy_narrowing_preserves_existing_restrictions() {
+        let narrowed =
+            CapabilityPolicy::unrestricted().denying([Capability::FileWrite, Capability::Process]);
+
+        assert!(!narrowed.is_unrestricted());
+        assert!(narrowed.allows(Capability::Pure));
+        assert!(narrowed.allows(Capability::FileRead));
+        assert!(!narrowed.allows(Capability::FileWrite));
+        assert!(narrowed.allows(Capability::Clock));
+        assert!(narrowed.allows(Capability::Random));
+        assert!(narrowed.allows(Capability::Diagnostic));
+        assert!(!narrowed.allows(Capability::Process));
+        assert!(narrowed.allows(Capability::Interactive));
+
+        let already_restricted = CapabilityPolicy::allow([
+            Capability::Pure,
+            Capability::FileWrite,
+            Capability::Diagnostic,
+        ])
+        .denying([Capability::FileWrite, Capability::Process]);
+
+        assert!(already_restricted.allows(Capability::Pure));
+        assert!(!already_restricted.allows(Capability::FileRead));
+        assert!(!already_restricted.allows(Capability::FileWrite));
+        assert!(!already_restricted.allows(Capability::Clock));
+        assert!(!already_restricted.allows(Capability::Random));
+        assert!(already_restricted.allows(Capability::Diagnostic));
+        assert!(!already_restricted.allows(Capability::Process));
+        assert!(!already_restricted.allows(Capability::Interactive));
     }
 
     #[test]
