@@ -4,7 +4,7 @@ This file is for active or near-term work only. Completed history and
 operational lessons live in [PROGRESS.md](./PROGRESS.md) (append-only log),
 and release-facing changes live in [CHANGELOG.md](./CHANGELOG.md).
 
-Status checkpoint: 2026-08-26, committed tree through `765ba51e`. Uncommitted
+Status checkpoint: 2026-08-26, committed tree through `4f5b85f1`. Uncommitted
 performance candidates do not count as completed until their correctness,
 timing, counter, and memory gates have all been reviewed.
 
@@ -46,18 +46,70 @@ They were closed by `c8d34876` and `dc5f6698` earlier in this sweep; the
 worklist was simply stale. Association key lookup remains a linear scan, which
 is a standing decision, not a defect.
 
-**Remaining from the survey, not yet re-probed:**
+**Re-probed 2026-08-26, all still present.** Numbers are from the release CLI
+at `c18b01f9`, each probe carrying a liveness assertion:
 
-1. **`Part` / `Extract` materialize a full table** where a cursor would do.
-2. **`ValueQ` clones session state** to answer a question about one symbol.
-3. Scattered items: symbol-ordering allocation, REPL re-parsing, a Jupyter
-   execution-time hot loop, `StringTrim`, and gensym GC.
+1. **`ValueQ` clones the whole session per call.** 4.6 us with no definitions,
+   90.6 ms at 2 000, 333 ms at 8 000, and 1.94 s at 32 000 — a cost that
+   depends on session history, not on the question asked.
+2. **`Part` / `Extract` materialize every association entry per call.** 200
+   reads of `a[[Key[7]]]` take 0.26/0.55/1.20/2.42 s at 4k/8k/16k/32k keys, a
+   strict doubling; positional `a[[3]]` has the same shape.
+3. **`StringTrim` with a literal *list* leaves the fast path.** At 8 000
+   characters: 342 ms for `{"1", "2"}` against 28 us for the single literal
+   `"1"` and 21 us for whitespace. Linear, not quadratic — the defect is a
+   four-order-of-magnitude constant, so the surveyed "quadratic suffix
+   helper" reading is wrong even though the target is real.
+4. **Symbol ordering allocates two `String`s per comparison**
+   (`ordering_sets.rs:875`), 6.7x/7.0x/14.2x slower than integer ordering at
+   4k/8k/16k. Not a mechanical swap: `Symbol::cmp` compares context then name,
+   which is not the lexicographic order of the joined qualified name, so a
+   repair has to argue output equivalence.
+5. Confirmed by reading: REPL re-parses the whole accumulated buffer per line
+   (`rum-repl/src/lib.rs:117-121`, O(L^2) on a paste), the Jupyter kernel busy
+   spins a full core while a cell runs (`socket.rs:329-334`), and the gensym
+   sweep never rearms after an all-live pass (`gensym_gc.rs`, default
+   threshold 200 000, so reachability is low).
 
 **Re-probe each before briefing it.** Two of this batch's items turned out to
 be already fixed, and one survey finding — "`SameTest` never exits early" —
 was an artifact of an invalid probe: rum's custom equivalence test is a
 positional argument, not a `SameTest` option, so the option form silently
 compared nothing. Findings age, and probes lie.
+
+**Found while re-probing, and more serious than the list above: iterator
+variables were invisible on an assignment lhs.** `Do[f[i] = i, {i, 1, 3}]`
+installed one `HoldPattern[f[i]] :> 3` and said nothing — the standard table
+fill and memoization idiom. Fixed in `4f5b85f1` (briefs 342-343): a clean
+iterator symbol lives in a dynamic own-value frame, ordinary evaluation
+resolves definitions then that frame, and the held-lhs normalizer stopped
+after definitions. It now takes the same third step in the same order. The
+`Do[With[{k = i}, f[k] = k], …]` workaround in the test suite is gone.
+
+**The same matrix exposed two defects that have nothing to do with
+iterators** — both reproduce with a plain global symbol, neither is fixed:
+
+- **`AssociateTo`/`KeyDropFrom` write back to the raw target.** `ii = 2;
+  AssociateTo[af[ii], "k" -> 7]` reads `af[2]` and then installs a third
+  definition `HoldPattern[af[ii]] :> <|"k" -> 7|>`, leaving `af[2]` empty.
+  Silent.
+- **None of the eleven compound assignment heads evaluate a `Part`
+  selector.** `kk = 1; lst[[kk]] += 5` reports `Part::pkspec1` and changes
+  nothing, while `lst[[kk]] = 99` works. Loud, so it ranks below the silent
+  one.
+- `TagSet`/`UpSet` never normalize lhs arguments either (`h /: h[tag1, tg] = 7`
+  stores `h[tag1, tg]` with `tg = 5`). That one is a standing contract
+  question, not a regression — decide it before touching it.
+
+**The microbench cannot run above `--scale 1`.** `--scale 5` dies on
+`evaluation exceeded iteration work limit (100000)` and writes a
+header-only `timings.tsv`, while the script still exits 0 with a warning —
+the same silent-empty shape as the stdin defect fixed in `dd4bdefc`. The
+cause is the deliberately conservative product propagation recorded below:
+the harness nests its repetition loop around each label's own loop. Two
+things are wrong and both matter, because this is the instrument every A/B
+depends on: the harness has no headroom above scale 1, and it fails
+quietly when it has none.
 
 **Deferred, with evidence, from the second sweep:**
 
