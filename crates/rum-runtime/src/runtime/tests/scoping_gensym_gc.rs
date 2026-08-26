@@ -441,24 +441,75 @@ fn empty_candidate_set_sweep_is_a_noop() {
 }
 
 #[test]
-fn active_module_activation_keeps_candidate_until_activation_is_removed() {
+fn nested_module_activations_keep_their_candidates_until_each_activation_is_removed() {
     let mut session = session_with_test_control_builtins();
-    let candidate = session.allocate_fresh_symbol(&Symbol::from_name("gcActive078"));
+    let outer_candidate = allocate_retained_candidate(&mut session, 7);
+    let inner_candidate = allocate_retained_candidate(&mut session, 11);
 
-    session.gc_candidate_gensyms.insert(candidate);
-    session.definitions.entry(candidate).or_default().own_value = Some(Expr::small_integer(7));
     session.module_activations.push(ModuleActivation {
-        gensyms: vec![candidate],
+        gensyms: vec![outer_candidate],
+        escaped: false,
+        side_table_stamp: session.current_side_table_stamp(),
+    });
+    session.module_activations.push(ModuleActivation {
+        gensyms: vec![inner_candidate],
         escaped: false,
         side_table_stamp: session.current_side_table_stamp(),
     });
 
     session.collect_and_sweep_dead_gensyms(&[]);
 
+    assert_candidate_definition_count(&session, &[outer_candidate, inner_candidate], 2);
+
+    session.module_activations.pop();
+    session.collect_and_sweep_dead_gensyms(&[]);
+
+    assert_candidate_definition_count(&session, &[outer_candidate, inner_candidate], 1);
+    assert!(session.gc_candidate_gensyms.contains(&outer_candidate));
+    assert!(!session.gc_candidate_gensyms.contains(&inner_candidate));
+
+    session.module_activations.clear();
+    session.collect_and_sweep_dead_gensyms(&[]);
+
+    assert_candidate_definition_count(&session, &[outer_candidate], 0);
+    assert!(!session.gc_candidate_gensyms.contains(&outer_candidate));
+}
+
+#[test]
+fn suspended_computation_keeps_candidate_live_until_resume_finishes() {
+    let mut session = session_with_test_control_builtins();
+    let candidate = allocate_retained_candidate(&mut session, 7);
+    let source = format!("List[{candidate}, List[InputString[\"gc: \"]]]");
+
+    let failure = session
+        .eval_request(&source)
+        .expect_err("InputString should suspend the candidate-holding call");
+    assert!(matches!(
+        failure.error,
+        SessionRequestError::InputRequired { .. }
+    ));
+
+    let suspension = session.pending_suspension.as_ref().unwrap();
+    let candidates = std::collections::HashSet::from([candidate]);
+    let mut live = std::collections::HashSet::new();
+    let mut worklist = Vec::new();
+    for entry in &suspension.active_stack {
+        seed_live_gensyms_from_expr(&entry.expr, &candidates, &mut live, &mut worklist);
+    }
+    assert!(
+        live.contains(&candidate),
+        "the candidate must be held by the suspension's traversed active stack"
+    );
+
+    session.collect_and_sweep_dead_gensyms(&[]);
+
     assert_candidate_definition_count(&session, &[candidate], 1);
     assert!(session.gc_candidate_gensyms.contains(&candidate));
 
-    session.module_activations.clear();
+    let response = session
+        .resume_eval_request_with_input("ready")
+        .expect("the suspended candidate-holding call should resume");
+    drop(response);
     session.collect_and_sweep_dead_gensyms(&[]);
 
     assert_candidate_definition_count(&session, &[candidate], 0);
@@ -526,10 +577,264 @@ fn recursive_module_sweep_reclaims_dead_retained_gensyms() {
 }
 
 #[test]
+fn all_live_modules_run_one_sweep_before_the_next_watermark() {
+    const SUBCASE: &str = "all-live-counter";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "all_live_modules_run_one_sweep_before_the_next_watermark",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    assert_eq!(gensym_gc_threshold(), 3);
+    let mut session = session_with_test_control_builtins();
+    let candidates = (0..5)
+        .map(|index| {
+            allocate_rooted_candidate(
+                &mut session,
+                &format!("gcWatermarkCounterRoot{index}"),
+                index,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    assert_eq!(session.gc_candidate_gensym_count(), 5);
+    assert_eq!(session.gensym_gc_watermark, 6);
+    assert_candidate_definition_count(&session, &candidates, 5);
+}
+
+#[test]
+fn unreachable_candidates_are_reclaimed_at_the_next_watermark_boundary() {
+    const SUBCASE: &str = "reclamation-bound";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "unreachable_candidates_are_reclaimed_at_the_next_watermark_boundary",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    let mut session = session_with_test_control_builtins();
+    let old_candidates = (0..3)
+        .map(|index| {
+            allocate_rooted_candidate(&mut session, &format!("gcBoundOldRoot{index}"), index)
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    assert_eq!(session.gensym_gc_watermark, 6);
+
+    session
+        .eval_text("ClearAll[gcBoundOldRoot0, gcBoundOldRoot1, gcBoundOldRoot2]")
+        .unwrap();
+    let new_candidates_before_boundary = (0..2)
+        .map(|index| {
+            allocate_rooted_candidate(&mut session, &format!("gcBoundNewRoot{index}"), 10 + index)
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(session.gc_candidate_gensym_count(), 5);
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    assert_candidate_definition_count(&session, &old_candidates, 3);
+
+    let boundary_candidate = allocate_rooted_candidate(&mut session, "gcBoundNewRoot2", 12);
+
+    assert_eq!(session.gensym_gc_sweep_count, 2);
+    assert_candidate_definition_count(&session, &old_candidates, 0);
+    assert_candidate_definition_count(&session, &new_candidates_before_boundary, 2);
+    assert_candidate_definition_count(&session, &[boundary_candidate], 1);
+    assert!(
+        old_candidates
+            .iter()
+            .all(|candidate| !session.gc_candidate_gensyms.contains(candidate))
+    );
+}
+
+#[test]
+fn partial_sweep_rearms_from_the_post_sweep_candidate_count() {
+    const SUBCASE: &str = "partial-sweep";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "partial_sweep_rearms_from_the_post_sweep_candidate_count",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    let mut session = session_with_test_control_builtins();
+    let dead = allocate_rooted_candidate(&mut session, "gcPartialDeadRoot", 1);
+    let live = allocate_rooted_candidate(&mut session, "gcPartialLiveRoot", 2);
+    session.eval_text("ClearAll[gcPartialDeadRoot]").unwrap();
+    let boundary = allocate_rooted_candidate(&mut session, "gcPartialBoundaryRoot", 3);
+
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    assert_eq!(session.gc_candidate_gensym_count(), 2);
+    assert_eq!(session.gensym_gc_watermark, 5);
+    assert_candidate_definition_count(&session, &[dead], 0);
+    assert_candidate_definition_count(&session, &[live, boundary], 2);
+
+    allocate_rooted_candidate(&mut session, "gcPartialNextRoot0", 4);
+    allocate_rooted_candidate(&mut session, "gcPartialNextRoot1", 5);
+    assert_eq!(session.gc_candidate_gensym_count(), 4);
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+
+    allocate_rooted_candidate(&mut session, "gcPartialNextRoot2", 6);
+    assert_eq!(session.gensym_gc_sweep_count, 2);
+}
+
+#[test]
+fn clear_all_candidate_shrink_rearms_the_watermark() {
+    const SUBCASE: &str = "clear-all-shrink";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "clear_all_candidate_shrink_rearms_the_watermark",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    let mut session = session_with_test_control_builtins();
+    let candidates = (0..3)
+        .map(|index| {
+            allocate_rooted_candidate(&mut session, &format!("gcClearAllRoot{index}"), index)
+        })
+        .collect::<Vec<_>>();
+    let cleared = candidates[0];
+    session.eval_text(&format!("ClearAll[{cleared}]")).unwrap();
+
+    assert_eq!(session.gc_candidate_gensym_count(), 2);
+    assert_eq!(session.gensym_gc_watermark, 5);
+    assert!(!session.definitions.contains_key(&cleared));
+
+    allocate_rooted_candidate(&mut session, "gcClearAllNextRoot0", 10);
+    allocate_rooted_candidate(&mut session, "gcClearAllNextRoot1", 11);
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    allocate_rooted_candidate(&mut session, "gcClearAllNextRoot2", 12);
+    assert_eq!(session.gensym_gc_sweep_count, 2);
+}
+
+#[test]
+fn remove_candidate_shrink_rearms_the_watermark() {
+    const SUBCASE: &str = "remove-shrink";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "remove_candidate_shrink_rearms_the_watermark",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    let mut session = session_with_test_control_builtins();
+    let candidates = (0..3)
+        .map(|index| {
+            allocate_rooted_candidate(&mut session, &format!("gcRemoveRoot{index}"), index)
+        })
+        .collect::<Vec<_>>();
+    let removed = candidates[0];
+    session.eval_text(&format!("Remove[{removed}]")).unwrap();
+
+    assert_eq!(session.gc_candidate_gensym_count(), 2);
+    assert_eq!(session.gensym_gc_watermark, 5);
+    assert!(!session.definitions.contains_key(&removed));
+    assert!(!session.gc_candidate_gensyms.contains(&removed));
+
+    allocate_rooted_candidate(&mut session, "gcRemoveNextRoot0", 10);
+    allocate_rooted_candidate(&mut session, "gcRemoveNextRoot1", 11);
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    allocate_rooted_candidate(&mut session, "gcRemoveNextRoot2", 12);
+    assert_eq!(session.gensym_gc_sweep_count, 2);
+}
+
+#[test]
+fn loader_snapshot_candidate_shrink_rearms_the_watermark() {
+    const SUBCASE: &str = "snapshot-shrink";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "loader_snapshot_candidate_shrink_rearms_the_watermark",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    let mut session = session_with_test_control_builtins();
+    let restored_candidates = vec![
+        allocate_rooted_candidate(&mut session, "gcSnapshotRoot0", 1),
+        allocate_rooted_candidate(&mut session, "gcSnapshotRoot1", 2),
+    ];
+    let snapshot = session.capture_loader_snapshot();
+    let rolled_back_candidates = vec![
+        allocate_rooted_candidate(&mut session, "gcSnapshotRolledBackRoot0", 3),
+        allocate_rooted_candidate(&mut session, "gcSnapshotRolledBackRoot1", 4),
+    ];
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    assert_eq!(session.gc_candidate_gensym_count(), 4);
+
+    session.restore_loader_snapshot(snapshot);
+
+    assert_eq!(session.gc_candidate_gensym_count(), 2);
+    assert_eq!(session.gensym_gc_watermark, 5);
+    assert_candidate_definition_count(&session, &restored_candidates, 2);
+    assert_candidate_definition_count(&session, &rolled_back_candidates, 0);
+    assert!(
+        rolled_back_candidates
+            .iter()
+            .all(|candidate| !session.gc_candidate_gensyms.contains(candidate))
+    );
+
+    allocate_rooted_candidate(&mut session, "gcSnapshotNextRoot0", 10);
+    allocate_rooted_candidate(&mut session, "gcSnapshotNextRoot1", 11);
+    assert_eq!(session.gensym_gc_sweep_count, 1);
+    allocate_rooted_candidate(&mut session, "gcSnapshotNextRoot2", 12);
+    assert_eq!(session.gensym_gc_sweep_count, 2);
+}
+
+#[test]
+fn immediate_module_reclaim_candidate_shrink_rearms_the_watermark() {
+    const SUBCASE: &str = "module-reclaim-shrink";
+    if !in_gensym_gc_watermark_subprocess(SUBCASE) {
+        run_gensym_gc_watermark_subprocess(
+            "immediate_module_reclaim_candidate_shrink_rearms_the_watermark",
+            SUBCASE,
+            3,
+        );
+        return;
+    }
+
+    let mut session = session_with_test_control_builtins();
+    let stale = Symbol::from_name("gcImmediateModule$1");
+    session.gc_candidate_gensyms.insert(stale);
+    session.gensym_gc_watermark = usize::MAX;
+
+    assert_eq!(
+        eval_string(&mut session, "Module[{gcImmediateModule}, 0]"),
+        "0"
+    );
+
+    assert!(session.gc_candidate_gensyms.is_empty());
+    assert_eq!(session.gensym_gc_watermark, 3);
+    assert_eq!(session.gensym_gc_sweep_count, 0);
+}
+
+#[test]
+fn gensym_gc_watermark_arithmetic_saturates() {
+    assert_eq!(gensym_gc_watermark(0, usize::MAX), usize::MAX);
+    assert_eq!(gensym_gc_watermark(usize::MAX - 1, 2), usize::MAX);
+    assert_eq!(gensym_gc_watermark(usize::MAX, usize::MAX), usize::MAX);
+}
+
+#[test]
 fn gensym_gc_threshold_parses_env_in_fresh_processes() {
     if let Ok(subcase) = std::env::var("RUM_GENSYM_GC_THRESHOLD_SUBCASE") {
         match subcase.as_str() {
             "valid" => assert_eq!(gensym_gc_threshold(), 3),
+            "max" => assert_eq!(gensym_gc_threshold(), usize::MAX),
             "invalid" | "zero" | "default" => assert_eq!(gensym_gc_threshold(), 200_000),
             other => panic!("unknown threshold subcase {other}"),
         }
@@ -543,8 +848,10 @@ fn gensym_gc_threshold_parses_env_in_fresh_processes() {
             .strip_prefix("rum_runtime::")
             .unwrap_or(module_path!())
     );
+    let max_threshold = usize::MAX.to_string();
     for (subcase, threshold) in [
         ("valid", Some("3")),
+        ("max", Some(max_threshold.as_str())),
         ("invalid", Some("not-a-number")),
         ("zero", Some("0")),
         ("default", None),
@@ -568,6 +875,40 @@ fn gensym_gc_threshold_parses_env_in_fresh_processes() {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+}
+
+const GENSYM_GC_WATERMARK_SUBCASE_ENV: &str = "RUM_GENSYM_GC_WATERMARK_SUBCASE";
+
+fn in_gensym_gc_watermark_subprocess(expected_subcase: &str) -> bool {
+    let Ok(actual_subcase) = std::env::var(GENSYM_GC_WATERMARK_SUBCASE_ENV) else {
+        return false;
+    };
+    assert_eq!(actual_subcase, expected_subcase);
+    true
+}
+
+fn run_gensym_gc_watermark_subprocess(test_function: &str, subcase: &str, threshold: usize) {
+    let current_exe = std::env::current_exe().unwrap();
+    let test_name = format!(
+        "{}::{test_function}",
+        module_path!()
+            .strip_prefix("rum_runtime::")
+            .unwrap_or(module_path!())
+    );
+    let output = std::process::Command::new(current_exe)
+        .arg("--exact")
+        .arg(&test_name)
+        .arg("--test-threads=1")
+        .env(GENSYM_GC_WATERMARK_SUBCASE_ENV, subcase)
+        .env("RUM_GENSYM_GC_THRESHOLD", threshold.to_string())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "watermark subcase {subcase} failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 fn eval_string(session: &mut Session, source: &str) -> String {
@@ -645,6 +986,22 @@ fn allocate_retained_candidate(session: &mut Session, value: i64) -> Symbol {
     let before = session.gc_candidate_gensyms.clone();
     let source = format!("Module[{{x}}, x = {value}; Hold[x]]");
     session.eval_text(&source).unwrap();
+    let candidates = session
+        .gc_candidate_gensyms
+        .iter()
+        .filter(|candidate| !before.contains(candidate))
+        .copied()
+        .collect::<Vec<_>>();
+    assert_eq!(candidates.len(), 1);
+    assert!(session.definitions.contains_key(&candidates[0]));
+    candidates[0]
+}
+
+fn allocate_rooted_candidate(session: &mut Session, root_name: &str, value: i64) -> Symbol {
+    let before = session.gc_candidate_gensyms.clone();
+    let source =
+        format!("ClearAll[{root_name}]; Module[{{x}}, x = {value}; {root_name} = Hold[x]; 0]");
+    assert_eq!(eval_string(session, &source), "0");
     let candidates = session
         .gc_candidate_gensyms
         .iter()

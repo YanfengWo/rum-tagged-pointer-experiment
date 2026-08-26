@@ -144,6 +144,7 @@ pub(in crate::runtime) struct LoaderSnapshot {
     pub(in crate::runtime) removed_symbols: SymbolSet,
     pub(in crate::runtime) symbol_generations: BTreeMap<(String, String), u64>,
     pub(in crate::runtime) once_values: BTreeMap<String, Expr>,
+    pub(in crate::runtime) gc_candidate_gensyms: std::collections::HashSet<Symbol>,
     pub(in crate::runtime) current_context: String,
     pub(in crate::runtime) context_path: Vec<String>,
     pub(in crate::runtime) context_stack: Vec<ContextFrame>,
@@ -448,6 +449,9 @@ impl Session {
             dynamic_own_values: Vec::new(),
             module_activations: Vec::new(),
             gc_candidate_gensyms: std::collections::HashSet::new(),
+            gensym_gc_watermark: gensym_gc_threshold(),
+            #[cfg(test)]
+            gensym_gc_sweep_count: 0,
             in_gensym_sweep: false,
             current_context: GLOBAL_CONTEXT.to_string(),
             context_path: vec![SYSTEM_CONTEXT.to_string(), GLOBAL_CONTEXT.to_string()],

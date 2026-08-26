@@ -297,6 +297,16 @@ impl Session {
         if changed {
             self.bump_evaluation_epoch_for_symbol(symbol);
         }
+
+        if clear_attributes
+            && clear_messages
+            && clear_options
+            && clear_syntax_information
+            && clear_default_values
+            && !self.in_gensym_sweep
+        {
+            self.remove_gc_candidate_gensym(symbol);
+        }
     }
 
     pub(in crate::runtime) fn remove_symbol_state(&mut self, symbol: &Symbol) {

@@ -10,6 +10,11 @@ impl Session {
             return;
         }
 
+        #[cfg(test)]
+        {
+            self.gensym_gc_sweep_count = self.gensym_gc_sweep_count.saturating_add(1);
+        }
+
         let mut live = std::collections::HashSet::new();
         let mut worklist = Vec::new();
 
@@ -50,16 +55,45 @@ impl Session {
             .filter(|gensym| !live.contains(*gensym))
             .copied()
             .collect::<Vec<_>>();
-        if dead.is_empty() {
-            return;
+        if !dead.is_empty() {
+            self.in_gensym_sweep = true;
+            for gensym in dead {
+                self.clear_symbol_state(&gensym, true, true, true, true, true);
+                self.gc_candidate_gensyms.remove(&gensym);
+            }
+            self.in_gensym_sweep = false;
         }
 
-        self.in_gensym_sweep = true;
-        for gensym in dead {
-            self.clear_symbol_state(&gensym, true, true, true, true, true);
-            self.gc_candidate_gensyms.remove(&gensym);
+        self.rearm_gensym_gc_watermark();
+    }
+
+    pub(in crate::runtime) fn remove_gc_candidate_gensym(&mut self, gensym: &Symbol) {
+        if self.gc_candidate_gensyms.remove(gensym) {
+            self.rearm_gensym_gc_watermark();
         }
-        self.in_gensym_sweep = false;
+    }
+
+    pub(in crate::runtime) fn remove_gc_candidate_gensyms(&mut self, gensyms: &[Symbol]) {
+        let previous_len = self.gc_candidate_gensyms.len();
+        for gensym in gensyms {
+            self.gc_candidate_gensyms.remove(gensym);
+        }
+        if self.gc_candidate_gensyms.len() != previous_len {
+            self.rearm_gensym_gc_watermark();
+        }
+    }
+
+    pub(in crate::runtime) fn restore_gc_candidate_gensyms(
+        &mut self,
+        candidates: std::collections::HashSet<Symbol>,
+    ) {
+        self.gc_candidate_gensyms = candidates;
+        self.rearm_gensym_gc_watermark();
+    }
+
+    fn rearm_gensym_gc_watermark(&mut self) {
+        self.gensym_gc_watermark =
+            gensym_gc_watermark(self.gc_candidate_gensyms.len(), gensym_gc_threshold());
     }
 
     #[cfg(test)]
@@ -170,6 +204,10 @@ pub(in crate::runtime) fn gensym_gc_threshold() -> usize {
             .filter(|value| *value > 0)
             .unwrap_or(DEFAULT_GENSYM_GC_THRESHOLD)
     })
+}
+
+pub(in crate::runtime) fn gensym_gc_watermark(candidate_count: usize, threshold: usize) -> usize {
+    candidate_count.saturating_add(threshold)
 }
 
 pub(in crate::runtime) fn gensym_gc_extra_roots_for_outcome(

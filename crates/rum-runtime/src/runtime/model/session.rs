@@ -50,6 +50,9 @@ pub struct Session {
     pub(in crate::runtime) dynamic_own_values: Vec<DynamicOwnValueFrame>,
     pub(in crate::runtime) module_activations: Vec<ModuleActivation>,
     pub(in crate::runtime) gc_candidate_gensyms: std::collections::HashSet<Symbol>,
+    pub(in crate::runtime) gensym_gc_watermark: usize,
+    #[cfg(test)]
+    pub(in crate::runtime) gensym_gc_sweep_count: usize,
     pub(in crate::runtime) in_gensym_sweep: bool,
     pub(in crate::runtime) current_context: String,
     pub(in crate::runtime) context_path: Vec<String>,

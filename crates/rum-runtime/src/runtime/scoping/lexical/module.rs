@@ -222,11 +222,10 @@ impl Session {
         }
 
         let reclaim_set: BTreeSet<Symbol> = reclaim.iter().copied().collect();
-        for gensym in &reclaim {
-            self.gc_candidate_gensyms.remove(gensym);
-        }
-        // Advisory only: rollback does not snapshot this set. A stale entry is
-        // rechecked by mark/sweep; a missing entry only skips reclamation.
+        self.remove_gc_candidate_gensyms(&reclaim);
+        // Advisory only: a stale entry is rechecked by mark/sweep; a missing
+        // entry only skips reclamation. Rollback restores the advisory set and
+        // rearms its watermark from the restored size.
         for gensym in &activation.gensyms {
             if !reclaim_set.contains(gensym) {
                 self.gc_candidate_gensyms.insert(*gensym);
@@ -238,7 +237,7 @@ impl Session {
             self.clear_symbol_state(&gensym, true, true, true, true, true);
         }
 
-        if self.gc_candidate_gensyms.len() >= gensym_gc_threshold() {
+        if self.gc_candidate_gensyms.len() >= self.gensym_gc_watermark {
             let extra_roots = gensym_gc_extra_roots_for_outcome(&outcome);
             self.collect_and_sweep_dead_gensyms(&extra_roots);
         }

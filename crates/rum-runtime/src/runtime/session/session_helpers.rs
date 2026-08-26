@@ -46,6 +46,7 @@ impl Session {
             removed_symbols: self.removed_symbols.clone(),
             symbol_generations: self.symbol_generations.clone(),
             once_values: self.once_values.clone(),
+            gc_candidate_gensyms: self.gc_candidate_gensyms.clone(),
             current_context: self.current_context.clone(),
             context_path: self.context_path.clone(),
             context_stack: self.context_stack.clone(),
@@ -78,6 +79,7 @@ impl Session {
         self.removed_symbols = snapshot.removed_symbols;
         self.symbol_generations = snapshot.symbol_generations;
         self.once_values = snapshot.once_values;
+        self.restore_gc_candidate_gensyms(snapshot.gc_candidate_gensyms);
         self.current_context = snapshot.current_context;
         self.context_path = snapshot.context_path;
         self.context_stack = snapshot.context_stack;

@@ -35,6 +35,7 @@ timeout_seconds=${RUM_CORE_MICRO_TIMEOUT:-180}
 build_timeout_seconds=${RUM_CORE_MICRO_BUILD_TIMEOUT:-300}
 scale=${RUM_CORE_MICRO_SCALE:-1}
 reps=${RUM_CORE_MICRO_REPS:-7}
+retained_module_gc_batches=${RUM_CORE_MICRO_RETAINED_MODULE_GC_BATCHES:-3}
 rum_cli_bin=${RUM_CLI_BIN:-"${repo_root}/target/release/rum-cli"}
 
 while [[ $# -gt 0 ]]; do
@@ -84,7 +85,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-for number in "${timeout_seconds}" "${build_timeout_seconds}" "${scale}" "${reps}"; do
+for number in "${timeout_seconds}" "${build_timeout_seconds}" "${scale}" "${reps}" "${retained_module_gc_batches}"; do
   if ! [[ "${number}" =~ ^[1-9][0-9]*$ ]]; then
     echo "error: numeric options expect positive integers" >&2
     exit 2
@@ -275,7 +276,11 @@ ClearAll[
   gMicroKeySortByCallbackSmall,
   gMicroKeySortByCallbackLarge,
   gMicroKeySortDefaultWide,
-  gMicroKeySortByDefaultWide
+  gMicroKeySortByDefaultWide,
+  gMicroRetainedModuleGcRoots,
+  gMicroRetainedModuleGcBatch,
+  gMicroRetainedModuleGcBatchSize,
+  gMicroRetainedModuleGcSeconds
 ];
 
 rumMicroScale = ${scale};
@@ -947,6 +952,41 @@ rumMicroBench[
   ValueQ[gMicroValueQUndefined]
 ];
 If[SameQ[rumMicroSink, False], Null, Exit[2]];
+
+(* Keep every Module gensym live while a low RUM_GENSYM_GC_THRESHOLD forces
+   the candidate scheduler to run. The environment-selected batch count lets
+   the same stable row compare an early and a later retained batch. *)
+gMicroRetainedModuleGcRoots = {};
+gMicroRetainedModuleGcBatch = 1;
+gMicroRetainedModuleGcBatchSize = rumMicroN[40];
+gMicroRetainedModuleGcSeconds = 0;
+While[gMicroRetainedModuleGcBatch <= ${retained_module_gc_batches},
+  gMicroRetainedModuleGcSeconds = First[AbsoluteTiming[
+    gMicroRetainedModuleGcRoots = Append[
+      gMicroRetainedModuleGcRoots,
+      With[{n = gMicroRetainedModuleGcBatchSize},
+        Reap[Do[
+          Module[{x = 1}, Sow[Hold[x]]],
+          {n}
+        ]]
+      ]
+    ]
+  ]];
+  gMicroRetainedModuleGcBatch = gMicroRetainedModuleGcBatch + 1
+];
+If[
+  SameQ[
+    Length[First[Last[Last[gMicroRetainedModuleGcRoots]]]],
+    gMicroRetainedModuleGcBatchSize
+  ],
+  Null,
+  Exit[2]
+];
+rumMicroEmit[
+  "module-retained-gensym-gc-batch",
+  gMicroRetainedModuleGcBatchSize,
+  gMicroRetainedModuleGcSeconds
+];
 
 Print["RUM_CORE_MICRO_END"];
 EOF
