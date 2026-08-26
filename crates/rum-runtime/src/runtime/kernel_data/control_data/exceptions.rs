@@ -5,6 +5,7 @@ struct ExceptionHandler {
     pattern: Expr,
     rhs: Expr,
     rhs_may_splice_without_bindings: bool,
+    guards: Box<[Expr]>,
 }
 
 impl Session {
@@ -238,25 +239,57 @@ impl Session {
         let match_result =
             self.match_expr_owned(handler.pattern.clone(), candidate, SymbolExprMap::default());
         self.drive_internal_value(match_result, move |session, outcome| {
-            if outcome.matched {
-                let rhs = substitute_rule_bindings_for_rhs(
-                    &handler.rhs,
-                    &outcome.bindings,
-                    handler.rhs_may_splice_without_bindings,
-                );
-                let rhs_result = session.evaluate(rhs);
-                session.suspend_with_frame(rhs_result, |_, value| Ok(value))
-            } else {
-                session.dispatch_exception_handlers(
+            if !outcome.matched {
+                return session.dispatch_exception_handlers(
                     exception,
                     payload,
                     type_chain,
                     handlers,
                     handler_index,
                     ancestor_index + 1,
-                )
+                );
             }
+
+            if handler.guards.is_empty() {
+                return session.evaluate_exception_handler_rhs(handler, outcome.bindings);
+            }
+
+            let false_bindings = outcome.bindings.clone();
+            let guard_result = session.evaluate_guard_sequence_owned(
+                handler.guards.clone(),
+                outcome.bindings,
+                false_bindings,
+                None,
+            );
+            session.drive_internal_value(guard_result, move |session, outcome| {
+                if outcome.matched {
+                    session.evaluate_exception_handler_rhs(handler, outcome.bindings)
+                } else {
+                    session.dispatch_exception_handlers(
+                        exception,
+                        payload,
+                        type_chain,
+                        handlers,
+                        handler_index,
+                        ancestor_index + 1,
+                    )
+                }
+            })
         })
+    }
+
+    fn evaluate_exception_handler_rhs(
+        &mut self,
+        handler: ExceptionHandler,
+        bindings: SymbolExprMap,
+    ) -> Result<Expr, EvalError> {
+        let rhs = substitute_rule_bindings_for_rhs(
+            &handler.rhs,
+            &bindings,
+            handler.rhs_may_splice_without_bindings,
+        );
+        let rhs_result = self.evaluate(rhs);
+        self.suspend_with_frame(rhs_result, |_, value| Ok(value))
     }
 }
 
@@ -280,11 +313,14 @@ fn parse_exception_handler(expr: &Expr) -> Option<ExceptionHandler> {
     {
         return None;
     }
+    let (rhs, guards) = split_definition_rhs_guards(args[1].clone());
+    let rhs_may_splice_without_bindings = rule_rhs_may_splice_without_bindings(&rhs);
 
     Some(ExceptionHandler {
         pattern: args[0].clone(),
-        rhs: args[1].clone(),
-        rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&args[1]),
+        rhs,
+        rhs_may_splice_without_bindings,
+        guards,
     })
 }
 

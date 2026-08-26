@@ -7,6 +7,22 @@ impl Session {
         normalized_target: Expr,
     ) -> Result<Vec<SymbolExprMap>, EvalError> {
         match matcher {
+            MatcherNode::DefinitionCondition(matcher) => {
+                let DefinitionConditionMatcher { inner, lhs, guards } = *matcher;
+                let option_scope = self.option_value_scope_for_definition(&lhs, &normalized_target);
+                let bindings_result =
+                    self.collect_replace_list_rule_bindings_owned(inner, normalized_target);
+                self.drive_internal_value(bindings_result, move |session, bindings| {
+                    session.filter_replace_list_guard_bindings_owned(
+                        guards,
+                        bindings,
+                        option_scope,
+                        Vec::new(),
+                        0,
+                        None,
+                    )
+                })
+            }
             MatcherNode::Call { head, args } => {
                 let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
                 let orderless = matcher_head_has_attribute(&head, self, Attribute::Orderless);
@@ -87,6 +103,57 @@ impl Session {
                         Vec::new()
                     })
                 })
+            }
+        }
+    }
+
+    fn filter_replace_list_guard_bindings_owned(
+        &mut self,
+        guards: Box<[Expr]>,
+        bindings: Vec<SymbolExprMap>,
+        option_scope: Option<OptionValueScope>,
+        mut accepted: Vec<SymbolExprMap>,
+        mut index: usize,
+        mut pending: Option<CompiledMatchOutcome>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        loop {
+            if let Some(outcome) = pending.take() {
+                if outcome.matched {
+                    accepted.push(outcome.bindings);
+                }
+                index += 1;
+            }
+
+            let Some(current) = bindings.get(index).cloned() else {
+                return Ok(accepted);
+            };
+            let false_bindings = current.clone();
+            let guard_result = self.evaluate_guard_sequence_owned(
+                guards.clone(),
+                current,
+                false_bindings,
+                option_scope.clone(),
+            );
+
+            match guard_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                        session
+                            .filter_replace_list_guard_bindings_owned(
+                                guards,
+                                bindings,
+                                option_scope,
+                                accepted,
+                                index,
+                                Some(outcome),
+                            )
+                            .map(|bindings| bindings.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
             }
         }
     }

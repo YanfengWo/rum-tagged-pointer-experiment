@@ -252,4 +252,5 @@ pub struct RewriteRule {
     pub(in crate::runtime) delayed: bool,
     pub(in crate::runtime) rhs_may_splice_without_bindings: bool,
     pub(in crate::runtime) matcher: MatcherNode,
+    pub(in crate::runtime) guards: Box<[Expr]>,
 }

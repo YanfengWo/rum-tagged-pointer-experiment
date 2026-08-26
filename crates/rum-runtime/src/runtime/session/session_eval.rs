@@ -364,7 +364,7 @@ impl Session {
                         .into_iter()
                         .map(|rule| RewriteRuleInfo {
                             lhs: rule.lhs,
-                            rhs: rule.rhs,
+                            rhs: rebuild_definition_rhs_guards(rule.rhs, &rule.guards),
                             delayed: rule.delayed,
                         })
                         .collect()

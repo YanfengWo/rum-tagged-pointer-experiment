@@ -45,6 +45,35 @@ fn inspect_rewrite_rules_reports_normalized_rules_and_delayed_flags() {
 }
 
 #[test]
+fn normalize_and_inspect_rewrite_rules_rebuild_rhs_guards() {
+    let mut session = Session::new();
+
+    assert_eq!(
+        session
+            .eval_text(
+                "NormalizeRules[x_Integer :> Condition[body, Condition[first[x], second[x]]]]",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[RuleDelayed[Pattern[x, Blank[Integer]], Condition[body, Condition[first[x], second[x]]]]]"
+    );
+
+    let syntax =
+        parse_expr("x_Integer :> Condition[body, Condition[first[x], second[x]]]").unwrap();
+    let expr = lower_syntax_expr(&syntax).unwrap();
+    let rules = session.inspect_rewrite_rules(expr).unwrap().unwrap();
+
+    assert_eq!(rules.len(), 1);
+    assert_eq!(rules[0].lhs.to_string(), "Pattern[x, Blank[Integer]]");
+    assert_eq!(
+        rules[0].rhs.to_string(),
+        "Condition[body, Condition[first[x], second[x]]]"
+    );
+    assert!(rules[0].delayed);
+}
+
+#[test]
 fn inspect_rewrite_rules_can_suspend_and_resume_with_host_input() {
     let mut session = Session::new();
     session

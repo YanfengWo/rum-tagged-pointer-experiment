@@ -390,6 +390,19 @@ fn delayed_string_rules_evaluate_at_application_time() {
 }
 
 #[test]
+fn string_rule_rhs_condition_remains_replacement_data_for_later_guard_step() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "StringReplace[\"ab\", \"a\" :> (\"string\" /; True)]"
+        ),
+        "\"Condition[\\\"string\\\", True]b\""
+    );
+}
+
+#[test]
 fn symbolic_string_patterns_bind_named_captures_in_rules() {
     let mut session = core_session();
 

@@ -600,13 +600,16 @@ pub(in crate::runtime) fn normalize_single_rewrite_rule(expr: &Expr) -> Option<R
                 && args.len() == 2 =>
         {
             let delayed = is_system_symbol_name(head, "RuleDelayed");
+            let (rhs, guards) = split_definition_rhs_guards(args[1].clone());
+            let rhs_may_splice_without_bindings = rule_rhs_may_splice_without_bindings(&rhs);
 
             Some(RewriteRule {
                 lhs: args[0].clone(),
-                rhs: args[1].clone(),
+                rhs,
                 delayed,
-                rhs_may_splice_without_bindings: rule_rhs_may_splice_without_bindings(&args[1]),
+                rhs_may_splice_without_bindings,
                 matcher: compile_matcher(&args[0]),
+                guards,
             })
         }
         _ => None,

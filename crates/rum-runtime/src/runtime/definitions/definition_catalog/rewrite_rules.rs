@@ -105,7 +105,10 @@ impl Session {
     pub(in crate::runtime) fn rewrite_rule_expr(rule: &RewriteRule) -> Expr {
         Expr::call(
             system_expr(if rule.delayed { "RuleDelayed" } else { "Rule" }),
-            vec![rule.lhs.clone(), rule.rhs.clone()],
+            vec![
+                rule.lhs.clone(),
+                rebuild_definition_rhs_guards(rule.rhs.clone(), &rule.guards),
+            ],
         )
     }
 
@@ -136,7 +139,7 @@ impl Session {
         expr: &Expr,
     ) -> Option<RewriteRule> {
         let mut rule = normalize_single_rewrite_rule(expr)?;
-        rule.matcher = self.compile_matcher_for_expr(&rule.lhs);
+        rule.matcher = self.compile_down_value_matcher(&rule.lhs, &rule.guards);
         Some(rule)
     }
 

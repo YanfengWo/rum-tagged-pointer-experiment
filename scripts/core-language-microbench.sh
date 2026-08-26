@@ -212,6 +212,8 @@ ClearAll[
   gMicroGuardedDefault,
   list10,
   rulesSimple,
+  gMicroGuardedRewriteRule,
+  gMicroGuardedRewriteFallbackRules,
   gMicroWideTraversal,
   gMicroWideAssociation,
   gMicroReplacePartRules,
@@ -318,6 +320,11 @@ rumMicroOnce[label_String, nExpr_, expr_] := Module[
 xOwn = 123;
 list10 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 rulesSimple = {a -> 1, b -> 2, c -> 3};
+gMicroGuardedRewriteRule = x_Integer :> x + 1 /; x > 0;
+gMicroGuardedRewriteFallbackRules = {
+  x_Integer :> x + 1 /; x > 0,
+  x_Integer :> x
+};
 gMicroWideTraversal = Range[rumMicroN[1600]];
 gMicroWideAssociation = AssociationThread[
   Range[rumMicroN[1600]] -> Range[rumMicroN[1600]]
@@ -440,6 +447,16 @@ rumMicroOnce[
 ];
 If[SameQ[rumMicroSink, True], Null, Exit[2]];
 rumMicroBench["replaceall-simple", rumMicroN[500], a /. rulesSimple];
+rumMicroBench[
+  "rewrite-guarded-hit",
+  rumMicroN[500],
+  Replace[1, gMicroGuardedRewriteRule]
+];
+rumMicroBench[
+  "rewrite-guarded-decline-fallback",
+  rumMicroN[500],
+  Replace[-1, gMicroGuardedRewriteFallbackRules]
+];
 rumMicroOnce[
   "cases-wide-no-match",
   rumMicroN[1600],
