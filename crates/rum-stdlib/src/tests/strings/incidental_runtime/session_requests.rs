@@ -58,6 +58,51 @@ fn resume_eval_request_with_input_can_finish_delayed_string_rules() {
     assert_eq!(response.value.to_string(), "List[\"y\"]");
 }
 
+#[test]
+fn guarded_string_rules_resume_without_replaying_candidates_or_output() {
+    let mut session = core_session();
+
+    let first = session
+        .eval_request(
+            "guardResumeCount = 0; StringReplace[\"aba\", {\"a\" :> (\"A\" /; (guardResumeCount = guardResumeCount + 1; True)), \"b\" :> (\"B\" /; (guardResumeCount = guardResumeCount + 1; InputString[\"replace guard: \"]; True))}]",
+        )
+        .expect_err("StringReplace should suspend inside the guard at b");
+    assert_input_prompt(&first.error, "replace guard: ");
+
+    let response = session
+        .resume_eval_request_with_input("continue")
+        .expect("StringReplace should resume the pending guard");
+    assert_eq!(response.value.to_string(), "\"ABA\"");
+    assert_eq!(
+        session
+            .eval_text("guardResumeCount")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+
+    let first = session
+        .eval_request(
+            "caseGuardResumeCount = 0; StringCases[\"aba\", {\"a\" :> (\"A\" /; (caseGuardResumeCount = caseGuardResumeCount + 1; True)), \"b\" :> (\"B\" /; (caseGuardResumeCount = caseGuardResumeCount + 1; InputString[\"case guard: \"]; True))}]",
+        )
+        .expect_err("StringCases should suspend inside the guard at b");
+    assert_input_prompt(&first.error, "case guard: ");
+
+    let response = session
+        .resume_eval_request_with_input("continue")
+        .expect("StringCases should resume the pending guard");
+    assert_eq!(response.value.to_string(), "List[\"A\", \"B\", \"A\"]");
+    assert_eq!(
+        session
+            .eval_text("caseGuardResumeCount")
+            .unwrap()
+            .value
+            .to_string(),
+        "3"
+    );
+}
+
 // Moved from crates/rum-runtime/src/runtime/tests/session_requests/functional_tensor_string_resume.rs.
 
 #[test]

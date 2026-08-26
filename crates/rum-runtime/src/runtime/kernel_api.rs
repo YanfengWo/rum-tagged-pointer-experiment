@@ -44,6 +44,12 @@ pub use super::file_io::{FileIo, FileIoError, FileIoProvider, FileProbe, FileWri
 // entropy/random
 pub use super::random::{EntropyError, EntropyProvider, EntropySource};
 
+// definition rhs guards (stdlib-only bridge)
+#[doc(hidden)]
+pub use super::definitions::rhs_guards::{
+    evaluate_definition_rhs_guards_for_match, split_definition_rhs_guards,
+};
+
 // lexical_substitution
 pub use super::substitution::lexical_substitution::substitute_lexical_bindings;
 

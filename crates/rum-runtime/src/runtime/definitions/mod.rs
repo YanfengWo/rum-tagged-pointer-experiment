@@ -8,7 +8,7 @@ mod definitions;
 mod incremental_append;
 mod incremental_mutation;
 mod part_assignment;
-mod rhs_guards;
+pub(super) mod rhs_guards;
 mod unique_symbols;
 mod value_table_assignment;
 

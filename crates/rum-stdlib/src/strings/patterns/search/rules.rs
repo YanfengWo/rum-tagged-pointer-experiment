@@ -577,7 +577,7 @@ fn resume_collect_string_cases_values_with_value(
     resume_collect_string_cases_values_from_index(session, state, index + 1, outputs)
 }
 
-fn evaluate_string_rule_output_expr_result(
+pub(super) fn evaluate_string_rule_output_expr_result(
     session: &mut Session,
     expr: &Expr,
     bindings: &SymbolExprMap,

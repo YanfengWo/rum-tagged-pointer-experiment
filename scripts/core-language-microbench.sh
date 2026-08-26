@@ -219,6 +219,12 @@ ClearAll[
   gMicroReplacePartRules,
   gMicroGuardedReplacePartRule,
   gMicroGuardedReplacePartFallbackRules,
+  gMicroStringLiteralHaystack,
+  gMicroStringLiteralNeedle,
+  gMicroStringLiteralRule,
+  gMicroStringPatternRule,
+  gMicroGuardedStringRule,
+  gMicroGuardedStringFallbackRules,
   gMicroAppendListSmall,
   gMicroAppendListLarge,
   gMicroAppendPartOuter1000Small,
@@ -334,6 +340,18 @@ gMicroWideAssociation = AssociationThread[
 gMicroReplacePartRules = Table[{1} -> i, {i, 1, rumMicroN[1600]}];
 gMicroGuardedReplacePartRule = 1 :> 1 /; True;
 gMicroGuardedReplacePartFallbackRules = {1 -> 0, 1 :> 1 /; False};
+gMicroStringLiteralHaystack = StringJoin[
+  StringRepeat["z", 300],
+  StringRepeat["a", 16]
+];
+gMicroStringLiteralNeedle = StringRepeat["a", 16];
+gMicroStringLiteralRule = gMicroStringLiteralNeedle -> "x";
+gMicroStringPatternRule = x_ :> x;
+gMicroGuardedStringRule = "a" :> ("x" /; True);
+gMicroGuardedStringFallbackRules = {
+  "a" :> ("x" /; False),
+  "a" -> "y"
+};
 fExact[1] = 2;
 fPattern[x_Integer] := x + 1;
 fGuarded[x_Integer] := x + 1 /; x > 0;
@@ -509,6 +527,26 @@ rumMicroBench[
 
 rumMicroBench["string-repeat-small", rumMicroN[500], StringRepeat["a", 3]];
 rumMicroBench["character-range-small", rumMicroN[200], CharacterRange["a", "z"]];
+rumMicroBench[
+  "stringreplace-single-literal-unguarded",
+  rumMicroN[200],
+  StringReplace[gMicroStringLiteralHaystack, gMicroStringLiteralRule]
+];
+rumMicroBench[
+  "stringreplace-pattern-unguarded",
+  rumMicroN[500],
+  StringReplace["abc", gMicroStringPatternRule]
+];
+rumMicroBench[
+  "stringreplace-guarded-hit",
+  rumMicroN[500],
+  StringReplace["abc", gMicroGuardedStringRule]
+];
+rumMicroBench[
+  "stringreplace-guarded-decline-fallback",
+  rumMicroN[500],
+  StringReplace["abc", gMicroGuardedStringFallbackRules]
+];
 
 rumMicroOnce[
   "appendto-list-incremental-small",

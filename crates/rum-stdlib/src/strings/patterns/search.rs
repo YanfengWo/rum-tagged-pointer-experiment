@@ -4,12 +4,17 @@ use super::matcher::{
     string_starts_q, trim_string_value,
 };
 use super::*;
+use guarded::{
+    collect_string_cases_values_with_guarded_rules_expr, collect_string_cases_with_guarded_rules,
+    replace_string_value_with_guarded_rules, replace_string_values_with_guarded_rules_expr,
+};
 use rules::{
     collect_string_cases_values_with_rule_evaluation_expr,
     collect_string_cases_with_rule_evaluation, replace_string_value_with_rules,
     replace_string_values_with_rules_expr,
 };
 
+mod guarded;
 mod rules;
 
 pub(crate) fn eval_string_contains_q(
@@ -203,21 +208,46 @@ pub(crate) fn eval_string_replace(
     };
 
     if let Some(value) = expr_as_string(&args[0]) {
-        let result =
-            replace_string_value_with_rules(session, value, &rules, max_replacements, config);
+        let result = match &rules {
+            ParsedExactStringReplacementRules::Unguarded(rules) => {
+                replace_string_value_with_rules(session, value, rules, max_replacements, config)
+            }
+            ParsedExactStringReplacementRules::Guarded(rules) => {
+                replace_string_value_with_guarded_rules(
+                    session,
+                    value,
+                    rules,
+                    max_replacements,
+                    config,
+                )
+            }
+        };
         return session.drive_internal_value::<String, Expr, _>(result, |_, rendered| {
             Ok(Expr::string(rendered))
         });
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
-        return replace_string_values_with_rules_expr(
-            session,
-            values,
-            &rules,
-            max_replacements,
-            config,
-        );
+        return match &rules {
+            ParsedExactStringReplacementRules::Unguarded(rules) => {
+                replace_string_values_with_rules_expr(
+                    session,
+                    values,
+                    rules,
+                    max_replacements,
+                    config,
+                )
+            }
+            ParsedExactStringReplacementRules::Guarded(rules) => {
+                replace_string_values_with_guarded_rules_expr(
+                    session,
+                    values,
+                    rules,
+                    max_replacements,
+                    config,
+                )
+            }
+        };
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))
@@ -244,44 +274,73 @@ pub(crate) fn eval_string_cases(
     };
 
     if let Some(value) = expr_as_string(&args[0]) {
-        if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
-            let result = collect_string_cases_with_rule_evaluation(
-                session,
-                value,
-                &spec,
-                max_matches,
-                config,
-            );
-            return session.drive_internal_value::<Vec<Expr>, Expr, _>(result, |_, items| {
-                Ok(list_expr(items))
-            });
-        }
-
-        return Ok(list_expr(collect_string_cases(
-            value,
-            &spec,
-            max_matches,
-            config,
-        )));
+        return match &spec {
+            ParsedExactStringCaseSpec::Unguarded(spec) => {
+                if matches!(spec, ExactStringCaseSpec::Rules(_)) {
+                    let result = collect_string_cases_with_rule_evaluation(
+                        session,
+                        value,
+                        spec,
+                        max_matches,
+                        config,
+                    );
+                    session.drive_internal_value::<Vec<Expr>, Expr, _>(result, |_, items| {
+                        Ok(list_expr(items))
+                    })
+                } else {
+                    Ok(list_expr(collect_string_cases(
+                        value,
+                        spec,
+                        max_matches,
+                        config,
+                    )))
+                }
+            }
+            ParsedExactStringCaseSpec::Guarded(rules) => {
+                let result = collect_string_cases_with_guarded_rules(
+                    session,
+                    value,
+                    rules,
+                    max_matches,
+                    config,
+                );
+                session.drive_internal_value::<Vec<Expr>, Expr, _>(result, |_, items| {
+                    Ok(list_expr(items))
+                })
+            }
+        };
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
-        if matches!(&spec, ExactStringCaseSpec::Rules(_)) {
-            return collect_string_cases_values_with_rule_evaluation_expr(
-                session,
-                values,
-                &spec,
-                max_matches,
-                config,
-            );
-        }
-
-        let mut outputs = Vec::with_capacity(values.len());
-        for value in values {
-            let items = collect_string_cases(&value, &spec, max_matches, config);
-            outputs.push(list_expr(items));
-        }
-        return Ok(list_expr(outputs));
+        return match &spec {
+            ParsedExactStringCaseSpec::Unguarded(spec) => {
+                if matches!(spec, ExactStringCaseSpec::Rules(_)) {
+                    collect_string_cases_values_with_rule_evaluation_expr(
+                        session,
+                        values,
+                        spec,
+                        max_matches,
+                        config,
+                    )
+                } else {
+                    let mut outputs = Vec::with_capacity(values.len());
+                    for value in values {
+                        let items = collect_string_cases(&value, spec, max_matches, config);
+                        outputs.push(list_expr(items));
+                    }
+                    Ok(list_expr(outputs))
+                }
+            }
+            ParsedExactStringCaseSpec::Guarded(rules) => {
+                collect_string_cases_values_with_guarded_rules_expr(
+                    session,
+                    values,
+                    rules,
+                    max_matches,
+                    config,
+                )
+            }
+        };
     }
 
     Ok(Expr::call(head.clone(), args.to_vec()))

@@ -120,6 +120,18 @@ struct ExactStringReplacementRule {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct GuardedExactStringReplacementRule {
+    rule: ExactStringReplacementRule,
+    guard: Option<StringRuleGuard>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ParsedExactStringReplacementRules {
+    Unguarded(Vec<ExactStringReplacementRule>),
+    Guarded(Vec<GuardedExactStringReplacementRule>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum ExactStringReplacementValue {
     Immediate(Expr),
     Delayed(Expr),
@@ -132,6 +144,18 @@ struct ExactStringCaseRule {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+struct GuardedExactStringCaseRule {
+    rule: ExactStringCaseRule,
+    guard: Option<StringRuleGuard>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct StringRuleGuard {
+    lhs: Expr,
+    guards: Box<[Expr]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum ExactStringCaseOutput {
     Immediate(Expr),
     Delayed(Expr),
@@ -141,6 +165,12 @@ enum ExactStringCaseOutput {
 enum ExactStringCaseSpec {
     Patterns(Vec<StringPattern>),
     Rules(Vec<ExactStringCaseRule>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ParsedExactStringCaseSpec {
+    Unguarded(ExactStringCaseSpec),
+    Guarded(Vec<GuardedExactStringCaseRule>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -494,9 +524,13 @@ fn parse_string_literal_pattern(value: &str) -> StringPattern {
     }
 }
 
-fn parse_exact_string_replacement_rules(expr: &Expr) -> Option<Vec<ExactStringReplacementRule>> {
+fn parse_exact_string_replacement_rules(expr: &Expr) -> Option<ParsedExactStringReplacementRules> {
     if let Some(rule) = parse_exact_string_replacement_rule(expr) {
-        return Some(vec![rule]);
+        return Some(if rule.guard.is_some() {
+            ParsedExactStringReplacementRules::Guarded(vec![rule])
+        } else {
+            ParsedExactStringReplacementRules::Unguarded(vec![rule.rule])
+        });
     }
 
     let Expr::Call { head, args } = expr else {
@@ -507,12 +541,33 @@ fn parse_exact_string_replacement_rules(expr: &Expr) -> Option<Vec<ExactStringRe
         return None;
     }
 
-    args.iter()
-        .map(parse_exact_string_replacement_rule)
-        .collect()
+    let mut unguarded = Vec::with_capacity(args.len());
+    let mut guarded: Option<Vec<GuardedExactStringReplacementRule>> = None;
+    for expr in args {
+        let rule = parse_exact_string_replacement_rule(expr)?;
+        if let Some(rules) = &mut guarded {
+            rules.push(rule);
+        } else if rule.guard.is_some() {
+            let mut rules = Vec::with_capacity(args.len());
+            rules.extend(
+                unguarded
+                    .drain(..)
+                    .map(|rule| GuardedExactStringReplacementRule { rule, guard: None }),
+            );
+            rules.push(rule);
+            guarded = Some(rules);
+        } else {
+            unguarded.push(rule.rule);
+        }
+    }
+
+    Some(match guarded {
+        Some(rules) => ParsedExactStringReplacementRules::Guarded(rules),
+        None => ParsedExactStringReplacementRules::Unguarded(unguarded),
+    })
 }
 
-fn parse_exact_string_replacement_rule(expr: &Expr) -> Option<ExactStringReplacementRule> {
+fn parse_exact_string_replacement_rule(expr: &Expr) -> Option<GuardedExactStringReplacementRule> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -521,26 +576,45 @@ fn parse_exact_string_replacement_rule(expr: &Expr) -> Option<ExactStringReplace
         return None;
     }
 
-    let replacement = if is_system_symbol_name(head, "Rule") {
-        ExactStringReplacementValue::Immediate(args[1].clone())
+    let delayed = if is_system_symbol_name(head, "Rule") {
+        false
     } else if is_system_symbol_name(head, "RuleDelayed") {
-        ExactStringReplacementValue::Delayed(args[1].clone())
+        true
     } else {
         return None;
     };
+    let pattern = parse_string_pattern(&args[0])?;
+    let (body, guards) = split_definition_rhs_guards(args[1].clone());
+    let replacement = if delayed {
+        ExactStringReplacementValue::Delayed(body)
+    } else {
+        ExactStringReplacementValue::Immediate(body)
+    };
 
-    Some(ExactStringReplacementRule {
-        pattern: parse_string_pattern(&args[0])?,
-        replacement,
+    Some(GuardedExactStringReplacementRule {
+        rule: ExactStringReplacementRule {
+            pattern,
+            replacement,
+        },
+        guard: (!guards.is_empty()).then(|| StringRuleGuard {
+            lhs: args[0].clone(),
+            guards,
+        }),
     })
 }
 
-fn parse_exact_string_case_spec(expr: &Expr) -> Option<ExactStringCaseSpec> {
+fn parse_exact_string_case_spec(expr: &Expr) -> Option<ParsedExactStringCaseSpec> {
     if let Some(patterns) = parse_string_patterns(expr) {
-        return Some(ExactStringCaseSpec::Patterns(patterns));
+        return Some(ParsedExactStringCaseSpec::Unguarded(
+            ExactStringCaseSpec::Patterns(patterns),
+        ));
     }
     if let Some(rule) = parse_exact_string_case_rule(expr) {
-        return Some(ExactStringCaseSpec::Rules(vec![rule]));
+        return Some(if rule.guard.is_some() {
+            ParsedExactStringCaseSpec::Guarded(vec![rule])
+        } else {
+            ParsedExactStringCaseSpec::Unguarded(ExactStringCaseSpec::Rules(vec![rule.rule]))
+        });
     }
 
     let Expr::Call { head, args } = expr else {
@@ -556,16 +630,38 @@ fn parse_exact_string_case_spec(expr: &Expr) -> Option<ExactStringCaseSpec> {
         .map(parse_string_pattern)
         .collect::<Option<Vec<_>>>()
     {
-        return Some(ExactStringCaseSpec::Patterns(patterns));
+        return Some(ParsedExactStringCaseSpec::Unguarded(
+            ExactStringCaseSpec::Patterns(patterns),
+        ));
     }
 
-    args.iter()
-        .map(parse_exact_string_case_rule)
-        .collect::<Option<Vec<_>>>()
-        .map(ExactStringCaseSpec::Rules)
+    let mut unguarded = Vec::with_capacity(args.len());
+    let mut guarded: Option<Vec<GuardedExactStringCaseRule>> = None;
+    for expr in args {
+        let rule = parse_exact_string_case_rule(expr)?;
+        if let Some(rules) = &mut guarded {
+            rules.push(rule);
+        } else if rule.guard.is_some() {
+            let mut rules = Vec::with_capacity(args.len());
+            rules.extend(
+                unguarded
+                    .drain(..)
+                    .map(|rule| GuardedExactStringCaseRule { rule, guard: None }),
+            );
+            rules.push(rule);
+            guarded = Some(rules);
+        } else {
+            unguarded.push(rule.rule);
+        }
+    }
+
+    Some(match guarded {
+        Some(rules) => ParsedExactStringCaseSpec::Guarded(rules),
+        None => ParsedExactStringCaseSpec::Unguarded(ExactStringCaseSpec::Rules(unguarded)),
+    })
 }
 
-fn parse_exact_string_case_rule(expr: &Expr) -> Option<ExactStringCaseRule> {
+fn parse_exact_string_case_rule(expr: &Expr) -> Option<GuardedExactStringCaseRule> {
     let Expr::Call { head, args } = expr else {
         return None;
     };
@@ -574,17 +670,27 @@ fn parse_exact_string_case_rule(expr: &Expr) -> Option<ExactStringCaseRule> {
         return None;
     }
 
-    let output = if is_system_symbol_name(head, "Rule") {
-        ExactStringCaseOutput::Immediate(args[1].clone())
+    let delayed = if is_system_symbol_name(head, "Rule") {
+        false
     } else if is_system_symbol_name(head, "RuleDelayed") {
-        ExactStringCaseOutput::Delayed(args[1].clone())
+        true
     } else {
         return None;
     };
+    let pattern = parse_string_pattern(&args[0])?;
+    let (body, guards) = split_definition_rhs_guards(args[1].clone());
+    let output = if delayed {
+        ExactStringCaseOutput::Delayed(body)
+    } else {
+        ExactStringCaseOutput::Immediate(body)
+    };
 
-    Some(ExactStringCaseRule {
-        pattern: parse_string_pattern(&args[0])?,
-        output,
+    Some(GuardedExactStringCaseRule {
+        rule: ExactStringCaseRule { pattern, output },
+        guard: (!guards.is_empty()).then(|| StringRuleGuard {
+            lhs: args[0].clone(),
+            guards,
+        }),
     })
 }
 

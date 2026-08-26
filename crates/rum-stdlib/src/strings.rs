@@ -4,10 +4,11 @@ use rum_core::{Atom, BigInt, Expr, Rational, Symbol, heads};
 pub(crate) use rum_runtime::kernel_api::render_input_like_expr;
 use rum_runtime::kernel_api::{
     EvalError, Session, SymbolExprMap, ToStringFormat, association_entries_from_expr,
-    base64_encode, call_items_with_head, expr_as_exact_rational, expr_as_non_negative_usize,
-    expr_as_signed_isize, expr_as_string, expr_as_string_list, expr_as_symbol,
-    is_system_symbol_name, render_association, render_to_string_expr, substitute_lexical_bindings,
-    system_expr, truthiness_symbol,
+    base64_encode, call_items_with_head, evaluate_definition_rhs_guards_for_match,
+    expr_as_exact_rational, expr_as_non_negative_usize, expr_as_signed_isize, expr_as_string,
+    expr_as_string_list, expr_as_symbol, is_system_symbol_name, render_association,
+    render_to_string_expr, split_definition_rhs_guards, substitute_lexical_bindings, system_expr,
+    truthiness_symbol,
 };
 use rum_syntax::parse_expr;
 

@@ -1,6 +1,8 @@
 use super::super::*;
 
-pub(in crate::runtime) fn split_definition_rhs_guards(rhs: Expr) -> (Expr, Box<[Expr]>) {
+#[doc(hidden)]
+#[inline]
+pub fn split_definition_rhs_guards(rhs: Expr) -> (Expr, Box<[Expr]>) {
     if pattern_condition(&rhs).is_none() {
         return (rhs, Box::default());
     }
@@ -194,4 +196,22 @@ impl OwnedGuards {
 
 fn guard_outcome(matched: bool, bindings: SymbolExprMap) -> CompiledMatchOutcome {
     CompiledMatchOutcome { matched, bindings }
+}
+
+#[doc(hidden)]
+pub fn evaluate_definition_rhs_guards_for_match(
+    session: &mut Session,
+    lhs: &Expr,
+    candidate: &Expr,
+    guards: &[Expr],
+    bindings: &SymbolExprMap,
+) -> Result<bool, EvalError> {
+    let option_scope = session.option_value_scope_for_definition(lhs, candidate);
+    let guard_result = session.evaluate_guard_sequence_owned(
+        guards.to_vec().into_boxed_slice(),
+        bindings.clone(),
+        bindings.clone(),
+        option_scope,
+    );
+    session.drive_internal_value(guard_result, |_, outcome| Ok(outcome.matched))
 }

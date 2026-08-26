@@ -390,16 +390,126 @@ fn delayed_string_rules_evaluate_at_application_time() {
 }
 
 #[test]
-fn string_rule_rhs_condition_remains_replacement_data_for_later_guard_step() {
+fn rhs_condition_guards_control_string_replace_for_both_rule_heads() {
     let mut session = core_session();
 
     assert_eq!(
         eval_to_string(
             &mut session,
-            "StringReplace[\"ab\", \"a\" :> (\"string\" /; True)]"
+            "{StringReplace[\"abc\", \"a\" -> (\"X\" /; True)], StringReplace[\"abc\", \"a\" -> (\"X\" /; False)], StringReplace[\"abc\", \"a\" :> (\"X\" /; True)], StringReplace[\"abc\", \"a\" :> (\"X\" /; False)]}"
         ),
-        "\"Condition[\\\"string\\\", True]b\""
+        "List[\"Xbc\", \"abc\", \"Xbc\", \"abc\"]"
     );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringReplace[\"a1b\", x_ ~~ NumberString -> (\"N\" /; True)], StringReplace[\"a1b\", x_ ~~ NumberString -> (\"N\" /; False)], StringReplace[\"a1b\", x_ ~~ NumberString :> (\"N\" /; StringMatchQ[x, LetterCharacter])], StringReplace[\"a1b\", x_ ~~ NumberString :> (\"N\" /; StringMatchQ[x, DigitCharacter])]}"
+        ),
+        "List[\"Nb\", \"a1b\", \"Nb\", \"a1b\"]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringReplace[{\"a1\", \"b2\"}, x_ ~~ NumberString :> (x /; True)], StringCases[\"a1b2\", x : DigitCharacter :> (x /; SameQ[x, \"1\"])], StringCases[\"a1b2\", DigitCharacter -> (\"d\" /; True)], StringCases[\"a1b2\", DigitCharacter :> (\"d\" /; False)], StringCases[{\"a1\", \"b2\"}, DigitCharacter :> (\"d\" /; True)]}"
+        ),
+        "List[List[\"a\", \"b\"], List[\"1\"], List[\"d\", \"d\"], List[], List[List[\"d\"], List[\"d\"]]]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringReplace[\"ab12\", StringExpression[Repeated[LetterCharacter], NumberString] :> (\"P\" /; True)], StringReplace[\"ab12\", Pattern[letters, Repeated[LetterCharacter]] ~~ NumberString :> (letters /; StringMatchQ[letters, LetterCharacter..])], StringCases[\"ab12\", StringExpression[Pattern[letters, Repeated[LetterCharacter]], Pattern[digits, Repeated[DigitCharacter]]] :> (StringJoin[digits, \"-\", letters] /; StringMatchQ[letters, LetterCharacter..])]}"
+        ),
+        "List[\"P\", \"ab\", List[\"12-ab\"]]"
+    );
+}
+
+#[test]
+fn guarded_string_rule_lists_try_later_rules_at_the_same_position() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "reverseCount = 0; {StringReplace[\"abc\", {\"a\" -> (\"X\" /; False), \"a\" -> \"Y\"}], StringReplace[\"abc\", {\"a\" -> \"Y\", \"a\" :> (\"X\" /; (reverseCount = reverseCount + 1; False))}], reverseCount, StringReplace[\"aba\", {\"a\" :> (\"X\" /; False), \"b\" :> (\"B\" /; True)}], StringCases[\"a\", {\"a\" :> (\"X\" /; False), \"a\" -> \"Y\"}], StringCases[\"a\", {\"a\" -> \"Y\", \"a\" :> (\"X\" /; False)}]}"
+        ),
+        "List[\"Ybc\", \"Ybc\", 0, \"aBa\", List[\"Y\"], List[\"Y\"]]"
+    );
+}
+
+#[test]
+fn guarded_string_rules_preserve_character_positions_and_candidate_counts() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "g1 = 0; g2 = 0; result = StringReplace[\"aba\", {\"a\" :> (\"X\" /; (g1 = g1 + 1; False)), x_ :> (\"Y\" /; (g2 = g2 + 1; SameQ[x, \"b\"]))}]; {result, g1, g2}"
+        ),
+        "List[\"aYa\", 2, 3]"
+    );
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "{StringReplace[\"猫a猫\", {\"猫\" :> (\"X\" /; False), \"a\" :> (\"A\" /; True)}], StringReplace[\"a\", {RepeatedNull[\"z\"] :> (\"x\" /; False), \"a\" :> (\"A\" /; True)}]}"
+        ),
+        "List[\"猫A猫\", \"A\"]"
+    );
+}
+
+#[test]
+fn guarded_string_cases_pin_overlapping_adjacent_and_empty_matches() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "overlapCount = 0; adjacentCount = 0; {StringCases[\"aaaa\", \"aa\" :> (\"x\" /; (overlapCount = overlapCount + 1; OddQ[overlapCount])), Overlaps -> True], overlapCount, StringReplace[\"aaaa\", \"aa\" :> (\"X\" /; (adjacentCount = adjacentCount + 1; True))], adjacentCount, StringCases[\"\", RepeatedNull[\"a\"] :> (\"x\" /; True)], StringCases[\"\", RepeatedNull[\"a\"] :> (\"x\" /; False)]}"
+        ),
+        "List[List[\"x\", \"x\"], 3, \"XX\", 2, List[\"x\"], List[]]"
+    );
+}
+
+#[test]
+fn non_boolean_string_guards_decline_and_delayed_bodies_wait_for_acceptance() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text(
+            "bodyCount = 0; acceptedBodyCount = 0; {StringReplace[\"aba\", {\"a\" :> (\"X\" /; unknownGuard), \"b\" :> (\"B\" /; True)}], StringReplace[\"a\", \"a\" :> ((bodyCount = bodyCount + 1; \"X\") /; False)], bodyCount, StringReplace[\"a\", \"a\" :> ((acceptedBodyCount = acceptedBodyCount + 1; \"X\") /; True)], acceptedBodyCount}",
+        )
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "List[\"aBa\", \"a\", 0, \"X\", 1]"
+    );
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
+fn string_rule_guards_and_bodies_share_the_enclosing_option_scope() {
+    let mut session = core_session();
+
+    assert_eq!(
+        eval_to_string(
+            &mut session,
+            "Options[f] = {accept -> False}; f[OptionsPattern[]] := StringReplace[\"a\", \"a\" :> (If[OptionValue[accept], \"X\", \"bad\"] /; OptionValue[accept])]; {f[], f[accept -> True]}"
+        ),
+        "List[\"a\", \"X\"]"
+    );
+}
+
+#[test]
+fn string_split_does_not_accept_rule_delimiter_specs() {
+    let mut session = core_session();
+
+    let outcome = session
+        .eval_text("StringSplit[\"a-b\", \"-\" -> (\"s\" /; True)]")
+        .unwrap();
+    assert_eq!(
+        outcome.value.to_string(),
+        "StringSplit[\"a-b\", Rule[\"-\", Condition[\"s\", True]]]"
+    );
+    assert!(outcome.messages.is_empty());
 }
 
 #[test]
