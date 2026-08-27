@@ -23,6 +23,40 @@ transforms, resumable key-sort, missing, aggregate), functional operations
 collection stats, selectors, the resumable merge sort), strings (patterns,
 text builtins, the regex AST step 2 pulled in), and predicates.
 
+## What the first attempt hit — read this before designing anything
+
+The first dispatch stopped for two independent reasons, both real, and the
+tree was rolled back. Neither is a scope problem; both change how you should
+design.
+
+**1. Persistent carriers cannot assume `Arc::try_unwrap` uniqueness — not
+yet.** plan-369's pure-finalizer protocol makes `try_unwrap` succeed by
+running the finalizer *after* the rooted frame and its dispatch `Arc` are
+dropped. **That frame lifetime is built in step 374, not here.** Until then a
+rooted frame keeps an alias, so any carrier whose completion path assumes
+uniqueness will either fail or fall back to the COW deep clone this line
+forbids.
+
+So: **no carrier in this brief may depend on `try_unwrap` succeeding at
+completion.** Step 372 is the model precisely because it never needed it —
+`FrozenMatchBindings` freezes into an `Arc` at suspension and only ever
+*reads* through it. Prefer a carrier whose completion is a borrow-and-build,
+not an unwrap. If a family genuinely cannot be converted without unwrap
+semantics, that family **waits for step 374** — say so and leave it alone
+rather than forcing it.
+
+**2. A suspension-only merge representation changed observable comparator
+progression and output ordering.** That is a semantic break, correctly caught.
+The sort family runs a user comparator whose call sequence is observable, so
+its representation cannot differ between the ordinary and the resumed path in
+any way a comparator can detect.
+
+**The sort family therefore has an explicit escape hatch in this brief**: if
+you cannot convert it while keeping comparator progression and output ordering
+byte-identical, **exclude it, report exactly why, and convert everything
+else.** A deferred family is a finding, not a failure. Do not attempt a third
+merge representation — the two-strike rule applies per mechanism.
+
 ## What "ownership conversion" means here
 
 Same shapes as steps 371 and 372, applied crate-locally:
@@ -123,6 +157,11 @@ prove no existing test changed result with a sorted per-test-name diff and
   made it cheaper.
 - `into_vec_clone` is the COW/unwrap-fallback detector — any nonzero value
   needs an explanation.
+- **The derived-inventory test must stay green.** Step 372 added
+  `derived_frame_root_trace_inventory_matches_the_closed_capture_graph`
+  (`crates/rum-runtime/src/runtime/tests/frame_root_trace.rs:308`), which
+  fails if a new deriving type is missing from the recorded closure. The first
+  attempt left it red. Every carrier you add must appear there.
 
 Then the microbench A/B, profiling env OFF, three runs per arm:
 
