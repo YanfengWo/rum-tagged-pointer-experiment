@@ -1052,3 +1052,28 @@ not a sample. `suspend_with_result_frame_lazy` already exists
 (`suspension/core.rs:162`) and is used by only 9 sites while 307 still capture
 eagerly — the mechanism for the 63.8 KiB waste is already in the tree and
 simply was never propagated.
+
+---
+
+## Execution record — step 373 deferred one family (2026-08-28)
+
+**The comparator-driven sort family is deferred into step 374**: `Sort`,
+`SortBy`, `ReverseSort`, `KeySort`, `KeySortBy`. `key_sort.rs` and
+`resumable_merge_sort.rs` have zero diff at `751d50de`.
+
+Why, and why it is not a gap to paper over: a user comparator observes its
+call sequence, so the sort representation cannot differ between the ordinary
+and the resumed path in any way a comparator can detect. brief-373's first
+attempt tried a suspension-only merge representation and changed exactly that,
+which the worker caught and stopped on. Under the two-strike rule no third
+merge representation is attempted before the frame lifetime exists.
+
+**The ordering dependency this exposed, stated for step 374's brief.**
+plan-369's pure finalizer makes `Arc::try_unwrap` succeed by running after the
+rooted frame and its dispatch `Arc` are dropped. That lifetime is built in
+step 374 — so steps 371-373 could only ever use the freeze-and-read shape
+(step 372's `FrozenMatchBindings`), never a carrier whose completion assumes
+uniqueness. Two stop-losses came from reaching for 374's mechanism early:
+brief-368's cutover and brief-373's first attempt. Step 374 is where both the
+deferred sort family and the finalizer protocol land, and it should say so
+explicitly rather than rediscovering it a third time.
