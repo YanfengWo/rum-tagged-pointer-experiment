@@ -108,6 +108,17 @@ what the batch was looking for, and both have their own entries above:
   after the third occurrence were all green. The standing agreement was to
   brief it on a third occurrence; it is unrelated to the 10 ms idle sleep,
   which landed after the flake's first two appearances.
+- **First occurrence of a call-stability-proof flake, recorded not explained
+  away.** One `cargo test -p rum-runtime` run during brief-370 failed
+  `association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof`
+  on its `has_valid_call_stability_proof_for_key` assertion
+  (`evaluation_cache/tests.rs:374`). The worker attributed it to the 128-bit
+  stability Bloom's sensitivity to parallel symbol-interning order. It did not
+  reproduce in thirteen director attempts — eight of the test alone, five of
+  the full 854-test parallel suite — so the attribution is neither confirmed
+  nor refuted. brief-370 changed neither `evaluation_cache` nor
+  `association_lvalue`, so it is pre-existing. Same standing agreement as the
+  Jupyter flake: brief it on a third occurrence.
 
 **Re-probe each before briefing it.** Two of this batch's items turned out to
 be already fixed, and one survey finding — "`SameTest` never exits early" —
