@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{
     EntropyError, EvalError, Integer, Session, ToPrimitive, base64_encode, expr_as_exact_integer,
@@ -11,8 +12,9 @@ const DEFAULT_RANDOM_ALPHABET: &str = crate::character_classes::ALPHANUMERIC;
 pub(crate) fn eval_seed_random(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [seed] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("SeedRandom", args, 1));
     };
@@ -26,8 +28,9 @@ pub(crate) fn eval_seed_random(
 pub(crate) fn eval_reseed_random(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !args.is_empty() {
         return Ok(session.invalid_call_with_exact_arg_count("ReseedRandom", args, 0));
     }
@@ -43,8 +46,9 @@ pub(crate) fn eval_reseed_random(
 pub(crate) fn eval_random_integer(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [] => Ok(random_integer_between(
             session,
@@ -81,8 +85,9 @@ pub(crate) fn eval_random_integer(
 pub(crate) fn eval_random_choice(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (list, count) = match args {
         [list] => (list, None),
         [list, count] => (list, Some(count)),
@@ -209,8 +214,9 @@ fn eval_random_choice_weighted(
 pub(crate) fn eval_random_sample(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (list, count) = match args {
         [list] => (list, None),
         [list, count] => (list, Some(count)),
@@ -250,8 +256,9 @@ pub(crate) fn eval_random_sample(
 pub(crate) fn eval_random_string(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("RandomString", args, 1, 2));
     }
@@ -269,8 +276,9 @@ pub(crate) fn eval_random_string(
 pub(crate) fn eval_random_password(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_arg_form(
             "RandomPassword",
@@ -304,8 +312,9 @@ pub(crate) fn eval_random_password(
 pub(crate) fn eval_block_random(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [body] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("BlockRandom", args, 1));
     };
@@ -316,8 +325,9 @@ pub(crate) fn eval_block_random(
 pub(crate) fn eval_random_uuid(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !args.is_empty() {
         return Ok(session.invalid_call_with_exact_arg_count("RandomUuid", args, 0));
     }
@@ -332,8 +342,9 @@ pub(crate) fn eval_random_uuid(
 pub(crate) fn eval_uuid_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("UuidQ", args, 1));
     };
@@ -344,8 +355,9 @@ pub(crate) fn eval_uuid_q(
 pub(crate) fn eval_random_bytes(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [count] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("RandomBytes", args, 1));
     };

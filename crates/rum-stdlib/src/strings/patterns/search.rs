@@ -13,6 +13,7 @@ use rules::{
     collect_string_cases_with_rule_evaluation, replace_string_value_with_rules,
     replace_string_values_with_rules_expr,
 };
+use rum_core::SharedArgs;
 
 mod guarded;
 mod rules;
@@ -20,32 +21,36 @@ mod rules;
 pub(crate) fn eval_string_contains_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_pattern_predicate(session, head, args, "StringContainsQ", string_contains_q)
 }
 
 pub(crate) fn eval_string_starts_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_pattern_predicate(session, head, args, "StringStartsQ", string_starts_q)
 }
 
 pub(crate) fn eval_string_ends_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_pattern_predicate(session, head, args, "StringEndsQ", string_ends_q)
 }
 
 pub(crate) fn eval_string_position(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(2..=4).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringPosition", args, 2, 4));
     }
@@ -79,8 +84,9 @@ pub(crate) fn eval_string_position(
 pub(crate) fn eval_string_split(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=4).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringSplit", args, 1, 4));
     }
@@ -155,8 +161,9 @@ fn is_string_split_option_expr(expr: &Expr) -> bool {
 pub(crate) fn eval_string_trim(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringTrim", args, 1, 2));
     }
@@ -188,8 +195,9 @@ pub(crate) fn eval_string_trim(
 pub(crate) fn eval_string_replace(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() == 1 {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     }
@@ -256,8 +264,9 @@ pub(crate) fn eval_string_replace(
 pub(crate) fn eval_string_cases(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() == 1 {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     }
@@ -349,8 +358,9 @@ pub(crate) fn eval_string_cases(
 pub(crate) fn eval_string_count(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() < 2 {
         return Ok(session.invalid_call_with_arg_range("StringCount", args, 2, 4));
     }
@@ -388,8 +398,9 @@ pub(crate) fn eval_string_count(
 pub(crate) fn eval_string_delete(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() == 1 {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     }
@@ -426,8 +437,9 @@ pub(crate) fn eval_string_delete(
 pub(crate) fn eval_string_apply(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(string_unary_operator_form("StringApply", operator)),
         [operator, input] => {
@@ -448,16 +460,18 @@ pub(crate) fn eval_string_apply(
 pub(crate) fn eval_string_match_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_patterns_predicate(session, head, args, "StringMatchQ", string_match_q)
 }
 
 pub(crate) fn eval_string_free_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_patterns_predicate(session, head, args, "StringFreeQ", string_free_q)
 }
 

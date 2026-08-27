@@ -1,4 +1,4 @@
-use rum_core::{BigInt, Expr};
+use rum_core::{BigInt, Expr, SharedArgs};
 use rum_host::{HostConfig, HostEvalOutcome, HostEvalSuccess, HostSession};
 use rum_runtime::kernel_api::{BuiltinSpec, Capability, EvalError, Session, expr_as_exact_integer};
 
@@ -44,7 +44,8 @@ fn install_demo_family(session: &mut Session) {
     );
 }
 
-fn demo_double(session: &mut Session, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn demo_double(session: &mut Session, _head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DemoDouble", args, 1));
     };
@@ -59,7 +60,8 @@ fn demo_double(session: &mut Session, _head: &Expr, args: &[Expr]) -> Result<Exp
     Ok(Expr::integer(value * BigInt::from(2_u8)))
 }
 
-fn demo_read(session: &mut Session, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn demo_read(session: &mut Session, _head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !args.is_empty() {
         return Ok(session.invalid_call_with_exact_arg_count("DemoRead", args, 0));
     }
@@ -86,7 +88,7 @@ fn install_order_second(session: &mut Session) {
 fn demo_order_first(
     _session: &mut Session,
     _head: &Expr,
-    _args: &[Expr],
+    _args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     Ok(Expr::string("first"))
 }
@@ -94,7 +96,7 @@ fn demo_order_first(
 fn demo_order_second(
     _session: &mut Session,
     _head: &Expr,
-    _args: &[Expr],
+    _args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     Ok(Expr::string("second"))
 }

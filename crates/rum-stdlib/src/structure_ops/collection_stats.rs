@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 
@@ -69,8 +70,9 @@ enum DecoratedOperation {
 pub(crate) fn eval_tally(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, test) = match args {
         [expr] => (expr, None),
         [expr, test] => (expr, Some(test)),
@@ -130,10 +132,12 @@ fn resume_tally_test_from_count(
         let value = match result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_tally_test_with_value(session, state, count_index, value)
+                    || {
+                        move |session, value| {
+                            resume_tally_test_with_value(session, state, count_index, value)
+                        }
                     },
                 );
             }
@@ -177,56 +181,63 @@ fn render_tally_counts(counts: Vec<(Expr, usize)>) -> Expr {
 pub(crate) fn eval_max_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_extreme_by(session, head, "MaxBy", args, true)
 }
 
 pub(crate) fn eval_min_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_extreme_by(session, head, "MinBy", args, false)
 }
 
 pub(crate) fn eval_maximal_by(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_extremal_elements_by(session, "MaximalBy", args, true)
 }
 
 pub(crate) fn eval_minimal_by(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_extremal_elements_by(session, "MinimalBy", args, false)
 }
 
 pub(crate) fn eval_take_largest_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_take_by(session, head, args, "TakeLargestBy", true)
 }
 
 pub(crate) fn eval_take_smallest_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_take_by(session, head, args, "TakeSmallestBy", false)
 }
 
 pub(crate) fn eval_reverse_sort(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, ordering) = match args {
         [expr] => (expr, None),
         [expr, ordering] => (expr, Some(ordering)),
@@ -255,8 +266,9 @@ pub(crate) fn eval_reverse_sort(
 pub(crate) fn eval_reverse_sort_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr, function] = args else {
         if args.len() == 1 {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -288,8 +300,9 @@ pub(crate) fn eval_reverse_sort_by(
 pub(crate) fn eval_gather_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr, function] = args else {
         if args.len() == 1 {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -330,8 +343,9 @@ pub(crate) fn eval_gather_by(
 pub(crate) fn eval_riffle(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, separator, positions) = match args {
         [expr, separator] => (expr, separator, RifflePositions::Every(1)),
         [expr, separator, positions] => {
@@ -399,10 +413,12 @@ fn resume_gather_by_function_list_from_position(
         let key = match session.evaluate(Expr::call(function, vec![item])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_gather_by_function_list_with_key(session, state, key)
+                    || {
+                        move |session, key| {
+                            resume_gather_by_function_list_with_key(session, state, key)
+                        }
                     },
                 );
             }
@@ -582,10 +598,12 @@ fn resume_decorate_by_from_index(
         let key = match session.evaluate(Expr::call(state.function.clone(), vec![item.clone()])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_decorate_by_with_key(session, state, index, decorated, item, key)
+                    || {
+                        move |session, key| {
+                            resume_decorate_by_with_key(session, state, index, decorated, item, key)
+                        }
                     },
                 );
             }

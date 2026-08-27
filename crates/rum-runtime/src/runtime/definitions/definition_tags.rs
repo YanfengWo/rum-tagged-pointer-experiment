@@ -8,7 +8,7 @@ impl Session {
 
         let lhs = args[0].clone();
         let rhs_result = self.evaluate(args[1].clone());
-        let rhs = self.suspend_with_frame(rhs_result, {
+        let rhs = self.suspend_with_frame_lazy(rhs_result, || {
             let lhs = lhs.clone();
             move |session, rhs| session.finish_up_set_assignment("UpSet", lhs, rhs, false)
         })?;
@@ -29,29 +29,33 @@ impl Session {
         self.finish_up_set_assignment("UpSetDelayed", lhs, rhs, true)
     }
 
-    pub(in crate::runtime) fn eval_tag_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() != 3 {
-            return Ok(self.invalid_call_with_exact_arg_count("TagSet", args, 3));
+    pub(in crate::runtime) fn eval_tag_set(
+        &mut self,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() != 3 {
+            return Ok(self.invalid_call_with_exact_arg_count("TagSet", args_slice, 3));
         }
 
-        let tag = match self.normalize_tag_target(&args[0]) {
+        let tag = match self.normalize_tag_target(&args_slice[0]) {
             Ok(tag) => tag,
             Err(error) => {
-                return Ok(self.invalid_call_with_arg_form("TagSet", args, error.message()));
+                return Ok(self.invalid_call_with_arg_form("TagSet", args_slice, error.message()));
             }
         };
 
-        let lhs = args[1].clone();
-        let rhs_result = self.evaluate(args[2].clone());
-        let rhs = self.suspend_with_frame(rhs_result, {
+        let lhs = args_slice[1].clone();
+        let rhs_result = self.evaluate(args_slice[2].clone());
+        let rhs = self.suspend_with_frame_lazy(rhs_result, || {
             let tag = tag.clone();
             let lhs = lhs.clone();
-            let args = args.to_vec();
+            let args = args.clone();
             move |session, rhs| {
-                session.store_tagged_definition("TagSet", &args, tag, lhs, rhs, false)
+                session.store_tagged_definition("TagSet", args.as_ref(), tag, lhs, rhs, false)
             }
         })?;
-        self.store_tagged_definition("TagSet", args, tag, lhs, rhs, false)
+        self.store_tagged_definition("TagSet", args_slice, tag, lhs, rhs, false)
     }
 
     pub(in crate::runtime) fn eval_tag_set_delayed(

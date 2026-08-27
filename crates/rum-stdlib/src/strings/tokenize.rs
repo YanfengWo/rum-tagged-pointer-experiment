@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_syntax::{LexedSource, Span, SyntaxError, SyntaxTokenKind, TriviaKind, lex_with_trivia};
 
 use super::patterns::{
@@ -51,8 +52,9 @@ impl<'a> ByteToCharOffsetCursor<'a> {
 pub(crate) fn eval_tokenize_with(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [rules_expr, source_expr] = args else {
         return Ok(fail_tokenizer(
             session,
@@ -80,8 +82,9 @@ pub(crate) fn eval_tokenize_with(
 pub(crate) fn eval_rum_tokens(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [source_expr] = args else {
         return Ok(fail_tokenizer(
             session,

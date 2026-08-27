@@ -226,9 +226,9 @@ impl Session {
                                     built.take().unwrap_or_else(|| args[..index].to_vec());
                                 let remaining_for_resume = args[index + 1..].to_vec();
                                 let unevaluated_restores_for_resume = unevaluated_restores.clone();
-                                self.suspend_with_frame(
+                                self.suspend_with_frame_lazy(
                                     Err(EvalError::InputRequired { request }),
-                                    move |session, value| {
+                                    || move |session, value| {
                                         session.resume_call_after_argument_with_unevaluated_restore(
                                             head_for_resume,
                                             attributes_for_resume,
@@ -374,30 +374,31 @@ impl Session {
             let runtime_profile_plan = runtime_path_timing_start("prepare_arguments.plan_arg");
             let plan = plan_call_argument_preparation(attributes, index, arg);
             record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
-            let prepared_arg = match plan.mode {
-                CallArgumentMode::Evaluate => {
-                    let allow_sequence_splice = plan.allow_sequence_splice;
-                    let runtime_profile_evaluate =
-                        runtime_path_timing_start("prepare_arguments.evaluate_arg");
-                    let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
-                    record_profile_runtime_path_timing(
-                        runtime_profile_evaluate,
-                        runtime_profile_outcome_for_expr_result(&evaluated_result),
-                    );
-                    match evaluated_result {
-                        Ok(value) => value,
-                        Err(EvalError::InputRequired { request }) => {
-                            let head_for_resume = head.clone();
-                            let attributes_for_resume = attributes;
-                            let evaluated_for_resume = evaluated_args.clone();
-                            let remaining_for_resume = remaining_args
-                                .by_ref()
-                                .map(|(_, arg)| arg)
-                                .collect::<Vec<_>>();
-                            let unevaluated_restores_for_resume = unevaluated_restores.clone();
-                            self.suspend_with_frame(
+            let prepared_arg =
+                match plan.mode {
+                    CallArgumentMode::Evaluate => {
+                        let allow_sequence_splice = plan.allow_sequence_splice;
+                        let runtime_profile_evaluate =
+                            runtime_path_timing_start("prepare_arguments.evaluate_arg");
+                        let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
+                        record_profile_runtime_path_timing(
+                            runtime_profile_evaluate,
+                            runtime_profile_outcome_for_expr_result(&evaluated_result),
+                        );
+                        match evaluated_result {
+                            Ok(value) => value,
+                            Err(EvalError::InputRequired { request }) => {
+                                let head_for_resume = head.clone();
+                                let attributes_for_resume = attributes;
+                                let evaluated_for_resume = evaluated_args.clone();
+                                let remaining_for_resume = remaining_args
+                                    .by_ref()
+                                    .map(|(_, arg)| arg)
+                                    .collect::<Vec<_>>();
+                                let unevaluated_restores_for_resume = unevaluated_restores.clone();
+                                self.suspend_with_frame_lazy(
                                 Err(EvalError::InputRequired { request }),
-                                move |session, value| {
+                                || move |session, value| {
                                     session.resume_call_after_argument_with_unevaluated_restore(
                                         head_for_resume,
                                         attributes_for_resume,
@@ -410,31 +411,31 @@ impl Session {
                                     )
                                 },
                             )?
+                            }
+                            Err(error) => return Err(error),
                         }
-                        Err(error) => return Err(error),
                     }
-                }
-                CallArgumentMode::Hold => plan.expr,
-                CallArgumentMode::StrippedUnevaluated => {
-                    let splices = prepared_argument_splices(
-                        &plan.expr,
-                        plan.allow_sequence_splice,
-                        sequence_hold,
-                    );
-                    let drops_nothing = list_drops_nothing
-                        && prepared_list_argument_drops_nothing(
+                    CallArgumentMode::Hold => plan.expr,
+                    CallArgumentMode::StrippedUnevaluated => {
+                        let splices = prepared_argument_splices(
                             &plan.expr,
                             plan.allow_sequence_splice,
                             sequence_hold,
                         );
-                    if !splices && !drops_nothing {
-                        unevaluated_restores
-                            .get_or_insert_with(Vec::new)
-                            .push((evaluated_args.len(), raw_arg));
+                        let drops_nothing = list_drops_nothing
+                            && prepared_list_argument_drops_nothing(
+                                &plan.expr,
+                                plan.allow_sequence_splice,
+                                sequence_hold,
+                            );
+                        if !splices && !drops_nothing {
+                            unevaluated_restores
+                                .get_or_insert_with(Vec::new)
+                                .push((evaluated_args.len(), raw_arg));
+                        }
+                        plan.expr
                     }
-                    plan.expr
-                }
-            };
+                };
 
             let runtime_profile_append = runtime_path_timing_start("prepare_arguments.append_arg");
             if list_drops_nothing {

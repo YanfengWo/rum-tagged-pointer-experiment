@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 // Deletion compaction crossed over at eight paths in the measured wide-parent
 // workload; preserve the allocation-light direct path below that point.
@@ -13,8 +14,9 @@ struct DeletePathFailure {
 pub(crate) fn eval_delete(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr, positions_expr] = args else {
         if args.len() == 1 {
             return Ok(Expr::call(head.clone(), args.to_vec()));

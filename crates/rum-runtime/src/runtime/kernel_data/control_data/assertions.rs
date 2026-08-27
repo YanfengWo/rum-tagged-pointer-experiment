@@ -1,20 +1,19 @@
 use super::*;
 
 impl Session {
-    pub(in crate::runtime) fn eval_assert(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let assert_args = args.to_vec();
+    pub(in crate::runtime) fn eval_assert(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         let test = args.first().cloned();
 
         let function_result = self.evaluate(system_expr("$AssertFunction"));
-        let function = self.suspend_with_frame(function_result, {
+        let function = self.suspend_with_frame_lazy(function_result, || {
             let test = test.clone();
-            let assert_args = assert_args.clone();
+            let args = args.clone();
             move |session, function| {
-                session.resume_assert_after_function(test, assert_args, function)
+                session.resume_assert_after_function(test, args.as_ref().to_vec(), function)
             }
         })?;
 
-        self.resume_assert_after_function(test, assert_args, function)
+        self.resume_assert_after_function(test, args.as_ref().to_vec(), function)
     }
 
     fn resume_assert_after_test(
@@ -73,7 +72,7 @@ impl Session {
         };
 
         let test_result = self.evaluate(test.clone());
-        let outcome = self.suspend_with_result_frame(test_result, {
+        let outcome = self.suspend_with_result_frame_lazy(test_result, || {
             let test = test.clone();
             let assert_args = assert_args.clone();
             let assert_function = assert_function.clone();

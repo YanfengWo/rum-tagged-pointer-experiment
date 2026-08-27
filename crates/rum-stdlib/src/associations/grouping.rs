@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
@@ -142,8 +143,9 @@ fn group_by_specs(function: &Expr) -> Vec<GroupBySpec> {
 pub(crate) fn eval_group_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_first("GroupBy", function.clone())),
         [expr, function] => {

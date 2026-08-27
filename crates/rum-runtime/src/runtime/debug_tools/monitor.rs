@@ -49,8 +49,8 @@ impl Session {
         self.refresh_monitor_scope_display(last_index);
 
         let body_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame(body_result, |session, outcome| {
-            session.finish_monitor(outcome)
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
+            |session, outcome| session.finish_monitor(outcome)
         });
 
         match outcome {

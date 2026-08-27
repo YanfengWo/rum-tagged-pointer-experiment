@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_range(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let Some((start, end, step)) = range_spec(args) else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };

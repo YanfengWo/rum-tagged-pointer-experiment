@@ -10,7 +10,7 @@ use super::*;
 
 macro_rules! test_arithmetic_handler {
     ($name:ident, $builtin:ident) => {
-        fn $name(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        fn $name(session: &mut Session, head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
             session.eval_arithmetic_data_builtin(ArithmeticDataBuiltin::$builtin, head, args)
         }
     };
@@ -18,7 +18,7 @@ macro_rules! test_arithmetic_handler {
 
 macro_rules! test_control_handler {
     ($name:ident, $builtin:ident) => {
-        fn $name(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        fn $name(session: &mut Session, head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
             session.eval_control_data_builtin(ControlDataBuiltin::$builtin, head, args)
         }
     };
@@ -26,7 +26,7 @@ macro_rules! test_control_handler {
 
 macro_rules! test_rewrite_handler {
     ($name:ident, $builtin:ident) => {
-        fn $name(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+        fn $name(session: &mut Session, head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
             session.eval_rewrite_data_builtin(RewriteDataBuiltin::$builtin, head, args)
         }
     };
@@ -459,7 +459,8 @@ pub(in crate::runtime) fn session_with_test_rewrite_builtins() -> Session {
     session
 }
 
-fn test_same_q(_session: &mut Session, _head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn test_same_q(_session: &mut Session, _head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(system_expr(
         if args.windows(2).all(|pair| pair[0] == pair[1]) {
             heads::structure::TRUE
@@ -469,7 +470,8 @@ fn test_same_q(_session: &mut Session, _head: &Expr, args: &[Expr]) -> Result<Ex
     ))
 }
 
-fn test_first(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn test_first(session: &mut Session, head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };

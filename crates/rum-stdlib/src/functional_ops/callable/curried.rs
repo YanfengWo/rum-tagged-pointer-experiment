@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_operator_applied(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(Expr::call(head.clone(), vec![function.clone()])),
         [function, spec] if parse_curried_operator_spec(spec).is_some() => {
@@ -31,8 +33,9 @@ pub(crate) fn eval_operator_applied(
 pub(crate) fn eval_curry_applied(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [spec] => {
             if parse_curried_operator_spec(spec).is_some() {

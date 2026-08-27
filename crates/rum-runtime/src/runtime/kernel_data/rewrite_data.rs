@@ -168,12 +168,17 @@ mod cases;
 mod replace;
 
 impl Session {
+    /// Evaluates the internal two-argument MatchQ bridge without constructing a call handle.
+    pub fn eval_match_q_data_builtin(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+        self.eval_match_q(args)
+    }
+
     /// Dispatches rewrite-family builtin handlers whose bodies remain kernel-side.
     pub fn eval_rewrite_data_builtin(
         &mut self,
         builtin: RewriteDataBuiltin,
         _head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         match builtin {
             RewriteDataBuiltin::Cases => self.eval_cases(args),

@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::str::FromStr;
 
 use super::*;
@@ -5,8 +6,9 @@ use super::*;
 pub(crate) fn eval_url_encode(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("UrlEncode", args, 1, usize::MAX));
     };
@@ -23,8 +25,9 @@ pub(crate) fn eval_url_encode(
 pub(crate) fn eval_url_decode(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("UrlDecode", args, 1, usize::MAX));
     };
@@ -44,8 +47,9 @@ pub(crate) fn eval_url_decode(
 pub(crate) fn eval_url_parse(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("UrlParse", args, 1, usize::MAX));
     };

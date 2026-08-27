@@ -19,7 +19,7 @@ impl Session {
         let input_expr = expr.clone();
 
         let body_result = self.evaluate(expr.clone());
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let input_string = input_string.clone();
             let input_expr = input_expr.clone();
             move |session, outcome| {

@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_string_reverse(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("StringReverse", args, 1));
     }
@@ -19,8 +21,9 @@ pub(crate) fn eval_string_reverse(
 pub(crate) fn eval_to_lower_case(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("ToLowerCase", args, 1));
     }
@@ -40,8 +43,9 @@ pub(crate) fn eval_to_lower_case(
 pub(crate) fn eval_lower_case_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_string_scalar_predicate(
         session,
         head,
@@ -54,8 +58,9 @@ pub(crate) fn eval_lower_case_q(
 pub(crate) fn eval_upper_case_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_string_scalar_predicate(
         session,
         head,
@@ -68,16 +73,18 @@ pub(crate) fn eval_upper_case_q(
 pub(crate) fn eval_capitalize(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_map(session, head, args, "Capitalize", capitalize_value)
 }
 
 pub(crate) fn eval_decapitalize(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_string_map(session, head, args, "Decapitalize", decapitalize_value)
 }
 

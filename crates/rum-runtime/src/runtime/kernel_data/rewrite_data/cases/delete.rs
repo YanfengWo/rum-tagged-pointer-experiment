@@ -3,36 +3,34 @@ use super::*;
 impl Session {
     pub(in crate::runtime) fn eval_delete_cases(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("DeleteCases", args));
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("DeleteCases", args_slice));
         }
-        if !(2..=5).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("DeleteCases", args, 2, 5));
+        if !(2..=5).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("DeleteCases", args_slice, 2, 5));
         }
 
-        let call_args = args.to_vec();
-        let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
-            let pattern_expr = args[1].clone();
-            let option_exprs = args[2..].to_vec();
-            let call_args = call_args.clone();
+        let target_result = self.evaluate(args_slice[0].clone());
+        let target = self.suspend_with_frame_lazy(target_result, || {
+            let args = args.clone();
             move |session, target| {
                 session.resume_delete_cases_after_target(
                     target,
-                    pattern_expr,
-                    option_exprs,
-                    call_args,
+                    args[1].clone(),
+                    args[2..].to_vec(),
+                    args.as_ref().to_vec(),
                 )
             }
         })?;
 
         self.resume_delete_cases_after_target(
             target,
-            args[1].clone(),
-            args[2..].to_vec(),
-            call_args,
+            args_slice[1].clone(),
+            args_slice[2..].to_vec(),
+            args_slice.to_vec(),
         )
     }
 
@@ -44,7 +42,7 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame(pattern_result, {
+        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
             let option_exprs = option_exprs.clone();
             let call_args = call_args.clone();

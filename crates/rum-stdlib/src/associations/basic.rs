@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
@@ -9,8 +10,9 @@ pub(crate) use self::key_predicates::{eval_key_free_q, eval_key_member_q};
 pub(crate) fn eval_association(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let source_items = match args {
         [
             Expr::Call {
@@ -45,17 +47,19 @@ fn resume_association_key_evaluation(
         let key = match session.evaluate(entry.key.clone()) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_association_key_evaluation_with_key(
-                            session,
-                            entries,
-                            evaluated_entries,
-                            index,
-                            entry,
-                            key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_association_key_evaluation_with_key(
+                                session,
+                                entries,
+                                evaluated_entries,
+                                index,
+                                entry,
+                                key,
+                            )
+                        }
                     },
                 );
             }
@@ -84,8 +88,9 @@ fn resume_association_key_evaluation_with_key(
 pub(crate) fn eval_association_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_message(
             "AssociationQ",
@@ -103,8 +108,9 @@ pub(crate) fn eval_association_q(
 pub(crate) fn eval_lookup(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() || args.len() > 4 {
         return Ok(session.invalid_call_with_message(
             "Lookup",
@@ -123,7 +129,7 @@ pub(crate) fn eval_lookup(
     };
 
     let expr_result = session.evaluate(expr.clone());
-    let expr = session.suspend_with_frame(expr_result, {
+    let expr = session.suspend_with_frame_lazy(expr_result, || {
         let head = head.clone();
         let key = key.clone();
         let rest = rest.to_vec();
@@ -141,7 +147,7 @@ fn eval_lookup_with_evaluated_data(
     rest: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
     let key_result = session.evaluate(key);
-    let key = session.suspend_with_frame(key_result, {
+    let key = session.suspend_with_frame_lazy(key_result, || {
         let head = head.clone();
         let expr = expr.clone();
         let rest = rest.clone();
@@ -176,10 +182,12 @@ fn finish_eval_lookup(
             match session.evaluate(default) {
                 Ok(default) => Some(default),
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, default| {
-                            finish_prepared_lookup(session, lookup, Some(default), wrapper)
+                        || {
+                            move |session, default| {
+                                finish_prepared_lookup(session, lookup, Some(default), wrapper)
+                            }
                         },
                     );
                 }
@@ -206,10 +214,12 @@ fn finish_prepared_lookup(
             match session.evaluate(wrapper) {
                 Ok(wrapper) => Some(wrapper),
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |_, wrapper| {
-                            Ok(lookup.outcome.into_expr(default.as_ref(), Some(&wrapper)))
+                        || {
+                            move |_, wrapper| {
+                                Ok(lookup.outcome.into_expr(default.as_ref(), Some(&wrapper)))
+                            }
                         },
                     );
                 }
@@ -228,8 +238,9 @@ fn finish_prepared_lookup(
 pub(crate) fn eval_key(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [key] = args else {
         return Ok(session.invalid_call_with_message(
             "Key",
@@ -245,8 +256,9 @@ pub(crate) fn eval_key(
 pub(crate) fn eval_keys(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_message(
             "Keys",
@@ -271,8 +283,9 @@ pub(crate) fn eval_keys(
 pub(crate) fn eval_values(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_message(
             "Values",
@@ -297,8 +310,9 @@ pub(crate) fn eval_values(
 pub(crate) fn eval_key_exists_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, key) = match args {
         [key] => return Ok(keyed_operator_form_slot_first("KeyExistsQ", key.clone())),
         [expr, key] => (expr, key),
@@ -329,8 +343,9 @@ pub(crate) fn eval_key_exists_q(
 pub(crate) fn eval_key_take(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [key_spec] => Ok(keyed_operator_form_slot_first("KeyTake", key_spec.clone())),
         [expr, key_spec] => {
@@ -356,8 +371,9 @@ pub(crate) fn eval_key_take(
 pub(crate) fn eval_key_drop(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [key_spec] => Ok(keyed_operator_form_slot_first("KeyDrop", key_spec.clone())),
         [expr, key_spec] => {
@@ -383,8 +399,9 @@ pub(crate) fn eval_key_drop(
 pub(crate) fn eval_normal(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() || args.len() > 3 {
         return Ok(session.invalid_call_with_message(
             "Normal",
@@ -417,8 +434,9 @@ pub(crate) fn eval_normal(
 pub(crate) fn eval_key_value_pattern(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [spec] = args else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };

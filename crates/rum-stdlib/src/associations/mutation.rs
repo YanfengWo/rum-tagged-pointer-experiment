@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum HeldAssociationPartMutationResult {
@@ -112,24 +113,25 @@ fn is_non_symbol_atom(expr: &Expr) -> bool {
 pub(crate) fn eval_associate_to(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let [target_expr, spec] = args else {
-        if args.len() == 1 {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+    let args_slice = args.as_ref();
+    let [target_expr, spec] = args_slice else {
+        if args_slice.len() == 1 {
+            return Ok(Expr::call(head.clone(), args_slice.to_vec()));
         }
         return Ok(session.invalid_call_with_message(
             "AssociateTo",
-            args,
-            two_argument_mutation_arity_tag(args.len()),
-            exact_argument_count_message("AssociateTo", args.len(), 2),
+            args_slice,
+            two_argument_mutation_arity_tag(args_slice.len()),
+            exact_argument_count_message("AssociateTo", args_slice.len(), 2),
         ));
     };
 
     if parse_association_update_spec_forms(spec).is_none() {
         return Ok(session.invalid_call_with_message(
             "AssociateTo",
-            args,
+            args_slice,
             "invlb",
             invalid_association_update_spec_message(spec),
         ));
@@ -164,7 +166,7 @@ pub(crate) fn eval_associate_to(
     if is_non_symbol_atom(target_expr) {
         return Ok(session.invalid_call_with_message(
             "AssociateTo",
-            args,
+            args_slice,
             "rvalue",
             mutation_rvalue_message(target_expr),
         ));
@@ -176,20 +178,22 @@ pub(crate) fn eval_associate_to(
             "wrsym",
             format!("Symbol {target_symbol} is Protected."),
         );
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+        return Ok(Expr::call(head.clone(), args_slice.to_vec()));
     }
 
     let target_result = session.evaluate(target_expr.clone());
-    let expr = session.suspend_with_frame(target_result, {
-        let call_args = args.to_vec();
+    let expr = session.suspend_with_frame_lazy(target_result, || {
+        let args = args.clone();
         let target_expr = target_expr.clone();
         let spec = spec.clone();
-        move |session, expr| finish_associate_to_value(session, call_args, target_expr, expr, spec)
+        move |session, expr| {
+            finish_associate_to_value(session, args.as_ref().to_vec(), target_expr, expr, spec)
+        }
     })?;
 
     finish_associate_to_value(
         session,
-        args.to_vec(),
+        args_slice.to_vec(),
         target_expr.clone(),
         expr,
         spec.clone(),
@@ -231,17 +235,18 @@ fn apply_associate_to_value(expr: Expr, spec: Expr) -> Option<Expr> {
 pub(crate) fn eval_key_drop_from(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let [target_expr, key_spec] = args else {
-        if args.len() == 1 {
-            return Ok(Expr::call(head.clone(), args.to_vec()));
+    let args_slice = args.as_ref();
+    let [target_expr, key_spec] = args_slice else {
+        if args_slice.len() == 1 {
+            return Ok(Expr::call(head.clone(), args_slice.to_vec()));
         }
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
-            args,
-            two_argument_mutation_arity_tag(args.len()),
-            exact_argument_count_message("KeyDropFrom", args.len(), 2),
+            args_slice,
+            two_argument_mutation_arity_tag(args_slice.len()),
+            exact_argument_count_message("KeyDropFrom", args_slice.len(), 2),
         ));
     };
 
@@ -274,7 +279,7 @@ pub(crate) fn eval_key_drop_from(
 
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
-            args,
+            args_slice,
             "invak",
             invalid_association_message(target_expr),
         ));
@@ -294,7 +299,7 @@ pub(crate) fn eval_key_drop_from(
     {
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
-            args,
+            args_slice,
             "invak",
             invalid_association_message(target_expr),
         ));
@@ -303,25 +308,25 @@ pub(crate) fn eval_key_drop_from(
     if is_non_symbol_atom(target_expr) {
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
-            args,
+            args_slice,
             "rvalue",
             mutation_rvalue_message(target_expr),
         ));
     }
 
     let target_result = session.evaluate(target_expr.clone());
-    let expr = session.suspend_with_frame(target_result, {
-        let call_args = args.to_vec();
+    let expr = session.suspend_with_frame_lazy(target_result, || {
+        let args = args.clone();
         let target_expr = target_expr.clone();
         let key_spec = key_spec.clone();
         move |session, expr| {
-            finish_key_drop_from_value(session, call_args, target_expr, expr, key_spec)
+            finish_key_drop_from_value(session, args.as_ref().to_vec(), target_expr, expr, key_spec)
         }
     })?;
 
     finish_key_drop_from_value(
         session,
-        args.to_vec(),
+        args_slice.to_vec(),
         target_expr.clone(),
         expr,
         key_spec.clone(),

@@ -3,7 +3,8 @@ use super::*;
 const PROBE_PACKAGE: &str =
     "DefinePackage[\"Pkg`\", Public[{f}], f[x_] := helper[x] + 1; helper[x_] := x * 2]";
 
-fn test_symbol(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn test_symbol(session: &mut Session, head: &Expr, args: &SharedArgs) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [Expr::Atom(Atom::String(name))] = args else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
@@ -17,8 +18,9 @@ fn test_symbol(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr
 fn test_to_expression(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [Expr::Atom(Atom::String(source))] = args else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
@@ -28,7 +30,12 @@ fn test_to_expression(
     session.evaluate(lowered)
 }
 
-fn test_string_join(_session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn test_string_join(
+    _session: &mut Session,
+    head: &Expr,
+    args: &SharedArgs,
+) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let Some(parts) = args.iter().map(expr_as_string).collect::<Option<Vec<_>>>() else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };

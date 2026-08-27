@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_string_wrap(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text, width, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("StringWrap", args, 2, usize::MAX));
     };
@@ -33,8 +35,9 @@ pub(crate) fn eval_string_wrap(
 pub(crate) fn eval_string_indent(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text, prefix, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("StringIndent", args, 2, usize::MAX));
     };
@@ -73,8 +76,9 @@ pub(crate) fn eval_string_indent(
 pub(crate) fn eval_string_dedent(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("StringDedent", args, 1));
     };
@@ -88,8 +92,9 @@ pub(crate) fn eval_string_dedent(
 pub(crate) fn eval_string_expand_tabs(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (text, width) = match args {
         [text] => (text, 8),
         [text, width] => {
@@ -118,8 +123,9 @@ pub(crate) fn eval_string_expand_tabs(
 pub(crate) fn eval_align_columns(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [rows, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("AlignColumns", args, 1, usize::MAX));
     };

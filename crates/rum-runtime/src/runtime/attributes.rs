@@ -43,11 +43,11 @@ impl Session {
         }
     }
 
-    pub(super) fn eval_set_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(super) fn eval_set_attributes(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         self.eval_update_attributes("SetAttributes", args, AttributeUpdate::Insert)
     }
 
-    pub(super) fn eval_clear_attributes(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(super) fn eval_clear_attributes(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         self.eval_update_attributes("ClearAttributes", args, AttributeUpdate::Remove)
     }
 
@@ -62,29 +62,30 @@ impl Session {
     pub(super) fn eval_update_attributes(
         &mut self,
         symbol: &str,
-        args: &[Expr],
+        args: &SharedArgs,
         update: AttributeUpdate,
     ) -> Result<Expr, EvalError> {
-        if args.len() != 2 {
-            return Ok(self.invalid_call_with_exact_arg_count(symbol, args, 2));
+        let args_slice = args.as_ref();
+        if args_slice.len() != 2 {
+            return Ok(self.invalid_call_with_exact_arg_count(symbol, args_slice, 2));
         }
 
-        let targets = match self.normalize_attribute_update_targets(&args[0]) {
+        let targets = match self.normalize_attribute_update_targets(&args_slice[0]) {
             Ok(targets) => targets,
             Err(error) => {
-                return Ok(self.invalid_call_with_arg_form(symbol, args, error.message()));
+                return Ok(self.invalid_call_with_arg_form(symbol, args_slice, error.message()));
             }
         };
 
         let symbol_name = symbol.to_string();
-        let resolved_result = self.evaluate(args[1].clone());
-        let resolved_attributes = self.suspend_with_frame(resolved_result, {
+        let resolved_result = self.evaluate(args_slice[1].clone());
+        let resolved_attributes = self.suspend_with_frame_lazy(resolved_result, || {
             let targets = targets.clone();
-            let original_args = args.to_vec();
+            let args = args.clone();
             move |session, resolved| {
                 session.finish_update_attributes_after_resolved_attributes(
                     &symbol_name,
-                    original_args,
+                    args.as_ref().to_vec(),
                     targets,
                     update,
                     resolved,
@@ -94,7 +95,7 @@ impl Session {
 
         self.finish_update_attributes_after_resolved_attributes(
             symbol,
-            args.to_vec(),
+            args_slice.to_vec(),
             targets,
             update,
             resolved_attributes,

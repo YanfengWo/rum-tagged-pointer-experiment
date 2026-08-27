@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_differences(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (list, order) = match args {
         [list] => (list, 1),
         [list, order_expr] => {
@@ -35,8 +37,9 @@ pub(crate) fn eval_differences(
 pub(crate) fn eval_constant_array(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [value, dims_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ConstantArray", args, 2));
     };
@@ -52,16 +55,18 @@ pub(crate) fn eval_constant_array(
 pub(crate) fn eval_pad_left(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_pad(session, args, PadSide::Left)
 }
 
 pub(crate) fn eval_pad_right(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_pad(session, args, PadSide::Right)
 }
 

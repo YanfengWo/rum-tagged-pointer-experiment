@@ -232,10 +232,12 @@ pub(super) fn resume_tensor_callback_from_index(
         let value = match session.evaluate(Expr::call(state.operator.clone(), vec![operator_arg])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_tensor_callback_with_value(session, state, index, outputs, value)
+                    || {
+                        move |session, value| {
+                            resume_tensor_callback_with_value(session, state, index, outputs, value)
+                        }
                     },
                 );
             }
@@ -321,18 +323,20 @@ fn resume_inner_from_indices(
             )) {
                 Ok(term) => term,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, term| {
-                            resume_inner_term_with_value(
-                                session,
-                                state,
-                                output_index,
-                                contract_index,
-                                terms,
-                                output_scalars,
-                                term,
-                            )
+                        || {
+                            move |session, term| {
+                                resume_inner_term_with_value(
+                                    session,
+                                    state,
+                                    output_index,
+                                    contract_index,
+                                    terms,
+                                    output_scalars,
+                                    term,
+                                )
+                            }
                         },
                     );
                 }
@@ -346,16 +350,18 @@ fn resume_inner_from_indices(
         let reduced = match session.evaluate(Expr::call(state.g.clone(), terms)) {
             Ok(reduced) => reduced,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, reduced| {
-                        resume_inner_reduced_with_value(
-                            session,
-                            state,
-                            output_index,
-                            output_scalars,
-                            reduced,
-                        )
+                    || {
+                        move |session, reduced| {
+                            resume_inner_reduced_with_value(
+                                session,
+                                state,
+                                output_index,
+                                output_scalars,
+                                reduced,
+                            )
+                        }
                     },
                 );
             }

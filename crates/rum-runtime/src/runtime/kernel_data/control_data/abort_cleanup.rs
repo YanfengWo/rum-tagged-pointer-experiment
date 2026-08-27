@@ -77,15 +77,20 @@ impl Session {
 
     pub(in crate::runtime) fn eval_check_abort(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if args.len() < 2 {
-            let tag = if args.is_empty() { "argrx" } else { "argr" };
+        let args_slice = args.as_ref();
+        if args_slice.len() < 2 {
+            let tag = if args_slice.is_empty() {
+                "argrx"
+            } else {
+                "argr"
+            };
             return Ok(self.invalid_call_with_message(
                 "CheckAbort",
-                args,
+                args_slice,
                 tag,
-                format!("expected at least 2 argument(s), got {}", args.len()),
+                format!("expected at least 2 argument(s), got {}", args_slice.len()),
             ));
         }
 
@@ -98,36 +103,38 @@ impl Session {
             match parse_check_abort_propagation_source(&default_option_exprs, false) {
                 Ok(Some(source)) => check_abort_propagation_from_value(source.value),
                 Ok(None) => default_check_abort_propagation(),
-                Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
+                Err(error) => return Ok(self.invalid_check_abort_option_call(args_slice, error)),
             };
 
-        let propagation_source = match parse_check_abort_propagation_source(&args[2..], true) {
+        let propagation_source = match parse_check_abort_propagation_source(&args_slice[2..], true)
+        {
             Ok(source) => source,
-            Err(error) => return Ok(self.invalid_check_abort_option_call(args, error)),
+            Err(error) => return Ok(self.invalid_check_abort_option_call(args_slice, error)),
         };
         let Some(source) = propagation_source else {
-            return self.resume_check_abort_with_propagation(args.to_vec(), default_propagation);
+            return self
+                .resume_check_abort_with_propagation(args_slice.to_vec(), default_propagation);
         };
         if source.evaluate_rhs {
             let value_result = self.evaluate(source.value.clone());
-            let value = self.suspend_with_frame(value_result, {
-                let args = args.to_vec();
+            let value = self.suspend_with_frame_lazy(value_result, || {
+                let args = args.clone();
                 move |session, value| {
                     session.resume_check_abort_with_propagation(
-                        args,
+                        args.as_ref().to_vec(),
                         check_abort_propagation_from_value(value),
                     )
                 }
             })?;
 
             return self.resume_check_abort_with_propagation(
-                args.to_vec(),
+                args_slice.to_vec(),
                 check_abort_propagation_from_value(value),
             );
         }
 
         self.resume_check_abort_with_propagation(
-            args.to_vec(),
+            args_slice.to_vec(),
             check_abort_propagation_from_value(source.value),
         )
     }
@@ -150,7 +157,7 @@ impl Session {
         let pending_checkpoint = self.abort_protect_pending;
 
         let primary_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame(primary_result, {
+        let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
             let args = args.to_vec();
             move |session, outcome| {
                 session.resume_check_abort_after_primary(
@@ -184,8 +191,10 @@ impl Session {
         let pending_checkpoint = self.abort_protect_pending;
         self.abort_protect_depth += 1;
         let body_result = self.evaluate(body.clone());
-        let outcome = self.suspend_with_result_frame(body_result, move |session, outcome| {
-            session.resume_abort_protect_after_body(pending_checkpoint, outcome)
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
+            move |session, outcome| {
+                session.resume_abort_protect_after_body(pending_checkpoint, outcome)
+            }
         });
 
         match outcome {
@@ -204,7 +213,7 @@ impl Session {
         match outcome {
             Ok(_value) if self.abort_protect_pending > pending_checkpoint => {
                 let fallback_result = self.evaluate(args[1].clone());
-                let outcome = self.suspend_with_result_frame(fallback_result, {
+                let outcome = self.suspend_with_result_frame_lazy(fallback_result, || {
                     move |session, outcome| {
                         session.resume_check_abort_after_fallback(
                             propagate,
@@ -231,7 +240,7 @@ impl Session {
             Err(error @ (EvalError::Abort | EvalError::ProtectedAbort)) => {
                 let protected = matches!(error, EvalError::ProtectedAbort);
                 let fallback_result = self.evaluate(args[1].clone());
-                let outcome = self.suspend_with_result_frame(fallback_result, {
+                let outcome = self.suspend_with_result_frame_lazy(fallback_result, || {
                     move |session, outcome| {
                         session.resume_check_abort_after_fallback(
                             propagate,

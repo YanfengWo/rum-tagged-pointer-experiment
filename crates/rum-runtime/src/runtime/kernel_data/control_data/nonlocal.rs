@@ -159,7 +159,7 @@ impl Session {
         };
 
         let form_result = self.resolve_matcher_pattern_expr_owned(form);
-        let form = self.suspend_with_frame(form_result, {
+        let form = self.suspend_with_frame_lazy(form_result, || {
             let handler = handler.clone();
             let value = value.clone();
             let tag = tag.clone();
@@ -224,7 +224,7 @@ impl Session {
         };
 
         let form_result = self.resolve_matcher_pattern_expr_owned(form);
-        let form = self.suspend_with_frame(form_result, {
+        let form = self.suspend_with_frame_lazy(form_result, || {
             let value = value.clone();
             let tag = tag.clone();
             let cleanup_value = cleanup_value.clone();

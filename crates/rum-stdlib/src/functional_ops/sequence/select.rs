@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,8 +26,9 @@ impl SelectLimit {
 pub(crate) fn eval_select(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [criterion] => Ok(unary_operator_form_slot_first("Select", criterion)),
         [criterion, limit_expr] if sequence_like_from_expr(criterion).is_none() => {
@@ -74,8 +76,9 @@ pub(crate) fn eval_select(
 pub(crate) fn eval_select_first(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [criterion] => Ok(unary_operator_form_slot_first("SelectFirst", criterion)),
         [expr, criterion] => {
@@ -127,12 +130,14 @@ fn resume_select_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_select_with_value(
-                            session, source, criterion, limit, index, selected, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_select_with_value(
+                                session, source, criterion, limit, index, selected, value,
+                            )
+                        }
                     },
                 );
             }
@@ -200,12 +205,14 @@ fn resume_select_first_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_select_first_with_value(
-                            session, source, criterion, default, index, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_select_first_with_value(
+                                session, source, criterion, default, index, value,
+                            )
+                        }
                     },
                 );
             }

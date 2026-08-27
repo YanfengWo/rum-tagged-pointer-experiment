@@ -1,4 +1,5 @@
 use rum_core::Expr;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{EvalError, Session, expr_as_string};
 
 mod codec;
@@ -16,8 +17,9 @@ pub(crate) use digest::{eval_crc32, eval_md5, eval_sha1, eval_sha256, eval_sha51
 pub(crate) fn eval_to_hex_string(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ToHexString", args, 1));
     };
@@ -36,8 +38,9 @@ pub(crate) fn eval_to_hex_string(
 pub(crate) fn eval_from_hex_string(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FromHexString", args, 1));
     };
@@ -59,8 +62,9 @@ pub(crate) fn eval_from_hex_string(
 pub(crate) fn eval_to_base64(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ToBase64", args, 1));
     };
@@ -79,8 +83,9 @@ pub(crate) fn eval_to_base64(
 pub(crate) fn eval_from_base64(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FromBase64", args, 1));
     };
@@ -102,8 +107,9 @@ pub(crate) fn eval_from_base64(
 pub(crate) fn eval_byte_array_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ByteArrayQ", args, 1));
     };
@@ -115,8 +121,9 @@ pub(crate) fn eval_byte_array_q(
 pub(crate) fn eval_byte_array_to_string(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ByteArrayToString", args, 1));
     };

@@ -1,6 +1,11 @@
 use super::*;
 
-fn eval_zzz_probe(_session: &mut Session, _head: &Expr, _args: &[Expr]) -> Result<Expr, EvalError> {
+fn eval_zzz_probe(
+    _session: &mut Session,
+    _head: &Expr,
+    _args: &SharedArgs,
+) -> Result<Expr, EvalError> {
+    let _args = _args.as_ref();
     Ok(Expr::integer(BigInt::from(9001_u16)))
 }
 

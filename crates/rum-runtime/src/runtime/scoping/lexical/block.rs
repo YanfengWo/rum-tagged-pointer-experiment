@@ -68,7 +68,7 @@ impl Session {
 
         if let Some(init) = init {
             let init_result = self.evaluate(init);
-            let outcome = self.suspend_with_result_frame(init_result, {
+            let outcome = self.suspend_with_result_frame_lazy(init_result, || {
                 let saved_state = saved_state.clone();
                 let body = body.clone();
                 move |session, outcome| {
@@ -272,7 +272,7 @@ impl Session {
         let (symbol, init) = items[index].clone();
         if let Some(init) = init {
             let init_result = self.evaluate(init);
-            let outcome = self.suspend_with_result_frame(init_result, {
+            let outcome = self.suspend_with_result_frame_lazy(init_result, || {
                 let items = items.clone();
                 let body = body.clone();
                 let saved_state = saved_state.clone();
@@ -365,7 +365,7 @@ impl Session {
         dynamic_depth: usize,
     ) -> Result<Expr, EvalError> {
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let saved_state = saved_state.clone();
             move |session, outcome| {
                 session.finish_single_symbol_block_scope(
@@ -474,7 +474,7 @@ impl Session {
         dynamic_depth: usize,
     ) -> Result<Expr, EvalError> {
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let saved_state = saved_state.clone();
             move |session, outcome| session.finish_block_scope(saved_state, dynamic_depth, outcome)
         });

@@ -63,7 +63,7 @@ impl Session {
         &mut self,
         builtin: ControlDataBuiltin,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         match builtin {
             ControlDataBuiltin::Abort => self.eval_abort(head, args),

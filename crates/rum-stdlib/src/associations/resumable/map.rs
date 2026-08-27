@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_association_map(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_second(
             "AssociationMap",
@@ -60,12 +62,14 @@ fn resume_association_map_from_index(
         let value = match session.evaluate(Expr::call(function.clone(), vec![key.clone()])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_association_map_with_value(
-                            session, function, keys, index, entries, key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_association_map_with_value(
+                                session, function, keys, index, entries, key, value,
+                            )
+                        }
                     },
                 );
             }
@@ -106,18 +110,20 @@ fn resume_association_map_association_from_index(
         let value = match session.evaluate(Expr::call(function.clone(), vec![item.clone()])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_association_map_association_with_value(
-                            session,
-                            function,
-                            items,
-                            index,
-                            mapped_items,
-                            item,
-                            value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_association_map_association_with_value(
+                                session,
+                                function,
+                                items,
+                                index,
+                                mapped_items,
+                                item,
+                                value,
+                            )
+                        }
                     },
                 );
             }

@@ -12,7 +12,7 @@ impl Session {
     pub(in crate::runtime) fn eval_absolute_time(
         &mut self,
         _head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         if !args.is_empty() {
             return Ok(self.invalid_call_with_exact_arg_count("AbsoluteTime", args, 0));
@@ -55,7 +55,7 @@ impl Session {
 
         let started = Instant::now();
         let evaluated = self.evaluate(expr.clone());
-        let value = self.suspend_with_frame(evaluated, {
+        let value = self.suspend_with_frame_lazy(evaluated, || {
             let symbol = symbol.to_string();
             move |session, value| session.finish_timing_like(&symbol, started, value)
         })?;
@@ -93,16 +93,18 @@ impl Session {
         }
 
         let started = Instant::now();
-        let suspended_state = state.clone();
         let value_result = self.evaluate(state.expr.clone());
-        let value = self.suspend_with_frame(value_result, move |session, value| {
-            session.resume_repeated_timing_with_value(
-                suspended_state,
-                sample,
-                best_elapsed,
-                started,
-                value,
-            )
+        let value = self.suspend_with_frame_lazy(value_result, || {
+            let suspended_state = state.clone();
+            move |session, value| {
+                session.resume_repeated_timing_with_value(
+                    suspended_state,
+                    sample,
+                    best_elapsed,
+                    started,
+                    value,
+                )
+            }
         })?;
 
         self.resume_repeated_timing_with_value(state, sample, best_elapsed, started, value)

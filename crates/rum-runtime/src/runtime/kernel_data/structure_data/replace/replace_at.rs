@@ -4,26 +4,23 @@ impl Session {
     pub(in crate::runtime) fn eval_replace_at(
         &mut self,
         _head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        match args {
+        match args.as_ref() {
             [rules_expr, position_spec] => Ok(replace_at_operator_form(
                 rules_expr.clone(),
                 position_spec.clone(),
             )),
             [target_expr, rules_expr, position_spec] => {
-                let call_args = args.to_vec();
                 let target_result = self.evaluate(target_expr.clone());
-                let target = self.suspend_with_frame(target_result, {
-                    let rules_expr = rules_expr.clone();
-                    let position_spec = position_spec.clone();
-                    let call_args = call_args.clone();
+                let target = self.suspend_with_frame_lazy(target_result, || {
+                    let args = args.clone();
                     move |session, target| {
                         session.resume_replace_at_after_target(
                             target,
-                            rules_expr,
-                            position_spec,
-                            call_args,
+                            args[1].clone(),
+                            args[2].clone(),
+                            args.as_ref().to_vec(),
                         )
                     }
                 })?;
@@ -32,7 +29,7 @@ impl Session {
                     target,
                     rules_expr.clone(),
                     position_spec.clone(),
-                    call_args,
+                    args.as_ref().to_vec(),
                 )
             }
             _ => Ok(self.invalid_call_with_arg_range("ReplaceAt", args, 2, 3)),

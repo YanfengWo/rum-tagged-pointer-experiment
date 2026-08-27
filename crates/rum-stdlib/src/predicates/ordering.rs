@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashSet;
 
@@ -28,8 +29,9 @@ struct LexicographicPairComparatorState {
 pub(crate) fn eval_order(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [lhs, rhs] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Order", args, 2));
     };
@@ -40,8 +42,9 @@ pub(crate) fn eval_order(
 pub(crate) fn eval_ordered_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => eval_ordered_q_default(session, head, args, expr),
         [expr, ordering] => eval_ordered_q_with_comparator(session, head, args, expr, ordering),
@@ -120,10 +123,12 @@ fn resume_ordered_q_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_ordered_q_comparator_with_value(session, state, value)
+                    || {
+                        move |session, value| {
+                            resume_ordered_q_comparator_with_value(session, state, value)
+                        }
                     },
                 );
             }
@@ -155,8 +160,9 @@ fn resume_ordered_q_comparator_with_value(
 pub(crate) fn eval_lexicographic_order(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [lhs, rhs] => Ok(order_result_expr(compare_lexicographic_order_subset(
             lhs, rhs,
@@ -211,12 +217,14 @@ fn resume_lexicographic_list_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_lexicographic_list_comparator_with_forward_value(
-                            session, state, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_lexicographic_list_comparator_with_forward_value(
+                                session, state, value,
+                            )
+                        }
                     },
                 );
             }
@@ -235,12 +243,14 @@ fn resume_lexicographic_list_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_lexicographic_list_comparator_with_reverse_value(
-                            session, state, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_lexicographic_list_comparator_with_reverse_value(
+                                session, state, value,
+                            )
+                        }
                     },
                 );
             }
@@ -273,10 +283,14 @@ fn resume_lexicographic_list_comparator_with_forward_value(
     ) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, value| {
-                    resume_lexicographic_list_comparator_with_reverse_value(session, state, value)
+                || {
+                    move |session, value| {
+                        resume_lexicographic_list_comparator_with_reverse_value(
+                            session, state, value,
+                        )
+                    }
                 },
             );
         }
@@ -306,10 +320,14 @@ fn resume_lexicographic_pair_comparator(
     let value = match eval_binary_predicate(session, &state.ordering, &state.lhs, &state.rhs) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, value| {
-                    resume_lexicographic_pair_comparator_with_forward_value(session, state, value)
+                || {
+                    move |session, value| {
+                        resume_lexicographic_pair_comparator_with_forward_value(
+                            session, state, value,
+                        )
+                    }
                 },
             );
         }
@@ -331,10 +349,14 @@ fn resume_lexicographic_pair_comparator_with_forward_value(
     let value = match eval_binary_predicate(session, &state.ordering, &state.rhs, &state.lhs) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, value| {
-                    resume_lexicographic_pair_comparator_with_reverse_value(session, state, value)
+                || {
+                    move |session, value| {
+                        resume_lexicographic_pair_comparator_with_reverse_value(
+                            session, state, value,
+                        )
+                    }
                 },
             );
         }
@@ -359,8 +381,9 @@ fn resume_lexicographic_pair_comparator_with_reverse_value(
 pub(crate) fn eval_numerical_order(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [lhs, rhs] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("NumericalOrder", args, 2));
     };
@@ -371,8 +394,9 @@ pub(crate) fn eval_numerical_order(
 pub(crate) fn eval_alphabetic_order(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [lhs, rhs] = args else {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     };
@@ -400,8 +424,9 @@ pub(crate) fn eval_alphabetic_order(
 pub(crate) fn eval_between(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() == 1 {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     }
@@ -438,8 +463,9 @@ pub(crate) fn eval_between(
 pub(crate) fn eval_same_q(
     _session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(predicate_bool_expr(
         args.windows(2).all(|pair| pair[0] == pair[1]),
     ))
@@ -448,8 +474,9 @@ pub(crate) fn eval_same_q(
 pub(crate) fn eval_unsame_q(
     _session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     const INDEX_THRESHOLD: usize = 16;
 
     if args.len() <= INDEX_THRESHOLD {

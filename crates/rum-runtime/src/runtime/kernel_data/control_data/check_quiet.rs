@@ -22,7 +22,7 @@ impl Session {
         let message_checkpoint = self.messages.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let primary_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame(primary_result, {
+        let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
             let selectors = selectors.clone();
             let fallback = fallback.clone();
             move |session, outcome| {
@@ -68,7 +68,7 @@ impl Session {
         let message_checkpoint = self.messages.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let primary_result = self.evaluate(args[0].clone());
-        let result = self.suspend_with_result_frame(primary_result, {
+        let result = self.suspend_with_result_frame_lazy(primary_result, || {
             let selectors = selectors.clone();
             move |session, outcome| {
                 session.resume_quiet_after_primary(

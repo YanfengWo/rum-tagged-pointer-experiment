@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_integer_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("IntegerQ", args, 1));
     };
@@ -18,8 +20,9 @@ pub(crate) fn eval_integer_q(
 pub(crate) fn eval_number_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("NumberQ", args, 1));
     };
@@ -33,8 +36,9 @@ pub(crate) fn eval_number_q(
 pub(crate) fn eval_numeric_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("NumericQ", args, 1));
     };
@@ -45,8 +49,9 @@ pub(crate) fn eval_numeric_q(
 pub(crate) fn eval_even_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("EvenQ", args, 1));
     };
@@ -64,8 +69,9 @@ pub(crate) fn eval_even_q(
 pub(crate) fn eval_odd_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("OddQ", args, 1));
     };
@@ -83,8 +89,9 @@ pub(crate) fn eval_odd_q(
 pub(crate) fn eval_positive(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_exact_numeric_sign_predicate_or_inert(session, "Positive", args, |value| {
         value.numerator() > &BigInt::from(0_u8)
     })
@@ -93,8 +100,9 @@ pub(crate) fn eval_positive(
 pub(crate) fn eval_negative(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_exact_numeric_sign_predicate_or_inert(session, "Negative", args, |value| {
         value.numerator() < &BigInt::from(0_u8)
     })
@@ -103,8 +111,9 @@ pub(crate) fn eval_negative(
 pub(crate) fn eval_non_positive(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_exact_numeric_sign_predicate_or_inert(session, "NonPositive", args, |value| {
         value.numerator() <= &BigInt::from(0_u8)
     })
@@ -113,8 +122,9 @@ pub(crate) fn eval_non_positive(
 pub(crate) fn eval_non_negative(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_exact_numeric_sign_predicate_or_inert(session, "NonNegative", args, |value| {
         value.numerator() >= &BigInt::from(0_u8)
     })
@@ -123,16 +133,18 @@ pub(crate) fn eval_non_negative(
 pub(crate) fn eval_possible_zero_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_exact_numeric_sign_predicate(session, "PossibleZeroQ", args, |value| value.is_zero())
 }
 
 pub(crate) fn eval_machine_number_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("MachineNumberQ", args, 1));
     };
@@ -143,8 +155,9 @@ pub(crate) fn eval_machine_number_q(
 pub(crate) fn eval_real_valued_number_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("RealValuedNumberQ", args, 1));
     };
@@ -155,8 +168,9 @@ pub(crate) fn eval_real_valued_number_q(
 pub(crate) fn eval_real_valued_numeric_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("RealValuedNumericQ", args, 1));
     };
@@ -167,8 +181,9 @@ pub(crate) fn eval_real_valued_numeric_q(
 pub(crate) fn eval_prime_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("PrimeQ", args, 1));
     };
@@ -181,8 +196,9 @@ pub(crate) fn eval_prime_q(
 pub(crate) fn eval_algebraic_integer_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("AlgebraicIntegerQ", args, 1));
     };
@@ -193,8 +209,9 @@ pub(crate) fn eval_algebraic_integer_q(
 pub(crate) fn eval_coprime_q(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let Some(values) = args
         .iter()
         .map(exact_integer_value)

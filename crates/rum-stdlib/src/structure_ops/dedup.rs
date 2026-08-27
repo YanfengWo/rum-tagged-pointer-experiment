@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashSet;
 
@@ -46,8 +47,9 @@ struct DeleteDuplicatesTestState {
 pub(crate) fn eval_delete_duplicates(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => eval_delete_duplicates_structural(session, expr, args),
         [expr, test] => eval_delete_duplicates_with_test(session, expr, test, args),
@@ -112,8 +114,9 @@ fn eval_delete_duplicates_with_test(
 pub(crate) fn eval_delete_duplicates_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr, function] = args else {
         return Ok(match args.len() {
             1 => Expr::call(head.clone(), args.to_vec()),
@@ -161,12 +164,14 @@ fn resume_delete_duplicates_by_from_index(
         let key = match session.evaluate(Expr::call(function.clone(), vec![item.clone()])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_delete_duplicates_by_with_key(
-                            session, expr_head, function, items, index, keys, kept, item, key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_delete_duplicates_by_with_key(
+                                session, expr_head, function, items, index, keys, kept, item, key,
+                            )
+                        }
                     },
                 );
             }
@@ -232,10 +237,14 @@ fn resume_delete_duplicates_test_from_kept(
         let value = match result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_delete_duplicates_test_with_value(session, state, kept_index, value)
+                    || {
+                        move |session, value| {
+                            resume_delete_duplicates_test_with_value(
+                                session, state, kept_index, value,
+                            )
+                        }
                     },
                 );
             }

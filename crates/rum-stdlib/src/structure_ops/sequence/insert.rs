@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 // The planner's temporary vectors pay off at 16 paths in the measured
 // crossover; smaller calls keep the allocation-light sequential path.
@@ -12,8 +13,9 @@ struct InsertPathFailure {
 pub(crate) fn eval_insert(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr, item, position] = args else {
         if args.len() == 2 {
             return Ok(Expr::call(head.clone(), args.to_vec()));

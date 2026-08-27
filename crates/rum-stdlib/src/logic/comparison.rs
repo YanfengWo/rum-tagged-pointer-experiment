@@ -1,4 +1,5 @@
 use super::shared::predicate_bool_expr;
+use rum_core::SharedArgs;
 use rum_core::{Atom, Expr, Rational, heads};
 use rum_runtime::kernel_api::{EvalError, Session, system_expr, truthiness_symbol};
 use std::collections::HashSet;
@@ -29,8 +30,9 @@ enum EqualityKnownValue {
 pub(crate) fn eval_equal(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_comparison_subset(
         session,
         head,
@@ -42,8 +44,9 @@ pub(crate) fn eval_equal(
 pub(crate) fn eval_unequal(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_comparison_subset(
         session,
         head,
@@ -55,8 +58,9 @@ pub(crate) fn eval_unequal(
 pub(crate) fn eval_less(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_comparison_subset(
         session,
         head,
@@ -68,8 +72,9 @@ pub(crate) fn eval_less(
 pub(crate) fn eval_greater(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_comparison_subset(
         session,
         head,
@@ -81,8 +86,9 @@ pub(crate) fn eval_greater(
 pub(crate) fn eval_less_equal(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_comparison_subset(
         session,
         head,
@@ -94,8 +100,9 @@ pub(crate) fn eval_less_equal(
 pub(crate) fn eval_greater_equal(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_comparison_subset(
         session,
         head,
@@ -107,8 +114,9 @@ pub(crate) fn eval_greater_equal(
 pub(crate) fn eval_comparison_operator_wrapper(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(Expr::call(head.clone(), args.to_vec()))
 }
 

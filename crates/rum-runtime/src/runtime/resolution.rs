@@ -353,8 +353,7 @@ impl Session {
                 Err(EvalError::InputRequired { request }) => {
                     let current_for_resume = current.clone();
                     let seen_for_resume = fixed_point_seen.clone();
-                    self.suspend_with_frame(
-                        Err(EvalError::InputRequired { request }),
+                    self.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
                         move |session, next| {
                             session.resume_fixed_point_from(
                                 current_for_resume,
@@ -362,8 +361,8 @@ impl Session {
                                 seen_for_resume,
                                 next,
                             )
-                        },
-                    )?
+                        }
+                    })?
                 }
                 Err(error) => return Err(error),
             };
@@ -432,8 +431,7 @@ impl Session {
                 Err(EvalError::InputRequired { request }) => {
                     let current_for_resume = current.clone();
                     let seen_for_resume = fixed_point_seen.clone();
-                    self.suspend_with_frame(
-                        Err(EvalError::InputRequired { request }),
+                    self.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
                         move |session, next| {
                             session.resume_fixed_point_from(
                                 current_for_resume,
@@ -441,8 +439,8 @@ impl Session {
                                 seen_for_resume,
                                 next,
                             )
-                        },
-                    )?
+                        }
+                    })?
                 }
                 Err(error) => return Err(error),
             };

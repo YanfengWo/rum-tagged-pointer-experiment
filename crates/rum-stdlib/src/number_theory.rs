@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Integer, One, Roots, Session, Signed, ThreadArgSpec, ThreadingDispatch, ToPrimitive,
@@ -14,8 +15,9 @@ const SIEVE_WORK_CHUNK: usize = 16;
 pub(crate) fn eval_divisors(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Divisors", args, 1));
     };
@@ -40,8 +42,9 @@ pub(crate) fn eval_divisors(
 pub(crate) fn eval_euler_phi(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("EulerPhi", args, 1));
     };
@@ -68,8 +71,9 @@ pub(crate) fn eval_euler_phi(
 pub(crate) fn eval_moebius_mu(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("MoebiusMu", args, 1));
     };
@@ -99,8 +103,9 @@ pub(crate) fn eval_moebius_mu(
 pub(crate) fn eval_divisor_sigma(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [k_arg, n_arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DivisorSigma", args, 2));
     };
@@ -123,8 +128,9 @@ pub(crate) fn eval_divisor_sigma(
 pub(crate) fn eval_prime(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Prime", args, 1));
     };
@@ -152,8 +158,9 @@ pub(crate) fn eval_prime(
 pub(crate) fn eval_prime_pi(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("PrimePi", args, 1));
     };
@@ -177,8 +184,9 @@ pub(crate) fn eval_prime_pi(
 pub(crate) fn eval_prime_nu(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("PrimeNu", args, 1));
     };
@@ -202,8 +210,9 @@ pub(crate) fn eval_prime_nu(
 pub(crate) fn eval_prime_omega(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("PrimeOmega", args, 1));
     };
@@ -231,8 +240,9 @@ pub(crate) fn eval_prime_omega(
 pub(crate) fn eval_next_prime(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [_] | [_, _] => {}
         _ => return Ok(session.invalid_call_with_arg_range("NextPrime", args, 1, 2)),

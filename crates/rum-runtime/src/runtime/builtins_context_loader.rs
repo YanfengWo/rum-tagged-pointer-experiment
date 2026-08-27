@@ -8,8 +8,9 @@ use self::file_names_glob::{collect_file_name_matches, parse_file_names_args};
 pub(in crate::runtime) fn builtin_file_names(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     session.eval_file_names(args)
 }
 

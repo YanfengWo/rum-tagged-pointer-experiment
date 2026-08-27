@@ -31,7 +31,7 @@ impl Session {
                 runtime_profile_outcome_for_expr_result(&rhs_result),
             );
             let runtime_profile_suspend = runtime_path_timing_start("set.rhs.suspend");
-            let rhs_result = self.suspend_with_frame(rhs_result, {
+            let rhs_result = self.suspend_with_frame_lazy(rhs_result, || {
                 let lhs = lhs.clone();
                 move |session, rhs| session.resume_set_with_rhs(lhs, rhs)
             });
@@ -71,7 +71,7 @@ impl Session {
 
         let lhs = self.evaluate_rule_lhs(args[0].clone())?;
         let rhs_result = self.evaluate(args[1].clone());
-        let rhs = self.suspend_with_frame(rhs_result, {
+        let rhs = self.suspend_with_frame_lazy(rhs_result, || {
             let lhs = lhs.clone();
             move |session, rhs| session.resume_rule_with_rhs(lhs, rhs)
         })?;

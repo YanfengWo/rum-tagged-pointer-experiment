@@ -21,7 +21,7 @@ impl Session {
         }
 
         let value_result = self.evaluate(args[0].clone());
-        let value = self.suspend_with_frame(value_result, {
+        let value = self.suspend_with_frame_lazy(value_result, || {
             let pattern_expr = args[1].clone();
             move |session, value| session.resume_match_q_after_value(pattern_expr, value)
         })?;
@@ -84,7 +84,7 @@ impl Session {
         value: Expr,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame(pattern_result, {
+        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let value = value.clone();
             move |session, resolved| session.finish_match_q_with_pattern(resolved, value)
         })?;

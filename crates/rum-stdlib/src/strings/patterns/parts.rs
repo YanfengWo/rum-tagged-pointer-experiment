@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum StringTakeDropSpec {
@@ -9,8 +10,9 @@ pub(super) enum StringTakeDropSpec {
 pub(crate) fn eval_string_take(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("StringTake", args, 2));
     }
@@ -40,8 +42,9 @@ pub(crate) fn eval_string_take(
 pub(crate) fn eval_string_drop(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("StringDrop", args, 2));
     }
@@ -75,8 +78,9 @@ pub(crate) fn eval_string_drop(
 pub(crate) fn eval_string_part(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("StringPart", args, 2));
     }
@@ -104,8 +108,9 @@ pub(crate) fn eval_string_part(
 pub(crate) fn eval_string_take_drop(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("StringTakeDrop", args, 2));
     }

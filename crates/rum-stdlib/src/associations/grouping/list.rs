@@ -54,13 +54,15 @@ fn resume_group_by_from_index_with_groups(
         {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_group_by_with_key(
-                            session, head, call_args, specs, spec_index, reducer, items, index,
-                            grouped, item, key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_group_by_with_key(
+                                session, head, call_args, specs, spec_index, reducer, items, index,
+                                grouped, item, key,
+                            )
+                        }
                     },
                 );
             }
@@ -73,13 +75,15 @@ fn resume_group_by_from_index_with_groups(
                 match session.evaluate(Expr::call(value_function, vec![item])) {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
-                        return session.suspend_with_frame(
+                        return session.suspend_with_frame_lazy(
                             Err(EvalError::InputRequired { request }),
-                            move |session, value| {
-                                resume_group_by_with_item_value(
-                                    session, head, call_args, specs, spec_index, reducer, items,
-                                    index, grouped, key, value,
-                                )
+                            || {
+                                move |session, value| {
+                                    resume_group_by_with_item_value(
+                                        session, head, call_args, specs, spec_index, reducer,
+                                        items, index, grouped, key, value,
+                                    )
+                                }
                             },
                         );
                     }
@@ -117,13 +121,15 @@ fn resume_group_by_with_key(
     let value = match session.evaluate(Expr::call(value_function, vec![item])) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, value| {
-                    resume_group_by_with_item_value(
-                        session, head, call_args, specs, spec_index, reducer, items, index,
-                        grouped, key, value,
-                    )
+                || {
+                    move |session, value| {
+                        resume_group_by_with_item_value(
+                            session, head, call_args, specs, spec_index, reducer, items, index,
+                            grouped, key, value,
+                        )
+                    }
                 },
             );
         }
@@ -255,13 +261,15 @@ fn resume_group_by_nested_from_index(
         let value = match value_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_group_by_nested_with_value(
-                            session, head, call_args, specs, spec_index, reducer, grouped, index,
-                            nested, key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_group_by_nested_with_value(
+                                session, head, call_args, specs, spec_index, reducer, grouped,
+                                index, nested, key, value,
+                            )
+                        }
                     },
                 );
             }
@@ -322,12 +330,15 @@ fn resume_group_by_reduce_from_index(
         let value = match value_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_group_by_reduce_with_value(
-                            session, head, call_args, reducer, grouped, index, reduced, key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_group_by_reduce_with_value(
+                                session, head, call_args, reducer, grouped, index, reduced, key,
+                                value,
+                            )
+                        }
                     },
                 );
             }

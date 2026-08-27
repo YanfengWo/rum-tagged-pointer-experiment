@@ -1,5 +1,6 @@
 use super::grouping::IndexedGroups;
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
@@ -13,8 +14,9 @@ enum CatenateStep {
 pub(crate) fn eval_catenate(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [associations_expr] = args else {
         return Ok(session.invalid_call_with_message(
             "Catenate",
@@ -50,8 +52,9 @@ pub(crate) fn eval_catenate(
 pub(crate) fn eval_counts(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, spec) = match args {
         [expr] => (expr, None),
         [expr, spec] => (expr, Some(spec)),
@@ -114,8 +117,9 @@ pub(crate) fn eval_counts(
 pub(crate) fn eval_position_index(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_message(
             "PositionIndex",
@@ -168,12 +172,14 @@ fn resume_counts_association_entries_from_index(
             match session.evaluate(entry.value) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_counts_after_association_value(
-                                session, entries, index, values, spec_keys, value,
-                            )
+                        || {
+                            move |session, value| {
+                                resume_counts_after_association_value(
+                                    session, entries, index, values, spec_keys, value,
+                                )
+                            }
                         },
                     );
                 }
@@ -216,12 +222,14 @@ fn resume_catenate_direct_association_entries_from_index(
             match session.evaluate(entry.value) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_catenate_direct_association_value(
-                                session, call_args, entries, index, values, value,
-                            )
+                        || {
+                            move |session, value| {
+                                resume_catenate_direct_association_value(
+                                    session, call_args, entries, index, values, value,
+                                )
+                            }
                         },
                     );
                 }
@@ -309,12 +317,14 @@ fn resume_catenate_steps_from_index(
                     match session.evaluate(value) {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
-                            return session.suspend_with_frame(
+                            return session.suspend_with_frame_lazy(
                                 Err(EvalError::InputRequired { request }),
-                                move |session, value| {
-                                    resume_catenate_after_association_value(
-                                        session, call_args, steps, index, flattened, value,
-                                    )
+                                || {
+                                    move |session, value| {
+                                        resume_catenate_after_association_value(
+                                            session, call_args, steps, index, flattened, value,
+                                        )
+                                    }
                                 },
                             );
                         }

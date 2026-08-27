@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_through(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("Through", args, 1, 2));
     }
@@ -16,8 +18,9 @@ pub(crate) fn eval_through(
 pub(crate) fn eval_operate(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(unary_operator_form("Operate", operator)),
         [operator, level_expr] if expr_as_non_negative_usize(level_expr).is_some() => Ok(

@@ -532,9 +532,11 @@ impl Session {
     pub fn evaluate_with_random_state_restored(&mut self, body: Expr) -> Result<Expr, EvalError> {
         let saved = self.prng_state;
         let result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(result, move |session, outcome| {
-            session.prng_state = saved;
-            outcome
+        let outcome = self.suspend_with_result_frame_lazy(result, || {
+            move |session, outcome| {
+                session.prng_state = saved;
+                outcome
+            }
         });
 
         match outcome {

@@ -203,10 +203,14 @@ fn resume_string_apply_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, evaluated| {
-                        resume_string_apply_with_value(session, state, index, outputs, evaluated)
+                    || {
+                        move |session, evaluated| {
+                            resume_string_apply_with_value(
+                                session, state, index, outputs, evaluated,
+                            )
+                        }
                     },
                 );
             }

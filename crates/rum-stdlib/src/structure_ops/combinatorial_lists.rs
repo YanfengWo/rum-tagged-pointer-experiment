@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_permutations(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Permutations", args, 1));
     };
@@ -43,8 +45,9 @@ pub(crate) fn eval_permutations(
 pub(crate) fn eval_subsets(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, size_spec) = match args {
         [expr] => (expr, None),
         [expr, size_spec] => (expr, Some(size_spec)),
@@ -89,8 +92,9 @@ pub(crate) fn eval_subsets(
 pub(crate) fn eval_tuples(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [factors_expr] => eval_cartesian_tuples(session, head, args, factors_expr),
         [expr, length_expr] => eval_repeated_tuples(session, head, args, expr, length_expr),
@@ -101,8 +105,9 @@ pub(crate) fn eval_tuples(
 pub(crate) fn eval_partition(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, size_expr, offset_expr, alignment_expr, padding_expr) = match args {
         [expr, size_expr] => (expr, size_expr, None, None, None),
         [expr, size_expr, offset_expr] => (expr, size_expr, Some(offset_expr), None, None),

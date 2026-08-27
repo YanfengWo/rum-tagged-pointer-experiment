@@ -1,5 +1,5 @@
 use super::*;
-use rum_runtime::kernel_api::RewriteDataBuiltin;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Debug, PartialEq, Eq, FrameRootTrace)]
@@ -12,8 +12,9 @@ struct ArrayLeafTestState {
 pub(crate) fn eval_vector_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => Ok(predicate_bool_expr(
             array_shape(expr).is_some_and(|shape| shape.len() == 1),
@@ -35,8 +36,9 @@ pub(crate) fn eval_vector_q(
 pub(crate) fn eval_matrix_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => Ok(predicate_bool_expr(
             array_shape(expr).is_some_and(|shape| shape.len() == 2),
@@ -58,8 +60,9 @@ pub(crate) fn eval_matrix_q(
 pub(crate) fn eval_array_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("ArrayQ", args, 1, 3));
     }
@@ -78,10 +81,10 @@ pub(crate) fn eval_array_q(
     let rank_value = match rank_pattern_match_result(session, shape.len(), args[1].clone()) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
-                Err(EvalError::InputRequired { request }),
-                move |session, value| finish_array_q_with_rank_value(session, leaf_test, value),
-            );
+            return session
+                .suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
+                    move |session, value| finish_array_q_with_rank_value(session, leaf_test, value)
+                });
         }
         Err(error) => return Err(error),
     };
@@ -106,12 +109,7 @@ fn rank_pattern_match_result(
     rank: usize,
     pattern: Expr,
 ) -> Result<Expr, EvalError> {
-    let head = system_expr("MatchQ");
-    session.eval_rewrite_data_builtin(
-        RewriteDataBuiltin::MatchQ,
-        &head,
-        &[Expr::integer(BigInt::from(rank)), pattern],
-    )
+    session.eval_match_q_data_builtin(&[Expr::integer(BigInt::from(rank)), pattern])
 }
 
 fn finish_array_q_with_rank_value(
@@ -144,9 +142,13 @@ fn resume_array_leaf_test_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| resume_array_leaf_test_with_value(session, state, value),
+                    || {
+                        move |session, value| {
+                            resume_array_leaf_test_with_value(session, state, value)
+                        }
+                    },
                 );
             }
             Err(error) => return Err(error),

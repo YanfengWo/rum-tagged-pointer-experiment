@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
@@ -113,8 +114,9 @@ fn earlier_index(lhs: Option<usize>, rhs: Option<usize>) -> Option<usize> {
 pub(crate) fn eval_subset_map(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, positions] => Ok(unary_operator_form_with_tail(
             "SubsetMap",
@@ -146,8 +148,9 @@ pub(crate) fn eval_subset_map(
 pub(crate) fn eval_map_at(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, position_spec] => Ok(unary_operator_form_with_tail(
             "MapAt",
@@ -179,8 +182,9 @@ pub(crate) fn eval_map_at(
 pub(crate) fn eval_map_thread(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(unary_operator_form("MapThread", operator)),
         [operator, expr] => finish_map_thread(
@@ -289,10 +293,12 @@ fn resume_map_at_from_index(
         let mapped = match session.evaluate(Expr::call(state.operator.clone(), vec![part])) {
             Ok(mapped) => mapped,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, mapped| {
-                        resume_map_at_with_value(session, state, index, current, mapped)
+                    || {
+                        move |session, mapped| {
+                            resume_map_at_with_value(session, state, index, current, mapped)
+                        }
                     },
                 );
             }
@@ -341,7 +347,7 @@ fn finish_subset_map_from_mapped(
     }
 
     let evaluated_result = session.evaluate(current);
-    session.suspend_with_frame(evaluated_result, |_, value| Ok(value))
+    session.suspend_with_frame_lazy(evaluated_result, || |_, value| Ok(value))
 }
 
 fn map_thread_inputs(
@@ -561,13 +567,13 @@ fn apply_subset_map(
         paths: paths.to_vec(),
         fallback,
     };
-    let suspended_state = state.clone();
     let mapped_result = session.evaluate(Expr::call(
         operator.clone(),
         vec![Expr::call(system_expr("List"), parts)],
     ));
-    let mapped = session.suspend_with_frame(mapped_result, move |session, mapped| {
-        finish_subset_map_from_mapped(session, suspended_state, mapped)
+    let mapped = session.suspend_with_frame_lazy(mapped_result, || {
+        let suspended_state = state.clone();
+        move |session, mapped| finish_subset_map_from_mapped(session, suspended_state, mapped)
     })?;
 
     finish_subset_map_from_mapped(session, state, mapped)

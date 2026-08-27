@@ -19,8 +19,8 @@ impl Session {
                 runtime_profile_evaluate,
                 runtime_profile_outcome_for_expr_result(&rhs_result),
             );
-            let outcome = self.suspend_with_result_frame(rhs_result, |session, outcome| {
-                session.finish_definition_rhs_evaluation(outcome)
+            let outcome = self.suspend_with_result_frame_lazy(rhs_result, || {
+                |session, outcome| session.finish_definition_rhs_evaluation(outcome)
             });
 
             match outcome {

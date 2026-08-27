@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 mod key_collections;
 
@@ -9,8 +10,9 @@ pub(crate) use self::key_collections::{
 pub(crate) fn eval_key_map(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_second("KeyMap", function.clone())),
         [function, expr] => {
@@ -46,8 +48,9 @@ pub(crate) fn eval_key_map(
 pub(crate) fn eval_key_value_map(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_second(
             "KeyValueMap",
@@ -83,8 +86,9 @@ pub(crate) fn eval_key_value_map(
 pub(crate) fn eval_key_sort(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => {
             let Some(mut entries) = keyed_entry_forms_from_expr(expr) else {
@@ -123,8 +127,9 @@ pub(crate) fn eval_key_sort(
 pub(crate) fn eval_association_thread(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (keys_expr, values_expr, delayed) = match args {
         [spec] => {
             let Some(entry) = parse_association_entry_form(spec) else {

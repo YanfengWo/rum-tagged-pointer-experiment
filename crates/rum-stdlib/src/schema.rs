@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::collections::HashMap;
 
 use rum_core::Expr;
@@ -52,14 +53,15 @@ struct SchemaValidator<'a> {
 pub(crate) fn eval_schema_errors(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() == 1 {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     }
     if args.len() >= 2 {
         let value_result = session.evaluate(args[0].clone());
-        let value = session.suspend_with_frame(value_result, {
+        let value = session.suspend_with_frame_lazy(value_result, || {
             let tail = args[1..].to_vec();
             move |session, value| eval_schema_errors_with_value(session, value, &tail)
         })?;
@@ -97,14 +99,15 @@ fn finish_schema_errors(session: &mut Session, args: &[Expr]) -> Result<Expr, Ev
 pub(crate) fn eval_conform_schema(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() == 1 {
         return Ok(Expr::call(head.clone(), args.to_vec()));
     }
     if args.len() >= 2 {
         let value_result = session.evaluate(args[0].clone());
-        let value = session.suspend_with_frame(value_result, {
+        let value = session.suspend_with_frame_lazy(value_result, || {
             let tail = args[1..].to_vec();
             move |session, value| eval_conform_schema_with_value(session, value, &tail)
         })?;

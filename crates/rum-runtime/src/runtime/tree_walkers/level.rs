@@ -4,7 +4,7 @@ impl Session {
     pub(in crate::runtime) fn eval_level(
         &mut self,
         _head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         if !(2..=4).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("Level", args, 2, 4));
@@ -15,7 +15,7 @@ impl Session {
             return Ok(self.invalid_level_spec_call("Level", args, &args[1]));
         };
 
-        let (apply_head, include_heads) = match args {
+        let (apply_head, include_heads) = match args.as_ref() {
             [_, _, third] => match classify_heads_option_expr(third) {
                 HeadsOptionClassification::Value(include_heads) => {
                     (None, include_heads.unwrap_or(default_include_heads))

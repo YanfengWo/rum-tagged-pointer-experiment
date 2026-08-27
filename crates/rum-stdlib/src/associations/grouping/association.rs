@@ -56,13 +56,15 @@ fn resume_association_group_by_from_index_with_groups(
         )) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_association_group_by_with_key(
-                            session, head, call_args, specs, spec_index, reducer, entries, index,
-                            grouped, entry, key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_association_group_by_with_key(
+                                session, head, call_args, specs, spec_index, reducer, entries,
+                                index, grouped, entry, key,
+                            )
+                        }
                     },
                 );
             }
@@ -72,12 +74,14 @@ fn resume_association_group_by_from_index_with_groups(
         let grouped_entry = match spec.value_function {
             None => entry,
             Some(value_function) => {
-                let value =
-                    match session.evaluate(Expr::call(value_function, vec![entry.value.clone()])) {
-                        Ok(value) => value,
-                        Err(EvalError::InputRequired { request }) => {
-                            return session.suspend_with_frame(
-                                Err(EvalError::InputRequired { request }),
+                let value = match session
+                    .evaluate(Expr::call(value_function, vec![entry.value.clone()]))
+                {
+                    Ok(value) => value,
+                    Err(EvalError::InputRequired { request }) => {
+                        return session.suspend_with_frame_lazy(
+                            Err(EvalError::InputRequired { request }),
+                            || {
                                 move |session, value| {
                                     let transformed_entry = AssociationEntryForm { value, ..entry };
                                     resume_association_group_by_with_entry(
@@ -93,11 +97,12 @@ fn resume_association_group_by_from_index_with_groups(
                                         transformed_entry,
                                         key,
                                     )
-                                },
-                            );
-                        }
-                        Err(error) => return Err(error),
-                    };
+                                }
+                            },
+                        );
+                    }
+                    Err(error) => return Err(error),
+                };
                 AssociationEntryForm { value, ..entry }
             }
         };
@@ -132,23 +137,25 @@ fn resume_association_group_by_with_key(
     let value = match session.evaluate(Expr::call(value_function, vec![entry.value.clone()])) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, value| {
-                    let transformed_entry = AssociationEntryForm { value, ..entry };
-                    resume_association_group_by_with_entry(
-                        session,
-                        head,
-                        call_args,
-                        specs,
-                        spec_index,
-                        reducer,
-                        entries,
-                        index,
-                        grouped,
-                        transformed_entry,
-                        key,
-                    )
+                || {
+                    move |session, value| {
+                        let transformed_entry = AssociationEntryForm { value, ..entry };
+                        resume_association_group_by_with_entry(
+                            session,
+                            head,
+                            call_args,
+                            specs,
+                            spec_index,
+                            reducer,
+                            entries,
+                            index,
+                            grouped,
+                            transformed_entry,
+                            key,
+                        )
+                    }
                 },
             );
         }
@@ -286,13 +293,15 @@ fn resume_association_group_by_nested_from_index(
         let value = match value_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_association_group_by_nested_with_value(
-                            session, head, call_args, specs, spec_index, reducer, grouped, index,
-                            nested, key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_association_group_by_nested_with_value(
+                                session, head, call_args, specs, spec_index, reducer, grouped,
+                                index, nested, key, value,
+                            )
+                        }
                     },
                 );
             }
@@ -351,12 +360,15 @@ fn resume_association_group_by_reduce_from_index(
         let value = match value_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_association_group_by_reduce_with_value(
-                            session, head, call_args, reducer, grouped, index, reduced, key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_association_group_by_reduce_with_value(
+                                session, head, call_args, reducer, grouped, index, reduced, key,
+                                value,
+                            )
+                        }
                     },
                 );
             }

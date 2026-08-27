@@ -5,12 +5,14 @@ use super::values::{
     string_pad_left_value, string_pad_right_pieces_value, string_pad_right_value, text_words_value,
 };
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_string_join(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let mut pieces = Vec::new();
 
     if args.len() == 1 {
@@ -39,8 +41,9 @@ pub(crate) fn eval_string_join(
 pub(crate) fn eval_string_length(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("StringLength", args, 1));
     }
@@ -55,8 +58,9 @@ pub(crate) fn eval_string_length(
 pub(crate) fn eval_to_upper_case(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("ToUpperCase", args, 1));
     }
@@ -76,8 +80,9 @@ pub(crate) fn eval_to_upper_case(
 pub(crate) fn eval_string_riffle(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringRiffle", args, 1, 3));
     }
@@ -169,8 +174,9 @@ fn parse_string_riffle_wrapper(expr: &Expr) -> Option<StringRiffleWrapper> {
 pub(crate) fn eval_row(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (items_expr, separator) = match args {
         [items] => (items, String::new()),
         [items, separator] => (items, row_text_piece(separator)),
@@ -200,8 +206,9 @@ pub(crate) fn eval_row(
 pub(crate) fn eval_string_pad_left(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(2..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringPadLeft", args, 2, 3));
     }
@@ -236,8 +243,9 @@ pub(crate) fn eval_string_pad_left(
 pub(crate) fn eval_string_pad_right(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(2..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringPadRight", args, 2, 3));
     }
@@ -324,8 +332,9 @@ fn string_pad_right_with_spec(
 pub(crate) fn eval_string_lines(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("StringLines", args, 1));
     }
@@ -340,8 +349,9 @@ pub(crate) fn eval_string_lines(
 pub(crate) fn eval_text_words(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("TextWords", args, 1));
     }
@@ -365,8 +375,9 @@ pub(crate) fn eval_text_words(
 pub(crate) fn eval_to_character_code(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (input, encoding) = match args {
         [input] => (input, None),
         [input, encoding] => {
@@ -424,8 +435,9 @@ fn utf8_byte_code_expr(value: &str) -> Expr {
 pub(crate) fn eval_to_expression(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("ToExpression", args, 1, 3));
     }
@@ -445,12 +457,12 @@ pub(crate) fn eval_to_expression(
     let syntax = parse_expr(source)?;
     let lowered = session.lower_syntax_expr(&syntax)?;
     let evaluated = session.evaluate(lowered);
-    let value = session.suspend_with_frame(evaluated, |_, value| Ok(value))?;
+    let value = session.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))?;
 
     if let Some(wrapper) = args.get(2) {
         let wrapped = Expr::call(wrapper.clone(), vec![value]);
         let wrapped_result = session.evaluate(wrapped);
-        return session.suspend_with_frame(wrapped_result, |_, value| Ok(value));
+        return session.suspend_with_frame_lazy(wrapped_result, || |_, value| Ok(value));
     }
 
     Ok(value)
@@ -459,8 +471,9 @@ pub(crate) fn eval_to_expression(
 pub(crate) fn eval_syntax_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("SyntaxQ", args, 1));
     }
@@ -475,8 +488,9 @@ pub(crate) fn eval_syntax_q(
 pub(crate) fn eval_text_string(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("TextString", args, 1));
     }
@@ -494,8 +508,9 @@ pub(crate) fn eval_text_string(
 pub(crate) fn eval_character_counts(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("CharacterCounts", args, 1));
     }
@@ -510,8 +525,9 @@ pub(crate) fn eval_character_counts(
 pub(crate) fn eval_remove_diacritics(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("RemoveDiacritics", args, 1));
     }
@@ -535,8 +551,9 @@ pub(crate) fn eval_remove_diacritics(
 pub(crate) fn eval_characters(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("Characters", args, 1));
     }
@@ -556,8 +573,9 @@ pub(crate) fn eval_characters(
 pub(crate) fn eval_character_range(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("CharacterRange", args, 2));
     }
@@ -593,8 +611,9 @@ pub(crate) fn eval_character_range(
 pub(crate) fn eval_to_string(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("ToString", args, 1, 2));
     }
@@ -615,8 +634,9 @@ pub(crate) fn eval_to_string(
 pub(crate) fn eval_string_repeat(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("StringRepeat", args, 2));
     }
@@ -640,8 +660,9 @@ pub(crate) fn eval_string_repeat(
 pub(crate) fn eval_letter_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_string_value_predicate(
         session,
         head,
@@ -654,8 +675,9 @@ pub(crate) fn eval_letter_q(
 pub(crate) fn eval_digit_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(eval_string_value_predicate(
         session,
         head,

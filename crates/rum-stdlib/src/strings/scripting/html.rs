@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[cfg(test)]
 std::thread_local! {
@@ -23,8 +24,9 @@ fn html_unescape_scan_steps() -> usize {
 pub(crate) fn eval_html_escape(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("HtmlEscape", args, 1));
     };
@@ -38,8 +40,9 @@ pub(crate) fn eval_html_escape(
 pub(crate) fn eval_html_unescape(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("HtmlUnescape", args, 1));
     };

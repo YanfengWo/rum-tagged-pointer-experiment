@@ -30,10 +30,12 @@ fn resume_fold_while_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_fold_while_with_step_value(session, state, index, history, value)
+                    || {
+                        move |session, value| {
+                            resume_fold_while_with_step_value(session, state, index, history, value)
+                        }
                     },
                 );
             }
@@ -49,12 +51,14 @@ fn resume_fold_while_from_index(
         let test_value = match session.evaluate(call) {
             Ok(test_value) => test_value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, test_value| {
-                        resume_fold_while_with_test_value(
-                            session, state, next_index, value, history, test_value,
-                        )
+                    || {
+                        move |session, test_value| {
+                            resume_fold_while_with_test_value(
+                                session, state, next_index, value, history, test_value,
+                            )
+                        }
                     },
                 );
             }
@@ -87,12 +91,14 @@ fn resume_fold_while_with_step_value(
     let test_value = match session.evaluate(call) {
         Ok(test_value) => test_value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, test_value| {
-                    resume_fold_while_with_test_value(
-                        session, state, next_index, value, history, test_value,
-                    )
+                || {
+                    move |session, test_value| {
+                        resume_fold_while_with_test_value(
+                            session, state, next_index, value, history, test_value,
+                        )
+                    }
                 },
             );
         }
@@ -165,12 +171,14 @@ fn resume_fold_while_tail_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_fold_while_tail_with_value(
-                            session, state, index, history, remaining, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_fold_while_tail_with_value(
+                                session, state, index, history, remaining, value,
+                            )
+                        }
                     },
                 );
             }

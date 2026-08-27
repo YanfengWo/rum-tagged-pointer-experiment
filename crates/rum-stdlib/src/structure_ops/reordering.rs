@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_reverse(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, levels) = match args {
         [expr] => (expr, ReverseLevels::Selected(BTreeSet::from([1_usize]))),
         [expr, level_spec] => {
@@ -26,8 +28,9 @@ pub(crate) fn eval_reverse(
 pub(crate) fn eval_transpose(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, permutation) = match args {
         [expr] => (expr, TransposePermutation::SwapFirstTwo),
         [expr, permutation] => {

@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, BigInt, Expr, IntValue};
 use rum_runtime::kernel_api::{
     ControlDataBuiltin, EvalError, Session, ToPrimitive, expr_as_symbol, is_system_symbol_name,
@@ -7,7 +8,7 @@ fn dispatch(
     session: &mut Session,
     builtin: ControlDataBuiltin,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     session.eval_control_data_builtin(builtin, head, args)
 }
@@ -15,7 +16,7 @@ fn dispatch(
 pub(crate) fn eval_compound_expression(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::CompoundExpression, head, args)
 }
@@ -23,7 +24,7 @@ pub(crate) fn eval_compound_expression(
 pub(crate) fn eval_if(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::If, head, args)
 }
@@ -31,7 +32,7 @@ pub(crate) fn eval_if(
 pub(crate) fn eval_which(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Which, head, args)
 }
@@ -39,7 +40,7 @@ pub(crate) fn eval_which(
 pub(crate) fn eval_switch(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Switch, head, args)
 }
@@ -47,7 +48,7 @@ pub(crate) fn eval_switch(
 pub(crate) fn eval_do(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     enforce_static_multi_iterator_product(session, args, true, false)?;
     dispatch(session, ControlDataBuiltin::Do, head, args)
@@ -56,7 +57,7 @@ pub(crate) fn eval_do(
 pub(crate) fn eval_product(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     enforce_static_multi_iterator_product(session, args, false, false)?;
     dispatch(session, ControlDataBuiltin::Product, head, args)
@@ -65,7 +66,7 @@ pub(crate) fn eval_product(
 pub(crate) fn eval_sum(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     enforce_static_multi_iterator_product(session, args, false, false)?;
     dispatch(session, ControlDataBuiltin::Sum, head, args)
@@ -74,7 +75,7 @@ pub(crate) fn eval_sum(
 pub(crate) fn eval_while(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::While, head, args)
 }
@@ -82,7 +83,7 @@ pub(crate) fn eval_while(
 pub(crate) fn eval_until(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Until, head, args)
 }
@@ -90,7 +91,7 @@ pub(crate) fn eval_until(
 pub(crate) fn eval_for(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::For, head, args)
 }
@@ -98,7 +99,7 @@ pub(crate) fn eval_for(
 pub(crate) fn eval_table(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     enforce_static_multi_iterator_product(session, args, true, true)?;
     dispatch(session, ControlDataBuiltin::Table, head, args)
@@ -283,7 +284,7 @@ fn static_iterator_value_is_stable(expr: &Expr) -> bool {
 pub(crate) fn eval_abort(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Abort, head, args)
 }
@@ -291,7 +292,7 @@ pub(crate) fn eval_abort(
 pub(crate) fn eval_exit(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Exit, head, args)
 }
@@ -299,7 +300,7 @@ pub(crate) fn eval_exit(
 pub(crate) fn eval_check_abort(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::CheckAbort, head, args)
 }
@@ -307,7 +308,7 @@ pub(crate) fn eval_check_abort(
 pub(crate) fn eval_abort_protect(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::AbortProtect, head, args)
 }
@@ -315,7 +316,7 @@ pub(crate) fn eval_abort_protect(
 pub(crate) fn eval_with_cleanup(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::WithCleanup, head, args)
 }
@@ -323,7 +324,7 @@ pub(crate) fn eval_with_cleanup(
 pub(crate) fn eval_failsafe(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Failsafe, head, args)
 }
@@ -331,7 +332,7 @@ pub(crate) fn eval_failsafe(
 pub(crate) fn eval_assert(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Assert, head, args)
 }
@@ -339,7 +340,7 @@ pub(crate) fn eval_assert(
 pub(crate) fn eval_enclose(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Enclose, head, args)
 }
@@ -347,7 +348,7 @@ pub(crate) fn eval_enclose(
 pub(crate) fn eval_confirm(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Confirm, head, args)
 }
@@ -355,7 +356,7 @@ pub(crate) fn eval_confirm(
 pub(crate) fn eval_confirm_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::ConfirmBy, head, args)
 }
@@ -363,7 +364,7 @@ pub(crate) fn eval_confirm_by(
 pub(crate) fn eval_confirm_match(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::ConfirmMatch, head, args)
 }
@@ -371,7 +372,7 @@ pub(crate) fn eval_confirm_match(
 pub(crate) fn eval_confirm_quiet(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::ConfirmQuiet, head, args)
 }
@@ -379,7 +380,7 @@ pub(crate) fn eval_confirm_quiet(
 pub(crate) fn eval_confirm_assert(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::ConfirmAssert, head, args)
 }
@@ -387,7 +388,7 @@ pub(crate) fn eval_confirm_assert(
 pub(crate) fn eval_return(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Return, head, args)
 }
@@ -395,7 +396,7 @@ pub(crate) fn eval_return(
 pub(crate) fn eval_break(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Break, head, args)
 }
@@ -403,7 +404,7 @@ pub(crate) fn eval_break(
 pub(crate) fn eval_continue(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Continue, head, args)
 }
@@ -411,7 +412,7 @@ pub(crate) fn eval_continue(
 pub(crate) fn eval_throw(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Throw, head, args)
 }
@@ -419,7 +420,7 @@ pub(crate) fn eval_throw(
 pub(crate) fn eval_catch(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Catch, head, args)
 }
@@ -427,7 +428,7 @@ pub(crate) fn eval_catch(
 pub(crate) fn eval_catch_exceptions(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::CatchExceptions, head, args)
 }
@@ -435,7 +436,7 @@ pub(crate) fn eval_catch_exceptions(
 pub(crate) fn eval_throw_exception(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::ThrowException, head, args)
 }
@@ -443,7 +444,7 @@ pub(crate) fn eval_throw_exception(
 pub(crate) fn eval_register_exception_type(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(
         session,
@@ -456,7 +457,7 @@ pub(crate) fn eval_register_exception_type(
 pub(crate) fn eval_exception_types(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::ExceptionTypes, head, args)
 }
@@ -464,7 +465,7 @@ pub(crate) fn eval_exception_types(
 pub(crate) fn eval_failure(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Failure, head, args)
 }
@@ -472,7 +473,7 @@ pub(crate) fn eval_failure(
 pub(crate) fn eval_failure_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::FailureQ, head, args)
 }
@@ -480,7 +481,7 @@ pub(crate) fn eval_failure_q(
 pub(crate) fn eval_success(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ControlDataBuiltin::Success, head, args)
 }
@@ -488,7 +489,7 @@ pub(crate) fn eval_success(
 pub(crate) fn eval_terminated_evaluation(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(
         session,

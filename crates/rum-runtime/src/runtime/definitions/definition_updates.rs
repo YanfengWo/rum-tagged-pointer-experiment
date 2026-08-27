@@ -397,7 +397,7 @@ impl Session {
         return_value: HeldUpdateReturn,
     ) -> Result<Expr, EvalError> {
         let update_result = self.evaluate(update);
-        let updated = self.suspend_with_frame(update_result, {
+        let updated = self.suspend_with_frame_lazy(update_result, || {
             let target = target.clone();
             let return_value = return_value.clone();
             move |session, updated| {

@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, BigInt, Expr};
 use rum_runtime::kernel_api::{
     EvalError, Session, ThreadArgSpec, ThreadingDispatch, expr_as_exact_integer,
@@ -7,8 +8,9 @@ use rum_runtime::kernel_api::{
 pub(crate) fn eval_integer_length(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (value_expr, base_expr) = match args {
         [value] => (value, None),
         [value, base] => (value, Some(base)),
@@ -39,8 +41,9 @@ pub(crate) fn eval_integer_length(
 pub(crate) fn eval_integer_digits(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (value_expr, base_expr, length_expr) = match args {
         [value] => (value, None, None),
         [value, base] => (value, Some(base), None),
@@ -95,8 +98,9 @@ pub(crate) fn eval_integer_digits(
 pub(crate) fn eval_integer_reverse(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if let Some(threaded) = eval_threaded_builtin_args(session, head, args, ThreadArgSpec::All)? {
         return Ok(threaded);
     }
@@ -134,8 +138,9 @@ pub(crate) fn eval_integer_reverse(
 pub(crate) fn eval_from_digits(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (digits_expr, base_expr) = match args {
         [digits] => (digits, None),
         [digits, base] => (digits, Some(base)),
@@ -168,8 +173,9 @@ pub(crate) fn eval_from_digits(
 pub(crate) fn eval_digit_count(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if let Some(threaded) =
         eval_threaded_builtin_args(session, head, args, ThreadArgSpec::Single(1))?
     {

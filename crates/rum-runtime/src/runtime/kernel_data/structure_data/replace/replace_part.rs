@@ -11,7 +11,7 @@ impl Session {
     pub(in crate::runtime) fn eval_replace_part(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         if !(2..=3).contains(&args.len()) {
             return Ok(self.invalid_call_with_arg_range("ReplacePart", args, 2, 3));

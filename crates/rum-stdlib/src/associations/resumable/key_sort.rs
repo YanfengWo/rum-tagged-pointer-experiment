@@ -2,6 +2,7 @@ use super::*;
 use crate::structure_ops::{
     ComparatorResultPolicy, MergeCompletion, MergeSortItem, sort_with_comparator,
 };
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,8 +60,9 @@ struct KeySortByOrderingState {
 pub(crate) fn eval_key_sort_by(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_first(
             "KeySortBy",
@@ -142,12 +144,14 @@ fn resume_key_sort_by_from_index(
         {
             Ok(sort_key) => sort_key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, sort_key| {
-                        resume_key_sort_by_with_value(
-                            session, function, entries, index, decorated, entry, sort_key,
-                        )
+                    || {
+                        move |session, sort_key| {
+                            resume_key_sort_by_with_value(
+                                session, function, entries, index, decorated, entry, sort_key,
+                            )
+                        }
                     },
                 );
             }
@@ -191,11 +195,13 @@ fn resume_key_sort_by_ordering(
             match session.evaluate(Expr::call(state.function.clone(), vec![entry.key.clone()])) {
                 Ok(sort_key) => sort_key,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, sort_key| {
-                            state.decorated.push(KeySortByEntry { entry, sort_key });
-                            resume_key_sort_by_ordering(session, state)
+                        || {
+                            move |session, sort_key| {
+                                state.decorated.push(KeySortByEntry { entry, sort_key });
+                                resume_key_sort_by_ordering(session, state)
+                            }
                         },
                     );
                 }

@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::collections::HashMap;
 
 use super::*;
@@ -79,8 +80,9 @@ impl<'a> JoinKeyLookup<'a> {
 pub(crate) fn eval_join_across(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (left_expr, right_expr, key_spec_expr, join_type_expr) = match args {
         [left, right, key_spec] => (left, right, key_spec, None),
         [left, right, key_spec, join_type] => (left, right, key_spec, Some(join_type)),

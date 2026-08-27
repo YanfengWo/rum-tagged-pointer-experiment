@@ -61,8 +61,8 @@ impl Session {
             runtime_profile_evaluate,
             runtime_profile_outcome_for_expr_result(&applied_result),
         );
-        let outcome = self.suspend_with_result_frame(applied_result, |session, outcome| {
-            session.finish_function_application(outcome)
+        let outcome = self.suspend_with_result_frame_lazy(applied_result, || {
+            |session, outcome| session.finish_function_application(outcome)
         });
 
         match outcome {

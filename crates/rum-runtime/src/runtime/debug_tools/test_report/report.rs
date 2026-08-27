@@ -34,9 +34,9 @@ impl Session {
     pub(in crate::runtime) fn eval_test_report(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let (tests_expr, properties, options) = match args {
+        let (tests_expr, properties, options) = match args.as_ref() {
             [tests_expr] => (tests_expr, None, None),
             [tests_expr, second] => {
                 if let Some(options) = self.parse_test_report_options(second)? {

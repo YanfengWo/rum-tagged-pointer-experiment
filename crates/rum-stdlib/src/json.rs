@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, association_entries_from_expr, expr_as_non_negative_usize, expr_as_string,
@@ -10,8 +11,9 @@ mod encode;
 pub(crate) fn eval_from_json(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [source] = args else {
         return Ok(fail_json(
             session,
@@ -44,8 +46,9 @@ pub(crate) fn eval_from_json(
 pub(crate) fn eval_to_json(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, indent) = match parse_to_json_args(args) {
         Ok(parsed) => parsed,
         Err(message) => {

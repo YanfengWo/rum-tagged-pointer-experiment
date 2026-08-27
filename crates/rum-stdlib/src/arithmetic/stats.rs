@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, ToPrimitive, call_items_with_head, compare_expr_canonical,
@@ -11,8 +12,9 @@ const COMMONEST_INDEX_THRESHOLD: usize = 64;
 pub(crate) fn eval_median(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Median", args, 1));
     };
@@ -42,8 +44,9 @@ pub(crate) fn eval_median(
 pub(crate) fn eval_commonest(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, n_expr) = match args {
         [expr] => (expr, None),
         [expr, n_expr] => (expr, Some(n_expr)),
@@ -110,8 +113,9 @@ fn linear_counts(items: &[Expr]) -> Vec<(Expr, usize)> {
 pub(crate) fn eval_quantile(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr, q_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Quantile", args, 2));
     };
@@ -189,7 +193,7 @@ fn average_pair(session: &mut Session, lhs: Expr, rhs: Expr) -> Result<Expr, Eva
         vec![sum, Expr::integer(BigInt::from(2_u8))],
     );
     let evaluated = session.evaluate(half);
-    session.suspend_with_frame(evaluated, |_, value| Ok(value))
+    session.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))
 }
 
 fn nearest_rank_index(q: &Rational, len: usize) -> usize {

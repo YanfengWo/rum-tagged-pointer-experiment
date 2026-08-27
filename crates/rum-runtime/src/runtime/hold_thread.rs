@@ -22,10 +22,14 @@ impl Session {
         let released = release_hold_once(&args[0]).unwrap_or_else(|| args[0].clone());
 
         let released_result = self.evaluate(released);
-        self.suspend_with_frame(released_result, |_, value| Ok(value))
+        self.suspend_with_frame_lazy(released_result, || |_, value| Ok(value))
     }
 
-    pub(super) fn eval_thread(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(super) fn eval_thread(
+        &mut self,
+        head: &Expr,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
         let ThreadCallConfig {
             expr,
             thread_head,

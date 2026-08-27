@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_file_extension(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [path] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FileExtension", args, 1));
     };
@@ -18,8 +20,9 @@ pub(crate) fn eval_file_extension(
 pub(crate) fn eval_file_base_name(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [path] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FileBaseName", args, 1));
     };
@@ -33,8 +36,9 @@ pub(crate) fn eval_file_base_name(
 pub(crate) fn eval_file_name_split(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [path] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FileNameSplit", args, 1));
     };

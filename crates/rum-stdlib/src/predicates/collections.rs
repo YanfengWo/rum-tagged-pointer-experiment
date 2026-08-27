@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 const STACK_MATCHING_THRESHOLD: usize = 16;
@@ -37,8 +38,9 @@ struct SameTestMatrixState {
 pub(crate) fn eval_duplicate_free_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (data_args, explicit_options) = split_same_test_options(args, 1);
     let [expr] = data_args else {
         return Ok(session.invalid_call_with_exact_arg_count("DuplicateFreeQ", args, 1));
@@ -66,8 +68,9 @@ pub(crate) fn eval_duplicate_free_q(
 pub(crate) fn eval_intersecting_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -84,8 +87,9 @@ pub(crate) fn eval_intersecting_q(
 pub(crate) fn eval_disjoint_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -102,8 +106,9 @@ pub(crate) fn eval_disjoint_q(
 pub(crate) fn eval_subset_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -122,8 +127,9 @@ pub(crate) fn eval_subset_q(
 pub(crate) fn eval_contains_all(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -142,8 +148,9 @@ pub(crate) fn eval_contains_all(
 pub(crate) fn eval_contains_any(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -162,8 +169,9 @@ pub(crate) fn eval_contains_any(
 pub(crate) fn eval_contains_exactly(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -177,8 +185,9 @@ pub(crate) fn eval_contains_exactly(
 pub(crate) fn eval_contains_none(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -197,8 +206,9 @@ pub(crate) fn eval_contains_none(
 pub(crate) fn eval_contains_only(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_list_containment_relation(
         session,
         head,
@@ -371,10 +381,12 @@ fn resume_duplicate_free_same_test(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_duplicate_free_same_test_with_value(session, state, value)
+                    || {
+                        move |session, value| {
+                            resume_duplicate_free_same_test_with_value(session, state, value)
+                        }
                     },
                 );
             }
@@ -451,9 +463,13 @@ fn resume_same_test_matrix(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| resume_same_test_matrix_with_value(session, state, value),
+                    || {
+                        move |session, value| {
+                            resume_same_test_matrix_with_value(session, state, value)
+                        }
+                    },
                 );
             }
             Err(error) => return Err(error),

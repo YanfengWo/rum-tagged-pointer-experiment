@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_atom_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("AtomQ", args, 1));
     };
@@ -15,8 +17,9 @@ pub(crate) fn eval_atom_q(
 pub(crate) fn eval_list_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ListQ", args, 1));
     };
@@ -29,8 +32,9 @@ pub(crate) fn eval_list_q(
 pub(crate) fn eval_string_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("StringQ", args, 1));
     };
@@ -44,8 +48,9 @@ pub(crate) fn eval_string_q(
 pub(crate) fn eval_date_object_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DateObjectQ", args, 1));
     };
@@ -59,8 +64,9 @@ pub(crate) fn eval_date_object_q(
 pub(crate) fn eval_time_object_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("TimeObjectQ", args, 1));
     };

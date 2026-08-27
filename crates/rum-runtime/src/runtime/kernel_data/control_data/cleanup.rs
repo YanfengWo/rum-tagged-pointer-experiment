@@ -12,7 +12,7 @@ impl Session {
             }
             [init, expr, cleanup] => {
                 let init_result = self.evaluate(init.clone());
-                let outcome = self.suspend_with_result_frame(init_result, {
+                let outcome = self.suspend_with_result_frame_lazy(init_result, || {
                     let expr = expr.clone();
                     let cleanup = cleanup.clone();
                     move |session, outcome| {
@@ -53,7 +53,7 @@ impl Session {
         cleanup: Expr,
         primary_result: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
-        let outcome = self.suspend_with_result_frame(primary_result, {
+        let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
             let cleanup = cleanup.clone();
             move |session, primary_outcome| {
                 session.resume_with_cleanup_after_primary(cleanup, primary_outcome)

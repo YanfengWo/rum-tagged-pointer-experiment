@@ -226,7 +226,7 @@ impl Session {
         if delayed {
             let status = status.clone();
             let param_result = self.evaluate(param_value);
-            let param_value = self.suspend_with_frame(param_result, {
+            let param_value = self.suspend_with_frame_lazy(param_result, || {
                 let status = status.clone();
                 let template = template.clone();
                 move |session, param_value| {

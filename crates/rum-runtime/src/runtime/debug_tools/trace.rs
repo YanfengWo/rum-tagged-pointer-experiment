@@ -118,15 +118,17 @@ impl Session {
         let trace_checkpoint = self.trace_events.len();
         self.tracing_enabled = true;
 
-        let suspended_state = state.clone();
         let value_result = self.evaluate(state.original.clone());
-        let outcome = self.suspend_with_result_frame(value_result, move |session, outcome| {
-            session.finish_structured_trace_capture_expr(
-                suspended_state,
-                trace_checkpoint,
-                prior_enabled,
-                outcome,
-            )
+        let outcome = self.suspend_with_result_frame_lazy(value_result, || {
+            let suspended_state = state.clone();
+            move |session, outcome| {
+                session.finish_structured_trace_capture_expr(
+                    suspended_state,
+                    trace_checkpoint,
+                    prior_enabled,
+                    outcome,
+                )
+            }
         });
 
         match outcome {

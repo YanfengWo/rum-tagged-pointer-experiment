@@ -3,24 +3,27 @@ use super::*;
 fn eval_test_register_exception_type(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     session.eval_register_exception_type(head, args)
 }
 
 fn eval_test_throw_exception(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     session.eval_throw_exception(head, args)
 }
 
 fn eval_test_catch_exceptions(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     session.eval_catch_exceptions(args)
 }
 

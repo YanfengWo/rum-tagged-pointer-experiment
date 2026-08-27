@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::collections::HashMap;
 
 use super::grouping::IndexedGroups;
@@ -58,8 +59,9 @@ impl NestedPathNodes {
 pub(crate) fn eval_key_group_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_first(
             "KeyGroupBy",
@@ -100,8 +102,9 @@ pub(crate) fn eval_key_group_by(
 pub(crate) fn eval_association_key_deflatten(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(inert_call(head, args));
     };
@@ -120,8 +123,9 @@ pub(crate) fn eval_association_key_deflatten(
 pub(crate) fn eval_association_key_flatten(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(inert_call(head, args));
     };
@@ -148,22 +152,24 @@ fn resume_key_group_by_from_index(
             return finish_key_group_by_grouped(session, reducer, grouped.into_entries());
         };
 
-        let group_key = match session
-            .evaluate(Expr::call(function.clone(), vec![entry.key.clone()]))
-        {
-            Ok(group_key) => group_key,
-            Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
-                    Err(EvalError::InputRequired { request }),
-                    move |session, group_key| {
-                        resume_key_group_by_with_key(
-                            session, function, reducer, entries, index, grouped, entry, group_key,
-                        )
-                    },
-                );
-            }
-            Err(error) => return Err(error),
-        };
+        let group_key =
+            match session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()])) {
+                Ok(group_key) => group_key,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, group_key| {
+                                resume_key_group_by_with_key(
+                                    session, function, reducer, entries, index, grouped, entry,
+                                    group_key,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
 
         grouped.push(group_key, entry);
         index += 1;
@@ -213,12 +219,14 @@ fn resume_key_group_by_reduce_from_index(
         let value = match session.evaluate(Expr::call(reducer.clone(), vec![group])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_key_group_by_reduce_with_value(
-                            session, reducer, grouped, index, reduced, group_key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_key_group_by_reduce_with_value(
+                                session, reducer, grouped, index, reduced, group_key, value,
+                            )
+                        }
                     },
                 );
             }

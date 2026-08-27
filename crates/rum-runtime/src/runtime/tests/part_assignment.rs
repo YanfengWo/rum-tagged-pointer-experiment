@@ -10,7 +10,12 @@ fn assert_no_false_part_protection(messages: &[RuntimeMessage]) {
     );
 }
 
-fn test_key_builtin(_session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+fn test_key_builtin(
+    _session: &mut Session,
+    head: &Expr,
+    args: &SharedArgs,
+) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(Expr::call(head.clone(), args.to_vec()))
 }
 

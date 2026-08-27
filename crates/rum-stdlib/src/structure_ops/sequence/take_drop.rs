@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum StructuralSequenceSpec {
@@ -17,8 +18,9 @@ enum StructuralSequenceSpec {
 pub(crate) fn eval_take(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.first().is_some_and(crate::lazy::is_lazy_list) {
         return eval_take_lazy_list(session, head, args);
     }
@@ -79,8 +81,9 @@ fn eval_take_lazy_list(
 pub(crate) fn eval_drop(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() < 2 {
         if args.len() == 1 {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -111,8 +114,9 @@ pub(crate) fn eval_drop(
 pub(crate) fn eval_take_drop(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() < 2 {
         return Ok(session.invalid_call_with_message(
             "TakeDrop",

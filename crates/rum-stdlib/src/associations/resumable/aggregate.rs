@@ -1,11 +1,13 @@
 use super::super::grouping::IndexedGroups;
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_merge(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [combiner] => Ok(keyed_operator_form_slot_first("Merge", combiner.clone())),
         [associations_expr, combiner] => {
@@ -50,8 +52,9 @@ pub(crate) fn eval_merge(
 pub(crate) fn eval_merge_nested(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [combiner] => Ok(keyed_operator_form_slot_first(
             "MergeNested",
@@ -81,8 +84,9 @@ pub(crate) fn eval_merge_nested(
 pub(crate) fn eval_counts_by(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(keyed_operator_form_slot_first("CountsBy", function.clone())),
         [expr, function] => {
@@ -129,12 +133,14 @@ fn resume_merge_nested_from_index(
         let value = match evaluate_merge_nested_group(session, combiner.clone(), values) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_merge_nested_with_value(
-                            session, combiner, grouped, index, merged, key, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_merge_nested_with_value(
+                                session, combiner, grouped, index, merged, key, value,
+                            )
+                        }
                     },
                 );
             }
@@ -202,12 +208,14 @@ fn resume_merge_from_index(
         )) {
             Ok(combined) => combined,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, combined| {
-                        resume_merge_with_value(
-                            session, combiner, grouped, index, merged, key, combined,
-                        )
+                    || {
+                        move |session, combined| {
+                            resume_merge_with_value(
+                                session, combiner, grouped, index, merged, key, combined,
+                            )
+                        }
                     },
                 );
             }
@@ -267,12 +275,14 @@ fn resume_counts_by_from_index(
         let key = match session.evaluate(Expr::call(function.clone(), vec![item])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_counts_by_with_value(
-                            session, head, call_args, function, items, index, counts, key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_counts_by_with_value(
+                                session, head, call_args, function, items, index, counts, key,
+                            )
+                        }
                     },
                 );
             }

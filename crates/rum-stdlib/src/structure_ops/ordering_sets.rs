@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -126,8 +127,9 @@ struct SetSameTestState {
 pub(crate) fn eval_sort(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => sort_normal_expression(session, "Sort", args, expr),
         [expr, ordering] => {
@@ -156,8 +158,9 @@ pub(crate) fn eval_sort(
 pub(crate) fn eval_sort_by(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [function] => Ok(sort_by_operator_form(function)),
         [expr, function] => {
@@ -204,8 +207,9 @@ pub(crate) fn eval_sort_by(
 pub(crate) fn eval_union(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(Expr::call(system_expr("List"), Vec::new()));
     }
@@ -241,8 +245,9 @@ pub(crate) fn eval_union(
 pub(crate) fn eval_intersection(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_message(
             "Intersection",
@@ -304,8 +309,9 @@ pub(crate) fn eval_intersection(
 pub(crate) fn eval_complement(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_message(
             "Complement",
@@ -525,10 +531,12 @@ fn resume_set_same_test(
                     match eval_binary_predicate(session, &state.same_test, candidate, existing) {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
-                            return session.suspend_with_frame(
+                            return session.suspend_with_frame_lazy(
                                 Err(EvalError::InputRequired { request }),
-                                move |session, value| {
-                                    resume_set_same_test_with_value(session, state, value)
+                                || {
+                                    move |session, value| {
+                                        resume_set_same_test_with_value(session, state, value)
+                                    }
                                 },
                             );
                         }
@@ -559,10 +567,12 @@ fn resume_set_same_test(
                 {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
-                        return session.suspend_with_frame(
+                        return session.suspend_with_frame_lazy(
                             Err(EvalError::InputRequired { request }),
-                            move |session, value| {
-                                resume_set_same_test_with_value(session, state, value)
+                            || {
+                                move |session, value| {
+                                    resume_set_same_test_with_value(session, state, value)
+                                }
                             },
                         );
                     }
@@ -586,10 +596,12 @@ fn resume_set_same_test(
                 {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
-                        return session.suspend_with_frame(
+                        return session.suspend_with_frame_lazy(
                             Err(EvalError::InputRequired { request }),
-                            move |session, value| {
-                                resume_set_same_test_with_value(session, state, value)
+                            || {
+                                move |session, value| {
+                                    resume_set_same_test_with_value(session, state, value)
+                                }
                             },
                         );
                     }
@@ -701,12 +713,14 @@ fn resume_sort_by_from_index(
         let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_sort_by_with_key(
-                            session, expr_head, function, items, index, decorated, item, key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_sort_by_with_key(
+                                session, expr_head, function, items, index, decorated, item, key,
+                            )
+                        }
                     },
                 );
             }
@@ -756,13 +770,15 @@ fn resume_sort_by_ordering_from_index(
         let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, key| {
-                        resume_sort_by_ordering_with_key(
-                            session, expr_head, function, ordering, items, index, decorated, item,
-                            key,
-                        )
+                    || {
+                        move |session, key| {
+                            resume_sort_by_ordering_with_key(
+                                session, expr_head, function, ordering, items, index, decorated,
+                                item, key,
+                            )
+                        }
                     },
                 );
             }

@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -226,8 +227,9 @@ impl PullStepper {
 pub(crate) fn eval_lazy_drop(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [lazy_list, count_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyDrop", args, 2));
     };
@@ -251,8 +253,9 @@ pub(crate) fn eval_lazy_drop(
 pub(crate) fn eval_lazy_fold_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [function, init, lazy_list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyFoldList", args, 3));
     };
@@ -273,8 +276,9 @@ pub(crate) fn eval_lazy_fold_list(
 pub(crate) fn eval_lazy_map(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [function, lazy_list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyMap", args, 2));
     };
@@ -295,8 +299,9 @@ pub(crate) fn eval_lazy_map(
 pub(crate) fn eval_lazy_nest_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [function, init] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyNestList", args, 2));
     };
@@ -310,8 +315,9 @@ pub(crate) fn eval_lazy_nest_list(
 pub(crate) fn eval_lazy_permutations(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyPermutations", args, 1));
     };
@@ -328,8 +334,9 @@ pub(crate) fn eval_lazy_permutations(
 pub(crate) fn eval_lazy_range(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() > 2 {
         return Ok(session.invalid_call_with_arg_range("LazyRange", args, 0, 2));
     }
@@ -360,8 +367,9 @@ pub(crate) fn eval_lazy_range(
 pub(crate) fn eval_lazy_select(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [predicate, lazy_list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazySelect", args, 2));
     };
@@ -382,8 +390,9 @@ pub(crate) fn eval_lazy_select(
 pub(crate) fn eval_lazy_subsets(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazySubsets", args, 1));
     };
@@ -400,8 +409,9 @@ pub(crate) fn eval_lazy_subsets(
 pub(crate) fn eval_lazy_table(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [body, spec] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyTable", args, 2));
     };
@@ -456,8 +466,9 @@ pub(crate) fn eval_lazy_table(
 pub(crate) fn eval_lazy_take(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [lazy_list, count_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LazyTake", args, 2));
     };
@@ -481,8 +492,9 @@ pub(crate) fn eval_lazy_take(
 pub(crate) fn eval_lazy_tuples(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let list_of_lists = match args {
         [list_of_lists]
             if list_items(list_of_lists)

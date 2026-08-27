@@ -19,70 +19,97 @@ impl CountLikeFinish {
 }
 
 impl Session {
-    pub(in crate::runtime) fn eval_count(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("Count", args));
+    pub(in crate::runtime) fn eval_count(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("Count", args_slice));
         }
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Count", args, 2, 4));
+        if !(2..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("Count", args_slice, 2, 4));
         }
 
-        let call_args = args.to_vec();
-        let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
-            let pattern_expr = args[1].clone();
-            let option_exprs = args[2..].to_vec();
-            let call_args = call_args.clone();
+        let target_result = self.evaluate(args_slice[0].clone());
+        let target = self.suspend_with_frame_lazy(target_result, || {
+            let args = args.clone();
             move |session, target| {
-                session.resume_count_after_target(target, pattern_expr, option_exprs, call_args)
+                session.resume_count_after_target(
+                    target,
+                    args[1].clone(),
+                    args[2..].to_vec(),
+                    args.as_ref().to_vec(),
+                )
             }
         })?;
 
-        self.resume_count_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+        self.resume_count_after_target(
+            target,
+            args_slice[1].clone(),
+            args_slice[2..].to_vec(),
+            args_slice.to_vec(),
+        )
     }
 
-    pub(in crate::runtime) fn eval_member_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("MemberQ", args));
+    pub(in crate::runtime) fn eval_member_q(
+        &mut self,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("MemberQ", args_slice));
         }
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("MemberQ", args, 2, 4));
+        if !(2..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("MemberQ", args_slice, 2, 4));
         }
 
-        let call_args = args.to_vec();
-        let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
-            let pattern_expr = args[1].clone();
-            let option_exprs = args[2..].to_vec();
-            let call_args = call_args.clone();
+        let target_result = self.evaluate(args_slice[0].clone());
+        let target = self.suspend_with_frame_lazy(target_result, || {
+            let args = args.clone();
             move |session, target| {
-                session.resume_member_q_after_target(target, pattern_expr, option_exprs, call_args)
+                session.resume_member_q_after_target(
+                    target,
+                    args[1].clone(),
+                    args[2..].to_vec(),
+                    args.as_ref().to_vec(),
+                )
             }
         })?;
 
-        self.resume_member_q_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+        self.resume_member_q_after_target(
+            target,
+            args_slice[1].clone(),
+            args_slice[2..].to_vec(),
+            args_slice.to_vec(),
+        )
     }
 
-    pub(in crate::runtime) fn eval_free_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("FreeQ", args));
+    pub(in crate::runtime) fn eval_free_q(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("FreeQ", args_slice));
         }
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("FreeQ", args, 2, 4));
+        if !(2..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("FreeQ", args_slice, 2, 4));
         }
 
-        let call_args = args.to_vec();
-        let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
-            let pattern_expr = args[1].clone();
-            let option_exprs = args[2..].to_vec();
-            let call_args = call_args.clone();
+        let target_result = self.evaluate(args_slice[0].clone());
+        let target = self.suspend_with_frame_lazy(target_result, || {
+            let args = args.clone();
             move |session, target| {
-                session.resume_free_q_after_target(target, pattern_expr, option_exprs, call_args)
+                session.resume_free_q_after_target(
+                    target,
+                    args[1].clone(),
+                    args[2..].to_vec(),
+                    args.as_ref().to_vec(),
+                )
             }
         })?;
 
-        self.resume_free_q_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+        self.resume_free_q_after_target(
+            target,
+            args_slice[1].clone(),
+            args_slice[2..].to_vec(),
+            args_slice.to_vec(),
+        )
     }
 
     fn resume_count_after_target(
@@ -93,7 +120,7 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame(pattern_result, {
+        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
             let option_exprs = option_exprs.clone();
             let call_args = call_args.clone();
@@ -135,7 +162,7 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame(pattern_result, {
+        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
             let option_exprs = option_exprs.clone();
             let call_args = call_args.clone();
@@ -177,7 +204,7 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame(pattern_result, {
+        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
             let option_exprs = option_exprs.clone();
             let call_args = call_args.clone();

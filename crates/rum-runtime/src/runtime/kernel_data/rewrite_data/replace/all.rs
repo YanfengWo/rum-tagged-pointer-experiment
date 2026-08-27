@@ -13,7 +13,7 @@ impl Session {
         }
 
         let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
+        let target = self.suspend_with_frame_lazy(target_result, || {
             let rules_expr = args[1].clone();
             move |session, target| session.resume_replace_all_after_target(target, rules_expr)
         })?;
@@ -55,7 +55,7 @@ impl Session {
             return Ok(replaced);
         }
         let replaced_result = self.evaluate(replaced);
-        self.suspend_with_frame(replaced_result, |_, value| Ok(value))
+        self.suspend_with_frame_lazy(replaced_result, || |_, value| Ok(value))
     }
 
     pub(in crate::runtime) fn eval_replace_all_unheld(
@@ -70,7 +70,7 @@ impl Session {
         }
 
         let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
+        let target = self.suspend_with_frame_lazy(target_result, || {
             let rules_expr = args[1].clone();
             move |session, target| {
                 session.resume_replace_all_unheld_after_target(target, rules_expr)
@@ -115,6 +115,6 @@ impl Session {
             return Ok(replaced);
         }
         let replaced_result = self.evaluate(replaced);
-        self.suspend_with_frame(replaced_result, |_, value| Ok(value))
+        self.suspend_with_frame_lazy(replaced_result, || |_, value| Ok(value))
     }
 }

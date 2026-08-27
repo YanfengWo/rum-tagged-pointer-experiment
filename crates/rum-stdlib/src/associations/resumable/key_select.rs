@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_key_select(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [criterion] => Ok(keyed_operator_form_slot_first(
             "KeySelect",
@@ -47,12 +49,14 @@ fn resume_key_select_from_index(
         let criterion_result = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, outcome| {
-                        resume_key_select_with_value(
-                            session, entries, criterion, index, selected, entry, outcome,
-                        )
+                    || {
+                        move |session, outcome| {
+                            resume_key_select_with_value(
+                                session, entries, criterion, index, selected, entry, outcome,
+                            )
+                        }
                     },
                 );
             }

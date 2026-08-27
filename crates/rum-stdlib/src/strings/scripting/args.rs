@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_parse_args(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [items, option_args @ ..] = args else {
         return Ok(session.invalid_call_with_arg_range("ParseArgs", args, 1, usize::MAX));
     };

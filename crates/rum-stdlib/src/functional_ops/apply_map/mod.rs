@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 mod normalize;
 mod traversal;
@@ -12,8 +13,9 @@ use self::traversal::{
 pub(crate) fn eval_comap(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_comap_call(session, head, args) {
         CommonArgMapNormalization::OperatorForm(expr)
         | CommonArgMapNormalization::Immediate(expr) => Ok(expr),
@@ -33,8 +35,9 @@ pub(crate) fn eval_comap(
 pub(crate) fn eval_comap_apply(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_comap_apply_call(session, head, args) {
         CommonArgMapNormalization::OperatorForm(expr)
         | CommonArgMapNormalization::Immediate(expr) => Ok(expr),
@@ -56,8 +59,9 @@ pub(crate) fn eval_comap_apply(
 pub(crate) fn eval_map_indexed(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_map_like_call(session, head, args, MapLikeFlavor::MapIndexed) {
         MapLikeNormalization::OperatorForm(expr) | MapLikeNormalization::Immediate(expr) => {
             Ok(expr)
@@ -73,8 +77,9 @@ pub(crate) fn eval_map_indexed(
 pub(crate) fn eval_map(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_map_like_call(session, head, args, MapLikeFlavor::Map) {
         MapLikeNormalization::OperatorForm(expr) | MapLikeNormalization::Immediate(expr) => {
             Ok(expr)
@@ -90,8 +95,9 @@ pub(crate) fn eval_map(
 pub(crate) fn eval_map_all(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_map_all_call(session, head, args) {
         MapLikeNormalization::OperatorForm(expr) | MapLikeNormalization::Immediate(expr) => {
             Ok(expr)
@@ -107,8 +113,9 @@ pub(crate) fn eval_map_all(
 pub(crate) fn eval_scan(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_map_like_call(session, head, args, MapLikeFlavor::Scan) {
         MapLikeNormalization::OperatorForm(expr) | MapLikeNormalization::Immediate(expr) => {
             Ok(expr)
@@ -127,8 +134,9 @@ pub(crate) fn eval_scan(
 pub(crate) fn eval_apply(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_apply_call(session, head, args, ApplyFlavor::Apply) {
         ApplyNormalization::OperatorForm(expr) | ApplyNormalization::Immediate(expr) => Ok(expr),
         ApplyNormalization::Call {
@@ -142,8 +150,9 @@ pub(crate) fn eval_apply(
 pub(crate) fn eval_map_apply(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match normalize_apply_call(session, head, args, ApplyFlavor::MapApply) {
         ApplyNormalization::OperatorForm(expr) | ApplyNormalization::Immediate(expr) => Ok(expr),
         ApplyNormalization::Call {

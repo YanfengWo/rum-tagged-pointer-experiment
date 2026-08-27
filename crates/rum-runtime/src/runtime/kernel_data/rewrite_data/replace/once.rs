@@ -1,42 +1,45 @@
 use super::*;
 
 impl Session {
-    pub(in crate::runtime) fn eval_replace(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("Replace", args));
+    pub(in crate::runtime) fn eval_replace(
+        &mut self,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("Replace", args_slice));
         }
-        if args.len() < 2 {
-            return Ok(self.invalid_call_with_arg_range("Replace", args, 2, 3));
+        if args_slice.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("Replace", args_slice, 2, 3));
         }
-        let Some((levels_expr, heads_option_exprs)) = partition_replace_trailing_args(&args[2..])
+        let Some((levels_expr, heads_option_exprs)) =
+            partition_replace_trailing_args(&args_slice[2..])
         else {
-            return Ok(self.invalid_call_with_arg_range("Replace", args, 2, 3));
+            return Ok(self.invalid_call_with_arg_range("Replace", args_slice, 2, 3));
         };
 
-        let call_args = args.to_vec();
-        let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
-            let rules_expr = args[1].clone();
+        let target_result = self.evaluate(args_slice[0].clone());
+        let target = self.suspend_with_frame_lazy(target_result, || {
+            let args = args.clone();
             let levels_expr = levels_expr.clone();
             let heads_option_exprs = heads_option_exprs.clone();
-            let call_args = call_args.clone();
             move |session, target| {
                 session.resume_replace_after_target(
                     target,
-                    rules_expr,
+                    args[1].clone(),
                     levels_expr,
                     heads_option_exprs,
-                    call_args,
+                    args.as_ref().to_vec(),
                 )
             }
         })?;
 
         self.resume_replace_after_target(
             target,
-            args[1].clone(),
+            args_slice[1].clone(),
             levels_expr,
             heads_option_exprs,
-            call_args,
+            args_slice.to_vec(),
         )
     }
 
@@ -107,7 +110,7 @@ impl Session {
                     session.replace_owned(target, rule_plan, levels, 0, include_heads);
                 session.drive_internal_value(replaced_result, move |session, outcome| {
                     let evaluated_result = session.evaluate(outcome.expr);
-                    session.suspend_with_frame(evaluated_result, |_, value| Ok(value))
+                    session.suspend_with_frame_lazy(evaluated_result, || |_, value| Ok(value))
                 })
             })
         })

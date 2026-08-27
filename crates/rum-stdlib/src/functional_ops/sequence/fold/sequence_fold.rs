@@ -45,10 +45,12 @@ fn resume_sequence_fold_from_offset(
         let value = match session.evaluate(Expr::call(state.operator.clone(), call_args)) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_sequence_fold_with_value(session, state, offset, history, value)
+                    || {
+                        move |session, value| {
+                            resume_sequence_fold_with_value(session, state, offset, history, value)
+                        }
                     },
                 );
             }

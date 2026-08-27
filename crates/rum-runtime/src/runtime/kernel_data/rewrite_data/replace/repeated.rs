@@ -3,40 +3,45 @@ use super::*;
 impl Session {
     pub(in crate::runtime) fn eval_replace_repeated(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("ReplaceRepeated", args));
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("ReplaceRepeated", args_slice));
         }
-        let max_iterations_expr = match args {
+        let max_iterations_expr = match args_slice {
             [_, _] => None,
             [_, _, option] if replace_repeated_max_iterations_option_value(option).is_some() => {
                 Some(option.clone())
             }
-            _ => return Ok(self.invalid_call_with_exact_arg_count("ReplaceRepeated", args, 2)),
+            _ => {
+                return Ok(self.invalid_call_with_exact_arg_count(
+                    "ReplaceRepeated",
+                    args_slice,
+                    2,
+                ));
+            }
         };
 
-        let call_args = args.to_vec();
-        let current_result = self.evaluate(args[0].clone());
-        let current = self.suspend_with_frame(current_result, {
-            let rules_expr = args[1].clone();
+        let current_result = self.evaluate(args_slice[0].clone());
+        let current = self.suspend_with_frame_lazy(current_result, || {
+            let args = args.clone();
             let max_iterations_expr = max_iterations_expr.clone();
-            let call_args = call_args.clone();
             move |session, current| {
                 session.resume_replace_repeated_after_current(
                     current,
-                    rules_expr,
+                    args[1].clone(),
                     max_iterations_expr,
-                    call_args,
+                    args.as_ref().to_vec(),
                 )
             }
         })?;
 
         self.resume_replace_repeated_after_current(
             current,
-            args[1].clone(),
+            args_slice[1].clone(),
             max_iterations_expr,
-            call_args,
+            args_slice.to_vec(),
         )
     }
 
@@ -132,7 +137,7 @@ impl Session {
             RuleApplicationSource::ReplaceRepeated,
         )?;
         let next_result = self.evaluate(replaced);
-        let next = self.suspend_with_frame(next_result, {
+        let next = self.suspend_with_frame_lazy(next_result, || {
             let current = current.clone();
             let rules = rules.clone();
             move |session, next| {

@@ -10,30 +10,32 @@ const ACTIVE_MEMORY_LIMIT_CHECK_STRIDE: u32 = 64;
 impl Session {
     pub(in crate::runtime) fn eval_time_constrained(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let (body, limit_expr, fallback) = match args {
+        let args_slice = args.as_ref();
+        let (body, limit_expr, fallback) = match args_slice {
             [body, limit] => (body.clone(), limit, None),
             [body, limit, fallback] => (body.clone(), limit, Some(fallback.clone())),
             _ => {
-                return Ok(self.invalid_call_with_arg_range("TimeConstrained", args, 2, 3));
+                return Ok(self.invalid_call_with_arg_range("TimeConstrained", args_slice, 2, 3));
             }
         };
 
-        let raw_args = args.to_vec();
-        let suspended_body = body.clone();
-        let suspended_fallback = fallback.clone();
         let resolved_result = self.evaluate(limit_expr.clone());
-        let resolved_limit =
-            self.suspend_with_frame(resolved_result, move |session, resolved| {
+        let resolved_limit = self.suspend_with_frame_lazy(resolved_result, || {
+            let args = args.clone();
+            let suspended_body = body.clone();
+            let suspended_fallback = fallback.clone();
+            move |session, resolved| {
                 session.resume_time_constrained_with_limit(
                     suspended_body,
                     suspended_fallback,
-                    raw_args,
+                    args.as_ref().to_vec(),
                     resolved,
                 )
-            })?;
-        self.resume_time_constrained_with_limit(body, fallback, args.to_vec(), resolved_limit)
+            }
+        })?;
+        self.resume_time_constrained_with_limit(body, fallback, args_slice.to_vec(), resolved_limit)
     }
 
     fn resume_time_constrained_with_limit(
@@ -56,7 +58,7 @@ impl Session {
         self.current_time_deadline = Some(next_deadline);
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let fallback = fallback.clone();
             move |session, outcome| {
                 session.finish_time_constrained(outcome, prior_deadline, fallback)
@@ -71,30 +73,37 @@ impl Session {
 
     pub(in crate::runtime) fn eval_memory_constrained(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let (body, limit_expr, fallback) = match args {
+        let args_slice = args.as_ref();
+        let (body, limit_expr, fallback) = match args_slice {
             [body, limit] => (body.clone(), limit, None),
             [body, limit, fallback] => (body.clone(), limit, Some(fallback.clone())),
             _ => {
-                return Ok(self.invalid_call_with_arg_range("MemoryConstrained", args, 2, 3));
+                return Ok(self.invalid_call_with_arg_range("MemoryConstrained", args_slice, 2, 3));
             }
         };
 
-        let raw_args = args.to_vec();
-        let suspended_body = body.clone();
-        let suspended_fallback = fallback.clone();
         let resolved_result = self.evaluate(limit_expr.clone());
-        let resolved_limit =
-            self.suspend_with_frame(resolved_result, move |session, resolved| {
+        let resolved_limit = self.suspend_with_frame_lazy(resolved_result, || {
+            let args = args.clone();
+            let suspended_body = body.clone();
+            let suspended_fallback = fallback.clone();
+            move |session, resolved| {
                 session.resume_memory_constrained_with_limit(
                     suspended_body,
                     suspended_fallback,
-                    raw_args,
+                    args.as_ref().to_vec(),
                     resolved,
                 )
-            })?;
-        self.resume_memory_constrained_with_limit(body, fallback, args.to_vec(), resolved_limit)
+            }
+        })?;
+        self.resume_memory_constrained_with_limit(
+            body,
+            fallback,
+            args_slice.to_vec(),
+            resolved_limit,
+        )
     }
 
     fn resume_memory_constrained_with_limit(
@@ -116,7 +125,7 @@ impl Session {
         self.current_memory_limit = Some(prior_limit.map_or(limit, |current| current.min(limit)));
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let fallback = fallback.clone();
             move |session, outcome| {
                 session.finish_memory_constrained(outcome, prior_limit, fallback)
@@ -228,7 +237,7 @@ impl Session {
             Err(EvalError::TimeConstraintExceeded) => match fallback {
                 Some(expr) => {
                     let fallback_result = self.evaluate(expr);
-                    self.suspend_with_frame(fallback_result, |_, value| Ok(value))
+                    self.suspend_with_frame_lazy(fallback_result, || |_, value| Ok(value))
                 }
                 None => Ok(system_expr("$Aborted")),
             },
@@ -249,7 +258,7 @@ impl Session {
             Err(EvalError::MemoryConstraintExceeded { .. }) => match fallback {
                 Some(expr) => {
                     let fallback_result = self.evaluate(expr);
-                    self.suspend_with_frame(fallback_result, |_, value| Ok(value))
+                    self.suspend_with_frame_lazy(fallback_result, || |_, value| Ok(value))
                 }
                 None => Ok(system_expr("$Aborted")),
             },

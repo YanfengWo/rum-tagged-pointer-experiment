@@ -114,8 +114,8 @@ impl Session {
                     runtime_profile_body,
                     runtime_profile_outcome_for_expr_result(&result),
                 );
-                let outcome = self.suspend_with_result_frame(result, move |session, outcome| {
-                    session.finish_module_scope(activation_depth, outcome)
+                let outcome = self.suspend_with_result_frame_lazy(result, || {
+                    move |session, outcome| session.finish_module_scope(activation_depth, outcome)
                 });
 
                 let result = match outcome {

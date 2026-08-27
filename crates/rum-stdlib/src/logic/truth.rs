@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::collections::HashSet;
 
 use super::shared::{negated_relation_head_name, predicate_bool_expr};
@@ -9,40 +10,45 @@ use rum_runtime::kernel_api::{
 pub(crate) fn eval_and(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     resume_and_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
 pub(crate) fn eval_or(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     resume_or_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
 pub(crate) fn eval_nand(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     resume_nand_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
 pub(crate) fn eval_nor(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     resume_nor_from_index(session, args.to_vec(), 0, Vec::new())
 }
 
 pub(crate) fn eval_xor(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     const INDEX_THRESHOLD: usize = 16;
 
     let mut invert = false;
@@ -87,8 +93,9 @@ pub(crate) fn eval_xor(
 pub(crate) fn eval_equivalent(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     const INDEX_THRESHOLD: usize = 16;
 
     let mut saw_true = false;
@@ -123,8 +130,9 @@ pub(crate) fn eval_equivalent(
 pub(crate) fn eval_implies(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [lhs, rhs] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Implies", args, 2));
     };
@@ -144,8 +152,9 @@ pub(crate) fn eval_implies(
 pub(crate) fn eval_not(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Not", args, 1));
     };
@@ -167,10 +176,12 @@ fn resume_and_from_index(
             match session.evaluate(arg) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_and_with_value(session, args, index, residual, value)
+                        || {
+                            move |session, value| {
+                                resume_and_with_value(session, args, index, residual, value)
+                            }
                         },
                     );
                 }
@@ -220,10 +231,12 @@ fn resume_or_from_index(
             match session.evaluate(arg) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_or_with_value(session, args, index, residual, value)
+                        || {
+                            move |session, value| {
+                                resume_or_with_value(session, args, index, residual, value)
+                            }
                         },
                     );
                 }
@@ -273,10 +286,12 @@ fn resume_nand_from_index(
             match session.evaluate(arg) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_nand_with_value(session, args, index, residual, value)
+                        || {
+                            move |session, value| {
+                                resume_nand_with_value(session, args, index, residual, value)
+                            }
                         },
                     );
                 }
@@ -326,10 +341,12 @@ fn resume_nor_from_index(
             match session.evaluate(arg) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, value| {
-                            resume_nor_with_value(session, args, index, residual, value)
+                        || {
+                            move |session, value| {
+                                resume_nor_with_value(session, args, index, residual, value)
+                            }
                         },
                     );
                 }

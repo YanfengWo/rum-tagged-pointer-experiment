@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::collections::{HashMap, HashSet};
 
 use rum_core::{Atom, Expr};
@@ -90,8 +91,9 @@ struct CsvRow {
 pub(crate) fn eval_from_csv(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (source, config) = match parse_from_csv_args(args) {
         Ok(parsed) => parsed,
         Err(message) => return Ok(fail_csv(session, "FromCsv", message)),
@@ -106,8 +108,9 @@ pub(crate) fn eval_from_csv(
 pub(crate) fn eval_to_csv(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (rows, config) = match parse_to_csv_args(args) {
         Ok(parsed) => parsed,
         Err(message) => return Ok(fail_csv(session, "ToCsv", message)),

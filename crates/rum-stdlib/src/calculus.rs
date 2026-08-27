@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, expr_as_exact_integer, expr_as_exact_rational, expr_as_non_negative_usize,
@@ -12,7 +13,12 @@ struct DerivativeSpec {
     order: usize,
 }
 
-pub(crate) fn eval_d(session: &mut Session, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
+pub(crate) fn eval_d(
+    session: &mut Session,
+    head: &Expr,
+    args: &SharedArgs,
+) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() < 2 {
         return Ok(session.invalid_call_with_message(
             "D",

@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_key_member_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, key) = match args {
         [key] => return Ok(keyed_operator_form_slot_first("KeyMemberQ", key.clone())),
         [expr, key] => (expr, key),
@@ -36,8 +38,9 @@ pub(crate) fn eval_key_member_q(
 pub(crate) fn eval_key_free_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, key) = match args {
         [key] => return Ok(keyed_operator_form_slot_first("KeyFreeQ", key.clone())),
         [expr, key] => (expr, key),

@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FlattenDepth {
@@ -22,8 +23,9 @@ enum FlattenSpecError {
 pub(crate) fn eval_flatten(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let expr = match args {
         [expr] | [expr, _] | [expr, _, _] => expr,
         _ => return Ok(session.invalid_call_with_arg_range("Flatten", args, 1, 3)),

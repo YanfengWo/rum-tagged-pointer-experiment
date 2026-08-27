@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum TemplateSegment {
@@ -10,8 +11,9 @@ enum TemplateSegment {
 pub(crate) fn eval_string_form(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_arg_range("StringForm", args, 1, usize::MAX));
     }
@@ -29,8 +31,9 @@ pub(crate) fn eval_string_form(
 pub(crate) fn eval_string_template(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("StringTemplate", args, 1));
     }
@@ -45,8 +48,9 @@ pub(crate) fn eval_string_template(
 pub(crate) fn eval_template_apply(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [template] => Ok(Expr::call(
             system_expr("Function"),

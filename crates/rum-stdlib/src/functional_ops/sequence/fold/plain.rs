@@ -27,10 +27,12 @@ fn resume_fold_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_fold_with_value(session, state, index, history, value)
+                    || {
+                        move |session, value| {
+                            resume_fold_with_value(session, state, index, history, value)
+                        }
                     },
                 );
             }

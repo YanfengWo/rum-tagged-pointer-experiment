@@ -5,8 +5,9 @@ fn key_selector(key: Expr) -> Expr {
 }
 
 fn part_value(session: &mut Session, target: &Expr, selector: Expr) -> Expr {
+    let args = SharedArgs::new(vec![target.clone(), selector]);
     session
-        .eval_part(&system_expr("Part"), &[target.clone(), selector])
+        .eval_part(&system_expr("Part"), &args)
         .expect("Part selection should not fail evaluation")
 }
 

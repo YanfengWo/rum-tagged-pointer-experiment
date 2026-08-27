@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TruthAggregateKind {
@@ -10,8 +11,9 @@ enum TruthAggregateKind {
 pub(crate) fn eval_true_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("TrueQ", args, 1));
     };
@@ -25,8 +27,9 @@ pub(crate) fn eval_true_q(
 pub(crate) fn eval_boolean_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("BooleanQ", args, 1));
     };
@@ -37,8 +40,9 @@ pub(crate) fn eval_boolean_q(
 pub(crate) fn eval_boole(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Boole", args, 1));
     };
@@ -53,24 +57,27 @@ pub(crate) fn eval_boole(
 pub(crate) fn eval_all_true(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_truth_aggregate(session, head, args, TruthAggregateKind::All)
 }
 
 pub(crate) fn eval_any_true(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_truth_aggregate(session, head, args, TruthAggregateKind::Any)
 }
 
 pub(crate) fn eval_none_true(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_truth_aggregate(session, head, args, TruthAggregateKind::None)
 }
 
@@ -131,20 +138,22 @@ fn resume_truth_aggregate_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_truth_aggregate_with_value(
-                            session,
-                            kind,
-                            head,
-                            call_args,
-                            parts,
-                            criterion,
-                            index,
-                            saw_unknown,
-                            value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_truth_aggregate_with_value(
+                                session,
+                                kind,
+                                head,
+                                call_args,
+                                parts,
+                                criterion,
+                                index,
+                                saw_unknown,
+                                value,
+                            )
+                        }
                     },
                 );
             }

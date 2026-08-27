@@ -48,9 +48,9 @@ impl Session {
     pub(in crate::runtime) fn eval_information(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let [target] = args else {
+        let [target] = args.as_ref() else {
             return Ok(self.invalid_call_with_arg_range("Information", args, 1, 1));
         };
 

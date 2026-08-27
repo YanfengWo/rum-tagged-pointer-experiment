@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Debug, PartialEq, Eq, FrameRootTrace)]
@@ -36,8 +37,9 @@ struct OuterHeadMismatch {
 pub(crate) fn eval_array(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (operator, dims_expr, origins_expr, output_head) = match args {
         [operator, dims] => (operator.clone(), dims, None, system_expr("List")),
         [operator, dims, origins] => (operator.clone(), dims, Some(origins), system_expr("List")),
@@ -87,8 +89,9 @@ pub(crate) fn eval_array(
 pub(crate) fn eval_outer(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() < 3 {
         return Ok(session.invalid_call_with_arg_range("Outer", args, 3, usize::MAX));
     }
@@ -189,10 +192,12 @@ fn resume_array_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_array_with_value(session, state, index, outputs, value)
+                    || {
+                        move |session, value| {
+                            resume_array_with_value(session, state, index, outputs, value)
+                        }
                     },
                 );
             }
@@ -234,10 +239,12 @@ fn resume_outer_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_outer_with_value(session, state, index, outputs, value)
+                    || {
+                        move |session, value| {
+                            resume_outer_with_value(session, state, index, outputs, value)
+                        }
                     },
                 );
             }

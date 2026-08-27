@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{BigInt, Expr, Rational};
 use rum_runtime::kernel_api::{
     EvalError, Session, ToPrimitive, expr_as_exact_integer, system_expr,
@@ -8,8 +9,9 @@ use crate::number_theory::IntegerWorkBudget;
 pub(crate) fn eval_binomial(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("Binomial", args, 2));
     }
@@ -28,8 +30,9 @@ pub(crate) fn eval_binomial(
 pub(crate) fn eval_fibonacci(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Fibonacci", args, 1));
     };
@@ -46,8 +49,9 @@ pub(crate) fn eval_fibonacci(
 pub(crate) fn eval_partitions_p(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("PartitionsP", args, 1));
     };
@@ -71,8 +75,9 @@ pub(crate) fn eval_partitions_p(
 pub(crate) fn eval_partitions_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("PartitionsQ", args, 1));
     };
@@ -96,8 +101,9 @@ pub(crate) fn eval_partitions_q(
 pub(crate) fn eval_bernoulli_b(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("BernoulliB", args, 1));
     };
@@ -118,8 +124,9 @@ pub(crate) fn eval_bernoulli_b(
 pub(crate) fn eval_subfactorial(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Subfactorial", args, 1));
     };
@@ -143,8 +150,9 @@ pub(crate) fn eval_subfactorial(
 pub(crate) fn eval_stirling_s1(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [n_arg, k_arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("StirlingS1", args, 2));
     };
@@ -169,8 +177,9 @@ pub(crate) fn eval_stirling_s1(
 pub(crate) fn eval_stirling_s2(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [n_arg, k_arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("StirlingS2", args, 2));
     };
@@ -195,8 +204,9 @@ pub(crate) fn eval_stirling_s2(
 pub(crate) fn eval_catalan_number(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("CatalanNumber", args, 1));
     };
@@ -219,8 +229,9 @@ pub(crate) fn eval_catalan_number(
 pub(crate) fn eval_multinomial(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let mut values = Vec::with_capacity(args.len());
     for arg in args {
         let Some(value) = expr_as_exact_integer(arg) else {
@@ -241,8 +252,9 @@ pub(crate) fn eval_multinomial(
 pub(crate) fn eval_pochhammer(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [base, count] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Pochhammer", args, 2));
     };

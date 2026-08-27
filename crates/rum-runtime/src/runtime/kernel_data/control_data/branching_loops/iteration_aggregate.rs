@@ -65,7 +65,7 @@ impl Session {
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
-        let spec_expr = self.suspend_with_frame(spec_result, {
+        let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
             let args = args.clone();
             move |session, spec_expr| {
                 session.finish_iteration_aggregate_spec_eval(aggregate, args, spec_index, spec_expr)

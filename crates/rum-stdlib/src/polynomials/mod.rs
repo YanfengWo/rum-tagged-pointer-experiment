@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use std::collections::BTreeSet;
 
 use rum_core::{Atom, BigInt, Expr, Rational, SYSTEM_CONTEXT};
@@ -21,8 +22,9 @@ use self::{
 pub(crate) fn eval_expand(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("Expand", args, 1));
     }
@@ -37,8 +39,9 @@ pub(crate) fn eval_expand(
 pub(crate) fn eval_coefficient(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(2..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("Coefficient", args, 2, 3));
     }
@@ -81,8 +84,9 @@ pub(crate) fn eval_coefficient(
 pub(crate) fn eval_coefficient_list(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("CoefficientList", args, 2));
     }
@@ -106,8 +110,9 @@ pub(crate) fn eval_coefficient_list(
 pub(crate) fn eval_together(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("Together", args, 1));
     }
@@ -122,8 +127,9 @@ pub(crate) fn eval_together(
 pub(crate) fn eval_factor(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("Factor", args, 1));
     }

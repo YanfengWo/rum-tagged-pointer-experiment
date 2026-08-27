@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 mod filter;
 mod generators;
@@ -13,8 +14,9 @@ use self::tensor::*;
 pub(crate) fn eval_inner(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (f, left, right, g) = match args {
         [f, left, right] => (f, left, right, system_expr("Plus")),
         [f, left, right, g] => (f, left, right, g.clone()),
@@ -31,8 +33,9 @@ pub(crate) fn eval_inner(
 pub(crate) fn eval_dot(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let Some((first, rest)) = args.split_first() else {
         return Ok(Expr::call(head.clone(), Vec::new()));
     };
@@ -56,8 +59,9 @@ pub(crate) fn eval_dot(
 pub(crate) fn eval_array_filter(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (operator, array, radius_spec, padding_expr) = match args {
         [operator, array, radius_spec] => (operator, array, radius_spec, None),
         [operator, array, radius_spec, padding_expr] => {
@@ -107,8 +111,9 @@ pub(crate) fn eval_array_filter(
 pub(crate) fn eval_array_reduce(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [operator, array, dims_spec] = args else {
         return Ok(session.invalid_call_with_arg_range("ArrayReduce", args, 3, 3));
     };

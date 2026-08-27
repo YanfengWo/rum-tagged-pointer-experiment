@@ -1,4 +1,5 @@
 use rum_core::Expr;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{EvalError, Session, expr_as_string, system_expr};
 
 mod calendar;
@@ -8,8 +9,9 @@ mod iso;
 pub(crate) fn eval_date_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [timestamp] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DateList", args, 1));
     };
@@ -23,8 +25,9 @@ pub(crate) fn eval_date_list(
 pub(crate) fn eval_from_date_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [date_list] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FromDateList", args, 1));
     };
@@ -37,8 +40,9 @@ pub(crate) fn eval_from_date_list(
 pub(crate) fn eval_date_string(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_message(
             "DateString",
@@ -90,8 +94,9 @@ pub(crate) fn eval_date_string(
 pub(crate) fn eval_from_date_string(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [source] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FromDateString", args, 1));
     };
@@ -112,8 +117,9 @@ pub(crate) fn eval_from_date_string(
 pub(crate) fn eval_date_plus(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [date, spec] = args else {
         if args.len() == 1 {
             return Ok(Expr::call(head.clone(), args.to_vec()));
@@ -130,8 +136,9 @@ pub(crate) fn eval_date_plus(
 pub(crate) fn eval_date_difference(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [start, end, unit] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DateDifference", args, 3));
     };
@@ -145,8 +152,9 @@ pub(crate) fn eval_date_difference(
 pub(crate) fn eval_day_of_week(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [date] => match calendar::day_of_week(date) {
             Ok(name) => Ok(system_expr(name)),
@@ -187,8 +195,9 @@ pub(crate) fn eval_day_of_week(
 pub(crate) fn eval_leap_year_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [year] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LeapYearQ", args, 1));
     };
@@ -202,8 +211,9 @@ pub(crate) fn eval_leap_year_q(
 pub(crate) fn eval_days_in_month(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [year, month] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DaysInMonth", args, 2));
     };

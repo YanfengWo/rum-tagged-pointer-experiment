@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, Expr};
 use rum_runtime::kernel_api::{
     EvalError, Session, association_entries_from_expr, expr_as_string, system_expr,
@@ -55,8 +56,9 @@ struct IniSection {
 pub(crate) fn eval_from_ini(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [source] = args else {
         return Ok(fail_ini(
             session,
@@ -82,8 +84,9 @@ pub(crate) fn eval_from_ini(
 pub(crate) fn eval_to_ini(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(fail_ini(
             session,

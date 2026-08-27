@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[cfg(feature = "hash")]
 use crc32fast::Hasher as Crc32Hasher;
@@ -12,8 +13,9 @@ use sha2::{Digest, Sha256, Sha512};
 pub(crate) fn eval_string_to_byte_array(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("StringToByteArray", args, 1, 2));
     }
@@ -46,8 +48,9 @@ pub(crate) fn eval_string_to_byte_array(
 pub(crate) fn eval_hash(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=3).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("Hash", args, 1, 3));
     }
@@ -83,8 +86,9 @@ pub(crate) fn eval_hash(
 pub(crate) fn eval_compress(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("Compress", args, 1));
     }
@@ -95,8 +99,9 @@ pub(crate) fn eval_compress(
 pub(crate) fn eval_uncompress(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_arg_range("Uncompress", args, 1, 2));
     }
@@ -117,7 +122,7 @@ pub(crate) fn eval_uncompress(
 
     if let Some(wrapper) = wrapper {
         let wrapped_result = session.evaluate(Expr::call(wrapper.clone(), vec![restored]));
-        return session.suspend_with_frame(wrapped_result, |_, value| Ok(value));
+        return session.suspend_with_frame_lazy(wrapped_result, || |_, value| Ok(value));
     }
 
     Ok(restored)

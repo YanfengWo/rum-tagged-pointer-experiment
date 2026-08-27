@@ -33,12 +33,12 @@ impl Session {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
                 let args_for_resume = args.clone();
-                let result = self.suspend_with_frame(
-                    Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        session.resume_call_after_head(SharedExpr::new(value), args_for_resume)
-                    },
-                );
+                let result =
+                    self.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
+                        move |session, value| {
+                            session.resume_call_after_head(SharedExpr::new(value), args_for_resume)
+                        }
+                    });
                 record_profile_runtime_path_timing(
                     runtime_profile_total,
                     runtime_profile_outcome_for_expr_result(&result),

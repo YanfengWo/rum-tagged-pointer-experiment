@@ -19,7 +19,7 @@ impl Session {
         );
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let handler = handler.clone();
             let form = form.clone();
             let lexical_tag = lexical_tag.clone();
@@ -34,74 +34,92 @@ impl Session {
         }
     }
 
-    pub(in crate::runtime) fn eval_confirm(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(1..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Confirm", args, 1, 3));
+    pub(in crate::runtime) fn eval_confirm(
+        &mut self,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if !(1..=3).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("Confirm", args_slice, 1, 3));
         }
 
-        let value_result = self.evaluate(args[0].clone());
-        let value = self.suspend_with_frame(value_result, {
-            let args = args.to_vec();
-            move |session, value| session.resume_confirm_after_value(args, value)
+        let value_result = self.evaluate(args_slice[0].clone());
+        let value = self.suspend_with_frame_lazy(value_result, || {
+            let args = args.clone();
+            move |session, value| session.resume_confirm_after_value(args.as_ref().to_vec(), value)
         })?;
 
-        self.resume_confirm_after_value(args.to_vec(), value)
+        self.resume_confirm_after_value(args_slice.to_vec(), value)
     }
 
-    pub(in crate::runtime) fn eval_confirm_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("ConfirmBy", args, 2, 4));
+    pub(in crate::runtime) fn eval_confirm_by(
+        &mut self,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if !(2..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("ConfirmBy", args_slice, 2, 4));
         }
 
-        let value_result = self.evaluate(args[0].clone());
-        let value = self.suspend_with_frame(value_result, {
-            let args = args.to_vec();
-            move |session, value| session.resume_confirm_by_after_value(args, value)
+        let value_result = self.evaluate(args_slice[0].clone());
+        let value = self.suspend_with_frame_lazy(value_result, || {
+            let args = args.clone();
+            move |session, value| {
+                session.resume_confirm_by_after_value(args.as_ref().to_vec(), value)
+            }
         })?;
 
-        self.resume_confirm_by_after_value(args.to_vec(), value)
+        self.resume_confirm_by_after_value(args_slice.to_vec(), value)
     }
 
     pub(in crate::runtime) fn eval_confirm_match(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("ConfirmMatch", args, 2, 4));
+        let args_slice = args.as_ref();
+        if !(2..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("ConfirmMatch", args_slice, 2, 4));
         }
 
-        let value_result = self.evaluate(args[0].clone());
-        let value = self.suspend_with_frame(value_result, {
-            let args = args.to_vec();
-            move |session, value| session.resume_confirm_match_after_value(args, value)
+        let value_result = self.evaluate(args_slice[0].clone());
+        let value = self.suspend_with_frame_lazy(value_result, || {
+            let args = args.clone();
+            move |session, value| {
+                session.resume_confirm_match_after_value(args.as_ref().to_vec(), value)
+            }
         })?;
 
-        self.resume_confirm_match_after_value(args.to_vec(), value)
+        self.resume_confirm_match_after_value(args_slice.to_vec(), value)
     }
 
     pub(in crate::runtime) fn eval_confirm_quiet(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if !(1..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("ConfirmQuiet", args, 1, 4));
+        let args_slice = args.as_ref();
+        if !(1..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("ConfirmQuiet", args_slice, 1, 4));
         }
 
-        let selectors = match normalize_confirm_quiet_selectors(args.get(1)) {
+        let selectors = match normalize_confirm_quiet_selectors(args_slice.get(1)) {
             Ok(selectors) => selectors,
             Err(error) => {
-                return Ok(self.invalid_call_with_arg_form("ConfirmQuiet", args, error.message()));
+                return Ok(self.invalid_call_with_arg_form(
+                    "ConfirmQuiet",
+                    args_slice,
+                    error.message(),
+                ));
             }
         };
 
         let message_checkpoint = self.messages.len();
-        let body_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame(body_result, {
-            let args = args.to_vec();
+        let body_result = self.evaluate(args_slice[0].clone());
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
+            let args = args.clone();
             let selectors = selectors.clone();
             move |session, outcome| {
                 session.resume_confirm_quiet_after_body(
-                    args,
+                    args.as_ref().to_vec(),
                     selectors,
                     message_checkpoint,
                     outcome,
@@ -112,7 +130,7 @@ impl Session {
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.resume_confirm_quiet_after_body(
-                args.to_vec(),
+                args_slice.to_vec(),
                 selectors,
                 message_checkpoint,
                 outcome,
@@ -122,19 +140,22 @@ impl Session {
 
     pub(in crate::runtime) fn eval_confirm_assert(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if !(1..=3).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("ConfirmAssert", args, 1, 3));
+        let args_slice = args.as_ref();
+        if !(1..=3).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("ConfirmAssert", args_slice, 1, 3));
         }
 
-        let test_result = self.evaluate(args[0].clone());
-        let test = self.suspend_with_frame(test_result, {
-            let args = args.to_vec();
-            move |session, test| session.resume_confirm_assert_after_test(args, test)
+        let test_result = self.evaluate(args_slice[0].clone());
+        let test = self.suspend_with_frame_lazy(test_result, || {
+            let args = args.clone();
+            move |session, test| {
+                session.resume_confirm_assert_after_test(args.as_ref().to_vec(), test)
+            }
         })?;
 
-        self.resume_confirm_assert_after_test(args.to_vec(), test)
+        self.resume_confirm_assert_after_test(args_slice.to_vec(), test)
     }
 
     fn resume_enclose_after_body(
@@ -270,7 +291,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let test_call = Expr::call(args[1].clone(), vec![value.clone()]);
         let test_result = self.evaluate(test_call);
-        let test = self.suspend_with_frame(test_result, {
+        let test = self.suspend_with_frame_lazy(test_result, || {
             let args = args.clone();
             let value = value.clone();
             move |session, test| session.resume_confirm_by_after_test(args, value, test)

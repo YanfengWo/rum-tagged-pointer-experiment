@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::{HashMap, HashSet};
 
@@ -77,8 +78,9 @@ impl KeyUnionPlan {
 pub(crate) fn eval_key_union(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (collections_expr, fill_function) = match args {
         [collections_expr] => (collections_expr, None),
         [collections_expr, fill_function] => (collections_expr, Some(fill_function.clone())),
@@ -133,8 +135,9 @@ pub(crate) fn eval_key_union(
 pub(crate) fn eval_key_intersection(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [collections_expr] = args else {
         return Ok(session.invalid_call_with_message(
             "KeyIntersection",
@@ -218,8 +221,9 @@ pub(crate) fn eval_key_intersection(
 pub(crate) fn eval_key_complement(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [collections_expr] = args else {
         if args.is_empty() {
             return Ok(session.invalid_call_with_message(
@@ -307,19 +311,21 @@ fn resume_key_union_missing_values_from_index(
             match session.evaluate(Expr::call(fill_function.clone(), vec![key.clone()])) {
                 Ok(fill_value) => fill_value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, fill_value| {
-                            resume_key_union_missing_value(
-                                session,
-                                fill_function,
-                                plan,
-                                missing_keys,
-                                index,
-                                fill_values,
-                                key,
-                                fill_value,
-                            )
+                        || {
+                            move |session, fill_value| {
+                                resume_key_union_missing_value(
+                                    session,
+                                    fill_function,
+                                    plan,
+                                    missing_keys,
+                                    index,
+                                    fill_values,
+                                    key,
+                                    fill_value,
+                                )
+                            }
                         },
                     );
                 }

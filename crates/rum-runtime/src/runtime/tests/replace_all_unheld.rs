@@ -4,7 +4,7 @@ use crate::runtime::test_builtins::register_test_arithmetic_builtins;
 fn eval_replace_all_unheld(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     session.eval_rewrite_data_builtin(RewriteDataBuiltin::ReplaceAllUnheld, head, args)
 }

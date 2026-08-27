@@ -1,18 +1,21 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_missing(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     Ok(Expr::call(head.clone(), args.to_vec()))
 }
 
 pub(crate) fn eval_delete_missing(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let (expr, mode) = match args {
         [expr] => (
             expr,
@@ -224,7 +227,7 @@ fn resume_delete_missing_list_at_target_level(
             0,
             Vec::new(),
         );
-        let child_value = session.suspend_with_frame(child_result, {
+        let child_value = session.suspend_with_frame_lazy(child_result, || {
             let items = items.clone();
             let kept = kept.clone();
             move |session, value| {
@@ -253,7 +256,7 @@ fn resume_delete_missing_list_at_target_level(
             0,
             Vec::new(),
         );
-        let child_value = session.suspend_with_frame(child_result, {
+        let child_value = session.suspend_with_frame_lazy(child_result, || {
             let items = items.clone();
             let kept = kept.clone();
             move |session, value| {
@@ -319,7 +322,7 @@ fn resume_delete_missing_association_at_target_level(
         } else {
             Ok(entry.value.clone())
         };
-        let predicate_value = session.suspend_with_frame(predicate_result, {
+        let predicate_value = session.suspend_with_frame_lazy(predicate_result, || {
             let entries = entries.clone();
             let entry = entry.clone();
             let kept = kept.clone();
@@ -369,7 +372,7 @@ fn resume_delete_missing_association_at_target_level(
             0,
             Vec::new(),
         );
-        let child_value = session.suspend_with_frame(child_result, {
+        let child_value = session.suspend_with_frame_lazy(child_result, || {
             let entries = entries.clone();
             let entry = entry.clone();
             let kept = kept.clone();
@@ -400,7 +403,7 @@ fn resume_delete_missing_association_at_target_level(
             0,
             Vec::new(),
         );
-        let child_value = session.suspend_with_frame(child_result, {
+        let child_value = session.suspend_with_frame_lazy(child_result, || {
             let entries = entries.clone();
             let entry = entry.clone();
             let kept = kept.clone();

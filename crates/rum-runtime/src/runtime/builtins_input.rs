@@ -61,8 +61,8 @@ impl Session {
         };
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, |session, outcome| {
-            session.finish_dialog_body(outcome)
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
+            |session, outcome| session.finish_dialog_body(outcome)
         });
 
         match outcome {
@@ -87,8 +87,8 @@ impl Session {
         };
 
         let text_result = self.drive_input_request(request);
-        let text = self.suspend_with_frame(text_result, |session, text| {
-            session.resume_input_after_text(text)
+        let text = self.suspend_with_frame_lazy(text_result, || {
+            |session, text| session.resume_input_after_text(text)
         })?;
 
         self.resume_input_after_text(text)
@@ -293,7 +293,7 @@ impl Session {
         let syntax = parse_expr(&source)?;
         let expr = self.lower_syntax_expr(&syntax)?;
         let evaluated = self.evaluate(expr);
-        self.suspend_with_frame(evaluated, |_, value| Ok(value))
+        self.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))
     }
 }
 

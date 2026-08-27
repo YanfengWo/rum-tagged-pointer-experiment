@@ -31,26 +31,28 @@ impl Session {
         self.resume_compound_expression_from_index(args.to_vec(), 0)
     }
 
-    pub(in crate::runtime) fn eval_if(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if !(2..=4).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("If", args, 2, 4));
+    pub(in crate::runtime) fn eval_if(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if !(2..=4).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("If", args_slice, 2, 4));
         }
 
-        if let Some(truth) = truthiness_symbol(&args[0]) {
+        if let Some(truth) = truthiness_symbol(&args_slice[0]) {
             return self.resume_if_after_condition(
-                args.to_vec(),
+                args_slice.to_vec(),
                 system_expr(if truth { "True" } else { "False" }),
             );
         }
 
-        let args_vec = args.to_vec();
-        let condition_result = self.evaluate(args_vec[0].clone());
+        let condition_result = self.evaluate(args_slice[0].clone());
         let condition = self.suspend_with_frame_lazy(condition_result, || {
-            let args = args_vec.clone();
-            move |session, condition| session.resume_if_after_condition(args, condition)
+            let args = args.clone();
+            move |session, condition| {
+                session.resume_if_after_condition(args.as_ref().to_vec(), condition)
+            }
         })?;
 
-        self.resume_if_after_condition(args_vec, condition)
+        self.resume_if_after_condition(args_slice.to_vec(), condition)
     }
 
     pub(in crate::runtime) fn eval_which(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -65,22 +67,25 @@ impl Session {
         self.resume_which_from_index(args.to_vec(), 0)
     }
 
-    pub(in crate::runtime) fn eval_switch(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() < 3 || args.len() % 2 == 0 {
+    pub(in crate::runtime) fn eval_switch(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() < 3 || args_slice.len() % 2 == 0 {
             return Ok(self.invalid_call_with_arg_form(
                 "Switch",
-                args,
+                args_slice,
                 "expected an expression followed by one or more form/value pairs",
             ));
         }
 
-        let subject_result = self.evaluate(args[0].clone());
-        let subject = self.suspend_with_frame(subject_result, {
-            let args = args.to_vec();
-            move |session, subject| session.resume_switch_after_subject(args, subject)
+        let subject_result = self.evaluate(args_slice[0].clone());
+        let subject = self.suspend_with_frame_lazy(subject_result, || {
+            let args = args.clone();
+            move |session, subject| {
+                session.resume_switch_after_subject(args.as_ref().to_vec(), subject)
+            }
         })?;
 
-        self.resume_switch_after_subject(args.to_vec(), subject)
+        self.resume_switch_after_subject(args_slice.to_vec(), subject)
     }
 
     pub(in crate::runtime) fn eval_while(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -371,7 +376,7 @@ impl Session {
         }
 
         let condition_result = self.evaluate(args[index].clone());
-        let condition = self.suspend_with_frame(condition_result, {
+        let condition = self.suspend_with_frame_lazy(condition_result, || {
             let args = args.clone();
             move |session, condition| session.resume_which_after_condition(args, index, condition)
         })?;

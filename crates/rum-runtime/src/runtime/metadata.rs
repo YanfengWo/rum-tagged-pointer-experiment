@@ -286,7 +286,7 @@ pub enum BuiltinDispatch {
     SpecialForm,
     Ordinary,
 }
-pub type BuiltinFn = fn(&mut Session, &Expr, &[Expr]) -> Result<Expr, EvalError>;
+pub type BuiltinFn = fn(&mut Session, &Expr, &SharedArgs) -> Result<Expr, EvalError>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BuiltinMessageSpec {

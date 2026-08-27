@@ -37,7 +37,7 @@ impl Session {
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
-        let spec_expr = self.suspend_with_frame(spec_result, {
+        let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
             let args = args.clone();
             move |session, spec_expr| session.finish_do_spec_eval(args, spec_index, spec_expr)
         })?;
@@ -130,7 +130,7 @@ impl Session {
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
-        let spec_expr = self.suspend_with_frame(spec_result, {
+        let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
             let args = args.clone();
             move |session, spec_expr| session.finish_table_spec_eval(args, spec_index, spec_expr)
         })?;
@@ -257,7 +257,7 @@ impl Session {
         self.install_loop_iterator_symbol_value(&symbol, value, &saved_state);
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             let saved_state = saved_state.clone();
             move |session, outcome| session.finish_loop_iterator_scope(symbol, saved_state, outcome)
         });
@@ -276,8 +276,10 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let dynamic_depth = self.push_dynamic_own_value_binding(symbol, Some(value));
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame(body_result, move |session, outcome| {
-            session.finish_loop_iterator_dynamic_scope(symbol, dynamic_depth, outcome)
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
+            move |session, outcome| {
+                session.finish_loop_iterator_dynamic_scope(symbol, dynamic_depth, outcome)
+            }
         });
 
         match outcome {

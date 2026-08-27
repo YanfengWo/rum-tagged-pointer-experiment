@@ -74,9 +74,9 @@ impl Session {
     pub(in crate::runtime) fn eval_missing_q(
         &mut self,
         _head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
+        let [expr] = args.as_ref() else {
             return Ok(self.invalid_call_with_exact_arg_count("MissingQ", args, 1));
         };
 

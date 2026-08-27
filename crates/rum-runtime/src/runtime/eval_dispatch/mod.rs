@@ -79,7 +79,7 @@ impl Session {
     ) -> Result<Option<Expr>, EvalError> {
         match stage {
             CallDispatchStage::SpecialForm => {
-                self.try_dispatch_builtin_call(builtin_spec, head, state.raw_args.as_ref())
+                self.try_dispatch_builtin_call(builtin_spec, head, &state.raw_args)
             }
             CallDispatchStage::PrepareArguments => {
                 let raw_args = std::mem::take(&mut state.raw_args);
@@ -94,7 +94,7 @@ impl Session {
                     ThreadingDispatch::NotApplicable => Ok(None),
                     ThreadingDispatch::Threaded(threaded) => {
                         let threaded_result = self.evaluate(threaded);
-                        self.suspend_with_frame(threaded_result, |_, value| Ok(value))
+                        self.suspend_with_frame_lazy(threaded_result, || |_, value| Ok(value))
                             .map(Some)
                     }
                     ThreadingDispatch::Mismatch => Ok(Some(Expr::call(
@@ -113,7 +113,7 @@ impl Session {
                 self.try_apply_sub_values(head, state.evaluated_shared_args(), attributes)
             }
             CallDispatchStage::OrdinaryBuiltin => {
-                self.try_dispatch_builtin_call(builtin_spec, head, state.evaluated_args())
+                self.try_dispatch_builtin_call(builtin_spec, head, state.evaluated_shared_args())
             }
             CallDispatchStage::Function => self.try_apply_function(head, state.evaluated_args()),
         }
@@ -123,7 +123,7 @@ impl Session {
         &mut self,
         builtin_spec: Option<BuiltinSpec>,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Option<Expr>, EvalError> {
         let Some(spec) = builtin_spec else {
             return Ok(None);
@@ -170,7 +170,7 @@ impl Session {
         &mut self,
         handler: BuiltinFn,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         handler(self, head, args)
     }

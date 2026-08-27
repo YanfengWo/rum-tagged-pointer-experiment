@@ -6,9 +6,9 @@ impl Session {
     pub(in crate::runtime) fn eval_short(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let (expr, limit) = match args {
+        let (expr, limit) = match args.as_ref() {
             [expr] => (expr, DEFAULT_SHORT_LIMIT),
             [expr, limit_expr] => {
                 let Some(limit) = expr_as_non_negative_usize(limit_expr).filter(|limit| *limit > 0)
@@ -30,9 +30,9 @@ impl Session {
     pub(in crate::runtime) fn eval_echo(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        match args {
+        match args.as_ref() {
             [value] => {
                 self.push_print(render_echo_fragment(value));
                 Ok(value.clone())
@@ -52,9 +52,9 @@ impl Session {
     pub(in crate::runtime) fn eval_echo_function(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let body = match args {
+        let body = match args.as_ref() {
             [] => Expr::call(system_expr("Echo"), vec![debug_slot_expr()]),
             [function] => {
                 let slot = debug_slot_expr();
@@ -78,9 +78,9 @@ impl Session {
     pub(in crate::runtime) fn eval_echo_label(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let [label] = args else {
+        let [label] = args.as_ref() else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 

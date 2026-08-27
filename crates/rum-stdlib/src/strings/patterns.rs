@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 mod matcher;
 mod parts;
@@ -219,8 +220,8 @@ fn first_invalid_string_repeated_bounds(expr: &Expr) -> Option<StringRepeatedBou
 fn eval_string_pattern_with_bounds_guard(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
-    evaluator: fn(&mut Session, &Expr, &[Expr]) -> Result<Expr, EvalError>,
+    args: &SharedArgs,
+    evaluator: fn(&mut Session, &Expr, &SharedArgs) -> Result<Expr, EvalError>,
 ) -> Result<Expr, EvalError> {
     if let Some(error) = args.get(1).and_then(first_invalid_string_repeated_bounds) {
         session.push_message(
@@ -242,7 +243,7 @@ macro_rules! guarded_string_pattern_evaluator {
         pub(crate) fn $name(
             session: &mut Session,
             head: &Expr,
-            args: &[Expr],
+            args: &SharedArgs,
         ) -> Result<Expr, EvalError> {
             eval_string_pattern_with_bounds_guard(session, head, args, $implementation)
         }

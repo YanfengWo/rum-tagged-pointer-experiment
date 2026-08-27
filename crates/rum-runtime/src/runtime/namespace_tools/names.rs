@@ -116,9 +116,9 @@ impl Session {
     pub(in crate::runtime) fn eval_symbol_name(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
+        let [expr] = args.as_ref() else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 
@@ -132,9 +132,9 @@ impl Session {
     pub(in crate::runtime) fn eval_name_q(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let [expr] = args else {
+        let [expr] = args.as_ref() else {
             return Ok(Expr::call(head.clone(), args.to_vec()));
         };
 

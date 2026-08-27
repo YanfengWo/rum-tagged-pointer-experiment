@@ -97,7 +97,7 @@ impl Session {
     pub(in crate::runtime) fn eval_part(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         if args.is_empty() {
             return Ok(self.invalid_call_with_message(
@@ -113,7 +113,7 @@ impl Session {
                 head: lazy_head, ..
             },
             index_expr,
-        ] = args
+        ] = args.as_ref()
         {
             if is_system_symbol_name(lazy_head, "LazyList") {
                 if let Some(index) = expr_as_exact_integer(index_expr) {
@@ -177,9 +177,9 @@ impl Session {
     pub(in crate::runtime) fn eval_extract(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if let [position_spec] = args {
+        if let [position_spec] = args.as_ref() {
             return Ok(extract_operator_form(position_spec.clone()));
         }
 

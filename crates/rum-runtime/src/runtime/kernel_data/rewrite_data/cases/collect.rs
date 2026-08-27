@@ -1,26 +1,34 @@
 use super::*;
 
 impl Session {
-    pub(in crate::runtime) fn eval_cases(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        if args.len() == 1 {
-            return Ok(self.invalid_call("Cases", args));
+    pub(in crate::runtime) fn eval_cases(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
+        let args_slice = args.as_ref();
+        if args_slice.len() == 1 {
+            return Ok(self.invalid_call("Cases", args_slice));
         }
-        if !(2..=5).contains(&args.len()) {
-            return Ok(self.invalid_call_with_arg_range("Cases", args, 2, 5));
+        if !(2..=5).contains(&args_slice.len()) {
+            return Ok(self.invalid_call_with_arg_range("Cases", args_slice, 2, 5));
         }
 
-        let call_args = args.to_vec();
-        let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame(target_result, {
-            let spec_expr = args[1].clone();
-            let option_exprs = args[2..].to_vec();
-            let call_args = call_args.clone();
+        let target_result = self.evaluate(args_slice[0].clone());
+        let target = self.suspend_with_frame_lazy(target_result, || {
+            let args = args.clone();
             move |session, target| {
-                session.resume_cases_after_target(target, spec_expr, option_exprs, call_args)
+                session.resume_cases_after_target(
+                    target,
+                    args[1].clone(),
+                    args[2..].to_vec(),
+                    args.as_ref().to_vec(),
+                )
             }
         })?;
 
-        self.resume_cases_after_target(target, args[1].clone(), args[2..].to_vec(), call_args)
+        self.resume_cases_after_target(
+            target,
+            args_slice[1].clone(),
+            args_slice[2..].to_vec(),
+            args_slice.to_vec(),
+        )
     }
 
     fn resume_cases_after_target(
@@ -31,7 +39,7 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let spec_result = self.resolve_cases_spec_expr_for_matching_owned(spec_expr.clone());
-        let resolved_spec = self.suspend_with_frame(spec_result, {
+        let resolved_spec = self.suspend_with_frame_lazy(spec_result, || {
             let target = target.clone();
             let option_exprs = option_exprs.clone();
             let call_args = call_args.clone();
@@ -341,7 +349,7 @@ impl Session {
                     );
                     let transformed_result = session.evaluate(transformed);
                     session
-                        .suspend_with_frame(transformed_result, |_, value| Ok(value))
+                        .suspend_with_frame_lazy(transformed_result, || |_, value| Ok(value))
                         .map(Some)
                 })
             }

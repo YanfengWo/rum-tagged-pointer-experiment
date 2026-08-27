@@ -29,10 +29,12 @@ fn resume_fold_pair_from_index(
         let pair = match session.evaluate(call) {
             Ok(pair) => pair,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, pair| {
-                        resume_fold_pair_with_pair_result(session, state, index, pair)
+                    || {
+                        move |session, pair| {
+                            resume_fold_pair_with_pair_result(session, state, index, pair)
+                        }
                     },
                 );
             }
@@ -54,10 +56,12 @@ fn resume_fold_pair_from_index(
             match session.evaluate(call) {
                 Ok(output) => output,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame(
+                    return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
-                        move |session, output| {
-                            resume_fold_pair_with_output(session, state, index, y_value, output)
+                        || {
+                            move |session, output| {
+                                resume_fold_pair_with_output(session, state, index, y_value, output)
+                            }
                         },
                     );
                 }
@@ -97,10 +101,12 @@ fn resume_fold_pair_with_pair_result(
     let output = match session.evaluate(call) {
         Ok(output) => output,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame(
+            return session.suspend_with_frame_lazy(
                 Err(EvalError::InputRequired { request }),
-                move |session, output| {
-                    resume_fold_pair_with_output(session, state, index, y_value, output)
+                || {
+                    move |session, output| {
+                        resume_fold_pair_with_output(session, state, index, y_value, output)
+                    }
                 },
             );
         }

@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod pair;
@@ -20,8 +21,9 @@ pub(super) struct FoldWhileConfig {
 pub(crate) fn eval_fold(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(variadic_operator_form("Fold", vec![operator.clone()])),
         [operator, list_expr] => apply_fold(session, operator, None, list_expr, false),
@@ -35,8 +37,9 @@ pub(crate) fn eval_fold(
 pub(crate) fn eval_fold_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(variadic_operator_form("FoldList", vec![operator.clone()])),
         [operator, list_expr] => apply_fold(session, operator, None, list_expr, true),
@@ -50,8 +53,9 @@ pub(crate) fn eval_fold_list(
 pub(crate) fn eval_fold_pair(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, list_expr] => {
             apply_fold_pair(session, head, operator, None, list_expr, None, args)
@@ -81,8 +85,9 @@ pub(crate) fn eval_fold_pair(
 pub(crate) fn eval_fold_while(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, test] => Ok(variadic_operator_form_with_suffix(
             "FoldWhile",
@@ -132,8 +137,9 @@ pub(crate) fn eval_fold_while(
 pub(crate) fn eval_sequence_fold(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, seeds, items] => {
             apply_sequence_fold(session, head, operator, seeds, items, None, false, args)
@@ -155,8 +161,9 @@ pub(crate) fn eval_sequence_fold(
 pub(crate) fn eval_sequence_fold_list(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, seeds, items] => {
             apply_sequence_fold(session, head, operator, seeds, items, None, true, args)

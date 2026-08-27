@@ -27,33 +27,32 @@ impl Session {
 
     pub(in crate::runtime) fn eval_set_options(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        if args.len() < 2 {
-            return Ok(self.invalid_call_with_arg_range("SetOptions", args, 2, usize::MAX));
+        let args_slice = args.as_ref();
+        if args_slice.len() < 2 {
+            return Ok(self.invalid_call_with_arg_range("SetOptions", args_slice, 2, usize::MAX));
         }
 
-        let Some(targets) = self.normalize_symbol_target_exprs(&args[0], true) else {
+        let Some(targets) = self.normalize_symbol_target_exprs(&args_slice[0], true) else {
             return Ok(self.invalid_call_with_arg_form(
                 "SetOptions",
-                args,
+                args_slice,
                 OptionsNormalizationError::InvalidTarget.message(),
             ));
         };
-        let preserve_target_list_shape =
-            matches!(&args[0], Expr::Call { head, .. } if is_system_symbol_name(head, "List"));
+        let preserve_target_list_shape = matches!(&args_slice[0], Expr::Call { head, .. } if is_system_symbol_name(head, "List"));
 
-        let tail = Expr::call(system_expr("List"), args[1..].to_vec());
-        let original_args = args.to_vec();
+        let tail = Expr::call(system_expr("List"), args_slice[1..].to_vec());
         let resolved_result = self.evaluate(tail);
-        let resolved = self.suspend_with_frame(resolved_result, {
+        let resolved = self.suspend_with_frame_lazy(resolved_result, || {
             let targets = targets.clone();
-            let original_args = original_args.clone();
+            let args = args.clone();
             move |session, resolved| {
                 session.finish_set_options_from_resolved(
                     targets,
                     preserve_target_list_shape,
-                    original_args,
+                    args.as_ref().to_vec(),
                     resolved,
                 )
             }
@@ -62,16 +61,17 @@ impl Session {
         self.finish_set_options_from_resolved(
             targets,
             preserve_target_list_shape,
-            original_args,
+            args_slice.to_vec(),
             resolved,
         )
     }
 
     pub(in crate::runtime) fn eval_option_value(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        match args {
+        let args_slice = args.as_ref();
+        match args_slice {
             [option_expr] => {
                 let query = match self.parse_option_value_query(option_expr) {
                     Ok(query) => query,
@@ -129,25 +129,24 @@ impl Session {
                     }
                 };
 
-                let original_args = args.to_vec();
                 let explicit_result = self.evaluate(explicit_expr.clone());
-                let explicit = self.suspend_with_frame(explicit_result, {
+                let explicit = self.suspend_with_frame_lazy(explicit_result, || {
                     let target = target.clone();
                     let query = query.clone();
-                    let original_args = original_args.clone();
+                    let args = args.clone();
                     move |session, resolved| {
                         session.finish_option_value_from_explicit(
                             target,
                             query,
-                            original_args,
+                            args.as_ref().to_vec(),
                             resolved,
                         )
                     }
                 })?;
 
-                self.finish_option_value_from_explicit(target, query, original_args, explicit)
+                self.finish_option_value_from_explicit(target, query, args_slice.to_vec(), explicit)
             }
-            _ => Ok(self.invalid_call_with_arg_range("OptionValue", args, 1, 3)),
+            _ => Ok(self.invalid_call_with_arg_range("OptionValue", args_slice, 1, 3)),
         }
     }
 

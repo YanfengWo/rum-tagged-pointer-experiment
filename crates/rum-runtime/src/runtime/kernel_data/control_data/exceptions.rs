@@ -290,7 +290,7 @@ impl Session {
             handler.rhs_may_splice_without_bindings,
         );
         let rhs_result = self.evaluate(rhs);
-        self.suspend_with_frame(rhs_result, |_, value| Ok(value))
+        self.suspend_with_frame_lazy(rhs_result, || |_, value| Ok(value))
     }
 }
 

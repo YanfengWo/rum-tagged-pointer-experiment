@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 mod distance;
 mod lexical;
@@ -36,8 +37,9 @@ enum NearestDistanceFunction {
 pub(crate) fn eval_nearest(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if let [data] = args {
         return Ok(Expr::call(
             system_expr("Function"),
@@ -149,8 +151,9 @@ pub(crate) fn eval_nearest(
 pub(crate) fn eval_pluralize(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [word_expr] => {
             let Some(word) = expr_as_string(word_expr) else {
@@ -178,8 +181,9 @@ pub(crate) fn eval_pluralize(
 pub(crate) fn eval_alphabet(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let supported = match args {
         [] => true,
         [arg] => expr_as_string(arg).is_some_and(|name| name == "English"),
@@ -200,8 +204,9 @@ pub(crate) fn eval_alphabet(
 pub(crate) fn eval_alphabetic_sort(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if !(1..=2).contains(&args.len()) {
         return Ok(session.invalid_call_with_arg_range("AlphabeticSort", args, 1, 2));
     }
@@ -226,8 +231,9 @@ pub(crate) fn eval_alphabetic_sort(
 pub(crate) fn eval_edit_distance(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("EditDistance", args, 2));
     }
@@ -255,8 +261,9 @@ pub(crate) fn eval_edit_distance(
 pub(crate) fn eval_hamming_distance(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("HammingDistance", args, 2));
     }
@@ -300,8 +307,9 @@ fn invalid_hamming_distance_length(session: &mut Session, head: &Expr, args: &[E
 pub(crate) fn eval_longest_common_subsequence(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("LongestCommonSubsequence", args, 2));
     }
@@ -326,8 +334,9 @@ pub(crate) fn eval_longest_common_subsequence(
 pub(crate) fn eval_sequence_alignment(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("SequenceAlignment", args, 2));
     }
@@ -353,8 +362,9 @@ pub(crate) fn eval_sequence_alignment(
 pub(crate) fn eval_diff(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 2 {
         return Ok(session.invalid_call_with_exact_arg_count("Diff", args, 2));
     }

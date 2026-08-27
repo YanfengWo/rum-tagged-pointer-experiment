@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{Atom, BigInt, Expr, Rational, SYSTEM_CONTEXT, heads};
 use rum_runtime::kernel_api::{
     CasesTraversalConfig, EvalError, Session, collect_level_parts_owned, compare_expr_canonical,
@@ -179,8 +180,9 @@ fn predicate_bool_expr(value: bool) -> Expr {
 pub(crate) fn eval_polynomial_q(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => Ok(polynomial_predicate_bool_expr(
             is_polynomial_expression_unconstrained(expr),
@@ -204,8 +206,9 @@ pub(crate) fn eval_polynomial_q(
 pub(crate) fn eval_polynomial_expression_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_polynomial_like_expression_q(
         session,
         head,
@@ -218,8 +221,9 @@ pub(crate) fn eval_polynomial_expression_q(
 pub(crate) fn eval_rational_expression_q(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_polynomial_like_expression_q(
         session,
         head,

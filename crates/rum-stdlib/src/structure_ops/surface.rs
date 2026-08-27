@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_head(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => Ok(structural_head_expr(expr)),
         [expr, wrapper] => Ok(Expr::call(
@@ -18,8 +20,9 @@ pub(crate) fn eval_head(
 pub(crate) fn eval_length(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Length", args, 1));
     };
@@ -30,8 +33,9 @@ pub(crate) fn eval_length(
 pub(crate) fn eval_depth(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let default_include_heads = session.system_option_bool("Depth", "Heads", false)?;
     let (expr, include_heads) = match args {
         [expr] => (expr, default_include_heads),
@@ -61,8 +65,9 @@ pub(crate) fn eval_depth(
 pub(crate) fn eval_leaf_count(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("LeafCount", args, 1));
     };
@@ -73,8 +78,9 @@ pub(crate) fn eval_leaf_count(
 pub(crate) fn eval_full_form(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("FullForm", args, 1));
     };
@@ -85,8 +91,9 @@ pub(crate) fn eval_full_form(
 pub(crate) fn eval_first(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if matches!(args.len(), 1 | 2) && args.first().is_some_and(crate::lazy::is_lazy_list) {
         let expr = &args[0];
         let Some(realized) = crate::lazy::realize_at_most(session, expr, 1)? else {
@@ -121,8 +128,9 @@ pub(crate) fn eval_first(
 pub(crate) fn eval_last(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr] => Ok(resolve_first_like(
             session, expr, None, "Last", "nolast", false,
@@ -142,8 +150,9 @@ pub(crate) fn eval_last(
 pub(crate) fn eval_rest(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Rest", args, 1));
     };
@@ -179,8 +188,9 @@ pub(crate) fn eval_rest(
 pub(crate) fn eval_most(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Most", args, 1));
     };
@@ -215,8 +225,9 @@ pub(crate) fn eval_most(
 pub(crate) fn eval_append(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr, item] => Ok(match expr {
             Expr::Atom(_) => invalid_surface_normal_expression_call(session, "Append", args),
@@ -234,8 +245,9 @@ pub(crate) fn eval_append(
 pub(crate) fn eval_prepend(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [expr, item] => Ok(match expr {
             Expr::Atom(_) => invalid_surface_normal_expression_call(session, "Prepend", args),
@@ -254,8 +266,9 @@ pub(crate) fn eval_prepend(
 pub(crate) fn eval_symbol(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [name_expr] = args else {
         return Ok(session.invalid_call_with_message(
             "Symbol",
@@ -289,8 +302,9 @@ pub(crate) fn eval_symbol(
 pub(crate) fn eval_construct(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.is_empty() {
         return Ok(session.invalid_call_with_message(
             "Construct",

@@ -121,7 +121,8 @@ impl Session {
         })
     }
 
-    pub(in crate::runtime) fn suspend_with_frame_lazy<M, F>(
+    #[inline]
+    pub fn suspend_with_frame_lazy<M, F>(
         &mut self,
         result: Result<Expr, EvalError>,
         make_frame: M,
@@ -159,6 +160,7 @@ impl Session {
         }
     }
 
+    #[inline]
     pub(in crate::runtime) fn suspend_with_result_frame_lazy<M, F>(
         &mut self,
         result: Result<Expr, EvalError>,

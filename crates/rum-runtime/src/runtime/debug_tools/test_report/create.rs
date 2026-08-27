@@ -5,9 +5,9 @@ impl Session {
     pub(in crate::runtime) fn eval_test_create(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let (input, expected, options_expr) = match args {
+        let (input, expected, options_expr) = match args.as_ref() {
             [input, expected] => (input.clone(), expected.clone(), None),
             [input, expected, third] => (input.clone(), expected.clone(), Some(third.clone())),
             _ => return Ok(Expr::call(head.clone(), args.to_vec())),

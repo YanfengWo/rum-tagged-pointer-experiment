@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{
     ArithmeticDataBuiltin, EvalError, Session, call_items_with_head, system_expr,
@@ -11,7 +12,7 @@ fn dispatch(
     session: &mut Session,
     builtin: ArithmeticDataBuiltin,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     session.eval_arithmetic_data_builtin(builtin, head, args)
 }
@@ -19,7 +20,7 @@ fn dispatch(
 pub(crate) fn eval_identity(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Identity, head, args)
 }
@@ -27,7 +28,7 @@ pub(crate) fn eval_identity(
 pub(crate) fn eval_plus(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Plus, head, args)
 }
@@ -35,7 +36,7 @@ pub(crate) fn eval_plus(
 pub(crate) fn eval_times(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Times, head, args)
 }
@@ -43,7 +44,7 @@ pub(crate) fn eval_times(
 pub(crate) fn eval_power(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Power, head, args)
 }
@@ -51,7 +52,7 @@ pub(crate) fn eval_power(
 pub(crate) fn eval_subtract(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Subtract, head, args)
 }
@@ -59,7 +60,7 @@ pub(crate) fn eval_subtract(
 pub(crate) fn eval_divide(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Divide, head, args)
 }
@@ -67,7 +68,7 @@ pub(crate) fn eval_divide(
 pub(crate) fn eval_abs(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Abs, head, args)
 }
@@ -75,7 +76,7 @@ pub(crate) fn eval_abs(
 pub(crate) fn eval_sign(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Sign, head, args)
 }
@@ -83,7 +84,7 @@ pub(crate) fn eval_sign(
 pub(crate) fn eval_floor(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Floor, head, args)
 }
@@ -91,7 +92,7 @@ pub(crate) fn eval_floor(
 pub(crate) fn eval_ceiling(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Ceiling, head, args)
 }
@@ -99,7 +100,7 @@ pub(crate) fn eval_ceiling(
 pub(crate) fn eval_integer_part(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::IntegerPart, head, args)
 }
@@ -107,7 +108,7 @@ pub(crate) fn eval_integer_part(
 pub(crate) fn eval_fractional_part(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::FractionalPart, head, args)
 }
@@ -115,7 +116,7 @@ pub(crate) fn eval_fractional_part(
 pub(crate) fn eval_minus(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Minus, head, args)
 }
@@ -123,7 +124,7 @@ pub(crate) fn eval_minus(
 pub(crate) fn eval_round(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Round, head, args)
 }
@@ -131,7 +132,7 @@ pub(crate) fn eval_round(
 pub(crate) fn eval_factorial(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Factorial, head, args)
 }
@@ -139,7 +140,7 @@ pub(crate) fn eval_factorial(
 pub(crate) fn eval_factorial2(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Factorial2, head, args)
 }
@@ -147,7 +148,7 @@ pub(crate) fn eval_factorial2(
 pub(crate) fn eval_total(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Total, head, args)
 }
@@ -155,8 +156,9 @@ pub(crate) fn eval_total(
 pub(crate) fn eval_mean(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Mean", args, 1));
     };
@@ -177,13 +179,13 @@ pub(crate) fn eval_mean(
     let length = Expr::integer(BigInt::from(items.len()));
     let quotient = Expr::call(system_expr("Divide"), vec![total, length]);
     let evaluated = session.evaluate(quotient);
-    session.suspend_with_frame(evaluated, |_, value| Ok(value))
+    session.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))
 }
 
 pub(crate) fn eval_denominator(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Denominator, head, args)
 }
@@ -191,7 +193,7 @@ pub(crate) fn eval_denominator(
 pub(crate) fn eval_numerator(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Numerator, head, args)
 }
@@ -199,7 +201,7 @@ pub(crate) fn eval_numerator(
 pub(crate) fn eval_mod(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Mod, head, args)
 }
@@ -207,7 +209,7 @@ pub(crate) fn eval_mod(
 pub(crate) fn eval_quotient(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Quotient, head, args)
 }
@@ -215,7 +217,7 @@ pub(crate) fn eval_quotient(
 pub(crate) fn eval_power_mod(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::PowerMod, head, args)
 }
@@ -223,7 +225,7 @@ pub(crate) fn eval_power_mod(
 pub(crate) fn eval_gcd(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::GCD, head, args)
 }
@@ -231,7 +233,7 @@ pub(crate) fn eval_gcd(
 pub(crate) fn eval_lcm(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::LCM, head, args)
 }
@@ -239,7 +241,7 @@ pub(crate) fn eval_lcm(
 pub(crate) fn eval_max(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Max, head, args)
 }
@@ -247,7 +249,7 @@ pub(crate) fn eval_max(
 pub(crate) fn eval_min(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::Min, head, args)
 }
@@ -255,7 +257,7 @@ pub(crate) fn eval_min(
 pub(crate) fn eval_min_max(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::MinMax, head, args)
 }

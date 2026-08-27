@@ -5,20 +5,21 @@ mod matching;
 impl Session {
     pub(in crate::runtime) fn eval_replace_list(
         &mut self,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        match args {
+        let args_slice = args.as_ref();
+        match args_slice {
             [rules_expr] => Ok(replace_list_operator_form(rules_expr.clone())),
             [target_expr, rules_expr] | [target_expr, rules_expr, _] => {
-                let call_args = args.to_vec();
                 let target_result = self.evaluate(target_expr.clone());
-                let target = self.suspend_with_frame(target_result, {
-                    let rules_expr = rules_expr.clone();
-                    let max_expr = args.get(2).cloned();
-                    let call_args = call_args.clone();
+                let target = self.suspend_with_frame_lazy(target_result, || {
+                    let args = args.clone();
                     move |session, target| {
                         session.resume_replace_list_after_target(
-                            target, rules_expr, max_expr, call_args,
+                            target,
+                            args[1].clone(),
+                            args.get(2).cloned(),
+                            args.as_ref().to_vec(),
                         )
                     }
                 })?;
@@ -26,11 +27,11 @@ impl Session {
                 self.resume_replace_list_after_target(
                     target,
                     rules_expr.clone(),
-                    args.get(2).cloned(),
-                    call_args,
+                    args_slice.get(2).cloned(),
+                    args_slice.to_vec(),
                 )
             }
-            _ => Ok(self.invalid_call_with_arg_range("ReplaceList", args, 1, 3)),
+            _ => Ok(self.invalid_call_with_arg_range("ReplaceList", args_slice, 1, 3)),
         }
     }
 

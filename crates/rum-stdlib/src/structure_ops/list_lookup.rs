@@ -1,3 +1,4 @@
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -31,8 +32,9 @@ impl SelectPositionsLimit {
 pub(crate) fn eval_select_positions(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [list, criterion] => {
             let Some(items) = list_items(list) else {
@@ -78,8 +80,9 @@ pub(crate) fn eval_select_positions(
 pub(crate) fn eval_duplicates(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [list] = args else {
         return Ok(session.invalid_call_with_arg_range("Duplicates", args, 1, 1));
     };
@@ -130,8 +133,9 @@ fn collect_duplicates_indexed<'a>(
 pub(crate) fn eval_binary_search(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [list, value] = args else {
         return Ok(session.invalid_call_with_arg_range("BinarySearch", args, 2, 2));
     };
@@ -162,9 +166,13 @@ fn resume_select_positions_from_index(
         let value = match session.evaluate(Expr::call(state.criterion.clone(), vec![item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| resume_select_positions_with_value(session, state, value),
+                    || {
+                        move |session, value| {
+                            resume_select_positions_with_value(session, state, value)
+                        }
+                    },
                 );
             }
             Err(error) => return Err(error),

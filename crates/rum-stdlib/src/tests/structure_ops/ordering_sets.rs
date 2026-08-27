@@ -1,6 +1,6 @@
 use super::*;
 use crate::structure_ops::eval_sort;
-use rum_core::{Atom, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, Symbol};
+use rum_core::{Atom, Expr, GLOBAL_CONTEXT, Rational, SYSTEM_CONTEXT, SharedArgs, Symbol};
 
 fn eval_to_string(session: &mut Session, source: &str) -> String {
     session.eval_text(source).unwrap().value.to_string()
@@ -13,7 +13,8 @@ fn sort_symbols_by_qualified_name(mut symbols: Vec<Symbol>) -> Vec<Symbol> {
 
 fn sort_exprs(session: &mut Session, items: Vec<Expr>) -> Expr {
     let list = Expr::call(Expr::system_symbol("List"), items);
-    eval_sort(session, &Expr::system_symbol("Sort"), &[list]).unwrap()
+    let args = SharedArgs::new(vec![list]);
+    eval_sort(session, &Expr::system_symbol("Sort"), &args).unwrap()
 }
 
 #[test]

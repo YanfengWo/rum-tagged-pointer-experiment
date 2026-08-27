@@ -1,5 +1,6 @@
 use crc32fast::Hasher as Crc32Hasher;
 use md5::Md5;
+use rum_core::SharedArgs;
 use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{EvalError, Session, expr_as_string};
 use sha1::Sha1;
@@ -10,40 +11,45 @@ use super::codec::{ByteInput, byte_array_expr, bytes_to_hex, fail_bytes, input_b
 pub(crate) fn eval_sha256(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_digest::<Sha256>(session, head, args, "Sha256")
 }
 
 pub(crate) fn eval_sha512(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_digest::<Sha512>(session, head, args, "Sha512")
 }
 
 pub(crate) fn eval_sha1(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_digest::<Sha1>(session, head, args, "Sha1")
 }
 
 pub(crate) fn eval_md5(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     eval_digest::<Md5>(session, head, args, "Md5")
 }
 
 pub(crate) fn eval_crc32(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [arg] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("Crc32", args, 1));
     };

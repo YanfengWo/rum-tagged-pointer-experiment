@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
@@ -43,8 +44,9 @@ impl Default for NestWhileConfig {
 pub(crate) fn eval_nest(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, count_expr] => {
             let Some(count) = expr_as_non_negative_usize(count_expr) else {
@@ -75,8 +77,9 @@ pub(crate) fn eval_nest(
 pub(crate) fn eval_nest_while(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, test] => Ok(unary_operator_form_with_tail(
             "NestWhile",
@@ -120,8 +123,9 @@ pub(crate) fn eval_nest_while(
 pub(crate) fn eval_nest_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, count_expr] => {
             let Some(count) = expr_as_non_negative_usize(count_expr) else {
@@ -152,8 +156,9 @@ pub(crate) fn eval_nest_list(
 pub(crate) fn eval_nest_while_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, test] => Ok(unary_operator_form_with_tail(
             "NestWhileList",
@@ -197,8 +202,9 @@ pub(crate) fn eval_nest_while_list(
 pub(crate) fn eval_fixed_point_list(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(unary_operator_form("FixedPointList", operator)),
         [operator, expr] => apply_fixed_point_list(session, operator, expr, None),
@@ -220,8 +226,9 @@ pub(crate) fn eval_fixed_point_list(
 pub(crate) fn eval_fixed_point(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator] => Ok(unary_operator_form("FixedPoint", operator)),
         [operator, expr] => apply_fixed_point(session, operator, expr, None),
@@ -259,8 +266,8 @@ fn resume_nest_from_iteration(
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
     match value_result {
         Ok(value) => resume_nest_with_value(session, state, iteration, items, value),
-        Err(error) => session.suspend_with_frame(Err(error), move |session, value| {
-            resume_nest_with_value(session, state, iteration, items, value)
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, value| resume_nest_with_value(session, state, iteration, items, value)
         }),
     }
 }
@@ -296,8 +303,12 @@ fn resume_fixed_point_from_iteration(
         Ok(value) => {
             resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
         }
-        Err(error) => session.suspend_with_frame(Err(error), move |session, value| {
-            resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, value| {
+                resume_fixed_point_with_value(
+                    session, state, iteration, current, seen, items, value,
+                )
+            }
         }),
     }
 }
@@ -348,8 +359,10 @@ fn resume_nest_while_test_from_iteration(
         Ok(test_value) => {
             resume_nest_while_with_test_value(session, state, iteration, history, test_value)
         }
-        Err(error) => session.suspend_with_frame(Err(error), move |session, test_value| {
-            resume_nest_while_with_test_value(session, state, iteration, history, test_value)
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, test_value| {
+                resume_nest_while_with_test_value(session, state, iteration, history, test_value)
+            }
         }),
     }
 }
@@ -380,8 +393,10 @@ fn resume_nest_while_with_test_value(
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
     match value_result {
         Ok(value) => resume_nest_while_with_step_value(session, state, iteration, history, value),
-        Err(error) => session.suspend_with_frame(Err(error), move |session, value| {
-            resume_nest_while_with_step_value(session, state, iteration, history, value)
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, value| {
+                resume_nest_while_with_step_value(session, state, iteration, history, value)
+            }
         }),
     }
 }

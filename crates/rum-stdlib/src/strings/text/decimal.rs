@@ -1,10 +1,12 @@
 use super::*;
+use rum_core::SharedArgs;
 
 pub(crate) fn eval_decimal_string(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [value_expr, digits_expr] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("DecimalString", args, 2));
     };

@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum QuoteMode {
@@ -10,8 +11,9 @@ enum QuoteMode {
 pub(crate) fn eval_shell_split(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ShellSplit", args, 1));
     };
@@ -33,8 +35,9 @@ pub(crate) fn eval_shell_split(
 pub(crate) fn eval_shell_quote(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     let [text] = args else {
         return Ok(session.invalid_call_with_exact_arg_count("ShellQuote", args, 1));
     };

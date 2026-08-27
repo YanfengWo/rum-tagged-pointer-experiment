@@ -688,7 +688,7 @@ impl Session {
 
         let selector = target.selectors()[index].clone();
         let selector_result = self.evaluate(selector);
-        let selector = self.suspend_with_frame(selector_result, {
+        let selector = self.suspend_with_frame_lazy(selector_result, || {
             let target = target.clone();
             let rhs = rhs.clone();
             let evaluated_selectors = evaluated_selectors.clone();

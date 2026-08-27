@@ -18,9 +18,9 @@ impl Session {
     pub(in crate::runtime) fn eval_sow(
         &mut self,
         head: &Expr,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let (value, tag) = match args {
+        let (value, tag) = match args.as_ref() {
             [value] => (value.clone(), system_expr("None")),
             [value, tag] => (value.clone(), tag.clone()),
             _ => return Ok(Expr::call(head.clone(), args.to_vec())),
@@ -65,7 +65,7 @@ impl Session {
         });
 
         let body_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame(body_result, {
+        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
             move |session, outcome| session.resume_reap_after_body(outcome)
         });
 
@@ -86,10 +86,10 @@ impl Session {
 
         match outcome {
             Ok(value) => {
-                let suspended_value = value.clone();
                 let rendered_result = self.render_reap_scope(scope);
-                let rendered = self.suspend_with_frame(rendered_result, move |_, rendered| {
-                    Ok(finish_reap_result(suspended_value, rendered))
+                let rendered = self.suspend_with_frame_lazy(rendered_result, || {
+                    let suspended_value = value.clone();
+                    move |_, rendered| Ok(finish_reap_result(suspended_value, rendered))
                 })?;
                 Ok(finish_reap_result(value, rendered))
             }

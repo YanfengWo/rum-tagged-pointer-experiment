@@ -119,7 +119,7 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "ByteCount",
         "Returns the current canonical-text byte count for an expression in the first-pass resource subset.",
-        Session::eval_byte_count,
+        builtin_byte_count,
     ).protected(),
     BuiltinSpec::ordinary_with_hold(
         "On",
@@ -202,13 +202,13 @@ pub(super) const DEBUG_BUILTINS: &[BuiltinSpec] = &[
     BuiltinSpec::ordinary(
         "MemoryInUse",
         "Returns the current session memory-proxy byte count subset.",
-        Session::eval_memory_in_use,
+        builtin_memory_in_use,
     ).protected()
     .with_capability(Capability::Diagnostic),
     BuiltinSpec::ordinary(
         "MaxMemoryUsed",
         "Returns the peak session memory-proxy byte count high-water mark subset.",
-        Session::eval_max_memory_used,
+        builtin_max_memory_used,
     ).protected()
     .with_capability(Capability::Diagnostic),
     BuiltinSpec::ordinary_with_hold(

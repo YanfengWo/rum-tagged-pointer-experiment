@@ -448,7 +448,7 @@ pub(super) fn evaluate_scan_parts(
 ) -> Result<Expr, EvalError> {
     for part in parts {
         let result = session.evaluate(Expr::call(operator.clone(), vec![part]));
-        session.suspend_with_frame(result, |_, value| Ok(value))?;
+        session.suspend_with_frame_lazy(result, || |_, value| Ok(value))?;
     }
 
     Ok(system_expr("Null"))

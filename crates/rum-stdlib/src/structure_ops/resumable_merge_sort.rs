@@ -147,11 +147,13 @@ where
         let value = match session.evaluate(comparison) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        state.apply_comparison(&value);
-                        resume_merge_sort(session, state)
+                    || {
+                        move |session, value| {
+                            state.apply_comparison(&value);
+                            resume_merge_sort(session, state)
+                        }
                     },
                 );
             }

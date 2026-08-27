@@ -1,4 +1,5 @@
 use super::*;
+use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, FrameRootTrace)]
@@ -25,8 +26,9 @@ struct BlockMapEvalState {
 pub(crate) fn eval_block_map(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [operator, size] => Ok(unary_operator_form_with_tail(
             "BlockMap",
@@ -79,8 +81,9 @@ pub(crate) fn eval_block_map(
 pub(crate) fn eval_accumulate(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     if args.len() != 1 {
         return Ok(session.invalid_call_with_exact_arg_count("Accumulate", args, 1));
     }
@@ -95,8 +98,9 @@ pub(crate) fn eval_accumulate(
 pub(crate) fn eval_take_while(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [criterion] => Ok(unary_operator_form_slot_first("TakeWhile", criterion)),
         [expr, criterion] => {
@@ -113,8 +117,9 @@ pub(crate) fn eval_take_while(
 pub(crate) fn eval_length_while(
     session: &mut Session,
     _head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     match args {
         [criterion] => Ok(unary_operator_form_slot_first("LengthWhile", criterion)),
         [expr, criterion] => {
@@ -174,12 +179,14 @@ fn resume_while_sequence_from_index(
         let value = match session.evaluate(Expr::call(criterion.clone(), vec![item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_while_sequence_with_value(
-                            session, sequence, criterion, index, mode, value,
-                        )
+                    || {
+                        move |session, value| {
+                            resume_while_sequence_with_value(
+                                session, sequence, criterion, index, mode, value,
+                            )
+                        }
                     },
                 );
             }
@@ -226,10 +233,18 @@ fn resume_accumulate_from_index(
         let value = match session.evaluate(Expr::call(system_expr("Plus"), vec![current, item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_accumulate_with_value(session, sequence, index, accumulated, value)
+                    || {
+                        move |session, value| {
+                            resume_accumulate_with_value(
+                                session,
+                                sequence,
+                                index,
+                                accumulated,
+                                value,
+                            )
+                        }
                     },
                 );
             }
@@ -271,10 +286,12 @@ fn resume_block_map_from_index(
         let value = match session.evaluate(Expr::call(state.operator.clone(), vec![block])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame(
+                return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_block_map_with_value(session, state, index, results, value)
+                    || {
+                        move |session, value| {
+                            resume_block_map_with_value(session, state, index, results, value)
+                        }
                     },
                 );
             }

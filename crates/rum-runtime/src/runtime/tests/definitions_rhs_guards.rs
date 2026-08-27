@@ -18,16 +18,18 @@ fn guard_test_session() -> Session {
 fn test_integer_greater(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     test_integer_order(head, args, |left, right| left > right)
 }
 
 fn test_integer_less(
     _session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
     test_integer_order(head, args, |left, right| left < right)
 }
 
