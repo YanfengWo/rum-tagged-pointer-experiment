@@ -115,19 +115,52 @@ and be argued in the report **per type**:
    (`crates/rum-syntax/Cargo.toml`), so it cannot name `Expr` at all — the
    compiler guarantees the absence, no audit required.
 
-`SyntaxError` passes both and is pre-approved; add it as a no-op base
-implementation in `trace.rs` and to the sorted allowlist. Anything else that
-you believe passes must be reported with both arguments made explicitly —
-add at most that one and stop if a second candidate appears, so the boundary
-is reviewed rather than assumed.
+**Both `SyntaxError` and `RandomState` are pre-approved.** `RandomState`
+(reached via `DownValueDispatchIndexCache` -> `OnceLock<Box<DownValueDispatchIndex>>`)
+passes even more plainly than `SyntaxError`: it is defined in `std`, so no
+derive of ours can reach it, and `std` cannot depend on `rum-core`, so it
+cannot name `Expr` at all.
 
-**The twelve types the expansion already reached in `rum-runtime` and
-`rum-stdlib` are derived, not allowlisted** — `RuntimeMessage`,
+**Amended after the third stop-loss — apply the test yourself instead of
+stopping.** The previous version said to add at most one and stop on a second
+candidate. That was wrong instrument design: both halves of the test are
+mechanically checkable facts — which crate defines the type, and whether that
+crate can reach `rum-core` — so they need no judgment call from me at the
+moment you hit them. Apply the test yourself and keep going.
+
+What replaces the stop is **an audit trail**: every entry you add to the
+allowlist gets both arguments written out explicitly in the report, naming the
+defining crate and the dependency fact that rules out `Expr`. I check each one
+at the gate. A candidate you cannot argue both halves for is still a stop.
+
+**Types defined in this repository are derived, not allowlisted** — they fail
+the first half of the test outright, since a derive is entirely possible
+there. That includes the three the last run stopped short of:
+`SpanEndpoint` (both `crates/rum-stdlib/src/structure_ops/selectors.rs:26`
+and `crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors.rs:42`)
+and `TaggedValueStoreMetadata`
+(`crates/rum-runtime/src/runtime/model/definitions/tagged_value_store.rs:9`).
+It also includes the twelve reached earlier in `rum-runtime` and `rum-stdlib` — `RuntimeMessage`,
 `CasesLevelSpec`, `TraceOutput`, `ReplacePartHeadsMode`,
 `GuardedReplacePartTargetState`, `AtomicPartSpec` (both the runtime and stdlib
 definitions), `DownValueDispatchIndexCache`, `AttributeSet`, `MessageNameKey`,
-`SequenceGreediness`, `FileIoError`, and `RuntimeInputRequest`. They fail
-test 1: a derive is entirely possible there.
+`SequenceGreediness`, `FileIoError`, and `RuntimeInputRequest`.
+
+## Working tree state (read before you start)
+
+The previous run's partial work is **deliberately left in the tree** rather
+than reverted: option (a)'s `kernel_api` re-export, the `SyntaxError` entry,
+and roughly 130 derive attributes across 57 files. Continue from it; do not
+start over.
+
+It does not compile. Three known errors remain — `SpanEndpoint` (twice) and
+`TaggedValueStoreMetadata` need derives, and `RandomState` needs the
+now-approved base implementation — plus the `selectors.rs` inner-attribute
+breakage in pitfall 7. There may be more behind them, since the build stops at
+the first crate. Expect to keep expanding until it is green.
+
+Nothing in that partial state is pre-verified. Every acceptance item in
+Verification is still yours to run and paste from the finished tree.
 
 ## Scope
 
@@ -136,10 +169,10 @@ Files you MAY modify:
 - the files named in the `plan-364:493` closure list **and any file the
   expansion reaches**, for derive attributes and their imports only;
 - `crates/rum-runtime/src/runtime/suspension.rs` — module visibility;
-- `crates/rum-runtime/src/runtime/suspension/trace.rs` — **only** for the
-  pre-approved `SyntaxError` no-op and its sorted allowlist entry. Nothing
-  else in this file changes; the base implementations landed in step 1 are
-  finished.
+- `crates/rum-runtime/src/runtime/suspension/trace.rs` — for no-op base
+  implementations that pass the two-part test, and their sorted allowlist
+  entries. Nothing else in this file changes; step 1's existing base
+  implementations are finished and are not to be edited.
 - whichever single `rum-runtime` module is the right export surface for the
   trait and the derive (name it in the report);
 - `crates/rum-runtime/src/runtime/tests/frame_root_trace.rs` and a sibling
@@ -209,7 +242,12 @@ out of scope; if you believe one belongs, report it rather than adding it.
    investigate, do not adjust the test.
 6. **Do not descend into `Expr`.** Step 1's contract hands a whole `Expr` to
    the visitor; the recursive symbol scan stays in `gensym_gc.rs:236`.
-7. **Stop-loss is real.** If a type's shape defeats the derive twice, STOP and
+7. **An import goes after a file's inner attributes, not before them.** The
+   last run left `crates/rum-stdlib/src/structure_ops/selectors.rs`
+   unparseable by inserting `use ...` above `#![allow(dead_code)]`; inner
+   attributes must precede every item in the file. Fix that file and check
+   the same shape everywhere else you added an import.
+8. **Stop-loss is real.** If a type's shape defeats the derive twice, STOP and
    report the shape and the error.
 
 ## Verification (MANDATORY — you run it; iterate to green)
@@ -230,8 +268,8 @@ per-test-name diff, with `removed_or_changed=0` pasted.
 Also paste:
 
 - the negative calibration, before and after counts (pitfall 1);
-- the allowlist test's output, and the diff of the sorted list — it may gain
-  `SyntaxError` and nothing else without an explicit two-part argument;
+- the allowlist test's output, and the diff of the sorted list — with the
+  two-part argument written out for **every** entry you added;
 - your final type count, the seed count you started from, and any type the
   expansion reached that surprised you.
 
