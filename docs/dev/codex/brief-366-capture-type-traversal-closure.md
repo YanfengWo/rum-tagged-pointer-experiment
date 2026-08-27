@@ -2,9 +2,10 @@
 
 ## Goal
 
-Step 2 of plan-364. Apply `#[derive(FrameRootTrace)]` across the complete
-187-type capture closure so that every type a suspension frame can hold has a
-field-recursive traversal. **No behavior changes in this brief**: no frame
+Step 2 of plan-364. Apply `#[derive(FrameRootTrace)]` across the whole capture
+closure — the 116 seed types plus everything the compiler shows they reach —
+so that every type a suspension frame can hold has a field-recursive
+traversal. **No behavior changes in this brief**: no frame
 becomes a named struct, no closure API is deleted, no call site moves, and
 neither the GC root walk nor the memory proxy is wired to the new traversal.
 Those are steps 3 and 4.
@@ -17,10 +18,11 @@ without anyone editing a traversal.
 ## Context pointers
 
 - Read `AGENTS.md` first.
-- `docs/dev/codex/plan-364-frame-roots.md:483` — the closure: 116 types that
-  carry `Expr` directly or transitively, 71 current leaf/control types. The
-  itemized list with source lines starts at `:493`. **That list is the
-  authoritative scope of this brief.**
+- `docs/dev/codex/plan-364-frame-roots.md:493` — the itemized list of the
+  **116 seed types** that carry `Expr` directly or transitively. This is a
+  seed set, **not** the full scope: plan-364 also counts 71 leaf/control
+  types, and those were never itemized anywhere. See "How scope is
+  determined" below — they are reached by expansion, not by a list.
 - `crates/rum-runtime/src/runtime/suspension/trace.rs` — landed in step 1
   (`d13aa27f`): the trait, the visitor, and base implementations for `Expr`,
   `Symbol`, shared-expression types, containers, scalars, and the two
@@ -53,11 +55,41 @@ Settle this first, and state your choice with reasons:
 - **(b) `rum-stdlib` depends on `rum-derive` directly** — simpler paths, but
   it leaks an implementation detail into a second manifest.
 
-My preference is (a); `rum-derive` is an implementation detail of the
-traversal contract, not a thing stdlib should know about. Take (b) only if
-(a) has a concrete problem you can show. Either way the trait itself has to
-become reachable, so decide how far its visibility opens and keep it as
-narrow as the closure actually requires.
+**Take (a), through `rum-runtime::kernel_api`.** That was my preference and
+you reached the same conclusion independently on the stopped run, so it is
+settled — do not spend the run re-deciding it. `rum-derive` is an
+implementation detail of the traversal contract, not a thing stdlib should
+know about. Open the trait's visibility only as far as the closure actually
+requires, and if (a) turns out to have a concrete problem you can show, STOP
+and report it rather than switching to (b) unilaterally.
+
+## How scope is determined (this replaces the previous brief's list rule)
+
+The first version of this brief named `plan-364:493` as the authoritative
+scope and simultaneously demanded all 187 types. That is unsatisfiable and
+Codex correctly stopped: the list holds exactly 116 entries and is titled
+"Expression-bearing custom closure"; the 71 leaf/control types were never
+itemized, and `Run<T>` is required by `plan-364:487` while appearing on no
+list. My error, not a gap in the plan.
+
+The fix is not a longer list — it is to stop using a list as the authority.
+The closure is mechanically derivable and **the compiler is the boundary**:
+
+1. Start from the 116 seeds at `plan-364:493`.
+2. Derive `FrameRootTrace` on each.
+3. Where a field's type has no traversal, the build fails. That failure names
+   the next member of the closure. Derive it too.
+4. Repeat until the workspace compiles. The closure is then closed by
+   construction, with no list to keep in sync.
+
+This is the same property the whole line is buying — a fact the compiler
+enforces rather than one people maintain — so it applies to the scope
+boundary as well. **187 is plan-364's estimate, not an acceptance
+criterion.** Report the number you actually reach. A different number is a
+finding to state, not a discrepancy to hide or to pad toward.
+
+If expansion pulls in a type that clearly has nothing to do with suspension
+state, stop and report it rather than deriving your way across the codebase.
 
 ## Scope
 
@@ -84,23 +116,26 @@ Files/areas you MUST NOT touch:
 - `crates/rum-core/src/expr.rs` representation and any public serde shape;
 - `AGENTS.md`, `PROGRESS.md`, `TODO.md`, `docs/**`, `.git`, `Cargo.lock`.
 
-**Any type not on the `plan-364:493` list is out of scope.** If you find one
-that belongs in the closure and is missing, report it — do not silently add
-it, and do not silently skip a listed one either.
+**Scope is the transitive closure of the seeds, and the compiler decides its
+boundary** — see "How scope is determined". A type reached by expansion from a
+seed is in scope even though no list names it. A type reachable from neither is
+out of scope; if you believe one belongs, report it rather than adding it.
 
 ## Deliverable
 
-1. **Derives applied across the full closure**, both the 116 expression-bearing
-   types and the 71 leaves. The leaves are not optional: a derived no-op today
-   is what makes a future field automatic, which is the entire point.
+1. **Derives applied across the whole closure** — the 116 seeds and every
+   type the expansion reaches, leaves included. The leaves are not optional: a
+   derived no-op today is what makes a future field automatic, which is the
+   entire point. `Run<T>` (`crates/rum-stdlib/src/structure_ops/resumable_merge_sort.rs:31`)
+   is a known example of a required type that no list names.
 2. **Generic carriers bounded correctly** — `Run<T>` and the other generic
    types get `T: FrameRootTrace` only where the parameter appears in a
    traversed field, matching the rule step 1 established.
 3. **A completeness check that is mechanical, not a promise.** A test that
-   fails if any closure type stops implementing the trait — for example a
-   list of `assert_traces::<T>()` instantiations covering all 187. State
-   plainly how you verified the list matches `plan-364:493` item for item, and
-   report the count you actually instantiated.
+   fails if any closure type stops implementing the trait — a list of
+   `assert_traces::<T>()` instantiations covering every type you derived.
+   Report the count you reached and how it compares to plan-364's estimate of
+   187, **without treating 187 as a target**: see "How scope is determined".
 4. **Zero growth in the handwritten allowlist.** Every type here is derived.
    If some type genuinely cannot be, STOP and report it — do **not** write a
    handwritten implementation and add it to the allowlist. That allowlist is
@@ -154,7 +189,8 @@ Also paste:
 
 - the negative calibration, before and after counts (pitfall 1);
 - the allowlist test's output, showing the list did not grow;
-- your completeness count, and how you reconciled it against `plan-364:493`.
+- your final type count, the seed count you started from, and any type the
+  expansion reached that surprised you.
 
 No microbench gate: this brief adds trait implementations that nothing calls
 on an evaluation path. Say that explicitly rather than running one — and if
@@ -182,7 +218,7 @@ you believe you touched a hot path, STOP and say so instead.
 3. Verification — each command with verbatim output, including the per-test
    diff and `removed_or_changed=`.
 4. The negative calibration — before/after counts, and the restore.
-5. Completeness — how many types instantiated, and the reconciliation against
-   `plan-364:493`.
+5. Completeness — the seed count, the final count, and any type the expansion
+   reached that no list named.
 6. Stop-loss / open questions — any type that resisted, any closure member you
    believe is wrong (empty if none).
