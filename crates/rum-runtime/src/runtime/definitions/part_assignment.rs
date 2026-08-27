@@ -1,6 +1,7 @@
 use super::super::*;
 use super::incremental_mutation::DefinitionValueRollback;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 #[cfg(test)]
 use std::cell::RefCell;
@@ -9,6 +10,67 @@ use std::cell::RefCell;
 struct PositionalPartAssignmentTarget {
     owner: Symbol,
     selectors: Vec<Expr>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct EvaluatedSelectorAccumulator {
+    prefix: SharedArgs,
+    tail: Option<Arc<EvaluatedSelectorNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct EvaluatedSelectorNode {
+    previous: Option<Arc<EvaluatedSelectorNode>>,
+    value: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedPositionalPartAssignment {
+    owner: Symbol,
+    selectors: Arc<[Expr]>,
+    rhs: Expr,
+    cursor: usize,
+    evaluated: EvaluatedSelectorAccumulator,
+}
+
+impl EvaluatedSelectorAccumulator {
+    fn freeze(values: Vec<Expr>) -> Self {
+        let len = values.len();
+        Self {
+            prefix: SharedArgs::new(values),
+            tail: None,
+            len,
+        }
+    }
+
+    fn appended(&self, value: Expr) -> Self {
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(EvaluatedSelectorNode {
+                previous: self.tail.clone(),
+                value,
+            })),
+            len: self.len + 1,
+        }
+    }
+
+    fn into_vec(self) -> Vec<Expr> {
+        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut node = self.tail;
+        while let Some(current) = node {
+            let current = Arc::try_unwrap(current)
+                .unwrap_or_else(|_| panic!("completed selector accumulator must be unique"));
+            suffix.push(current.value);
+            node = current.previous;
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.into_vec();
+        values.reserve(suffix.len());
+        values.extend(suffix);
+        values
+    }
 }
 
 impl Session {
@@ -56,59 +118,101 @@ impl Session {
         target: PositionalPartAssignmentTarget,
         rhs: Expr,
         mut evaluated_selectors: Vec<Expr>,
-        index: usize,
+        mut index: usize,
     ) -> Result<Expr, EvalError> {
-        if index >= target.selectors.len() {
-            return self.finish_positional_part_assignment(target, evaluated_selectors, rhs);
-        }
-
-        let selector_result = self.evaluate(target.selectors[index].clone());
-        let selector = self.suspend_with_frame_lazy(selector_result, || {
-            let target = target.clone();
-            let rhs = rhs.clone();
-            let evaluated_selectors = evaluated_selectors.clone();
-            move |session, selector| {
-                let mut evaluated_selectors = evaluated_selectors;
-                evaluated_selectors.push(selector);
-                session.resume_positional_part_selector_evaluation(
-                    target,
-                    rhs,
+        loop {
+            let Some(selector_expr) = target.selectors.get(index) else {
+                return self.finish_positional_part_assignment(
+                    target.owner,
                     evaluated_selectors,
-                    index + 1,
-                )
-            }
-        })?;
+                    rhs,
+                );
+            };
 
-        evaluated_selectors.push(selector);
-        self.resume_positional_part_selector_evaluation(target, rhs, evaluated_selectors, index + 1)
+            match self.evaluate(selector_expr.clone()) {
+                Ok(selector) => {
+                    evaluated_selectors.push(selector);
+                    index += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    let suspended = SuspendedPositionalPartAssignment {
+                        owner: target.owner,
+                        selectors: Arc::from(target.selectors),
+                        rhs,
+                        cursor: index,
+                        evaluated: EvaluatedSelectorAccumulator::freeze(evaluated_selectors),
+                    };
+                    self.push_suspension_frame(move |session, outcome| {
+                        let selector = outcome?;
+                        session.resume_suspended_positional_part_assignment(suspended, selector)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn resume_suspended_positional_part_assignment(
+        &mut self,
+        mut state: SuspendedPositionalPartAssignment,
+        selector: Expr,
+    ) -> Result<Expr, EvalError> {
+        state.evaluated = state.evaluated.appended(selector);
+        state.cursor += 1;
+
+        loop {
+            let Some(selector_expr) = state.selectors.get(state.cursor) else {
+                return self.finish_positional_part_assignment(
+                    state.owner,
+                    state.evaluated.into_vec(),
+                    state.rhs,
+                );
+            };
+
+            match self.evaluate(selector_expr.clone()) {
+                Ok(selector) => {
+                    state.evaluated = state.evaluated.appended(selector);
+                    state.cursor += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        let selector = outcome?;
+                        session.resume_suspended_positional_part_assignment(state, selector)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     fn finish_positional_part_assignment(
         &mut self,
-        target: PositionalPartAssignmentTarget,
+        owner: Symbol,
         evaluated_selectors: Vec<Expr>,
         rhs: Expr,
     ) -> Result<Expr, EvalError> {
         // Selector evaluation can reassign, clear, protect, or remove the
         // owner. Re-fetch every target fact only after the final callback.
-        if !self.ensure_symbol_not_protected_for_write("Set", &target.owner) {
+        if !self.ensure_symbol_not_protected_for_write("Set", &owner) {
             return Ok(rhs);
         }
-        if self.removed_symbols.contains(&target.owner) {
+        if self.removed_symbols.contains(&owner) {
             self.push_positional_part_assignment_argform(format!(
                 "Part assignment owner {} has been removed",
-                target.owner
+                owner
             ));
             return Ok(rhs);
         }
         let Some(current) = self
             .definitions
-            .get(&target.owner)
+            .get(&owner)
             .and_then(|definition| definition.own_value.as_ref())
         else {
             self.push_positional_part_assignment_argform(format!(
                 "expected Part assignment owner {} to have a current List value",
-                target.owner
+                owner
             ));
             return Ok(rhs);
         };
@@ -156,7 +260,7 @@ impl Session {
             return Ok(rhs);
         }
 
-        if self.try_direct_positional_part_assignment(&target.owner, path, &rhs)? {
+        if self.try_direct_positional_part_assignment(&owner, path, &rhs)? {
             return Ok(rhs);
         }
 
@@ -165,21 +269,21 @@ impl Session {
         // the direct route cannot prove an unobservable environment.
         let Some(current) = self
             .definitions
-            .get(&target.owner)
+            .get(&owner)
             .and_then(|definition| definition.own_value.clone())
         else {
             self.push_positional_part_assignment_argform(format!(
                 "expected Part assignment owner {} to have a current List value",
-                target.owner
+                owner
             ));
             return Ok(rhs);
         };
         let updated = replace_exact_path(current, path, rhs.clone());
-        self.installed_system_own_values.remove(&target.owner);
-        let definition = self.definitions.entry(target.owner).or_default();
+        self.installed_system_own_values.remove(&owner);
+        let definition = self.definitions.entry(owner).or_default();
         definition.own_value = Some(updated);
         definition.delayed_own_value = None;
-        self.bump_evaluation_epoch_for_symbol(&target.owner);
+        self.bump_evaluation_epoch_for_symbol(&owner);
         Ok(rhs)
     }
 
@@ -469,4 +573,6 @@ fn take_positional_part_assignment_failure(_target: &Symbol) -> bool {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<PositionalPartAssignmentTarget>();
+    assert_traces::<EvaluatedSelectorAccumulator>();
+    assert_traces::<SuspendedPositionalPartAssignment>();
 };

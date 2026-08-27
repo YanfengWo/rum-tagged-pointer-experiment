@@ -1,4 +1,98 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct PersistentPositionAccumulator {
+    prefix: SharedArgs,
+    tail: Option<Arc<PersistentPositionNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct PersistentPositionNode {
+    previous: Option<Arc<PersistentPositionNode>>,
+    values: SharedArgs,
+}
+
+impl PersistentPositionAccumulator {
+    fn freeze(values: Vec<Expr>) -> Self {
+        let len = values.len();
+        Self {
+            prefix: SharedArgs::new(values),
+            tail: None,
+            len,
+        }
+    }
+
+    fn appended_values(&self, values: Vec<Expr>) -> Self {
+        if values.is_empty() {
+            return self.clone();
+        }
+        let added = values.len();
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(PersistentPositionNode {
+                previous: self.tail.clone(),
+                values: SharedArgs::new(values),
+            })),
+            len: self.len + added,
+        }
+    }
+
+    fn appended(&self, value: Expr) -> Self {
+        self.appended_values(vec![value])
+    }
+
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn into_vec(self) -> Vec<Expr> {
+        let mut suffix = Vec::new();
+        let mut node = self.tail;
+        while let Some(current) = node {
+            let current = match Arc::try_unwrap(current) {
+                Ok(current) => current,
+                Err(_) => panic!("completed position accumulator must be uniquely owned"),
+            };
+            let values = current.values.into_vec();
+            suffix.push(values);
+            node = current.previous;
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.into_vec();
+        values.reserve(self.len.saturating_sub(values.len()));
+        for chunk in suffix {
+            values.extend(chunk);
+        }
+        values
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedPositionChildren {
+    children: Arc<[(Expr, Vec<Expr>, bool)]>,
+    child_index: usize,
+    expr: Expr,
+    pattern: Expr,
+    traversal: CasesTraversalConfig,
+    level: usize,
+    path: Arc<[Expr]>,
+    seen_before: usize,
+    positions: PersistentPositionAccumulator,
+    max_child_depth: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedPositionNode {
+    traversal: CasesTraversalConfig,
+    depth: usize,
+    path: Arc<[Expr]>,
+    seen_before: usize,
+    positions: PersistentPositionAccumulator,
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_position(
@@ -16,63 +110,51 @@ impl Session {
         let target_result = self.evaluate(args_slice[0].clone());
         let target = self.suspend_with_frame_lazy(target_result, || {
             let args = args.clone();
-            move |session, target| {
-                session.resume_position_after_target(
-                    target,
-                    args[1].clone(),
-                    args[2..].to_vec(),
-                    args.as_ref().to_vec(),
-                )
-            }
+            move |session, target| session.resume_position_after_target(target, &args)
         })?;
 
-        self.resume_position_after_target(
-            target,
-            args_slice[1].clone(),
-            args_slice[2..].to_vec(),
-            args_slice.to_vec(),
-        )
+        self.resume_position_after_target(target, args)
     }
 
     fn resume_position_after_target(
         &mut self,
         target: Expr,
-        pattern_expr: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
         let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
-            let option_exprs = option_exprs.clone();
-            let call_args = call_args.clone();
-            move |session, pattern| {
-                session.resume_position_after_pattern(target, pattern, option_exprs, call_args)
-            }
+            let args = args.clone();
+            move |session, pattern| session.resume_position_after_pattern(target, pattern, &args)
         })?;
 
-        self.resume_position_after_pattern(target, pattern, option_exprs, call_args)
+        self.resume_position_after_pattern(target, pattern, args)
     }
 
     fn resume_position_after_pattern(
         &mut self,
         target: Expr,
         pattern: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let mut defaults = CasesTraversalConfig::default_position();
         defaults.include_heads = self.system_option_bool("Position", "Heads", true)?;
-        let traversal_result = self.resolve_position_traversal_owned(option_exprs, defaults);
-        self.drive_internal_value(traversal_result, {
-            let target = target.clone();
-            let pattern = pattern.clone();
-            let call_args = call_args.clone();
-            move |session, traversal| {
-                session
-                    .finish_position_after_resolved_traversal(target, pattern, traversal, call_args)
+        let traversal_result = self.resolve_position_traversal_owned(args[2..].to_vec(), defaults);
+        match traversal_result {
+            Ok(traversal) => {
+                self.finish_position_after_resolved_traversal(target, pattern, traversal, args)
             }
-        })
+            Err(EvalError::InputRequired { request }) => {
+                let args = args.clone();
+                self.push_suspension_frame(move |session, outcome| {
+                    let traversal = CasesTraversalResolution::from_continuation_expr(outcome?);
+                    session
+                        .finish_position_after_resolved_traversal(target, pattern, traversal, &args)
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn finish_position_after_resolved_traversal(
@@ -80,12 +162,12 @@ impl Session {
         target: Expr,
         pattern: Expr,
         traversal: CasesTraversalResolution,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let traversal = match traversal {
             CasesTraversalResolution::Valid(traversal) => traversal,
             CasesTraversalResolution::Invalid(error) => {
-                return Ok(self.invalid_cases_traversal_call("Position", &call_args, error));
+                return Ok(self.invalid_cases_traversal_call("Position", args.as_ref(), error));
             }
         };
 
@@ -243,14 +325,58 @@ impl Session {
             })
         };
 
-        self.drive_internal_value(match_result, move |_, outcome| {
-            if outcome.matched {
-                positions.push(position_expr(&path));
+        match match_result {
+            Ok(outcome) => {
+                if outcome.matched {
+                    positions.push(position_expr(&path));
+                }
+                let exhausted = traversal.limit_reached(seen_before + positions.len());
+                Ok(PositionCollectionOutcome::new(positions, depth, exhausted))
             }
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedPositionNode {
+                    traversal,
+                    depth,
+                    path: Arc::from(path),
+                    seen_before,
+                    positions: PersistentPositionAccumulator::freeze(positions),
+                };
+                self.push_suspension_frame(move |session, outcome| {
+                    session
+                        .finish_suspended_position_node(state, outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-            let exhausted = traversal.limit_reached(seen_before + positions.len());
-            Ok(PositionCollectionOutcome::new(positions, depth, exhausted))
-        })
+    fn finish_suspended_position_node(
+        &mut self,
+        state: SuspendedPositionNode,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<PositionCollectionOutcome, EvalError> {
+        let outcome = CompiledMatchOutcome::from_continuation_expr(outcome?);
+        self.finish_suspended_position_node_outcome(state, outcome)
+    }
+
+    fn finish_suspended_position_node_outcome(
+        &mut self,
+        mut state: SuspendedPositionNode,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<PositionCollectionOutcome, EvalError> {
+        if outcome.matched {
+            state.positions = state.positions.appended(position_expr(state.path.as_ref()));
+        }
+        let exhausted = state
+            .traversal
+            .limit_reached(state.seen_before + state.positions.len());
+        Ok(PositionCollectionOutcome::new(
+            state.positions.into_vec(),
+            state.depth,
+            exhausted,
+        ))
     }
 
     /// Walks the children one per loop iteration, keeping the accumulated
@@ -320,28 +446,139 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedPositionChildren {
+                        children: Arc::from(children),
+                        child_index,
+                        expr,
+                        pattern,
+                        traversal,
+                        level,
+                        path: Arc::from(path),
+                        seen_before,
+                        positions: PersistentPositionAccumulator::freeze(positions),
+                        max_child_depth,
+                    };
                     self.push_suspension_frame(move |session, value| {
                         let outcome = PositionCollectionOutcome::from_continuation_expr(value?);
                         session
-                            .collect_position_children(
-                                children,
-                                child_index,
-                                expr,
-                                pattern,
-                                traversal,
-                                level,
-                                path,
-                                seen_before,
-                                positions,
-                                max_child_depth,
-                                Some(outcome),
-                            )
+                            .collect_position_children_suspended(state, Some(outcome))
                             .map(|outcome| outcome.into_continuation_expr())
                     });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
             }
+        }
+    }
+
+    fn collect_position_children_suspended(
+        &mut self,
+        mut state: SuspendedPositionChildren,
+        mut pending: Option<PositionCollectionOutcome>,
+    ) -> Result<PositionCollectionOutcome, EvalError> {
+        loop {
+            if let Some(child_outcome) = pending.take() {
+                state.positions = state.positions.appended_values(child_outcome.positions);
+                let contributes_depth = state
+                    .children
+                    .get(state.child_index)
+                    .is_some_and(|(_, _, contributes_depth)| *contributes_depth);
+                if contributes_depth {
+                    state.max_child_depth = state.max_child_depth.max(child_outcome.depth);
+                }
+
+                if child_outcome.exhausted {
+                    return Ok(PositionCollectionOutcome::new(
+                        state.positions.into_vec(),
+                        state.max_child_depth + 1,
+                        true,
+                    ));
+                }
+
+                state.child_index += 1;
+            }
+
+            let Some((child, child_path, _contributes_depth)) =
+                state.children.get(state.child_index).cloned()
+            else {
+                let depth = state.max_child_depth.saturating_add(1);
+                let node = SuspendedPositionNode {
+                    traversal: state.traversal,
+                    depth,
+                    path: state.path,
+                    seen_before: state.seen_before,
+                    positions: state.positions,
+                };
+                return self.finish_positions_at_current_node_suspended(
+                    state.expr,
+                    state.pattern,
+                    state.level - 1,
+                    node,
+                );
+            };
+
+            let child_result = self.collect_positions_owned(
+                child,
+                state.pattern.clone(),
+                state.traversal,
+                state.level,
+                child_path,
+                state.seen_before + state.positions.len(),
+            );
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = PositionCollectionOutcome::from_continuation_expr(value?);
+                        session
+                            .collect_position_children_suspended(state, Some(outcome))
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn finish_positions_at_current_node_suspended(
+        &mut self,
+        expr: Expr,
+        pattern: Expr,
+        level: usize,
+        state: SuspendedPositionNode,
+    ) -> Result<PositionCollectionOutcome, EvalError> {
+        if state
+            .traversal
+            .limit_reached(state.seen_before + state.positions.len())
+        {
+            return Ok(PositionCollectionOutcome::new(
+                state.positions.into_vec(),
+                state.depth,
+                true,
+            ));
+        }
+
+        let match_result = if state.traversal.levels.matches(level, state.depth) {
+            self.match_expr_owned(pattern, expr, SymbolExprMap::default())
+        } else {
+            Ok(CompiledMatchOutcome {
+                matched: false,
+                bindings: SymbolExprMap::default(),
+            })
+        };
+        match match_result {
+            Ok(outcome) => self.finish_suspended_position_node_outcome(state, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    session
+                        .finish_suspended_position_node(state, outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
         }
     }
 }
@@ -363,3 +600,11 @@ fn position_index(index: usize) -> Expr {
 fn position_key(key: Expr) -> Expr {
     Expr::call(system_expr("Key"), vec![key])
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<PersistentPositionAccumulator>();
+    assert_traces::<SuspendedPositionChildren>();
+    assert_traces::<SuspendedPositionNode>();
+};

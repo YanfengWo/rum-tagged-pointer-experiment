@@ -1,4 +1,59 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct FixedPointHistory {
+    prefix: SharedArgs,
+    tail: Option<Arc<FixedPointHistoryNode>>,
+}
+
+#[derive(FrameRootTrace)]
+struct FixedPointHistoryNode {
+    previous: Option<Arc<FixedPointHistoryNode>>,
+    value: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedFixedPointState {
+    current: Expr,
+    evaluation_passes: usize,
+    seen: FixedPointHistory,
+}
+
+impl FixedPointHistory {
+    fn freeze(values: Vec<Expr>) -> Self {
+        Self {
+            prefix: SharedArgs::new(values),
+            tail: None,
+        }
+    }
+
+    fn contains(&self, value: &Expr) -> bool {
+        if self.prefix.iter().any(|previous| previous == value) {
+            return true;
+        }
+
+        let mut node = self.tail.as_deref();
+        while let Some(current) = node {
+            if &current.value == value {
+                return true;
+            }
+            node = current.previous.as_deref();
+        }
+        false
+    }
+
+    fn appended(&self, value: Expr) -> Self {
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(FixedPointHistoryNode {
+                previous: self.tail.clone(),
+                value,
+            })),
+        }
+    }
+}
 
 impl Session {
     pub(super) fn normalize_match_expr(&self, expr: &Expr) -> Expr {
@@ -351,18 +406,16 @@ impl Session {
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    let current_for_resume = current.clone();
-                    let seen_for_resume = fixed_point_seen.clone();
-                    self.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                        move |session, next| {
-                            session.resume_fixed_point_from(
-                                current_for_resume,
-                                evaluation_passes,
-                                seen_for_resume,
-                                next,
-                            )
-                        }
-                    })?
+                    let state = SuspendedFixedPointState {
+                        current,
+                        evaluation_passes,
+                        seen: FixedPointHistory::freeze(fixed_point_seen),
+                    };
+                    self.push_suspension_frame(move |session, outcome| {
+                        let next = outcome?;
+                        session.resume_fixed_point_from(state, next)
+                    });
+                    return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
             };
@@ -382,78 +435,73 @@ impl Session {
         }
     }
 
-    pub(super) fn resume_fixed_point_from(
+    fn resume_fixed_point_from(
         &mut self,
-        current: Expr,
-        evaluation_passes: usize,
-        fixed_point_seen: Vec<Expr>,
+        mut state: SuspendedFixedPointState,
         next: Expr,
     ) -> Result<Expr, EvalError> {
-        if next == current {
+        if next == state.current {
             return Ok(next);
         }
 
-        self.push_evaluation_pass_trace(&current, &next);
-
-        let mut current = next;
-        let mut evaluation_passes = evaluation_passes;
-        let mut fixed_point_seen = fixed_point_seen;
+        self.push_evaluation_pass_trace(&state.current, &next);
+        state.current = next;
 
         loop {
-            if evaluation_passes >= self.resource_limits.evaluation_pass_limit {
+            if state.evaluation_passes >= self.resource_limits.evaluation_pass_limit {
                 return Err(EvalError::EvaluationPassLimitExceeded {
                     limit: self.resource_limits.evaluation_pass_limit,
                 });
             }
-            evaluation_passes += 1;
+            state.evaluation_passes += 1;
 
-            self.enforce_active_resource_limits_for_expr(&current)?;
-            if self.cached_expr_is_evaluation_stable(&current) {
-                return Ok(current);
+            self.enforce_active_resource_limits_for_expr(&state.current)?;
+            if self.cached_expr_is_evaluation_stable(&state.current) {
+                return Ok(state.current);
             }
 
-            let track_cycle = should_track_evaluation_cycle(&current);
+            let track_cycle = should_track_evaluation_cycle(&state.current);
             if track_cycle {
-                if fixed_point_seen.iter().any(|previous| previous == &current) {
+                if state.seen.contains(&state.current) {
                     return Err(EvalError::EvaluationCycleDetected {
-                        expr: current.to_string(),
+                        expr: state.current.to_string(),
                     });
                 }
-                fixed_point_seen.push(current.clone());
+                state.seen = state.seen.appended(state.current.clone());
             }
 
             let next_result = self.evaluate_once_unstable_after_input_check_with_cycle_tracking(
-                current.clone(),
+                state.current.clone(),
                 track_cycle,
             );
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    let current_for_resume = current.clone();
-                    let seen_for_resume = fixed_point_seen.clone();
-                    self.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                        move |session, next| {
-                            session.resume_fixed_point_from(
-                                current_for_resume,
-                                evaluation_passes,
-                                seen_for_resume,
-                                next,
-                            )
-                        }
-                    })?
+                    self.push_suspension_frame(move |session, outcome| {
+                        let next = outcome?;
+                        session.resume_fixed_point_from(state, next)
+                    });
+                    return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
             };
 
-            if next == current {
+            if next == state.current {
                 return Ok(next);
             }
 
-            self.push_evaluation_pass_trace(&current, &next);
-            current = next;
+            self.push_evaluation_pass_trace(&state.current, &next);
+            state.current = next;
         }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<FixedPointHistory>();
+    assert_traces::<SuspendedFixedPointState>();
+};
 
 const EVALUATION_CYCLE_HISTORY_NODE_LIMIT: usize = 8;
 

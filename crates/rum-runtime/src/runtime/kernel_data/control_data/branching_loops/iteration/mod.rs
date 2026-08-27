@@ -1,5 +1,6 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 mod driver;
 mod spec;
@@ -38,6 +39,78 @@ pub(super) enum DoSpec {
     Iterator { symbol: Symbol, values: Vec<Expr> },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
+pub(super) enum SuspendedDoSpec {
+    Count(usize),
+    Iterator { symbol: Symbol, values: Arc<[Expr]> },
+}
+
+impl From<DoSpec> for SuspendedDoSpec {
+    fn from(spec: DoSpec) -> Self {
+        match spec {
+            DoSpec::Count(count) => Self::Count(count),
+            DoSpec::Iterator { symbol, values } => Self::Iterator {
+                symbol,
+                values: Arc::from(values),
+            },
+        }
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
+pub(super) struct PersistentExprAccumulator {
+    prefix: SharedArgs,
+    tail: Option<Arc<PersistentExprAccumulatorNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct PersistentExprAccumulatorNode {
+    previous: Option<Arc<PersistentExprAccumulatorNode>>,
+    value: Expr,
+}
+
+impl PersistentExprAccumulator {
+    pub(super) fn freeze(values: Vec<Expr>) -> Self {
+        let len = values.len();
+        Self {
+            prefix: SharedArgs::new(values),
+            tail: None,
+            len,
+        }
+    }
+
+    pub(super) fn appended(&self, value: Expr) -> Self {
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(PersistentExprAccumulatorNode {
+                previous: self.tail.clone(),
+                value,
+            })),
+            len: self.len + 1,
+        }
+    }
+
+    pub(super) fn into_vec(self) -> Vec<Expr> {
+        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut node = self.tail;
+        while let Some(current) = node {
+            let current = match Arc::try_unwrap(current) {
+                Ok(current) => current,
+                Err(_) => panic!("completed iteration accumulator must be uniquely owned"),
+            };
+            suffix.push(current.value);
+            node = current.previous;
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.into_vec();
+        values.reserve(suffix.len());
+        values.extend(suffix);
+        values
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub(super) enum IterationConsumer {
@@ -74,4 +147,6 @@ impl IterationConsumer {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<DoSpec>();
+    assert_traces::<SuspendedDoSpec>();
+    assert_traces::<PersistentExprAccumulator>();
 };

@@ -1,10 +1,49 @@
 use super::status::is_failure_q_expr;
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum ConfirmQuietSelectors {
     All,
     Exact(Vec<MessageSelector>),
+}
+
+#[derive(Clone, FrameRootTrace)]
+enum SuspendedConfirmQuietSelectors {
+    All,
+    Exact(Arc<[MessageSelector]>),
+}
+
+#[derive(Clone, Copy)]
+enum ConfirmQuietSelectorsView<'a> {
+    All,
+    Exact(&'a [MessageSelector]),
+}
+
+impl ConfirmQuietSelectors {
+    fn view(&self) -> ConfirmQuietSelectorsView<'_> {
+        match self {
+            Self::All => ConfirmQuietSelectorsView::All,
+            Self::Exact(selectors) => ConfirmQuietSelectorsView::Exact(selectors),
+        }
+    }
+}
+
+impl SuspendedConfirmQuietSelectors {
+    fn freeze(selectors: ConfirmQuietSelectors) -> Self {
+        match selectors {
+            ConfirmQuietSelectors::All => Self::All,
+            ConfirmQuietSelectors::Exact(selectors) => Self::Exact(Arc::from(selectors)),
+        }
+    }
+
+    fn view(&self) -> ConfirmQuietSelectorsView<'_> {
+        match self {
+            Self::All => ConfirmQuietSelectorsView::All,
+            Self::Exact(selectors) => ConfirmQuietSelectorsView::Exact(selectors),
+        }
+    }
 }
 
 mod builtins;
@@ -23,13 +62,13 @@ fn normalize_confirm_quiet_selectors(
 
 fn confirm_quiet_matched_message(
     messages: &[RuntimeMessage],
-    selectors: &ConfirmQuietSelectors,
+    selectors: ConfirmQuietSelectorsView<'_>,
 ) -> Option<RuntimeMessage> {
     messages
         .iter()
         .find(|message| match selectors {
-            ConfirmQuietSelectors::All => true,
-            ConfirmQuietSelectors::Exact(selectors) => {
+            ConfirmQuietSelectorsView::All => true,
+            ConfirmQuietSelectorsView::Exact(selectors) => {
                 selectors.iter().any(|selector| selector.matches(message))
             }
         })
@@ -39,15 +78,21 @@ fn confirm_quiet_matched_message(
 fn suppress_confirm_quiet_messages(
     session: &mut Session,
     checkpoint: usize,
-    selectors: &ConfirmQuietSelectors,
+    selectors: ConfirmQuietSelectorsView<'_>,
 ) {
     match selectors {
-        ConfirmQuietSelectors::All => session.messages.truncate(checkpoint),
-        ConfirmQuietSelectors::Exact(selectors) => {
+        ConfirmQuietSelectorsView::All => session.messages.truncate(checkpoint),
+        ConfirmQuietSelectorsView::Exact(selectors) => {
             session.suppress_messages_since(checkpoint, selectors);
         }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedConfirmQuietSelectors>();
+};
 
 fn evaluate_optional_confirmation_info(
     session: &mut Session,

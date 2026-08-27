@@ -112,8 +112,7 @@ impl Session {
             Err(error) => return Ok(self.invalid_check_abort_option_call(args_slice, error)),
         };
         let Some(source) = propagation_source else {
-            return self
-                .resume_check_abort_with_propagation(args_slice.to_vec(), default_propagation);
+            return self.resume_check_abort_with_propagation(args, default_propagation);
         };
         if source.evaluate_rhs {
             let value_result = self.evaluate(source.value.clone());
@@ -121,27 +120,27 @@ impl Session {
                 let args = args.clone();
                 move |session, value| {
                     session.resume_check_abort_with_propagation(
-                        args.as_ref().to_vec(),
+                        &args,
                         check_abort_propagation_from_value(value),
                     )
                 }
             })?;
 
             return self.resume_check_abort_with_propagation(
-                args_slice.to_vec(),
+                args,
                 check_abort_propagation_from_value(value),
             );
         }
 
         self.resume_check_abort_with_propagation(
-            args_slice.to_vec(),
+            args,
             check_abort_propagation_from_value(source.value),
         )
     }
 
     fn resume_check_abort_with_propagation(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         propagation: CheckAbortPropagation,
     ) -> Result<Expr, EvalError> {
         if let Some(invalid_value) = propagation.invalid_value.as_ref() {
@@ -158,10 +157,10 @@ impl Session {
 
         let primary_result = self.evaluate(args[0].clone());
         let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
-            let args = args.to_vec();
+            let args = args.clone();
             move |session, outcome| {
                 session.resume_check_abort_after_primary(
-                    args,
+                    &args,
                     propagate,
                     pending_checkpoint,
                     outcome,
@@ -171,12 +170,9 @@ impl Session {
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_check_abort_after_primary(
-                args.to_vec(),
-                propagate,
-                pending_checkpoint,
-                outcome,
-            ),
+            outcome => {
+                self.resume_check_abort_after_primary(args, propagate, pending_checkpoint, outcome)
+            }
         }
     }
 
@@ -205,7 +201,7 @@ impl Session {
 
     fn resume_check_abort_after_primary(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         propagate: PropagateAbortsMode,
         pending_checkpoint: usize,
         outcome: Result<Expr, EvalError>,

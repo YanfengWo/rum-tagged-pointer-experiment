@@ -1,4 +1,15 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedModuleInitializers {
+    items: Arc<[(Symbol, Option<Expr>)]>,
+    body: Expr,
+    renames: Arc<SymbolExprMap>,
+    activation_depth: usize,
+    index: usize,
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_module(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -146,24 +157,18 @@ impl Session {
                     runtime_profile_init,
                     runtime_profile_outcome_for_expr_result(&init_result),
                 );
-                let outcome = self.suspend_with_result_frame_lazy(init_result, || {
-                    let items = items.clone();
-                    let body = body.clone();
-                    let renames = renames.clone();
-                    move |session, outcome| {
-                        session.resume_module_initializers(
-                            items,
+                match init_result {
+                    Err(EvalError::InputRequired { request }) => {
+                        let state = SuspendedModuleInitializers {
+                            items: Arc::from(items),
                             body,
-                            renames,
+                            renames: Arc::new(renames),
                             activation_depth,
                             index,
-                            Some(outcome),
-                        )
-                    }
-                });
-
-                match outcome {
-                    Err(EvalError::InputRequired { request }) => {
+                        };
+                        self.push_suspension_frame(move |session, outcome| {
+                            session.resume_suspended_module_initializers(state, Some(outcome))
+                        });
                         let result = Err(EvalError::InputRequired { request });
                         record_profile_runtime_path_timing(
                             runtime_profile_resume,
@@ -177,6 +182,102 @@ impl Session {
             }
 
             index += 1;
+        }
+    }
+
+    fn resume_suspended_module_initializers(
+        &mut self,
+        mut state: SuspendedModuleInitializers,
+        mut pending: Option<Result<Expr, EvalError>>,
+    ) -> Result<Expr, EvalError> {
+        let runtime_profile_resume = runtime_path_timing_start("module.resume_initializers");
+        loop {
+            if let Some(outcome) = pending.take() {
+                let symbol = state.items[state.index].0;
+                match outcome {
+                    Ok(value) => {
+                        self.store_module_initializer_value(&state.renames, &symbol, value);
+                        state.index += 1;
+                    }
+                    Err(error) => {
+                        let result = self.finish_module_scope(state.activation_depth, Err(error));
+                        record_profile_runtime_path_timing(
+                            runtime_profile_resume,
+                            runtime_profile_outcome_for_expr_result(&result),
+                        );
+                        return result;
+                    }
+                }
+            }
+
+            record_profile_module_resume_entry(state.index);
+            if state.index >= state.items.len() {
+                let profile_start = lexical_profile_start();
+                let eval_cache_profile_start = evaluation_cache_profile_source_timing_start(
+                    "module_body_substitution_by_source",
+                );
+                let body =
+                    substitute_lexical_bindings(&state.body, &state.renames, &BTreeSet::new());
+                record_profile_module_body_substitution(profile_start);
+                record_profile_module_body_substitution_by_source(eval_cache_profile_start);
+                let runtime_profile_body = runtime_path_timing_start("module.body.evaluate");
+                let result = self.evaluate(body);
+                record_profile_runtime_path_timing(
+                    runtime_profile_body,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                let outcome = self.suspend_with_result_frame_lazy(result, || {
+                    let activation_depth = state.activation_depth;
+                    move |session, outcome| session.finish_module_scope(activation_depth, outcome)
+                });
+
+                let result = match outcome {
+                    Err(EvalError::InputRequired { request }) => {
+                        Err(EvalError::InputRequired { request })
+                    }
+                    outcome => self.finish_module_scope(state.activation_depth, outcome),
+                };
+                record_profile_runtime_path_timing(
+                    runtime_profile_resume,
+                    runtime_profile_outcome_for_expr_result(&result),
+                );
+                return result;
+            }
+
+            let init = state.items[state.index].1.clone();
+            if let Some(init) = init {
+                let profile_start = lexical_profile_start();
+                let eval_cache_profile_start = evaluation_cache_profile_source_timing_start(
+                    "module_init_substitution_by_source",
+                );
+                let renamed_init =
+                    substitute_lexical_bindings(&init, &state.renames, &BTreeSet::new());
+                record_profile_module_init_substitution(profile_start);
+                record_profile_module_init_substitution_by_source(eval_cache_profile_start);
+                let runtime_profile_init = runtime_path_timing_start("module.initializer.evaluate");
+                let init_result = self.evaluate(renamed_init);
+                record_profile_runtime_path_timing(
+                    runtime_profile_init,
+                    runtime_profile_outcome_for_expr_result(&init_result),
+                );
+                match init_result {
+                    Err(EvalError::InputRequired { request }) => {
+                        self.push_suspension_frame(move |session, outcome| {
+                            session.resume_suspended_module_initializers(state, Some(outcome))
+                        });
+                        let result = Err(EvalError::InputRequired { request });
+                        record_profile_runtime_path_timing(
+                            runtime_profile_resume,
+                            runtime_profile_outcome_for_expr_result(&result),
+                        );
+                        return result;
+                    }
+                    outcome => pending = Some(outcome),
+                }
+                continue;
+            }
+
+            state.index += 1;
         }
     }
 
@@ -280,3 +381,9 @@ impl Session {
             .collect()
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedModuleInitializers>();
+};

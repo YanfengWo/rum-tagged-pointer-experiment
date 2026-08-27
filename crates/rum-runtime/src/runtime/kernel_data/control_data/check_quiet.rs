@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::Arc;
 
 impl Session {
     pub(in crate::runtime) fn eval_check(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -11,7 +12,7 @@ impl Session {
             ));
         }
 
-        let selectors = match self.normalize_optional_message_selectors(args.get(2)) {
+        let mut selectors = match self.normalize_optional_message_selectors(args.get(2)) {
             Ok(selectors) => selectors,
             Err(error) => {
                 return Ok(self.invalid_call_with_arg_form("Check", args, error.message()));
@@ -23,11 +24,11 @@ impl Session {
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let primary_result = self.evaluate(args[0].clone());
         let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
-            let selectors = selectors.clone();
+            let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
             let fallback = fallback.clone();
             move |session, outcome| {
                 session.resume_check_after_primary(
-                    selectors,
+                    selectors.as_deref(),
                     fallback,
                     message_checkpoint,
                     handled_error_checkpoint,
@@ -39,7 +40,7 @@ impl Session {
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.resume_check_after_primary(
-                selectors,
+                selectors.as_deref(),
                 fallback,
                 message_checkpoint,
                 handled_error_checkpoint,
@@ -58,7 +59,7 @@ impl Session {
             ));
         }
 
-        let selectors = match self.normalize_optional_message_selectors(args.get(1)) {
+        let mut selectors = match self.normalize_optional_message_selectors(args.get(1)) {
             Ok(selectors) => selectors,
             Err(error) => {
                 return Ok(self.invalid_call_with_arg_form("Quiet", args, error.message()));
@@ -69,10 +70,10 @@ impl Session {
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let primary_result = self.evaluate(args[0].clone());
         let result = self.suspend_with_result_frame_lazy(primary_result, || {
-            let selectors = selectors.clone();
+            let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
             move |session, outcome| {
                 session.resume_quiet_after_primary(
-                    selectors,
+                    selectors.as_deref(),
                     message_checkpoint,
                     handled_error_checkpoint,
                     outcome,
@@ -83,7 +84,7 @@ impl Session {
         match result {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => self.resume_quiet_after_primary(
-                selectors,
+                selectors.as_deref(),
                 message_checkpoint,
                 handled_error_checkpoint,
                 outcome,
@@ -93,7 +94,7 @@ impl Session {
 
     fn resume_check_after_primary(
         &mut self,
-        selectors: Option<Vec<MessageSelector>>,
+        selectors: Option<&[MessageSelector]>,
         fallback: Expr,
         message_checkpoint: usize,
         handled_error_checkpoint: usize,
@@ -101,7 +102,7 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => {
-                let matched = selectors.as_ref().map_or_else(
+                let matched = selectors.map_or_else(
                     || self.messages.len() > message_checkpoint,
                     |selectors| self.messages_since_match(message_checkpoint, selectors),
                 );
@@ -118,7 +119,7 @@ impl Session {
             Err(err) => {
                 self.emit_non_loader_eval_message(handled_error_checkpoint, &err);
 
-                let matched = selectors.as_ref().map_or_else(
+                let matched = selectors.map_or_else(
                     || self.messages.len() > message_checkpoint,
                     |selectors| self.messages_since_match(message_checkpoint, selectors),
                 );
@@ -134,7 +135,7 @@ impl Session {
 
     fn resume_quiet_after_primary(
         &mut self,
-        selectors: Option<Vec<MessageSelector>>,
+        selectors: Option<&[MessageSelector]>,
         message_checkpoint: usize,
         handled_error_checkpoint: usize,
         outcome: Result<Expr, EvalError>,
@@ -147,7 +148,7 @@ impl Session {
             }
         };
 
-        if let Some(selectors) = selectors.as_ref() {
+        if let Some(selectors) = selectors {
             self.suppress_messages_since(message_checkpoint, selectors);
         } else {
             self.messages.truncate(message_checkpoint);

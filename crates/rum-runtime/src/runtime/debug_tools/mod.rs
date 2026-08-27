@@ -8,6 +8,7 @@ mod message_switch;
 mod monitor;
 mod properties;
 mod reap;
+mod reap_state;
 mod resources;
 mod shared;
 mod test_report;

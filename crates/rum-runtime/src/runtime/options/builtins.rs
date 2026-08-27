@@ -1,5 +1,6 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum OptionValueQuery {
@@ -34,7 +35,7 @@ impl Session {
             return Ok(self.invalid_call_with_arg_range("SetOptions", args_slice, 2, usize::MAX));
         }
 
-        let Some(targets) = self.normalize_symbol_target_exprs(&args_slice[0], true) else {
+        let Some(mut targets) = self.normalize_symbol_target_exprs(&args_slice[0], true) else {
             return Ok(self.invalid_call_with_arg_form(
                 "SetOptions",
                 args_slice,
@@ -46,22 +47,22 @@ impl Session {
         let tail = Expr::call(system_expr("List"), args_slice[1..].to_vec());
         let resolved_result = self.evaluate(tail);
         let resolved = self.suspend_with_frame_lazy(resolved_result, || {
-            let targets = targets.clone();
+            let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
             let args = args.clone();
             move |session, resolved| {
                 session.finish_set_options_from_resolved(
-                    targets,
+                    targets.as_ref(),
                     preserve_target_list_shape,
-                    args.as_ref().to_vec(),
+                    args.as_ref(),
                     resolved,
                 )
             }
         })?;
 
         self.finish_set_options_from_resolved(
-            targets,
+            &targets,
             preserve_target_list_shape,
-            args_slice.to_vec(),
+            args_slice,
             resolved,
         )
     }
@@ -87,7 +88,7 @@ impl Session {
                     return Ok(self.invalid_call_with_arg_range("OptionValue", args, 2, 3));
                 };
 
-                self.resolve_option_value_query(scope.target, Some(scope.explicit), query)
+                self.resolve_option_value_query(scope.target, Some(scope.explicit), &query)
             }
             [target_expr, option_expr] => {
                 let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
@@ -108,7 +109,7 @@ impl Session {
                     }
                 };
 
-                self.resolve_option_value_query(target, None, query)
+                self.resolve_option_value_query(target, None, &query)
             }
             [target_expr, explicit_expr, option_expr] => {
                 let Some(target) = self.normalize_symbol_target_expr(target_expr, true) else {
@@ -129,22 +130,32 @@ impl Session {
                     }
                 };
 
+                let mut query = Some(query);
                 let explicit_result = self.evaluate(explicit_expr.clone());
                 let explicit = self.suspend_with_frame_lazy(explicit_result, || {
                     let target = target.clone();
-                    let query = query.clone();
+                    let query = Arc::new(
+                        query
+                            .take()
+                            .expect("option query is frozen only after input suspension"),
+                    );
                     let args = args.clone();
                     move |session, resolved| {
                         session.finish_option_value_from_explicit(
                             target,
-                            query,
-                            args.as_ref().to_vec(),
+                            query.as_ref(),
+                            args.as_ref(),
                             resolved,
                         )
                     }
                 })?;
 
-                self.finish_option_value_from_explicit(target, query, args_slice.to_vec(), explicit)
+                self.finish_option_value_from_explicit(
+                    target,
+                    query.as_ref().expect("ordinary option query remains owned"),
+                    args_slice,
+                    explicit,
+                )
             }
             _ => Ok(self.invalid_call_with_arg_range("OptionValue", args_slice, 1, 3)),
         }
@@ -152,9 +163,9 @@ impl Session {
 
     fn finish_set_options_from_resolved(
         &mut self,
-        targets: Vec<Symbol>,
+        targets: &[Symbol],
         preserve_target_list_shape: bool,
-        original_args: Vec<Expr>,
+        original_args: &[Expr],
         resolved: Expr,
     ) -> Result<Expr, EvalError> {
         let updates = match self.parse_option_entries_from_resolved_set_options(&resolved) {
@@ -162,15 +173,15 @@ impl Session {
             Err(error) => {
                 return Ok(self.invalid_call_with_arg_form(
                     "SetOptions",
-                    &original_args,
+                    original_args,
                     error.message(),
                 ));
             }
         };
 
         let results = targets
-            .into_iter()
-            .map(|target| self.apply_set_options_updates(&target, &original_args, &updates))
+            .iter()
+            .map(|target| self.apply_set_options_updates(target, original_args, &updates))
             .collect::<Vec<_>>();
 
         if preserve_target_list_shape {
@@ -179,7 +190,7 @@ impl Session {
             Ok(results
                 .into_iter()
                 .next()
-                .unwrap_or_else(|| self.invalid_call("SetOptions", &original_args)))
+                .unwrap_or_else(|| self.invalid_call("SetOptions", original_args)))
         }
     }
 
@@ -224,8 +235,8 @@ impl Session {
     fn finish_option_value_from_explicit(
         &mut self,
         target: Symbol,
-        query: OptionValueQuery,
-        original_args: Vec<Expr>,
+        query: &OptionValueQuery,
+        original_args: &[Expr],
         explicit_resolved: Expr,
     ) -> Result<Expr, EvalError> {
         let explicit = match self.parse_option_entries_from_resolved(&explicit_resolved) {
@@ -233,7 +244,7 @@ impl Session {
             Err(error) => {
                 return Ok(self.invalid_call_with_arg_form(
                     "OptionValue",
-                    &original_args,
+                    original_args,
                     error.message(),
                 ));
             }
@@ -246,11 +257,11 @@ impl Session {
         &mut self,
         target: Symbol,
         explicit: Option<SymbolOptions>,
-        query: OptionValueQuery,
+        query: &OptionValueQuery,
     ) -> Result<Expr, EvalError> {
         match query {
             OptionValueQuery::Single { original, name } => {
-                self.resolve_option_value_scalar(target, explicit, original, name)
+                self.resolve_option_value_scalar(target, explicit, original.clone(), *name)
             }
             OptionValueQuery::Many(items) => {
                 let mut values = Vec::with_capacity(items.len());
@@ -258,8 +269,8 @@ impl Session {
                     values.push(self.resolve_option_value_scalar(
                         target.clone(),
                         explicit.clone(),
-                        original,
-                        name,
+                        original.clone(),
+                        *name,
                     )?);
                 }
                 Ok(Expr::call(system_expr("List"), values))

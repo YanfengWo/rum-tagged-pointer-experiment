@@ -1,4 +1,61 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct PersistentWithBindings {
+    base: Arc<SymbolExprMap>,
+    tail: Option<Arc<WithBindingNode>>,
+}
+
+#[derive(FrameRootTrace)]
+struct WithBindingNode {
+    previous: Option<Arc<WithBindingNode>>,
+    symbol: Symbol,
+    value: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedWithBindings {
+    items: Arc<[(Symbol, Expr)]>,
+    body: Expr,
+    bindings: PersistentWithBindings,
+    cursor: usize,
+}
+
+impl PersistentWithBindings {
+    fn freeze(bindings: SymbolExprMap) -> Self {
+        Self {
+            base: Arc::new(bindings),
+            tail: None,
+        }
+    }
+
+    fn inserted(&self, symbol: Symbol, value: Expr) -> Self {
+        Self {
+            base: self.base.clone(),
+            tail: Some(Arc::new(WithBindingNode {
+                previous: self.tail.clone(),
+                symbol,
+                value,
+            })),
+        }
+    }
+
+    fn materialize(&self) -> SymbolExprMap {
+        let mut delta = Vec::new();
+        let mut node = self.tail.as_deref();
+        while let Some(current) = node {
+            delta.push((current.symbol, current.value.clone()));
+            node = current.previous.as_deref();
+        }
+        delta.reverse();
+
+        let mut bindings = self.base.as_ref().clone();
+        bindings.extend(delta);
+        bindings
+    }
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_with(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -41,28 +98,79 @@ impl Session {
         items: Vec<(Symbol, Expr)>,
         body: Expr,
         mut bindings: SymbolExprMap,
-        index: usize,
+        mut index: usize,
     ) -> Result<Expr, EvalError> {
-        if index >= items.len() {
-            let body = substitute_lexical_bindings(&body, &bindings, &BTreeSet::new());
-            return self.evaluate(body);
-        }
+        loop {
+            let Some((symbol, rhs)) = items.get(index) else {
+                let body = substitute_lexical_bindings(&body, &bindings, &BTreeSet::new());
+                return self.evaluate(body);
+            };
 
-        let (symbol, rhs) = items[index].clone();
-        let substituted_rhs = substitute_lexical_bindings(&rhs, &bindings, &BTreeSet::new());
-        let rhs_result = self.evaluate(substituted_rhs);
-        let outcome = self.suspend_with_frame_lazy(rhs_result, || {
-            let items = items.clone();
-            let body = body.clone();
-            let bindings = bindings.clone();
-            let symbol = symbol.clone();
-            move |session, value| {
-                let mut bindings = bindings;
-                bindings.insert(symbol, value);
-                session.resume_with_bindings(items, body, bindings, index + 1)
+            let symbol = *symbol;
+            let substituted_rhs = substitute_lexical_bindings(rhs, &bindings, &BTreeSet::new());
+            match self.evaluate(substituted_rhs) {
+                Ok(value) => {
+                    bindings.insert(symbol, value);
+                    index += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedWithBindings {
+                        items: Arc::from(items),
+                        body,
+                        bindings: PersistentWithBindings::freeze(bindings),
+                        cursor: index + 1,
+                    };
+                    self.push_suspension_frame(move |session, outcome| {
+                        let value = outcome?;
+                        session.resume_suspended_with_binding(state, symbol, value)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
             }
-        })?;
-        bindings.insert(symbol, outcome);
-        self.resume_with_bindings(items, body, bindings, index + 1)
+        }
+    }
+
+    fn resume_suspended_with_binding(
+        &mut self,
+        mut state: SuspendedWithBindings,
+        symbol: Symbol,
+        value: Expr,
+    ) -> Result<Expr, EvalError> {
+        state.bindings = state.bindings.inserted(symbol, value);
+
+        loop {
+            let Some((symbol, rhs)) = state.items.get(state.cursor) else {
+                let bindings = state.bindings.materialize();
+                let body = substitute_lexical_bindings(&state.body, &bindings, &BTreeSet::new());
+                return self.evaluate(body);
+            };
+
+            let symbol = *symbol;
+            let bindings = state.bindings.materialize();
+            let substituted_rhs = substitute_lexical_bindings(rhs, &bindings, &BTreeSet::new());
+            match self.evaluate(substituted_rhs) {
+                Ok(value) => {
+                    state.bindings = state.bindings.inserted(symbol, value);
+                    state.cursor += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    state.cursor += 1;
+                    self.push_suspension_frame(move |session, outcome| {
+                        let value = outcome?;
+                        session.resume_suspended_with_binding(state, symbol, value)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<PersistentWithBindings>();
+    assert_traces::<SuspendedWithBindings>();
+};

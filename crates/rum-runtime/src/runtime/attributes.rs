@@ -1,8 +1,8 @@
 use super::*;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct AttributeUpdateConfig {
-    targets: Vec<Symbol>,
     attributes: AttributeSet,
 }
 
@@ -70,7 +70,7 @@ impl Session {
             return Ok(self.invalid_call_with_exact_arg_count(symbol, args_slice, 2));
         }
 
-        let targets = match self.normalize_attribute_update_targets(&args_slice[0]) {
+        let mut targets = match self.normalize_attribute_update_targets(&args_slice[0]) {
             Ok(targets) => targets,
             Err(error) => {
                 return Ok(self.invalid_call_with_arg_form(symbol, args_slice, error.message()));
@@ -80,13 +80,13 @@ impl Session {
         let symbol_name = symbol.to_string();
         let resolved_result = self.evaluate(args_slice[1].clone());
         let resolved_attributes = self.suspend_with_frame_lazy(resolved_result, || {
-            let targets = targets.clone();
+            let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
             let args = args.clone();
             move |session, resolved| {
                 session.finish_update_attributes_after_resolved_attributes(
                     &symbol_name,
-                    args.as_ref().to_vec(),
-                    targets,
+                    args.as_ref(),
+                    targets.as_ref(),
                     update,
                     resolved,
                 )
@@ -95,8 +95,8 @@ impl Session {
 
         self.finish_update_attributes_after_resolved_attributes(
             symbol,
-            args_slice.to_vec(),
-            targets,
+            args_slice,
+            &targets,
             update,
             resolved_attributes,
         )
@@ -105,32 +105,27 @@ impl Session {
     fn finish_update_attributes_after_resolved_attributes(
         &mut self,
         symbol: &str,
-        original_args: Vec<Expr>,
-        targets: Vec<Symbol>,
+        original_args: &[Expr],
+        targets: &[Symbol],
         update: AttributeUpdate,
         resolved_attributes: Expr,
     ) -> Result<Expr, EvalError> {
-        let config =
-            match self.compile_attribute_update_from_resolved_args(targets, &resolved_attributes) {
-                Ok(config) => config,
-                Err(error) => {
-                    return Ok(self.invalid_call_with_arg_form(
-                        symbol,
-                        &original_args,
-                        error.message(),
-                    ));
-                }
-            };
+        let config = match self.compile_attribute_update_from_resolved_args(&resolved_attributes) {
+            Ok(config) => config,
+            Err(error) => {
+                return Ok(self.invalid_call_with_arg_form(symbol, original_args, error.message()));
+            }
+        };
 
-        for target in config.targets {
+        for target in targets {
             let removes_protected = update == AttributeUpdate::Remove
                 && config.attributes.contains(Attribute::Protected);
-            if self.symbol_is_protected(&target) && !removes_protected {
-                self.push_protected_write_message(symbol, &target);
+            if self.symbol_is_protected(target) && !removes_protected {
+                self.push_protected_write_message(symbol, target);
                 continue;
             }
 
-            let mut current = self.attribute_set_for_symbol(&target);
+            let mut current = self.attribute_set_for_symbol(target);
 
             for attribute in config.attributes.attributes() {
                 match update {
@@ -139,7 +134,7 @@ impl Session {
                 }
             }
 
-            self.set_attribute_set_for_symbol(target, current);
+            self.set_attribute_set_for_symbol(*target, current);
         }
 
         Ok(system_expr("Null"))
@@ -186,16 +181,12 @@ impl Session {
 
     fn compile_attribute_update_from_resolved_args(
         &self,
-        targets: Vec<Symbol>,
         resolved_attributes: &Expr,
     ) -> Result<AttributeUpdateConfig, AttributeUpdateNormalizationError> {
         let attributes = parse_attribute_set_expr(resolved_attributes)
             .ok_or(AttributeUpdateNormalizationError::InvalidAttributes)?;
 
-        Ok(AttributeUpdateConfig {
-            targets,
-            attributes,
-        })
+        Ok(AttributeUpdateConfig { attributes })
     }
 
     pub(super) fn normalize_multi_symbol_targets(

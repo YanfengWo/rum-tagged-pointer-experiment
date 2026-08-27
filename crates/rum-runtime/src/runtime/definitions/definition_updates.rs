@@ -1,5 +1,6 @@
 use super::super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum HeldUpdateReturn {
@@ -17,6 +18,45 @@ enum HeldUpdateTarget {
         distribute_updates: bool,
         paths: Vec<Vec<isize>>,
     },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
+enum SuspendedHeldUpdateTarget {
+    Symbol(Symbol),
+    Part {
+        symbol: Symbol,
+        current_target: Expr,
+        selection_shape: Expr,
+        distribute_updates: bool,
+        paths: Arc<[Arc<[isize]>]>,
+    },
+}
+
+impl SuspendedHeldUpdateTarget {
+    fn freeze(target: HeldUpdateTarget) -> Self {
+        match target {
+            HeldUpdateTarget::Symbol(symbol) => Self::Symbol(symbol),
+            HeldUpdateTarget::Part {
+                symbol,
+                current_target,
+                selection_shape,
+                distribute_updates,
+                paths,
+            } => {
+                let paths = paths
+                    .into_iter()
+                    .map(Arc::<[isize]>::from)
+                    .collect::<Vec<_>>();
+                Self::Part {
+                    symbol,
+                    current_target,
+                    selection_shape,
+                    distribute_updates,
+                    paths: Arc::from(paths),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -396,16 +436,18 @@ impl Session {
         update: Expr,
         return_value: HeldUpdateReturn,
     ) -> Result<Expr, EvalError> {
-        let update_result = self.evaluate(update);
-        let updated = self.suspend_with_frame_lazy(update_result, || {
-            let target = target.clone();
-            let return_value = return_value.clone();
-            move |session, updated| {
-                session.store_held_update(operator, target, updated, return_value)
+        match self.evaluate(update) {
+            Ok(updated) => self.store_held_update(operator, target, updated, return_value),
+            Err(EvalError::InputRequired { request }) => {
+                let target = SuspendedHeldUpdateTarget::freeze(target);
+                self.push_suspension_frame(move |session, outcome| {
+                    let updated = outcome?;
+                    session.store_suspended_held_update(operator, target, updated, return_value)
+                });
+                Err(EvalError::InputRequired { request })
             }
-        })?;
-
-        self.store_held_update(operator, target, updated, return_value)
+            Err(error) => Err(error),
+        }
     }
 
     fn store_held_update(
@@ -463,6 +505,64 @@ impl Session {
             HeldUpdateReturn::Previous(value) => value,
         })
     }
+
+    fn store_suspended_held_update(
+        &mut self,
+        operator: &'static str,
+        target: SuspendedHeldUpdateTarget,
+        updated: Expr,
+        return_value: HeldUpdateReturn,
+    ) -> Result<Expr, EvalError> {
+        let owner = match &target {
+            SuspendedHeldUpdateTarget::Symbol(symbol)
+            | SuspendedHeldUpdateTarget::Part { symbol, .. } => symbol,
+        };
+        if !self.ensure_symbol_not_protected_for_write(operator, owner) {
+            let current = self
+                .definitions
+                .get(owner)
+                .and_then(|definition| definition.own_value.clone())
+                .unwrap_or_else(|| Expr::Atom(Atom::Symbol(*owner)));
+            return Ok(current);
+        }
+
+        match target {
+            SuspendedHeldUpdateTarget::Symbol(symbol) => {
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(updated.clone());
+                definition.delayed_own_value = None;
+                self.bump_evaluation_epoch_for_symbol(&symbol);
+            }
+            SuspendedHeldUpdateTarget::Part {
+                symbol,
+                current_target,
+                selection_shape,
+                distribute_updates,
+                paths,
+            } => {
+                let mut updated_target = current_target;
+                let replacements = part_update_replacement_values(
+                    paths.len(),
+                    &selection_shape,
+                    updated.clone(),
+                    distribute_updates,
+                );
+                for (path, updated_part) in paths.iter().zip(replacements) {
+                    updated_target =
+                        replace_exact_path(updated_target, path.as_ref(), updated_part);
+                }
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(updated_target);
+                definition.delayed_own_value = None;
+                self.bump_evaluation_epoch_for_symbol(&symbol);
+            }
+        }
+
+        Ok(match return_value {
+            HeldUpdateReturn::Updated => updated,
+            HeldUpdateReturn::Previous(value) => value,
+        })
+    }
 }
 
 fn normalize_part_update_target(expr: &Expr) -> Option<(Symbol, Vec<Expr>)> {
@@ -484,29 +584,39 @@ fn bulk_part_update_replacements<'a>(
     updated: Expr,
     distribute_updates: bool,
 ) -> Vec<(&'a [isize], Expr)> {
-    let shape_matched = distribute_updates
-        .then(|| replacement_values_matching_selection_shape(selection_shape, &updated))
-        .flatten()
-        .filter(|values| values.len() == paths.len());
-    let replacement_values = match shape_matched {
-        Some(values) => values,
-        None => match &updated {
-            Expr::Call { head, args }
-                if paths.len() > 1
-                    && is_system_symbol_name(head, "List")
-                    && args.len() == paths.len() =>
-            {
-                args.to_vec()
-            }
-            _ => vec![updated; paths.len()],
-        },
-    };
+    let replacement_values =
+        part_update_replacement_values(paths.len(), selection_shape, updated, distribute_updates);
 
     paths
         .iter()
         .zip(replacement_values)
         .map(|(path, value)| (path.as_slice(), value))
         .collect()
+}
+
+fn part_update_replacement_values(
+    path_count: usize,
+    selection_shape: &Expr,
+    updated: Expr,
+    distribute_updates: bool,
+) -> Vec<Expr> {
+    let shape_matched = distribute_updates
+        .then(|| replacement_values_matching_selection_shape(selection_shape, &updated))
+        .flatten()
+        .filter(|values| values.len() == path_count);
+    match shape_matched {
+        Some(values) => values,
+        None => match &updated {
+            Expr::Call { head, args }
+                if path_count > 1
+                    && is_system_symbol_name(head, "List")
+                    && args.len() == path_count =>
+            {
+                args.to_vec()
+            }
+            _ => vec![updated; path_count],
+        },
+    }
 }
 
 fn part_selector_exprs_select_bulk(selector_exprs: &[Expr]) -> bool {
@@ -559,4 +669,5 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<HeldUpdateReturn>();
     assert_traces::<HeldUpdateTarget>();
+    assert_traces::<SuspendedHeldUpdateTarget>();
 };

@@ -1,4 +1,9 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedCleanupPrimaryOutcome(Arc<Result<Expr, EvalError>>);
 
 impl Session {
     pub(in crate::runtime) fn eval_with_cleanup(
@@ -75,13 +80,27 @@ impl Session {
         match cleanup_result {
             Ok(value) => self.resume_with_cleanup_after_cleanup(primary_outcome, Ok(value)),
             Err(EvalError::InputRequired { request }) => {
+                let primary_outcome = SuspendedCleanupPrimaryOutcome(Arc::new(primary_outcome));
                 self.push_suspension_frame(move |session, cleanup_outcome| {
-                    session.resume_with_cleanup_after_cleanup(primary_outcome, cleanup_outcome)
+                    session.resume_suspended_with_cleanup_after_cleanup(
+                        primary_outcome,
+                        cleanup_outcome,
+                    )
                 });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => self.resume_with_cleanup_after_cleanup(primary_outcome, Err(error)),
         }
+    }
+
+    fn resume_suspended_with_cleanup_after_cleanup(
+        &mut self,
+        primary_outcome: SuspendedCleanupPrimaryOutcome,
+        cleanup_outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let primary_outcome = Arc::try_unwrap(primary_outcome.0)
+            .unwrap_or_else(|_| panic!("completed cleanup outcome state must be unique"));
+        self.resume_with_cleanup_after_cleanup(primary_outcome, cleanup_outcome)
     }
 
     fn resume_with_cleanup_after_cleanup(
@@ -130,3 +149,9 @@ impl Session {
         }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedCleanupPrimaryOutcome>();
+};

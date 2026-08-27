@@ -87,7 +87,7 @@ impl RuntimeInputRequest {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct MessageSelector {
     pub(in crate::runtime) symbol: String,
     pub(in crate::runtime) tag: Option<String>,

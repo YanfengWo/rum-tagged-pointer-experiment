@@ -23,7 +23,6 @@ fn eval_test_catch_exceptions(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     session.eval_catch_exceptions(args)
 }
 

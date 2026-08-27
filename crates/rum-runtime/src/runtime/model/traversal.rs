@@ -57,7 +57,7 @@ impl CasesLevelSpec {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct CasesTraversalConfig {
     pub(in crate::runtime) levels: CasesLevelSpec,
     pub(in crate::runtime) max_matches: Option<usize>,
@@ -166,5 +166,6 @@ fn level_as_signed(level: usize) -> isize {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<CasesLevelSpec>();
+    assert_traces::<CasesTraversalConfig>();
     assert_traces::<CasesSpec>();
 };

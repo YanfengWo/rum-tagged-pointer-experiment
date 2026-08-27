@@ -1,4 +1,29 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedBlockInitializers {
+    items: Arc<[(Symbol, Option<Expr>)]>,
+    body: Expr,
+    saved_state: Arc<BTreeMap<Symbol, BlockSymbolState>>,
+    dynamic_depth: usize,
+    index: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedBlockScope {
+    saved_state: Arc<BTreeMap<Symbol, BlockSymbolState>>,
+    dynamic_depth: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedSingleBlockScope {
+    symbol: Symbol,
+    body: Expr,
+    saved_state: Arc<BlockSymbolState>,
+    dynamic_depth: usize,
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_block(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -67,23 +92,17 @@ impl Session {
         let dynamic_depth = self.push_dynamic_own_value_binding(symbol, None);
 
         if let Some(init) = init {
-            let init_result = self.evaluate(init);
-            let outcome = self.suspend_with_result_frame_lazy(init_result, || {
-                let saved_state = saved_state.clone();
-                let body = body.clone();
-                move |session, outcome| {
-                    session.resume_single_symbol_block_after_initializer(
+            return match self.evaluate(init) {
+                Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedSingleBlockScope {
                         symbol,
                         body,
-                        saved_state,
+                        saved_state: Arc::new(saved_state),
                         dynamic_depth,
-                        outcome,
-                    )
-                }
-            });
-
-            return match outcome {
-                Err(EvalError::InputRequired { request }) => {
+                    };
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_suspended_single_block_after_initializer(state, outcome)
+                    });
                     Err(EvalError::InputRequired { request })
                 }
                 outcome => self.resume_single_symbol_block_after_initializer(
@@ -263,73 +282,105 @@ impl Session {
         body: Expr,
         saved_state: BTreeMap<Symbol, BlockSymbolState>,
         dynamic_depth: usize,
-        index: usize,
+        mut index: usize,
     ) -> Result<Expr, EvalError> {
-        if index >= items.len() {
-            return self.resume_block_body(body, saved_state, dynamic_depth);
-        }
-
-        let (symbol, init) = items[index].clone();
-        if let Some(init) = init {
-            let init_result = self.evaluate(init);
-            let outcome = self.suspend_with_result_frame_lazy(init_result, || {
-                let items = items.clone();
-                let body = body.clone();
-                let saved_state = saved_state.clone();
-                let symbol = symbol.clone();
-                move |session, outcome| {
-                    session.resume_block_after_initializer(
-                        items,
-                        body,
-                        saved_state,
-                        dynamic_depth,
-                        index,
-                        symbol,
-                        outcome,
-                    )
-                }
-            });
-
-            return match outcome {
-                Err(EvalError::InputRequired { request }) => {
-                    Err(EvalError::InputRequired { request })
-                }
-                outcome => self.resume_block_after_initializer(
-                    items,
-                    body,
-                    saved_state,
-                    dynamic_depth,
-                    index,
-                    symbol,
-                    outcome,
-                ),
+        loop {
+            let Some((symbol, init)) = items.get(index) else {
+                return self.resume_block_body(body, saved_state, dynamic_depth);
             };
-        }
 
-        self.resume_block_initializers(items, body, saved_state, dynamic_depth, index + 1)
+            let symbol = *symbol;
+            if let Some(init) = init {
+                match self.evaluate(init.clone()) {
+                    Ok(value) => {
+                        let definition = self.definitions.entry(symbol).or_default();
+                        definition.store_own_value(value, Box::default(), false);
+                        self.bump_evaluation_epoch_for_symbol(&symbol);
+                        index += 1;
+                    }
+                    Err(EvalError::InputRequired { request }) => {
+                        let state = SuspendedBlockInitializers {
+                            items: Arc::from(items),
+                            body,
+                            saved_state: Arc::new(saved_state),
+                            dynamic_depth,
+                            index,
+                        };
+                        self.push_suspension_frame(move |session, outcome| {
+                            session.resume_suspended_block_after_initializer(state, outcome)
+                        });
+                        return Err(EvalError::InputRequired { request });
+                    }
+                    Err(error) => {
+                        self.truncate_dynamic_own_value_bindings(dynamic_depth);
+                        self.restore_block_symbol_states(saved_state);
+                        return Err(error);
+                    }
+                }
+            } else {
+                index += 1;
+            }
+        }
     }
 
-    fn resume_block_after_initializer(
+    fn resume_suspended_block_after_initializer(
         &mut self,
-        items: Vec<(Symbol, Option<Expr>)>,
-        body: Expr,
-        saved_state: BTreeMap<Symbol, BlockSymbolState>,
-        dynamic_depth: usize,
-        index: usize,
-        symbol: Symbol,
+        mut state: SuspendedBlockInitializers,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => {
+                let symbol = state.items[state.index].0;
                 let definition = self.definitions.entry(symbol).or_default();
                 definition.store_own_value(value, Box::default(), false);
                 self.bump_evaluation_epoch_for_symbol(&symbol);
-                self.resume_block_initializers(items, body, saved_state, dynamic_depth, index + 1)
+                state.index += 1;
+                self.resume_suspended_block_initializers(state)
             }
             Err(error) => {
-                self.truncate_dynamic_own_value_bindings(dynamic_depth);
+                self.truncate_dynamic_own_value_bindings(state.dynamic_depth);
+                let saved_state = Arc::try_unwrap(state.saved_state)
+                    .unwrap_or_else(|_| panic!("failed Block state must be unique"));
                 self.restore_block_symbol_states(saved_state);
                 Err(error)
+            }
+        }
+    }
+
+    fn resume_suspended_block_initializers(
+        &mut self,
+        mut state: SuspendedBlockInitializers,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let Some((symbol, init)) = state.items.get(state.index) else {
+                return self.resume_suspended_block_body(state);
+            };
+
+            let symbol = *symbol;
+            if let Some(init) = init {
+                match self.evaluate(init.clone()) {
+                    Ok(value) => {
+                        let definition = self.definitions.entry(symbol).or_default();
+                        definition.store_own_value(value, Box::default(), false);
+                        self.bump_evaluation_epoch_for_symbol(&symbol);
+                        state.index += 1;
+                    }
+                    Err(EvalError::InputRequired { request }) => {
+                        self.push_suspension_frame(move |session, outcome| {
+                            session.resume_suspended_block_after_initializer(state, outcome)
+                        });
+                        return Err(EvalError::InputRequired { request });
+                    }
+                    Err(error) => {
+                        self.truncate_dynamic_own_value_bindings(state.dynamic_depth);
+                        let saved_state = Arc::try_unwrap(state.saved_state)
+                            .unwrap_or_else(|_| panic!("failed Block state must be unique"));
+                        self.restore_block_symbol_states(saved_state);
+                        return Err(error);
+                    }
+                }
+            } else {
+                state.index += 1;
             }
         }
     }
@@ -357,6 +408,28 @@ impl Session {
         }
     }
 
+    fn resume_suspended_single_block_after_initializer(
+        &mut self,
+        state: SuspendedSingleBlockScope,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        match outcome {
+            Ok(value) => {
+                let definition = self.definitions.entry(state.symbol).or_default();
+                definition.store_own_value(value, Box::default(), false);
+                self.bump_evaluation_epoch_for_symbol(&state.symbol);
+                self.resume_suspended_single_block_body(state)
+            }
+            Err(error) => {
+                self.truncate_dynamic_own_value_bindings(state.dynamic_depth);
+                let saved_state = Arc::try_unwrap(state.saved_state)
+                    .unwrap_or_else(|_| panic!("failed single Block state must be unique"));
+                self.restore_single_block_symbol_state(state.symbol, saved_state);
+                Err(error)
+            }
+        }
+    }
+
     fn resume_single_symbol_block_body(
         &mut self,
         symbol: Symbol,
@@ -364,24 +437,37 @@ impl Session {
         saved_state: BlockSymbolState,
         dynamic_depth: usize,
     ) -> Result<Expr, EvalError> {
-        let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let saved_state = saved_state.clone();
-            move |session, outcome| {
-                session.finish_single_symbol_block_scope(
+        match self.evaluate(body) {
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedSingleBlockScope {
                     symbol,
-                    saved_state,
+                    body: system_expr("Null"),
+                    saved_state: Arc::new(saved_state),
                     dynamic_depth,
-                    outcome,
-                )
+                };
+                self.push_suspension_frame(move |session, outcome| {
+                    session.finish_suspended_single_block_scope(state, outcome)
+                });
+                Err(EvalError::InputRequired { request })
             }
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
             outcome => {
                 self.finish_single_symbol_block_scope(symbol, saved_state, dynamic_depth, outcome)
             }
+        }
+    }
+
+    fn resume_suspended_single_block_body(
+        &mut self,
+        state: SuspendedSingleBlockScope,
+    ) -> Result<Expr, EvalError> {
+        match self.evaluate(state.body.clone()) {
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    session.finish_suspended_single_block_scope(state, outcome)
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            outcome => self.finish_suspended_single_block_scope(state, outcome),
         }
     }
 
@@ -394,6 +480,18 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         self.truncate_dynamic_own_value_bindings(dynamic_depth);
         self.restore_single_block_symbol_state(symbol, saved_state);
+        outcome
+    }
+
+    fn finish_suspended_single_block_scope(
+        &mut self,
+        state: SuspendedSingleBlockScope,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.truncate_dynamic_own_value_bindings(state.dynamic_depth);
+        let saved_state = Arc::try_unwrap(state.saved_state)
+            .unwrap_or_else(|_| panic!("completed single Block state must be unique"));
+        self.restore_single_block_symbol_state(state.symbol, saved_state);
         outcome
     }
 
@@ -473,15 +571,33 @@ impl Session {
         saved_state: BTreeMap<Symbol, BlockSymbolState>,
         dynamic_depth: usize,
     ) -> Result<Expr, EvalError> {
-        let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let saved_state = saved_state.clone();
-            move |session, outcome| session.finish_block_scope(saved_state, dynamic_depth, outcome)
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+        match self.evaluate(body) {
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedBlockScope {
+                    saved_state: Arc::new(saved_state),
+                    dynamic_depth,
+                };
+                self.push_suspension_frame(move |session, outcome| {
+                    session.finish_suspended_block_scope(state, outcome)
+                });
+                Err(EvalError::InputRequired { request })
+            }
             outcome => self.finish_block_scope(saved_state, dynamic_depth, outcome),
+        }
+    }
+
+    fn resume_suspended_block_body(
+        &mut self,
+        state: SuspendedBlockInitializers,
+    ) -> Result<Expr, EvalError> {
+        match self.evaluate(state.body.clone()) {
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    session.finish_suspended_block_initializers_scope(state, outcome)
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            outcome => self.finish_suspended_block_initializers_scope(state, outcome),
         }
     }
 
@@ -495,4 +611,36 @@ impl Session {
         self.restore_block_symbol_states(saved_state);
         outcome
     }
+
+    fn finish_suspended_block_scope(
+        &mut self,
+        state: SuspendedBlockScope,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.truncate_dynamic_own_value_bindings(state.dynamic_depth);
+        let saved_state = Arc::try_unwrap(state.saved_state)
+            .unwrap_or_else(|_| panic!("completed Block state must be unique"));
+        self.restore_block_symbol_states(saved_state);
+        outcome
+    }
+
+    fn finish_suspended_block_initializers_scope(
+        &mut self,
+        state: SuspendedBlockInitializers,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.truncate_dynamic_own_value_bindings(state.dynamic_depth);
+        let saved_state = Arc::try_unwrap(state.saved_state)
+            .unwrap_or_else(|_| panic!("completed Block initializer state must be unique"));
+        self.restore_block_symbol_states(saved_state);
+        outcome
+    }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedBlockInitializers>();
+    assert_traces::<SuspendedBlockScope>();
+    assert_traces::<SuspendedSingleBlockScope>();
+};

@@ -1,11 +1,25 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 #[derive(Clone, Copy, FrameRootTrace)]
 enum CountLikeFinish {
     Count,
     MemberQ,
     FreeQ,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedCountChildren {
+    children: Arc<[(Expr, bool)]>,
+    child_index: usize,
+    expr: Expr,
+    pattern: Expr,
+    traversal: CasesTraversalConfig,
+    level: usize,
+    seen_before: usize,
+    count: usize,
+    max_child_depth: usize,
 }
 
 impl CountLikeFinish {
@@ -31,22 +45,10 @@ impl Session {
         let target_result = self.evaluate(args_slice[0].clone());
         let target = self.suspend_with_frame_lazy(target_result, || {
             let args = args.clone();
-            move |session, target| {
-                session.resume_count_after_target(
-                    target,
-                    args[1].clone(),
-                    args[2..].to_vec(),
-                    args.as_ref().to_vec(),
-                )
-            }
+            move |session, target| session.resume_count_after_target(target, &args)
         })?;
 
-        self.resume_count_after_target(
-            target,
-            args_slice[1].clone(),
-            args_slice[2..].to_vec(),
-            args_slice.to_vec(),
-        )
+        self.resume_count_after_target(target, args)
     }
 
     pub(in crate::runtime) fn eval_member_q(
@@ -64,22 +66,10 @@ impl Session {
         let target_result = self.evaluate(args_slice[0].clone());
         let target = self.suspend_with_frame_lazy(target_result, || {
             let args = args.clone();
-            move |session, target| {
-                session.resume_member_q_after_target(
-                    target,
-                    args[1].clone(),
-                    args[2..].to_vec(),
-                    args.as_ref().to_vec(),
-                )
-            }
+            move |session, target| session.resume_member_q_after_target(target, &args)
         })?;
 
-        self.resume_member_q_after_target(
-            target,
-            args_slice[1].clone(),
-            args_slice[2..].to_vec(),
-            args_slice.to_vec(),
-        )
+        self.resume_member_q_after_target(target, args)
     }
 
     pub(in crate::runtime) fn eval_free_q(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
@@ -94,58 +84,39 @@ impl Session {
         let target_result = self.evaluate(args_slice[0].clone());
         let target = self.suspend_with_frame_lazy(target_result, || {
             let args = args.clone();
-            move |session, target| {
-                session.resume_free_q_after_target(
-                    target,
-                    args[1].clone(),
-                    args[2..].to_vec(),
-                    args.as_ref().to_vec(),
-                )
-            }
+            move |session, target| session.resume_free_q_after_target(target, &args)
         })?;
 
-        self.resume_free_q_after_target(
-            target,
-            args_slice[1].clone(),
-            args_slice[2..].to_vec(),
-            args_slice.to_vec(),
-        )
+        self.resume_free_q_after_target(target, args)
     }
 
     fn resume_count_after_target(
         &mut self,
         target: Expr,
-        pattern_expr: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
         let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
-            let option_exprs = option_exprs.clone();
-            let call_args = call_args.clone();
-            move |session, pattern| {
-                session.resume_count_after_pattern(target, pattern, option_exprs, call_args)
-            }
+            let args = args.clone();
+            move |session, pattern| session.resume_count_after_pattern(target, pattern, &args)
         })?;
 
-        self.resume_count_after_pattern(target, pattern, option_exprs, call_args)
+        self.resume_count_after_pattern(target, pattern, args)
     }
 
     fn resume_count_after_pattern(
         &mut self,
         target: Expr,
         pattern: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let include_heads = self.system_option_bool("Count", "Heads", false)?;
         self.finish_count_like_after_pattern(
             "Count",
             target,
             pattern,
-            option_exprs,
-            call_args,
+            args,
             CasesTraversalConfig {
                 include_heads,
                 ..CasesTraversalConfig::default_cases()
@@ -157,37 +128,30 @@ impl Session {
     fn resume_member_q_after_target(
         &mut self,
         target: Expr,
-        pattern_expr: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
         let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
-            let option_exprs = option_exprs.clone();
-            let call_args = call_args.clone();
-            move |session, pattern| {
-                session.resume_member_q_after_pattern(target, pattern, option_exprs, call_args)
-            }
+            let args = args.clone();
+            move |session, pattern| session.resume_member_q_after_pattern(target, pattern, &args)
         })?;
 
-        self.resume_member_q_after_pattern(target, pattern, option_exprs, call_args)
+        self.resume_member_q_after_pattern(target, pattern, args)
     }
 
     fn resume_member_q_after_pattern(
         &mut self,
         target: Expr,
         pattern: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let include_heads = self.system_option_bool("MemberQ", "Heads", false)?;
         self.finish_count_like_after_pattern(
             "MemberQ",
             target,
             pattern,
-            option_exprs,
-            call_args,
+            args,
             CasesTraversalConfig {
                 include_heads,
                 ..CasesTraversalConfig::default_member_q()
@@ -199,37 +163,30 @@ impl Session {
     fn resume_free_q_after_target(
         &mut self,
         target: Expr,
-        pattern_expr: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
-        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
         let pattern = self.suspend_with_frame_lazy(pattern_result, || {
             let target = target.clone();
-            let option_exprs = option_exprs.clone();
-            let call_args = call_args.clone();
-            move |session, pattern| {
-                session.resume_free_q_after_pattern(target, pattern, option_exprs, call_args)
-            }
+            let args = args.clone();
+            move |session, pattern| session.resume_free_q_after_pattern(target, pattern, &args)
         })?;
 
-        self.resume_free_q_after_pattern(target, pattern, option_exprs, call_args)
+        self.resume_free_q_after_pattern(target, pattern, args)
     }
 
     fn resume_free_q_after_pattern(
         &mut self,
         target: Expr,
         pattern: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let include_heads = self.system_option_bool("FreeQ", "Heads", true)?;
         self.finish_count_like_after_pattern(
             "FreeQ",
             target,
             pattern,
-            option_exprs,
-            call_args,
+            args,
             CasesTraversalConfig {
                 include_heads,
                 ..CasesTraversalConfig::default_free_q()
@@ -243,29 +200,64 @@ impl Session {
         builtin_name: &'static str,
         target: Expr,
         pattern: Expr,
-        option_exprs: Vec<Expr>,
-        call_args: Vec<Expr>,
+        args: &SharedArgs,
         defaults: CasesTraversalConfig,
         finish: CountLikeFinish,
     ) -> Result<Expr, EvalError> {
-        let traversal_result = self.resolve_traversal_without_limit_owned(option_exprs, defaults);
-        self.drive_internal_value(traversal_result, move |session, traversal| {
-            let traversal = match traversal {
-                TraversalWithoutLimitResolution::Valid(traversal) => traversal,
-                TraversalWithoutLimitResolution::Invalid(error) => {
-                    return Ok(session.invalid_traversal_without_limit_call(
+        let traversal_result =
+            self.resolve_traversal_without_limit_owned(args[2..].to_vec(), defaults);
+        match traversal_result {
+            Ok(traversal) => self.finish_count_like_after_traversal(
+                builtin_name,
+                target,
+                pattern,
+                args,
+                finish,
+                traversal,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                let args = args.clone();
+                self.push_suspension_frame(move |session, outcome| {
+                    let traversal =
+                        TraversalWithoutLimitResolution::from_continuation_expr(outcome?);
+                    session.finish_count_like_after_traversal(
                         builtin_name,
-                        &call_args,
-                        error,
-                    ));
-                }
-            };
+                        target,
+                        pattern,
+                        &args,
+                        finish,
+                        traversal,
+                    )
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-            let outcome_result =
-                session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
-            session.drive_internal_value(outcome_result, move |_, outcome| {
-                Ok(finish.finish(outcome.count))
-            })
+    fn finish_count_like_after_traversal(
+        &mut self,
+        builtin_name: &'static str,
+        target: Expr,
+        pattern: Expr,
+        args: &SharedArgs,
+        finish: CountLikeFinish,
+        traversal: TraversalWithoutLimitResolution,
+    ) -> Result<Expr, EvalError> {
+        let traversal = match traversal {
+            TraversalWithoutLimitResolution::Valid(traversal) => traversal,
+            TraversalWithoutLimitResolution::Invalid(error) => {
+                return Ok(self.invalid_traversal_without_limit_call(
+                    builtin_name,
+                    args.as_ref(),
+                    error,
+                ));
+            }
+        };
+
+        let outcome_result = self.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
+        self.drive_internal_value(outcome_result, move |_, outcome| {
+            Ok(finish.finish(outcome.count))
         })
     }
 
@@ -457,21 +449,86 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedCountChildren {
+                        children: Arc::from(children),
+                        child_index,
+                        expr,
+                        pattern,
+                        traversal,
+                        level,
+                        seen_before,
+                        count,
+                        max_child_depth,
+                    };
                     self.push_suspension_frame(move |session, value| {
                         let outcome = TraversalCountOutcome::from_continuation_expr(value?);
                         session
-                            .count_pattern_children(
-                                children,
-                                child_index,
-                                expr,
-                                pattern,
-                                traversal,
-                                level,
-                                seen_before,
-                                count,
-                                max_child_depth,
-                                Some(outcome),
-                            )
+                            .count_pattern_children_suspended(state, Some(outcome))
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn count_pattern_children_suspended(
+        &mut self,
+        mut state: SuspendedCountChildren,
+        mut pending: Option<TraversalCountOutcome>,
+    ) -> Result<TraversalCountOutcome, EvalError> {
+        loop {
+            if let Some(child_outcome) = pending.take() {
+                state.count += child_outcome.count;
+                let contributes_depth = state
+                    .children
+                    .get(state.child_index)
+                    .is_some_and(|(_, contributes_depth)| *contributes_depth);
+                if contributes_depth {
+                    state.max_child_depth = state.max_child_depth.max(child_outcome.depth);
+                }
+
+                if child_outcome.exhausted {
+                    return Ok(TraversalCountOutcome::new(
+                        state.count,
+                        state.max_child_depth + 1,
+                        true,
+                    ));
+                }
+
+                state.child_index += 1;
+            }
+
+            let Some((child, _contributes_depth)) = state.children.get(state.child_index).cloned()
+            else {
+                let depth = state.max_child_depth.saturating_add(1);
+                return self.finish_count_at_current_node(
+                    state.expr,
+                    state.pattern,
+                    state.traversal,
+                    state.level - 1,
+                    depth,
+                    state.seen_before,
+                    state.count,
+                );
+            };
+
+            let child_result = self.count_pattern_matches_owned(
+                child,
+                state.pattern.clone(),
+                state.traversal,
+                state.level,
+                state.seen_before + state.count,
+            );
+
+            match child_result {
+                Ok(outcome) => pending = Some(outcome),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = TraversalCountOutcome::from_continuation_expr(value?);
+                        session
+                            .count_pattern_children_suspended(state, Some(outcome))
                             .map(|outcome| outcome.into_continuation_expr())
                     });
                     return Err(EvalError::InputRequired { request });
@@ -486,4 +543,5 @@ impl Session {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<CountLikeFinish>();
+    assert_traces::<SuspendedCountChildren>();
 };

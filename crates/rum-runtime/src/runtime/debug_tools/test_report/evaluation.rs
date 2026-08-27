@@ -92,9 +92,22 @@ impl Session {
         actual: Expr,
         expected: Expr,
     ) -> Result<bool, EvalError> {
-        let same_test = test_case
-            .same_test
-            .clone()
+        self.test_case_output_matches_parts(
+            test_case.same_test.clone(),
+            report_same_test,
+            actual,
+            expected,
+        )
+    }
+
+    pub(in crate::runtime::debug_tools::test_report) fn test_case_output_matches_parts(
+        &mut self,
+        case_same_test: Option<Expr>,
+        report_same_test: Option<Expr>,
+        actual: Expr,
+        expected: Expr,
+    ) -> Result<bool, EvalError> {
+        let same_test = case_same_test
             .or(report_same_test)
             .unwrap_or_else(|| system_expr("SameQ"));
         let applied = Expr::call(same_test, vec![actual, expected]);

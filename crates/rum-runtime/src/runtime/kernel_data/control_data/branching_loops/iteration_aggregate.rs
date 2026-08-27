@@ -1,12 +1,24 @@
 use super::iteration::{
-    DoSpec, IterationConsumer, build_iteration_body_or_nested, evaluate_do_spec_expr, parse_do_spec,
+    DoSpec, IterationConsumer, PersistentExprAccumulator, SuspendedDoSpec,
+    build_iteration_body_or_nested, evaluate_do_spec_expr, parse_do_spec,
 };
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum IterationAggregate {
     Product,
     Sum,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedIterationAggregate {
+    aggregate: IterationAggregate,
+    args: SharedArgs,
+    spec_index: usize,
+    spec: SuspendedDoSpec,
+    iteration: usize,
+    collected: PersistentExprAccumulator,
 }
 
 impl IterationAggregate {
@@ -33,18 +45,21 @@ impl IterationAggregate {
 }
 
 impl Session {
-    pub(in crate::runtime) fn eval_product(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(in crate::runtime) fn eval_product(
+        &mut self,
+        args: &SharedArgs,
+    ) -> Result<Expr, EvalError> {
         self.eval_iteration_aggregate(IterationAggregate::Product, args)
     }
 
-    pub(in crate::runtime) fn eval_sum(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(in crate::runtime) fn eval_sum(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         self.eval_iteration_aggregate(IterationAggregate::Sum, args)
     }
 
     fn eval_iteration_aggregate(
         &mut self,
         aggregate: IterationAggregate,
-        args: &[Expr],
+        args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         if args.len() < 2 {
             return Ok(self.invalid_call_with_message(
@@ -55,20 +70,21 @@ impl Session {
             ));
         }
 
-        self.resume_iteration_aggregate_after_spec_eval(aggregate, args.to_vec(), 0)
+        self.resume_iteration_aggregate_after_spec_eval(aggregate, args, 0)
     }
 
     fn resume_iteration_aggregate_after_spec_eval(
         &mut self,
         aggregate: IterationAggregate,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
         let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
             let args = args.clone();
             move |session, spec_expr| {
-                session.finish_iteration_aggregate_spec_eval(aggregate, args, spec_index, spec_expr)
+                session
+                    .finish_iteration_aggregate_spec_eval(aggregate, &args, spec_index, spec_expr)
             }
         })?;
 
@@ -78,7 +94,7 @@ impl Session {
     fn finish_iteration_aggregate_spec_eval(
         &mut self,
         aggregate: IterationAggregate,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
         spec_expr: Expr,
     ) -> Result<Expr, EvalError> {
@@ -87,7 +103,7 @@ impl Session {
             None => {
                 return Ok(self.invalid_call_with_arg_form(
                     aggregate.name(),
-                    &args,
+                    args,
                     "expected a supported repetition count or iterator specification",
                 ));
             }
@@ -107,7 +123,7 @@ impl Session {
     fn resume_iteration_aggregate_iterations(
         &mut self,
         aggregate: IterationAggregate,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
         spec: DoSpec,
         mut iteration: usize,
@@ -119,14 +135,14 @@ impl Session {
                     if iteration >= *count {
                         return self.finish_iteration_aggregate(aggregate, collected);
                     }
-                    let body = build_iteration_body_or_nested(&args, spec_index, aggregate.name());
+                    let body = build_iteration_body_or_nested(args, spec_index, aggregate.name());
                     self.evaluate(body)
                 }
                 DoSpec::Iterator { symbol, values } => {
                     let Some(value) = values.get(iteration).cloned() else {
                         return self.finish_iteration_aggregate(aggregate, collected);
                     };
-                    let body = build_iteration_body_or_nested(&args, spec_index, aggregate.name());
+                    let body = build_iteration_body_or_nested(args, spec_index, aggregate.name());
                     self.evaluate_loop_iterator_body(*symbol, value, body)
                 }
             };
@@ -137,10 +153,16 @@ impl Session {
                     iteration += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedIterationAggregate {
+                        aggregate,
+                        args: args.clone(),
+                        spec_index,
+                        spec: spec.into(),
+                        iteration,
+                        collected: PersistentExprAccumulator::freeze(collected),
+                    };
                     self.push_suspension_frame(move |session, outcome| {
-                        session.resume_iteration_aggregate_after_iteration(
-                            aggregate, args, spec_index, spec, iteration, collected, outcome,
-                        )
+                        session.resume_suspended_iteration_aggregate_after_iteration(state, outcome)
                     });
                     return Err(EvalError::InputRequired { request });
                 }
@@ -149,29 +171,70 @@ impl Session {
         }
     }
 
-    fn resume_iteration_aggregate_after_iteration(
+    fn resume_suspended_iteration_aggregate_after_iteration(
         &mut self,
-        aggregate: IterationAggregate,
-        args: Vec<Expr>,
-        spec_index: usize,
-        spec: DoSpec,
-        iteration: usize,
-        mut collected: Vec<Expr>,
+        mut state: SuspendedIterationAggregate,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => {
-                collected.push(value);
-                self.resume_iteration_aggregate_iterations(
-                    aggregate,
-                    args,
-                    spec_index,
-                    spec,
-                    iteration + 1,
-                    collected,
-                )
+                state.collected = state.collected.appended(value);
+                state.iteration += 1;
+                self.resume_suspended_iteration_aggregate(state)
             }
             Err(error) => Err(error),
+        }
+    }
+
+    fn resume_suspended_iteration_aggregate(
+        &mut self,
+        mut state: SuspendedIterationAggregate,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let outcome = match &state.spec {
+                SuspendedDoSpec::Count(count) => {
+                    if state.iteration >= *count {
+                        return self.finish_iteration_aggregate(
+                            state.aggregate,
+                            state.collected.into_vec(),
+                        );
+                    }
+                    let body = build_iteration_body_or_nested(
+                        state.args.as_ref(),
+                        state.spec_index,
+                        state.aggregate.name(),
+                    );
+                    self.evaluate(body)
+                }
+                SuspendedDoSpec::Iterator { symbol, values } => {
+                    let Some(value) = values.get(state.iteration).cloned() else {
+                        return self.finish_iteration_aggregate(
+                            state.aggregate,
+                            state.collected.into_vec(),
+                        );
+                    };
+                    let body = build_iteration_body_or_nested(
+                        state.args.as_ref(),
+                        state.spec_index,
+                        state.aggregate.name(),
+                    );
+                    self.evaluate_loop_iterator_body(*symbol, value, body)
+                }
+            };
+
+            match outcome {
+                Ok(value) => {
+                    state.collected = state.collected.appended(value);
+                    state.iteration += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_suspended_iteration_aggregate_after_iteration(state, outcome)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
         }
     }
 
@@ -183,3 +246,9 @@ impl Session {
         self.evaluate(Expr::call(system_expr(aggregate.combiner_name()), values))
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedIterationAggregate>();
+};

@@ -30,25 +30,25 @@ impl Session {
                 session.resume_time_constrained_with_limit(
                     suspended_body,
                     suspended_fallback,
-                    args.as_ref().to_vec(),
+                    args.as_ref(),
                     resolved,
                 )
             }
         })?;
-        self.resume_time_constrained_with_limit(body, fallback, args_slice.to_vec(), resolved_limit)
+        self.resume_time_constrained_with_limit(body, fallback, args_slice, resolved_limit)
     }
 
     fn resume_time_constrained_with_limit(
         &mut self,
         body: Expr,
         fallback: Option<Expr>,
-        raw_args: Vec<Expr>,
+        raw_args: &[Expr],
         resolved_limit: Expr,
     ) -> Result<Expr, EvalError> {
         let Some(limit) = parse_time_constraint_duration(&resolved_limit) else {
             return Ok(self.invalid_call_with_arg_form(
                 "TimeConstrained",
-                &raw_args,
+                raw_args,
                 "expected the timeout argument to be a non-negative exact number in the current first-pass subset",
             ));
         };
@@ -93,30 +93,25 @@ impl Session {
                 session.resume_memory_constrained_with_limit(
                     suspended_body,
                     suspended_fallback,
-                    args.as_ref().to_vec(),
+                    args.as_ref(),
                     resolved,
                 )
             }
         })?;
-        self.resume_memory_constrained_with_limit(
-            body,
-            fallback,
-            args_slice.to_vec(),
-            resolved_limit,
-        )
+        self.resume_memory_constrained_with_limit(body, fallback, args_slice, resolved_limit)
     }
 
     fn resume_memory_constrained_with_limit(
         &mut self,
         body: Expr,
         fallback: Option<Expr>,
-        raw_args: Vec<Expr>,
+        raw_args: &[Expr],
         resolved_limit: Expr,
     ) -> Result<Expr, EvalError> {
         let Some(limit) = expr_as_non_negative_usize(&resolved_limit) else {
             return Ok(self.invalid_call_with_arg_form(
                 "MemoryConstrained",
-                &raw_args,
+                raw_args,
                 "expected the memory limit argument to be a non-negative exact integer",
             ));
         };

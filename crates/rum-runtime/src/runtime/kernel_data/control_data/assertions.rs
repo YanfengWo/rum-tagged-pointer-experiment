@@ -8,18 +8,16 @@ impl Session {
         let function = self.suspend_with_frame_lazy(function_result, || {
             let test = test.clone();
             let args = args.clone();
-            move |session, function| {
-                session.resume_assert_after_function(test, args.as_ref().to_vec(), function)
-            }
+            move |session, function| session.resume_assert_after_function(test, &args, function)
         })?;
 
-        self.resume_assert_after_function(test, args.as_ref().to_vec(), function)
+        self.resume_assert_after_function(test, args, function)
     }
 
     fn resume_assert_after_test(
         &mut self,
         test: Expr,
-        assert_args: Vec<Expr>,
+        assert_args: &SharedArgs,
         assert_function: Option<Expr>,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
@@ -34,7 +32,7 @@ impl Session {
                     return self.finish_assert_function(assert_function, assert_args);
                 }
 
-                for (message_tag, text) in assert_failure_messages(&test, &assert_args) {
+                for (message_tag, text) in assert_failure_messages(&test, assert_args.as_ref()) {
                     self.push_message("Assert", message_tag, text);
                 }
                 Ok(system_expr("Null"))
@@ -46,7 +44,7 @@ impl Session {
     fn resume_assert_after_function(
         &mut self,
         test: Option<Expr>,
-        assert_args: Vec<Expr>,
+        assert_args: &SharedArgs,
         function: Expr,
     ) -> Result<Expr, EvalError> {
         let assert_function = if is_system_symbol_name(&function, "$AssertFunction")
@@ -57,7 +55,10 @@ impl Session {
             Some(function)
         };
         if !self.asserts_enabled && assert_function.is_none() {
-            return Ok(Expr::call(system_expr("Assert"), assert_args));
+            return Ok(Expr::call_with_shared_args(
+                system_expr("Assert"),
+                assert_args.clone(),
+            ));
         }
         let Some(test) = test else {
             self.push_message(
@@ -65,7 +66,10 @@ impl Session {
                 "asrte",
                 format!(
                     "Assertion {} had no test.",
-                    render_input_like_expr(&Expr::call(system_expr("Assert"), assert_args))
+                    render_input_like_expr(&Expr::call_with_shared_args(
+                        system_expr("Assert"),
+                        assert_args.clone(),
+                    ))
                 ),
             );
             return Ok(system_expr("Null"));
@@ -77,7 +81,7 @@ impl Session {
             let assert_args = assert_args.clone();
             let assert_function = assert_function.clone();
             move |session, outcome| {
-                session.resume_assert_after_test(test, assert_args, assert_function, outcome)
+                session.resume_assert_after_test(test, &assert_args, assert_function, outcome)
             }
         });
 
@@ -90,11 +94,14 @@ impl Session {
     fn finish_assert_function(
         &mut self,
         assert_function: Expr,
-        assert_args: Vec<Expr>,
+        assert_args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let payload = Expr::call(
             system_expr("HoldComplete"),
-            vec![Expr::call(system_expr("Assert"), assert_args)],
+            vec![Expr::call_with_shared_args(
+                system_expr("Assert"),
+                assert_args.clone(),
+            )],
         );
         let result = self.evaluate(Expr::call(assert_function, vec![payload]));
         self.drive_internal_value(result, |_, _| Ok(system_expr("Null")))

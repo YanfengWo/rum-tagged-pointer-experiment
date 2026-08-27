@@ -1,5 +1,6 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 pub(in crate::runtime) const SEALED_IDENTITY_MARKER: u64 = 1 << 62;
 
@@ -45,6 +46,12 @@ struct PackageInstallPlan {
     forms: Vec<Expr>,
     source_unit: SourceUnit,
     minted_sealed: Vec<Symbol>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedPackageInstall {
+    plan: Arc<PackageInstallPlan>,
+    index: usize,
 }
 
 #[derive(Default)]
@@ -253,33 +260,73 @@ impl Session {
     fn resume_package_install(
         &mut self,
         plan: PackageInstallPlan,
-        index: usize,
+        mut index: usize,
     ) -> Result<Expr, EvalError> {
-        if index >= plan.forms.len() {
-            return Ok(self.finish_package_install(plan));
-        }
+        loop {
+            let Some(form) = plan.forms.get(index) else {
+                return Ok(self.finish_package_install(plan));
+            };
 
-        let form_result = self.evaluate(plan.forms[index].clone());
-        let outcome = self.suspend_with_result_frame_lazy(form_result, || {
-            let plan = plan.clone();
-            move |session, outcome| session.resume_package_after_form(plan, index, outcome)
-        });
-
-        match outcome {
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
-            outcome => self.resume_package_after_form(plan, index, outcome),
+            match self.evaluate(form.clone()) {
+                Ok(_) => index += 1,
+                Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedPackageInstall {
+                        plan: Arc::new(plan),
+                        index,
+                    };
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_suspended_package_after_form(state, outcome)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Ok(self.fail_package_install(plan, error)),
+            }
         }
     }
 
-    fn resume_package_after_form(
+    fn resume_suspended_package_after_form(
         &mut self,
-        plan: PackageInstallPlan,
-        index: usize,
+        mut state: SuspendedPackageInstall,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
-            Ok(_) => self.resume_package_install(plan, index + 1),
-            Err(error) => Ok(self.fail_package_install(plan, error)),
+            Ok(_) => {
+                state.index += 1;
+                self.resume_suspended_package_install(state)
+            }
+            Err(error) => Ok(self.fail_package_install(
+                Arc::try_unwrap(state.plan)
+                    .unwrap_or_else(|_| panic!("failed package install state must be unique")),
+                error,
+            )),
+        }
+    }
+
+    fn resume_suspended_package_install(
+        &mut self,
+        mut state: SuspendedPackageInstall,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let Some(form) = state.plan.forms.get(state.index) else {
+                let plan = Arc::try_unwrap(state.plan)
+                    .unwrap_or_else(|_| panic!("completed package install state must be unique"));
+                return Ok(self.finish_package_install(plan));
+            };
+
+            match self.evaluate(form.clone()) {
+                Ok(_) => state.index += 1,
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_suspended_package_after_form(state, outcome)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => {
+                    let plan = Arc::try_unwrap(state.plan)
+                        .unwrap_or_else(|_| panic!("failed package install state must be unique"));
+                    return Ok(self.fail_package_install(plan, error));
+                }
+            }
         }
     }
 
@@ -330,6 +377,12 @@ impl Session {
         system_expr("$Failed")
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedPackageInstall>();
+};
 
 fn restore_unit_contexts(expr: &Expr) -> Option<Vec<String>> {
     if let Expr::Call { head, args } = expr {

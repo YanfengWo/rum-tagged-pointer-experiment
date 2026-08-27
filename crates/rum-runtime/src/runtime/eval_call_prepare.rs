@@ -1,5 +1,6 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CallArgumentPlan {
@@ -24,6 +25,120 @@ pub(super) struct PreparedCallArguments {
 pub(super) struct UnevaluatedRestorePlan {
     pub(super) prepared_args: SharedArgs,
     pub(super) wrappers: Vec<(usize, Expr)>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct PreparedArgumentAccumulator {
+    prefix: SharedArgs,
+    tail: Option<Arc<PreparedArgumentNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct PreparedArgumentNode {
+    previous: Option<Arc<PreparedArgumentNode>>,
+    value: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct UnevaluatedRestoreAccumulator {
+    prefix: Arc<[(usize, Expr)]>,
+    tail: Option<Arc<UnevaluatedRestoreNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct UnevaluatedRestoreNode {
+    previous: Option<Arc<UnevaluatedRestoreNode>>,
+    value: (usize, Expr),
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedCallArgumentPreparation {
+    head: Expr,
+    attributes: AttributeSet,
+    args: SharedArgs,
+    cursor: usize,
+    prepared: PreparedArgumentAccumulator,
+    unevaluated_restores: Option<UnevaluatedRestoreAccumulator>,
+}
+
+impl PreparedArgumentAccumulator {
+    fn freeze(values: Vec<Expr>) -> Self {
+        let len = values.len();
+        Self {
+            prefix: SharedArgs::new(values),
+            tail: None,
+            len,
+        }
+    }
+
+    fn appended(&self, value: Expr) -> Self {
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(PreparedArgumentNode {
+                previous: self.tail.clone(),
+                value,
+            })),
+            len: self.len + 1,
+        }
+    }
+
+    fn into_vec(self) -> Vec<Expr> {
+        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut node = self.tail;
+        while let Some(current) = node {
+            let current = Arc::try_unwrap(current)
+                .unwrap_or_else(|_| panic!("completed call argument state must be unique"));
+            suffix.push(current.value);
+            node = current.previous;
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.into_vec();
+        values.reserve(suffix.len());
+        values.extend(suffix);
+        values
+    }
+}
+
+impl UnevaluatedRestoreAccumulator {
+    fn freeze(values: Vec<(usize, Expr)>) -> Self {
+        let len = values.len();
+        Self {
+            prefix: Arc::from(values),
+            tail: None,
+            len,
+        }
+    }
+
+    fn appended(&self, value: (usize, Expr)) -> Self {
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(UnevaluatedRestoreNode {
+                previous: self.tail.clone(),
+                value,
+            })),
+            len: self.len + 1,
+        }
+    }
+
+    fn into_vec(self) -> Vec<(usize, Expr)> {
+        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut node = self.tail;
+        while let Some(current) = node {
+            let current = Arc::try_unwrap(current)
+                .unwrap_or_else(|_| panic!("completed Unevaluated restore state must be unique"));
+            suffix.push(current.value);
+            node = current.previous;
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.iter().cloned().collect::<Vec<_>>();
+        values.reserve(suffix.len());
+        values.extend(suffix);
+        values
+    }
 }
 
 fn plan_call_argument_preparation(
@@ -123,6 +238,30 @@ fn append_prepared_list_item(prepared_args: &mut Vec<Expr>, value: Expr) {
     }
 }
 
+fn append_suspended_prepared_argument(
+    mut prepared: PreparedArgumentAccumulator,
+    value: Expr,
+    allow_sequence_splice: bool,
+    sequence_hold: bool,
+    list_drops_nothing: bool,
+) -> PreparedArgumentAccumulator {
+    if allow_sequence_splice && !sequence_hold {
+        if let Some(items) = sequence_items(&value) {
+            for item in items {
+                if !list_drops_nothing || !is_nothing_symbol(item) {
+                    prepared = prepared.appended(item.clone());
+                }
+            }
+            return prepared;
+        }
+    }
+
+    if !list_drops_nothing || !is_nothing_symbol(&value) {
+        prepared = prepared.appended(value);
+    }
+    prepared
+}
+
 fn prepared_argument_splices(
     value: &Expr,
     allow_sequence_splice: bool,
@@ -220,27 +359,26 @@ impl Session {
                         match evaluated_result {
                             Ok(value) => value,
                             Err(EvalError::InputRequired { request }) => {
-                                let head_for_resume = head.clone();
-                                let attributes_for_resume = attributes;
-                                let evaluated_for_resume =
+                                let prepared =
                                     built.take().unwrap_or_else(|| args[..index].to_vec());
-                                let remaining_for_resume = args[index + 1..].to_vec();
-                                let unevaluated_restores_for_resume = unevaluated_restores.clone();
-                                self.suspend_with_frame_lazy(
-                                    Err(EvalError::InputRequired { request }),
-                                    || move |session, value| {
-                                        session.resume_call_after_argument_with_unevaluated_restore(
-                                            head_for_resume,
-                                            attributes_for_resume,
-                                            evaluated_for_resume,
-                                            remaining_for_resume,
-                                            index + 1,
-                                            value,
-                                            allow_sequence_splice,
-                                            unevaluated_restores_for_resume,
-                                        )
-                                    },
-                                )?
+                                let state = SuspendedCallArgumentPreparation {
+                                    head,
+                                    attributes,
+                                    args,
+                                    cursor: index + 1,
+                                    prepared: PreparedArgumentAccumulator::freeze(prepared),
+                                    unevaluated_restores: unevaluated_restores
+                                        .map(UnevaluatedRestoreAccumulator::freeze),
+                                };
+                                self.push_suspension_frame(move |session, outcome| {
+                                    let value = outcome?;
+                                    session.resume_suspended_call_after_argument(
+                                        state,
+                                        value,
+                                        allow_sequence_splice,
+                                    )
+                                });
+                                return Err(EvalError::InputRequired { request });
                             }
                             Err(error) => return Err(error),
                         }
@@ -354,158 +492,122 @@ impl Session {
         result
     }
 
-    fn resume_prepared_call_arguments_with_unevaluated_restore(
+    fn resume_suspended_call_after_argument(
         &mut self,
-        head: Expr,
-        attributes: AttributeSet,
-        mut evaluated_args: Vec<Expr>,
-        remaining_args: Vec<Expr>,
-        start_index: usize,
-        mut unevaluated_restores: Option<Vec<(usize, Expr)>>,
-    ) -> Result<PreparedCallArguments, EvalError> {
-        let sequence_hold = attributes.sequence_hold();
-        let list_drops_nothing = is_system_symbol_name(&head, heads::structure::LIST);
-        let mut remaining_args = remaining_args.into_iter().enumerate();
+        mut state: SuspendedCallArgumentPreparation,
+        value: Expr,
+        allow_sequence_splice: bool,
+    ) -> Result<Expr, EvalError> {
+        let list_drops_nothing = is_system_symbol_name(&state.head, heads::structure::LIST);
+        state.prepared = append_suspended_prepared_argument(
+            state.prepared,
+            value,
+            allow_sequence_splice,
+            state.attributes.sequence_hold(),
+            list_drops_nothing,
+        );
+        self.resume_suspended_call_argument_preparation(state)
+    }
 
-        while let Some((offset, arg)) = remaining_args.next() {
-            let index = start_index + offset;
+    fn resume_suspended_call_argument_preparation(
+        &mut self,
+        mut state: SuspendedCallArgumentPreparation,
+    ) -> Result<Expr, EvalError> {
+        let sequence_hold = state.attributes.sequence_hold();
+        let list_drops_nothing = is_system_symbol_name(&state.head, heads::structure::LIST);
+
+        loop {
+            let Some(arg) = state.args.get(state.cursor).cloned() else {
+                let head = state.head;
+                let evaluated_args = SharedArgs::new(state.prepared.into_vec());
+                let unevaluated_restore = state.unevaluated_restores.map(|restores| {
+                    Box::new(UnevaluatedRestorePlan {
+                        prepared_args: evaluated_args.clone(),
+                        wrappers: restores.into_vec(),
+                    })
+                });
+                return self.resume_call_from_prepared_args_with_unevaluated_restore(
+                    head,
+                    PreparedCallArguments {
+                        evaluated_args,
+                        unevaluated_restore,
+                    },
+                );
+            };
+
+            let index = state.cursor;
             let raw_arg = arg.clone();
-
             let runtime_profile_plan = runtime_path_timing_start("prepare_arguments.plan_arg");
-            let plan = plan_call_argument_preparation(attributes, index, arg);
+            let plan = plan_call_argument_preparation(state.attributes, index, arg);
             record_profile_runtime_path_timing(runtime_profile_plan, RuntimeProfileOutcome::Ok);
-            let prepared_arg =
-                match plan.mode {
-                    CallArgumentMode::Evaluate => {
-                        let allow_sequence_splice = plan.allow_sequence_splice;
-                        let runtime_profile_evaluate =
-                            runtime_path_timing_start("prepare_arguments.evaluate_arg");
-                        let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
-                        record_profile_runtime_path_timing(
-                            runtime_profile_evaluate,
-                            runtime_profile_outcome_for_expr_result(&evaluated_result),
-                        );
-                        match evaluated_result {
-                            Ok(value) => value,
-                            Err(EvalError::InputRequired { request }) => {
-                                let head_for_resume = head.clone();
-                                let attributes_for_resume = attributes;
-                                let evaluated_for_resume = evaluated_args.clone();
-                                let remaining_for_resume = remaining_args
-                                    .by_ref()
-                                    .map(|(_, arg)| arg)
-                                    .collect::<Vec<_>>();
-                                let unevaluated_restores_for_resume = unevaluated_restores.clone();
-                                self.suspend_with_frame_lazy(
-                                Err(EvalError::InputRequired { request }),
-                                || move |session, value| {
-                                    session.resume_call_after_argument_with_unevaluated_restore(
-                                        head_for_resume,
-                                        attributes_for_resume,
-                                        evaluated_for_resume,
-                                        remaining_for_resume,
-                                        index + 1,
-                                        value,
-                                        allow_sequence_splice,
-                                        unevaluated_restores_for_resume,
-                                    )
-                                },
-                            )?
-                            }
-                            Err(error) => return Err(error),
+
+            let prepared_arg = match plan.mode {
+                CallArgumentMode::Evaluate => {
+                    let allow_sequence_splice = plan.allow_sequence_splice;
+                    let runtime_profile_evaluate =
+                        runtime_path_timing_start("prepare_arguments.evaluate_arg");
+                    let evaluated_result = self.evaluate_atom_fast_path(plan.expr);
+                    record_profile_runtime_path_timing(
+                        runtime_profile_evaluate,
+                        runtime_profile_outcome_for_expr_result(&evaluated_result),
+                    );
+                    match evaluated_result {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            state.cursor += 1;
+                            self.push_suspension_frame(move |session, outcome| {
+                                let value = outcome?;
+                                session.resume_suspended_call_after_argument(
+                                    state,
+                                    value,
+                                    allow_sequence_splice,
+                                )
+                            });
+                            return Err(EvalError::InputRequired { request });
                         }
+                        Err(error) => return Err(error),
                     }
-                    CallArgumentMode::Hold => plan.expr,
-                    CallArgumentMode::StrippedUnevaluated => {
-                        let splices = prepared_argument_splices(
+                }
+                CallArgumentMode::Hold => plan.expr,
+                CallArgumentMode::StrippedUnevaluated => {
+                    let splices = prepared_argument_splices(
+                        &plan.expr,
+                        plan.allow_sequence_splice,
+                        sequence_hold,
+                    );
+                    let drops_nothing = list_drops_nothing
+                        && prepared_list_argument_drops_nothing(
                             &plan.expr,
                             plan.allow_sequence_splice,
                             sequence_hold,
                         );
-                        let drops_nothing = list_drops_nothing
-                            && prepared_list_argument_drops_nothing(
-                                &plan.expr,
-                                plan.allow_sequence_splice,
-                                sequence_hold,
-                            );
-                        if !splices && !drops_nothing {
-                            unevaluated_restores
-                                .get_or_insert_with(Vec::new)
-                                .push((evaluated_args.len(), raw_arg));
-                        }
-                        plan.expr
+                    if !splices && !drops_nothing {
+                        let entry = (state.prepared.len, raw_arg);
+                        state.unevaluated_restores = Some(
+                            state
+                                .unevaluated_restores
+                                .take()
+                                .unwrap_or_else(
+                                    || UnevaluatedRestoreAccumulator::freeze(Vec::new()),
+                                )
+                                .appended(entry),
+                        );
                     }
-                };
+                    plan.expr
+                }
+            };
 
             let runtime_profile_append = runtime_path_timing_start("prepare_arguments.append_arg");
-            if list_drops_nothing {
-                append_prepared_list_argument(
-                    &mut evaluated_args,
-                    prepared_arg,
-                    plan.allow_sequence_splice,
-                    sequence_hold,
-                );
-            } else {
-                append_prepared_argument(
-                    &mut evaluated_args,
-                    prepared_arg,
-                    plan.allow_sequence_splice,
-                    sequence_hold,
-                );
-            }
+            state.prepared = append_suspended_prepared_argument(
+                state.prepared,
+                prepared_arg,
+                plan.allow_sequence_splice,
+                sequence_hold,
+                list_drops_nothing,
+            );
+            state.cursor += 1;
             record_profile_runtime_path_timing(runtime_profile_append, RuntimeProfileOutcome::Ok);
         }
-
-        let evaluated_args = SharedArgs::new(evaluated_args);
-        let unevaluated_restore = unevaluated_restores.map(|wrappers| {
-            Box::new(UnevaluatedRestorePlan {
-                prepared_args: evaluated_args.clone(),
-                wrappers,
-            })
-        });
-
-        Ok(PreparedCallArguments {
-            evaluated_args,
-            unevaluated_restore,
-        })
-    }
-
-    fn resume_call_after_argument_with_unevaluated_restore(
-        &mut self,
-        head: Expr,
-        attributes: AttributeSet,
-        mut evaluated_args: Vec<Expr>,
-        remaining_args: Vec<Expr>,
-        next_index: usize,
-        value: Expr,
-        allow_sequence_splice: bool,
-        unevaluated_restores: Option<Vec<(usize, Expr)>>,
-    ) -> Result<Expr, EvalError> {
-        if is_system_symbol_name(&head, heads::structure::LIST) {
-            append_prepared_list_argument(
-                &mut evaluated_args,
-                value,
-                allow_sequence_splice,
-                attributes.sequence_hold(),
-            );
-        } else {
-            append_prepared_argument(
-                &mut evaluated_args,
-                value,
-                allow_sequence_splice,
-                attributes.sequence_hold(),
-            );
-        }
-
-        let prepared = self.resume_prepared_call_arguments_with_unevaluated_restore(
-            head.clone(),
-            attributes,
-            evaluated_args,
-            remaining_args,
-            next_index,
-            unevaluated_restores,
-        )?;
-        self.resume_call_from_prepared_args_with_unevaluated_restore(head, prepared)
     }
 
     pub(super) fn resume_call_from_prepared_args(
@@ -720,5 +822,8 @@ mod tests {
 #[cfg(test)]
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<PreparedArgumentAccumulator>();
+    assert_traces::<UnevaluatedRestoreAccumulator>();
+    assert_traces::<SuspendedCallArgumentPreparation>();
     assert_traces::<UnevaluatedRestorePlan>();
 };

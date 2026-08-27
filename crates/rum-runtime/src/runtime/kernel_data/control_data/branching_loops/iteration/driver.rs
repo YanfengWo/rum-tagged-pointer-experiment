@@ -3,9 +3,44 @@ use super::table_fast_path::{
     eval_single_spec_constant_table_fast_path, eval_single_spec_table_fast_path,
 };
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedDoIterations {
+    args: SharedArgs,
+    spec_index: usize,
+    spec: SuspendedDoSpec,
+    iteration: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedTableIterations {
+    args: SharedArgs,
+    spec_index: usize,
+    spec: SuspendedDoSpec,
+    iteration: usize,
+    collected: PersistentExprAccumulator,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedLoopIteratorSymbolState(Arc<BlockSymbolState>);
+
+impl SuspendedLoopIteratorSymbolState {
+    fn freeze(state: BlockSymbolState) -> Self {
+        Self(Arc::new(state))
+    }
+
+    fn into_owned(self) -> BlockSymbolState {
+        match Arc::try_unwrap(self.0) {
+            Ok(state) => state,
+            Err(_) => panic!("completed loop-iterator state must be uniquely owned"),
+        }
+    }
+}
 
 impl Session {
-    pub(in crate::runtime) fn eval_do(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(in crate::runtime) fn eval_do(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         if args.len() < 2 {
             return Ok(self.invalid_call_with_message(
                 "Do",
@@ -15,10 +50,10 @@ impl Session {
             ));
         }
 
-        self.resume_do_after_spec_eval(args.to_vec(), 0)
+        self.resume_do_after_spec_eval(args, 0)
     }
 
-    pub(in crate::runtime) fn eval_table(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
+    pub(in crate::runtime) fn eval_table(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         if args.len() < 2 {
             return Ok(self.invalid_call_with_message(
                 "Table",
@@ -28,18 +63,18 @@ impl Session {
             ));
         }
 
-        self.resume_table_after_spec_eval(args.to_vec(), 0)
+        self.resume_table_after_spec_eval(args, 0)
     }
 
     fn resume_do_after_spec_eval(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
         let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
             let args = args.clone();
-            move |session, spec_expr| session.finish_do_spec_eval(args, spec_index, spec_expr)
+            move |session, spec_expr| session.finish_do_spec_eval(&args, spec_index, spec_expr)
         })?;
 
         self.finish_do_spec_eval(args, spec_index, spec_expr)
@@ -47,7 +82,7 @@ impl Session {
 
     fn finish_do_spec_eval(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
         spec_expr: Expr,
     ) -> Result<Expr, EvalError> {
@@ -56,7 +91,7 @@ impl Session {
             None => {
                 return Ok(self.invalid_call_with_arg_form(
                     "Do",
-                    &args,
+                    args,
                     "expected a supported repetition count or iterator specification",
                 ));
             }
@@ -67,7 +102,7 @@ impl Session {
 
     fn resume_do_iterations(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
         spec: DoSpec,
         mut iteration: usize,
@@ -78,14 +113,14 @@ impl Session {
                     if iteration >= *count {
                         return Ok(system_expr("Null"));
                     }
-                    let body = build_iteration_body_or_nested(&args, spec_index, "Do");
+                    let body = build_iteration_body_or_nested(args, spec_index, "Do");
                     self.evaluate(body)
                 }
                 DoSpec::Iterator { symbol, values } => {
                     let Some(value) = values.get(iteration).cloned() else {
                         return Ok(system_expr("Null"));
                     };
-                    let body = build_iteration_body_or_nested(&args, spec_index, "Do");
+                    let body = build_iteration_body_or_nested(args, spec_index, "Do");
                     self.evaluate_loop_iterator_body(*symbol, value, body)
                 }
             };
@@ -96,9 +131,14 @@ impl Session {
                 }
                 Err(EvalError::Break) => return Ok(system_expr("Null")),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedDoIterations {
+                        args: args.clone(),
+                        spec_index,
+                        spec: spec.into(),
+                        iteration,
+                    };
                     self.push_suspension_frame(move |session, outcome| {
-                        session
-                            .resume_do_after_iteration(args, spec_index, spec, iteration, outcome)
+                        session.resume_suspended_do_after_iteration(state, outcome)
                     });
                     return Err(EvalError::InputRequired { request });
                 }
@@ -107,32 +147,68 @@ impl Session {
         }
     }
 
-    fn resume_do_after_iteration(
+    fn resume_suspended_do_after_iteration(
         &mut self,
-        args: Vec<Expr>,
-        spec_index: usize,
-        spec: DoSpec,
-        iteration: usize,
+        mut state: SuspendedDoIterations,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(_) | Err(EvalError::Continue) => {
-                self.resume_do_iterations(args, spec_index, spec, iteration + 1)
+                state.iteration += 1;
+                self.resume_suspended_do_iterations(state)
             }
             Err(EvalError::Break) => Ok(system_expr("Null")),
             Err(error) => Err(error),
         }
     }
 
+    fn resume_suspended_do_iterations(
+        &mut self,
+        mut state: SuspendedDoIterations,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let outcome = match &state.spec {
+                SuspendedDoSpec::Count(count) => {
+                    if state.iteration >= *count {
+                        return Ok(system_expr("Null"));
+                    }
+                    let body =
+                        build_iteration_body_or_nested(state.args.as_ref(), state.spec_index, "Do");
+                    self.evaluate(body)
+                }
+                SuspendedDoSpec::Iterator { symbol, values } => {
+                    let Some(value) = values.get(state.iteration).cloned() else {
+                        return Ok(system_expr("Null"));
+                    };
+                    let body =
+                        build_iteration_body_or_nested(state.args.as_ref(), state.spec_index, "Do");
+                    self.evaluate_loop_iterator_body(*symbol, value, body)
+                }
+            };
+
+            match outcome {
+                Ok(_) | Err(EvalError::Continue) => state.iteration += 1,
+                Err(EvalError::Break) => return Ok(system_expr("Null")),
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_suspended_do_after_iteration(state, outcome)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
     fn resume_table_after_spec_eval(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
         let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
             let args = args.clone();
-            move |session, spec_expr| session.finish_table_spec_eval(args, spec_index, spec_expr)
+            move |session, spec_expr| session.finish_table_spec_eval(&args, spec_index, spec_expr)
         })?;
 
         self.finish_table_spec_eval(args, spec_index, spec_expr)
@@ -140,7 +216,7 @@ impl Session {
 
     fn finish_table_spec_eval(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
         spec_expr: Expr,
     ) -> Result<Expr, EvalError> {
@@ -157,7 +233,7 @@ impl Session {
             None => {
                 return Ok(self.invalid_call_with_arg_form(
                     "Table",
-                    &args,
+                    args,
                     "expected a supported repetition count or iterator specification",
                 ));
             }
@@ -183,7 +259,7 @@ impl Session {
 
     fn resume_table_iterations(
         &mut self,
-        args: Vec<Expr>,
+        args: &SharedArgs,
         spec_index: usize,
         spec: DoSpec,
         mut iteration: usize,
@@ -195,14 +271,14 @@ impl Session {
                     if iteration >= *count {
                         return Ok(Expr::call(system_expr("List"), collected));
                     }
-                    let body = build_iteration_body_or_nested(&args, spec_index, "Table");
+                    let body = build_iteration_body_or_nested(args, spec_index, "Table");
                     self.evaluate(body)
                 }
                 DoSpec::Iterator { symbol, values } => {
                     let Some(value) = values.get(iteration).cloned() else {
                         return Ok(Expr::call(system_expr("List"), collected));
                     };
-                    let body = build_iteration_body_or_nested(&args, spec_index, "Table");
+                    let body = build_iteration_body_or_nested(args, spec_index, "Table");
                     self.evaluate_loop_iterator_body(*symbol, value, body)
                 }
             };
@@ -213,10 +289,15 @@ impl Session {
                     iteration += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedTableIterations {
+                        args: args.clone(),
+                        spec_index,
+                        spec: spec.into(),
+                        iteration,
+                        collected: PersistentExprAccumulator::freeze(collected),
+                    };
                     self.push_suspension_frame(move |session, outcome| {
-                        session.resume_table_after_iteration(
-                            args, spec_index, spec, iteration, collected, outcome,
-                        )
+                        session.resume_suspended_table_after_iteration(state, outcome)
                     });
                     return Err(EvalError::InputRequired { request });
                 }
@@ -225,21 +306,64 @@ impl Session {
         }
     }
 
-    fn resume_table_after_iteration(
+    fn resume_suspended_table_after_iteration(
         &mut self,
-        args: Vec<Expr>,
-        spec_index: usize,
-        spec: DoSpec,
-        iteration: usize,
-        mut collected: Vec<Expr>,
+        mut state: SuspendedTableIterations,
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         match outcome {
             Ok(value) => {
-                collected.push(value);
-                self.resume_table_iterations(args, spec_index, spec, iteration + 1, collected)
+                state.collected = state.collected.appended(value);
+                state.iteration += 1;
+                self.resume_suspended_table_iterations(state)
             }
             Err(error) => Err(error),
+        }
+    }
+
+    fn resume_suspended_table_iterations(
+        &mut self,
+        mut state: SuspendedTableIterations,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let outcome = match &state.spec {
+                SuspendedDoSpec::Count(count) => {
+                    if state.iteration >= *count {
+                        return Ok(Expr::call(system_expr("List"), state.collected.into_vec()));
+                    }
+                    let body = build_iteration_body_or_nested(
+                        state.args.as_ref(),
+                        state.spec_index,
+                        "Table",
+                    );
+                    self.evaluate(body)
+                }
+                SuspendedDoSpec::Iterator { symbol, values } => {
+                    let Some(value) = values.get(state.iteration).cloned() else {
+                        return Ok(Expr::call(system_expr("List"), state.collected.into_vec()));
+                    };
+                    let body = build_iteration_body_or_nested(
+                        state.args.as_ref(),
+                        state.spec_index,
+                        "Table",
+                    );
+                    self.evaluate_loop_iterator_body(*symbol, value, body)
+                }
+            };
+
+            match outcome {
+                Ok(value) => {
+                    state.collected = state.collected.appended(value);
+                    state.iteration += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, outcome| {
+                        session.resume_suspended_table_after_iteration(state, outcome)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
         }
     }
 
@@ -253,13 +377,16 @@ impl Session {
             return self.evaluate_loop_iterator_body_with_dynamic_value(symbol, value, body);
         }
 
-        let saved_state = self.capture_loop_iterator_symbol_state(&symbol);
+        let mut saved_state = self.capture_loop_iterator_symbol_state(&symbol);
         self.install_loop_iterator_symbol_value(&symbol, value, &saved_state);
 
         let body_result = self.evaluate(body);
         let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let saved_state = saved_state.clone();
-            move |session, outcome| session.finish_loop_iterator_scope(symbol, saved_state, outcome)
+            let saved_state =
+                SuspendedLoopIteratorSymbolState::freeze(std::mem::take(&mut saved_state));
+            move |session, outcome| {
+                session.finish_suspended_loop_iterator_scope(symbol, saved_state, outcome)
+            }
         });
 
         match outcome {
@@ -421,4 +548,21 @@ impl Session {
 
         outcome
     }
+
+    fn finish_suspended_loop_iterator_scope(
+        &mut self,
+        symbol: Symbol,
+        saved_state: SuspendedLoopIteratorSymbolState,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        self.finish_loop_iterator_scope(symbol, saved_state.into_owned(), outcome)
+    }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedDoIterations>();
+    assert_traces::<SuspendedTableIterations>();
+    assert_traces::<SuspendedLoopIteratorSymbolState>();
+};
