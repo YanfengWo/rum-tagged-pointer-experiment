@@ -1,4 +1,44 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+struct OrderlessOptionalState {
+    flat_head: Option<Expr>,
+    spec: CompiledOptionalPattern,
+    rest_patterns: Vec<MatcherArg>,
+    value_args: Vec<Expr>,
+    bindings: SymbolExprMap,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedOrderlessOptionalState {
+    flat_head: Option<Expr>,
+    spec: FrozenMatcherValue<CompiledOptionalPattern>,
+    rest_patterns: FrozenMatcherSequence<MatcherArg>,
+    value_args: SharedArgs,
+    bindings: FrozenMatchBindings,
+}
+
+impl SuspendedOrderlessOptionalState {
+    fn freeze(state: OrderlessOptionalState) -> Self {
+        Self {
+            flat_head: state.flat_head,
+            spec: FrozenMatcherValue::freeze(state.spec),
+            rest_patterns: FrozenMatcherSequence::freeze(state.rest_patterns),
+            value_args: SharedArgs::new(state.value_args),
+            bindings: FrozenMatchBindings::freeze(state.bindings),
+        }
+    }
+
+    fn into_owned(self) -> OrderlessOptionalState {
+        OrderlessOptionalState {
+            flat_head: self.flat_head,
+            spec: self.spec.into_inner(),
+            rest_patterns: self.rest_patterns.into_vec(),
+            value_args: self.value_args.into_vec(),
+            bindings: self.bindings.into_owned(),
+        }
+    }
+}
 
 impl Session {
     pub(in crate::runtime::pattern_matching::sequence) fn match_compiled_orderless_optional_choices(
@@ -8,36 +48,13 @@ impl Session {
         value_args: Vec<Expr>,
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let snapshot = bindings.clone();
-
-        if !value_args.is_empty() {
-            let present_result = self.match_compiled_orderless_arg_choices_owned(
-                (*spec.inner).clone(),
-                rest_patterns.clone(),
-                value_args.clone(),
-                bindings,
-            );
-
-            return self.drive_internal_value(present_result, move |session, outcome| {
-                if outcome.matched {
-                    Ok(outcome)
-                } else {
-                    session.match_compiled_orderless_optional_omission_owned(
-                        spec,
-                        rest_patterns,
-                        value_args,
-                        snapshot,
-                    )
-                }
-            });
-        }
-
-        self.match_compiled_orderless_optional_omission_owned(
+        self.match_orderless_optional_choices(OrderlessOptionalState {
+            flat_head: None,
             spec,
             rest_patterns,
             value_args,
-            snapshot,
-        )
+            bindings,
+        })
     }
 
     pub(in crate::runtime::pattern_matching::sequence) fn match_compiled_orderless_flat_optional_choices(
@@ -48,39 +65,150 @@ impl Session {
         value_args: Vec<Expr>,
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let snapshot = bindings.clone();
-
-        if !value_args.is_empty() {
-            let present_result = self.match_compiled_orderless_flat_arg_choices_owned(
-                flat_head.clone(),
-                (*spec.inner).clone(),
-                rest_patterns.clone(),
-                value_args.clone(),
-                bindings,
-            );
-
-            return self.drive_internal_value(present_result, move |session, outcome| {
-                if outcome.matched {
-                    Ok(outcome)
-                } else {
-                    session.match_compiled_orderless_flat_optional_omission_owned(
-                        flat_head,
-                        spec,
-                        rest_patterns,
-                        value_args,
-                        snapshot,
-                    )
-                }
-            });
-        }
-
-        self.match_compiled_orderless_flat_optional_omission_owned(
-            flat_head,
+        self.match_orderless_optional_choices(OrderlessOptionalState {
+            flat_head: Some(flat_head),
             spec,
             rest_patterns,
             value_args,
-            snapshot,
-        )
+            bindings,
+        })
+    }
+
+    fn match_orderless_optional_choices(
+        &mut self,
+        state: OrderlessOptionalState,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if state.value_args.is_empty() {
+            return self.match_orderless_optional_omission(state);
+        }
+
+        let present_result = if let Some(flat_head) = state.flat_head.clone() {
+            self.match_compiled_orderless_flat_arg_choices_owned(
+                flat_head,
+                (*state.spec.inner).clone(),
+                state.rest_patterns.clone(),
+                state.value_args.clone(),
+                state.bindings.clone(),
+            )
+        } else {
+            self.match_compiled_orderless_arg_choices_owned(
+                (*state.spec.inner).clone(),
+                state.rest_patterns.clone(),
+                state.value_args.clone(),
+                state.bindings.clone(),
+            )
+        };
+        match present_result {
+            Ok(outcome) => self.finish_orderless_optional_present(state, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedOrderlessOptionalState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_orderless_optional_present(state.into_owned(), outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_orderless_optional_present(
+        &mut self,
+        state: OrderlessOptionalState,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if outcome.matched {
+            Ok(outcome)
+        } else {
+            self.match_orderless_optional_omission(state)
+        }
+    }
+
+    fn match_orderless_optional_omission(
+        &mut self,
+        state: OrderlessOptionalState,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let default_result = self.resolve_optional_default_expr_owned(state.spec.default.clone());
+        match default_result {
+            Ok(default_expr) => self.finish_orderless_optional_default(state, default_expr),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedOrderlessOptionalState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let default_expr = Option::<Expr>::from_continuation_expr(payload?);
+                    session
+                        .finish_orderless_optional_default(state.into_owned(), default_expr)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_orderless_optional_default(
+        &mut self,
+        state: OrderlessOptionalState,
+        default_expr: Option<Expr>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let Some(default_expr) = default_expr else {
+            return Ok(match_outcome(false, state.bindings));
+        };
+
+        let default_result = if let Some(flat_head) = state.flat_head.clone() {
+            self.match_compiled_orderless_flat_selected_values_owned(
+                flat_head,
+                (*state.spec.inner).clone(),
+                optional_default_values(default_expr),
+                state.bindings.clone(),
+            )
+        } else {
+            self.match_compiled_orderless_selected_values_owned(
+                (*state.spec.inner).clone(),
+                optional_default_values(default_expr),
+                state.bindings.clone(),
+            )
+        };
+        match default_result {
+            Ok(outcome) => self.finish_orderless_optional_default_match(state, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedOrderlessOptionalState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_orderless_optional_default_match(state.into_owned(), outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_orderless_optional_default_match(
+        &mut self,
+        state: OrderlessOptionalState,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return Ok(outcome);
+        }
+
+        if let Some(flat_head) = state.flat_head {
+            self.match_compiled_orderless_args_with_flat_head_owned(
+                state.rest_patterns,
+                state.value_args,
+                outcome.bindings,
+                flat_head,
+            )
+        } else {
+            self.match_compiled_orderless_args_owned(
+                state.rest_patterns,
+                state.value_args,
+                outcome.bindings,
+            )
+        }
     }
 
     pub(in crate::runtime::pattern_matching::sequence) fn collect_compiled_orderless_optional_matches_owned(
@@ -90,30 +218,12 @@ impl Session {
         value_args: Vec<Expr>,
         bindings: SymbolExprMap,
     ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        let present_result = if value_args.is_empty() {
-            Ok(Vec::new())
-        } else {
-            self.collect_compiled_orderless_arg_choice_matches_owned(
-                (*spec.inner).clone(),
-                rest_patterns.clone(),
-                value_args.clone(),
-                bindings.clone(),
-            )
-        };
-
-        self.drive_internal_value(present_result, move |session, mut present| {
-            let omission_result = session
-                .collect_compiled_orderless_optional_omission_matches_owned(
-                    spec,
-                    rest_patterns,
-                    value_args,
-                    bindings,
-                );
-
-            session.drive_internal_value(omission_result, move |_, mut omitted| {
-                present.append(&mut omitted);
-                Ok(present)
-            })
+        self.collect_orderless_optional_matches(OrderlessOptionalState {
+            flat_head: None,
+            spec,
+            rest_patterns,
+            value_args,
+            bindings,
         })
     }
 
@@ -125,33 +235,161 @@ impl Session {
         value_args: Vec<Expr>,
         bindings: SymbolExprMap,
     ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        let present_result = if value_args.is_empty() {
+        self.collect_orderless_optional_matches(OrderlessOptionalState {
+            flat_head: Some(flat_head),
+            spec,
+            rest_patterns,
+            value_args,
+            bindings,
+        })
+    }
+
+    fn collect_orderless_optional_matches(
+        &mut self,
+        state: OrderlessOptionalState,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        let present_result = if state.value_args.is_empty() {
             Ok(Vec::new())
-        } else {
+        } else if let Some(flat_head) = state.flat_head.clone() {
             self.collect_compiled_orderless_flat_arg_choice_matches_owned(
-                flat_head.clone(),
-                (*spec.inner).clone(),
-                rest_patterns.clone(),
-                value_args.clone(),
-                bindings.clone(),
+                flat_head,
+                (*state.spec.inner).clone(),
+                state.rest_patterns.clone(),
+                state.value_args.clone(),
+                state.bindings.clone(),
+            )
+        } else {
+            self.collect_compiled_orderless_arg_choice_matches_owned(
+                (*state.spec.inner).clone(),
+                state.rest_patterns.clone(),
+                state.value_args.clone(),
+                state.bindings.clone(),
             )
         };
+        match present_result {
+            Ok(present) => self.finish_orderless_optional_present_collection(state, present),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedOrderlessOptionalState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let present = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
+                    session
+                        .finish_orderless_optional_present_collection(state.into_owned(), present)
+                        .map(|matches| matches.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-        self.drive_internal_value(present_result, move |session, mut present| {
-            let omission_result = session
-                .collect_compiled_orderless_flat_optional_omission_matches_owned(
-                    flat_head,
-                    spec,
-                    rest_patterns,
-                    value_args,
-                    bindings,
-                );
+    fn finish_orderless_optional_present_collection(
+        &mut self,
+        state: OrderlessOptionalState,
+        present: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        let omission_result = self.collect_orderless_optional_omission(state);
+        match omission_result {
+            Ok(omitted) => Ok(append_match_results(present, omitted)),
+            Err(EvalError::InputRequired { request }) => {
+                let present = PersistentMatchResults::freeze(present);
+                self.push_suspension_frame(move |_, payload| {
+                    let omitted = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
+                    Ok(append_match_results(present.into_vec(), omitted).into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-            session.drive_internal_value(omission_result, move |_, mut omitted| {
-                present.append(&mut omitted);
-                Ok(present)
-            })
-        })
+    fn collect_orderless_optional_omission(
+        &mut self,
+        state: OrderlessOptionalState,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        let default_result = self.resolve_optional_default_expr_owned(state.spec.default.clone());
+        match default_result {
+            Ok(default_expr) => {
+                self.finish_orderless_optional_collection_default(state, default_expr)
+            }
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedOrderlessOptionalState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let default_expr = Option::<Expr>::from_continuation_expr(payload?);
+                    session
+                        .finish_orderless_optional_collection_default(
+                            state.into_owned(),
+                            default_expr,
+                        )
+                        .map(|matches| matches.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_orderless_optional_collection_default(
+        &mut self,
+        state: OrderlessOptionalState,
+        default_expr: Option<Expr>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        let Some(default_expr) = default_expr else {
+            return Ok(Vec::new());
+        };
+
+        let default_result = if let Some(flat_head) = state.flat_head.clone() {
+            self.match_compiled_orderless_flat_selected_values_owned(
+                flat_head,
+                (*state.spec.inner).clone(),
+                optional_default_values(default_expr),
+                state.bindings.clone(),
+            )
+        } else {
+            self.match_compiled_orderless_selected_values_owned(
+                (*state.spec.inner).clone(),
+                optional_default_values(default_expr),
+                state.bindings.clone(),
+            )
+        };
+        match default_result {
+            Ok(outcome) => self.finish_orderless_optional_collection_match(state, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedOrderlessOptionalState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_orderless_optional_collection_match(state.into_owned(), outcome)
+                        .map(|matches| matches.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_orderless_optional_collection_match(
+        &mut self,
+        state: OrderlessOptionalState,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        if !outcome.matched {
+            return Ok(Vec::new());
+        }
+
+        if let Some(flat_head) = state.flat_head {
+            self.collect_compiled_orderless_arg_matches_with_flat_head_owned(
+                state.rest_patterns,
+                state.value_args,
+                outcome.bindings,
+                flat_head,
+            )
+        } else {
+            self.collect_compiled_orderless_arg_matches_owned(
+                state.rest_patterns,
+                state.value_args,
+                outcome.bindings,
+            )
+        }
     }
 
     pub(in crate::runtime::pattern_matching::sequence) fn match_compiled_orderless_optional_omission_owned(
@@ -161,98 +399,12 @@ impl Session {
         value_args: Vec<Expr>,
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let default_result = self.resolve_optional_default_expr_owned(spec.default);
-        self.drive_internal_value(default_result, move |session, default_expr| {
-            let Some(default_expr) = default_expr else {
-                return Ok(match_outcome(false, bindings));
-            };
-
-            let default_result = session.match_compiled_orderless_selected_values_owned(
-                *spec.inner,
-                optional_default_values(default_expr),
-                bindings,
-            );
-
-            session.drive_internal_value(default_result, move |session, outcome| {
-                if !outcome.matched {
-                    return Ok(outcome);
-                }
-
-                session.match_compiled_orderless_args_owned(
-                    rest_patterns,
-                    value_args,
-                    outcome.bindings,
-                )
-            })
-        })
-    }
-
-    fn collect_compiled_orderless_optional_omission_matches_owned(
-        &mut self,
-        spec: CompiledOptionalPattern,
-        rest_patterns: Vec<MatcherArg>,
-        value_args: Vec<Expr>,
-        bindings: SymbolExprMap,
-    ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        let default_result = self.resolve_optional_default_expr_owned(spec.default);
-        self.drive_internal_value(default_result, move |session, default_expr| {
-            let Some(default_expr) = default_expr else {
-                return Ok(Vec::new());
-            };
-
-            let default_result = session.match_compiled_orderless_selected_values_owned(
-                *spec.inner,
-                optional_default_values(default_expr),
-                bindings,
-            );
-
-            session.drive_internal_value(default_result, move |session, outcome| {
-                if !outcome.matched {
-                    return Ok(Vec::new());
-                }
-
-                session.collect_compiled_orderless_arg_matches_owned(
-                    rest_patterns,
-                    value_args,
-                    outcome.bindings,
-                )
-            })
-        })
-    }
-
-    fn collect_compiled_orderless_flat_optional_omission_matches_owned(
-        &mut self,
-        flat_head: Expr,
-        spec: CompiledOptionalPattern,
-        rest_patterns: Vec<MatcherArg>,
-        value_args: Vec<Expr>,
-        bindings: SymbolExprMap,
-    ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        let default_result = self.resolve_optional_default_expr_owned(spec.default);
-        self.drive_internal_value(default_result, move |session, default_expr| {
-            let Some(default_expr) = default_expr else {
-                return Ok(Vec::new());
-            };
-
-            let default_result = session.match_compiled_orderless_flat_selected_values_owned(
-                flat_head.clone(),
-                *spec.inner,
-                optional_default_values(default_expr),
-                bindings,
-            );
-
-            session.drive_internal_value(default_result, move |session, outcome| {
-                if !outcome.matched {
-                    return Ok(Vec::new());
-                }
-
-                session.collect_compiled_orderless_arg_matches_with_flat_head_owned(
-                    rest_patterns,
-                    value_args,
-                    outcome.bindings,
-                    flat_head,
-                )
-            })
+        self.match_orderless_optional_omission(OrderlessOptionalState {
+            flat_head: None,
+            spec,
+            rest_patterns,
+            value_args,
+            bindings,
         })
     }
 
@@ -264,31 +416,26 @@ impl Session {
         value_args: Vec<Expr>,
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let default_result = self.resolve_optional_default_expr_owned(spec.default);
-        self.drive_internal_value(default_result, move |session, default_expr| {
-            let Some(default_expr) = default_expr else {
-                return Ok(match_outcome(false, bindings));
-            };
-
-            let default_result = session.match_compiled_orderless_flat_selected_values_owned(
-                flat_head.clone(),
-                *spec.inner,
-                optional_default_values(default_expr),
-                bindings,
-            );
-
-            session.drive_internal_value(default_result, move |session, outcome| {
-                if !outcome.matched {
-                    return Ok(outcome);
-                }
-
-                session.match_compiled_orderless_args_with_flat_head_owned(
-                    rest_patterns,
-                    value_args,
-                    outcome.bindings,
-                    flat_head,
-                )
-            })
+        self.match_orderless_optional_omission(OrderlessOptionalState {
+            flat_head: Some(flat_head),
+            spec,
+            rest_patterns,
+            value_args,
+            bindings,
         })
     }
 }
+
+fn append_match_results(
+    mut first: Vec<SymbolExprMap>,
+    mut second: Vec<SymbolExprMap>,
+) -> Vec<SymbolExprMap> {
+    first.append(&mut second);
+    first
+}
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedOrderlessOptionalState>();
+};

@@ -77,22 +77,62 @@ impl Session {
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = bindings.clone();
         let inner_result = self.match_expr_interpreted_owned(inner, value.clone(), bindings);
-        self.drive_internal_value(inner_result, move |session, outcome| {
-            if !outcome.matched {
-                return Ok(outcome);
+        match inner_result {
+            Ok(outcome) => self.finish_interpreted_except_inner(excluded, value, snapshot, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let snapshot = FrozenMatchBindings::freeze(snapshot);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_interpreted_except_inner(
+                            excluded,
+                            value,
+                            snapshot.into_owned(),
+                            outcome,
+                        )
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
+            Err(error) => Err(error),
+        }
+    }
 
-            let accepted_bindings = outcome.bindings.clone();
-            let excluded_result =
-                session.match_expr_interpreted_owned(excluded, value, outcome.bindings);
-            session.drive_internal_value(excluded_result, move |_, excluded_outcome| {
-                Ok(if excluded_outcome.matched {
-                    interpreted_match_outcome(false, snapshot)
-                } else {
-                    interpreted_match_outcome(true, accepted_bindings)
-                })
-            })
-        })
+    fn finish_interpreted_except_inner(
+        &mut self,
+        excluded: Expr,
+        value: Expr,
+        snapshot: SymbolExprMap,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return Ok(outcome);
+        }
+
+        let accepted_bindings = outcome.bindings.clone();
+        let excluded_result = self.match_expr_interpreted_owned(excluded, value, outcome.bindings);
+        match excluded_result {
+            Ok(excluded_outcome) => Ok(if excluded_outcome.matched {
+                interpreted_match_outcome(false, snapshot)
+            } else {
+                interpreted_match_outcome(true, accepted_bindings)
+            }),
+            Err(EvalError::InputRequired { request }) => {
+                let snapshot = FrozenMatchBindings::freeze(snapshot);
+                let accepted_bindings = FrozenMatchBindings::freeze(accepted_bindings);
+                self.push_suspension_frame(move |_, payload| {
+                    let excluded_outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    Ok(if excluded_outcome.matched {
+                        interpreted_match_outcome(false, snapshot.into_owned())
+                    } else {
+                        interpreted_match_outcome(true, accepted_bindings.into_owned())
+                    }
+                    .into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn match_call_interpreted_owned(
@@ -111,18 +151,28 @@ impl Session {
                 let value_head = value_head.into_owned();
                 let value_args = value_args.into_vec();
                 let head_result = self.match_expr_interpreted_owned(head, value_head, bindings);
-                self.drive_internal_value(head_result, move |session, outcome| {
-                    if !outcome.matched {
-                        return Ok(outcome);
+                match head_result {
+                    Ok(outcome) => {
+                        self.finish_interpreted_call_head(head_expr, args, value_args, outcome)
                     }
-
-                    session.match_call_args_interpreted_owned(
-                        head_expr,
-                        args,
-                        value_args,
-                        outcome.bindings,
-                    )
-                })
+                    Err(EvalError::InputRequired { request }) => {
+                        let args = SharedArgs::new(args);
+                        let value_args = SharedArgs::new(value_args);
+                        self.push_suspension_frame(move |session, payload| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                            session
+                                .finish_interpreted_call_head(
+                                    head_expr,
+                                    args.into_vec(),
+                                    value_args.into_vec(),
+                                    outcome,
+                                )
+                                .map(|outcome| outcome.into_continuation_expr())
+                        });
+                        Err(EvalError::InputRequired { request })
+                    }
+                    Err(error) => Err(error),
+                }
             }
             other
                 if matcher_head_has_attribute(
@@ -135,6 +185,20 @@ impl Session {
             }
             _ => Ok(interpreted_match_outcome(false, bindings)),
         }
+    }
+
+    fn finish_interpreted_call_head(
+        &mut self,
+        head: Expr,
+        args: Vec<Expr>,
+        value_args: Vec<Expr>,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return Ok(outcome);
+        }
+
+        self.match_call_args_interpreted_owned(head, args, value_args, outcome.bindings)
     }
 
     #[allow(dead_code)]
@@ -153,18 +217,48 @@ impl Session {
         let value_for_retry = value.clone();
         let alternatives_for_retry = alternatives.clone();
         let alternative_result = self.match_expr_interpreted_owned(alternative, value, bindings);
-        self.drive_internal_value(alternative_result, move |session, outcome| {
-            if outcome.matched {
-                Ok(outcome)
-            } else {
-                session.match_alternatives_interpreted_owned(
-                    alternatives_for_retry,
-                    value_for_retry,
-                    snapshot,
-                    index + 1,
-                )
+        match alternative_result {
+            Ok(outcome) => self.finish_interpreted_alternative(
+                alternatives_for_retry,
+                value_for_retry,
+                snapshot,
+                index,
+                outcome,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                let alternatives = SharedArgs::new(alternatives_for_retry);
+                let snapshot = FrozenMatchBindings::freeze(snapshot);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_interpreted_alternative(
+                            alternatives.into_vec(),
+                            value_for_retry,
+                            snapshot.into_owned(),
+                            index,
+                            outcome,
+                        )
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
-        })
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_interpreted_alternative(
+        &mut self,
+        alternatives: Vec<Expr>,
+        value: Expr,
+        snapshot: SymbolExprMap,
+        index: usize,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if outcome.matched {
+            Ok(outcome)
+        } else {
+            self.match_alternatives_interpreted_owned(alternatives, value, snapshot, index + 1)
+        }
     }
 
     #[allow(dead_code)]
@@ -190,16 +284,20 @@ impl Session {
         let normalized_pattern = self.normalize_match_expr(&pattern);
         let normalized_value = self.normalize_match_expr(&value);
         let snapshot = bindings.clone();
-        let outcome = self.match_expr_interpreted_inner_owned(
-            normalized_pattern,
-            normalized_value,
-            bindings,
-        )?;
-
-        if outcome.matched {
-            Ok(outcome)
-        } else {
-            Ok(interpreted_match_outcome(false, snapshot))
+        let inner_result =
+            self.match_expr_interpreted_inner_owned(normalized_pattern, normalized_value, bindings);
+        match inner_result {
+            Ok(outcome) => Ok(finish_interpreted_match(snapshot, outcome)),
+            Err(EvalError::InputRequired { request }) => {
+                let snapshot = FrozenMatchBindings::freeze(snapshot);
+                self.push_suspension_frame(move |_, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    Ok(finish_interpreted_match(snapshot.into_owned(), outcome)
+                        .into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
         }
     }
 
@@ -305,5 +403,16 @@ impl Session {
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let compiled_args = compile_matcher_args(&pattern_head, &pattern_args);
         self.match_compiled_args_owned(compiled_args, value_args, bindings)
+    }
+}
+
+fn finish_interpreted_match(
+    snapshot: SymbolExprMap,
+    outcome: CompiledMatchOutcome,
+) -> CompiledMatchOutcome {
+    if outcome.matched {
+        outcome
+    } else {
+        interpreted_match_outcome(false, snapshot)
     }
 }

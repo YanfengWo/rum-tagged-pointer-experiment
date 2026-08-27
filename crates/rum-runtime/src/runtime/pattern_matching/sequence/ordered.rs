@@ -50,20 +50,28 @@ impl Session {
         pattern_args: std::vec::IntoIter<MatcherArg>,
         value_args: std::vec::IntoIter<Expr>,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        self.drive_internal_value::<CompiledMatchOutcome, CompiledMatchOutcome, _>(
-            Err(error),
-            move |session, outcome| {
-                if !outcome.matched {
-                    return Ok(outcome);
-                }
+        match error {
+            EvalError::InputRequired { request } => {
+                let pattern_args = FrozenMatcherSequence::freeze(pattern_args.collect());
+                let value_args = SharedArgs::new(value_args.collect());
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    if !outcome.matched {
+                        return Ok(outcome.into_continuation_expr());
+                    }
 
-                session.match_compiled_ordered_args_iter_owned(
-                    pattern_args,
-                    value_args,
-                    outcome.bindings,
-                )
-            },
-        )
+                    session
+                        .match_compiled_ordered_args_iter_owned(
+                            pattern_args.into_vec().into_iter(),
+                            value_args.into_vec().into_iter(),
+                            outcome.bindings,
+                        )
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            error => Err(error),
+        }
     }
 
     #[cold]
@@ -116,19 +124,27 @@ impl Session {
         pattern_args: std::vec::IntoIter<MatcherArg>,
         value_args: std::vec::IntoIter<Expr>,
     ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        self.drive_internal_value::<CompiledMatchOutcome, Vec<SymbolExprMap>, _>(
-            Err(error),
-            move |session, outcome| {
-                if !outcome.matched {
-                    return Ok(Vec::new());
-                }
+        match error {
+            EvalError::InputRequired { request } => {
+                let pattern_args = FrozenMatcherSequence::freeze(pattern_args.collect());
+                let value_args = SharedArgs::new(value_args.collect());
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    if !outcome.matched {
+                        return Ok(Vec::<SymbolExprMap>::new().into_continuation_expr());
+                    }
 
-                session.collect_compiled_ordered_args_iter_owned(
-                    pattern_args,
-                    value_args,
-                    outcome.bindings,
-                )
-            },
-        )
+                    session
+                        .collect_compiled_ordered_args_iter_owned(
+                            pattern_args.into_vec().into_iter(),
+                            value_args.into_vec().into_iter(),
+                            outcome.bindings,
+                        )
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            error => Err(error),
+        }
     }
 }

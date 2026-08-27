@@ -82,6 +82,7 @@ impl Session {
         let rules = self
             .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
             .expect("normalized rewrite rule expressions should recompile");
+        let rules = Self::shared_rewrite_rule_plan(rules);
 
         let limit_result = self.resolve_replace_repeated_limit_owned(max_iterations_expr);
         self.drive_internal_value(limit_result, move |session, effective_limit| {
@@ -121,7 +122,7 @@ impl Session {
     fn resume_replace_repeated_loop(
         &mut self,
         current: Expr,
-        rules: Vec<RewriteRule>,
+        rules: RewriteRulePlan,
         iteration: usize,
         effective_limit: usize,
     ) -> Result<Expr, EvalError> {
@@ -131,9 +132,9 @@ impl Session {
             });
         }
 
-        let replaced = self.apply_replace_all(
+        let replaced = self.apply_replace_all_with_plan(
             current.clone(),
-            &rules,
+            rules.clone(),
             RuleApplicationSource::ReplaceRepeated,
         )?;
         let next_result = self.evaluate(replaced);
@@ -157,7 +158,7 @@ impl Session {
     fn resume_replace_repeated_after_next(
         &mut self,
         current: Expr,
-        rules: Vec<RewriteRule>,
+        rules: RewriteRulePlan,
         iteration: usize,
         effective_limit: usize,
         next: Expr,

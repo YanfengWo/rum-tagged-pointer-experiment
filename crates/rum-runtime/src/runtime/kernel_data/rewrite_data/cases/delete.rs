@@ -1,4 +1,8 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+mod suspended_state;
+use suspended_state::*;
 
 impl Session {
     pub(in crate::runtime) fn eval_delete_cases(
@@ -42,16 +46,25 @@ impl Session {
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
-            let target = target.clone();
-            let option_exprs = option_exprs.clone();
-            let call_args = call_args.clone();
-            move |session, pattern| {
-                session.resume_delete_cases_after_pattern(target, pattern, option_exprs, call_args)
+        match pattern_result {
+            Ok(pattern) => {
+                self.resume_delete_cases_after_pattern(target, pattern, option_exprs, call_args)
             }
-        })?;
-
-        self.resume_delete_cases_after_pattern(target, pattern, option_exprs, call_args)
+            Err(EvalError::InputRequired { request }) => {
+                let option_exprs = SharedArgs::new(option_exprs);
+                let call_args = SharedArgs::new(call_args);
+                self.push_suspension_frame(move |session, value| {
+                    session.resume_delete_cases_after_pattern(
+                        target,
+                        value?,
+                        option_exprs.into_vec(),
+                        call_args.into_vec(),
+                    )
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn resume_delete_cases_after_pattern(
@@ -64,16 +77,25 @@ impl Session {
         let mut defaults = CasesTraversalConfig::default_cases();
         defaults.include_heads = self.system_option_bool("DeleteCases", "Heads", false)?;
         let traversal_result = self.resolve_cases_traversal_owned(option_exprs, defaults);
-        self.drive_internal_value(traversal_result, {
-            let target = target.clone();
-            let pattern = pattern.clone();
-            let call_args = call_args.clone();
-            move |session, traversal| {
-                session.finish_delete_cases_after_resolved_traversal(
-                    target, pattern, traversal, call_args,
-                )
+        match traversal_result {
+            Ok(traversal) => self.finish_delete_cases_after_resolved_traversal(
+                target, pattern, traversal, call_args,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                let call_args = SharedArgs::new(call_args);
+                self.push_suspension_frame(move |session, value| {
+                    let traversal = CasesTraversalResolution::from_continuation_expr(value?);
+                    session.finish_delete_cases_after_resolved_traversal(
+                        target,
+                        pattern,
+                        traversal,
+                        call_args.into_vec(),
+                    )
+                });
+                Err(EvalError::InputRequired { request })
             }
-        })
+            Err(error) => Err(error),
+        }
     }
 
     fn finish_delete_cases_after_resolved_traversal(
@@ -338,23 +360,23 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedDeleteCallChildren {
+                        children: FrozenRewriteQueue::freeze(children),
+                        child_index,
+                        pattern,
+                        traversal,
+                        level,
+                        subtree_start,
+                        deleted_before,
+                        rebuilt_args: PersistentRewriteExprs::freeze(rebuilt_args),
+                        max_child_depth,
+                        rebuilt_head,
+                        head_deleted,
+                    };
                     self.push_suspension_frame(move |session, value| {
                         let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
                         session
-                            .delete_cases_call_children_from_queue(
-                                children,
-                                child_index,
-                                pattern,
-                                traversal,
-                                level,
-                                subtree_start,
-                                deleted_before,
-                                rebuilt_args,
-                                max_child_depth,
-                                rebuilt_head,
-                                head_deleted,
-                                Some(outcome),
-                            )
+                            .resume_suspended_delete_call_children(state, outcome)
                             .map(|outcome| outcome.into_continuation_expr())
                     });
                     return Err(EvalError::InputRequired { request });
@@ -545,23 +567,282 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedDeleteAssociationChildren {
+                        children: FrozenRewriteQueue::freeze(children),
+                        child_index,
+                        pattern,
+                        traversal,
+                        level,
+                        subtree_start,
+                        deleted_before,
+                        rebuilt_entries: PersistentRewriteExprs::freeze(rebuilt_entries),
+                        max_child_depth,
+                        rebuilt_head,
+                        head_deleted,
+                    };
                     self.push_suspension_frame(move |session, value| {
                         let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
                         session
-                            .delete_cases_association_children_from_queue(
-                                children,
-                                child_index,
-                                pattern,
-                                traversal,
-                                level,
-                                subtree_start,
-                                deleted_before,
-                                rebuilt_entries,
-                                max_child_depth,
-                                rebuilt_head,
-                                head_deleted,
-                                Some(outcome),
-                            )
+                            .resume_suspended_delete_association_children(state, outcome)
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn resume_suspended_delete_call_children(
+        &mut self,
+        mut state: SuspendedDeleteCallChildren,
+        mut child_outcome: DeleteCasesOutcome,
+    ) -> Result<DeleteCasesOutcome, EvalError> {
+        loop {
+            let (is_head, contributes_depth) =
+                match state.children.as_slice().get(state.child_index) {
+                    Some((is_head, _, contributes_depth)) => (*is_head, *contributes_depth),
+                    None => unreachable!("pending outcome belongs to a live child index"),
+                };
+
+            state.deleted_before += child_outcome.deleted_count;
+            if contributes_depth {
+                state.max_child_depth = state.max_child_depth.max(child_outcome.depth);
+            }
+            if is_head {
+                match child_outcome.result {
+                    DeleteCasesResult::Keep(expr) => state.rebuilt_head = Some(expr),
+                    DeleteCasesResult::Delete | DeleteCasesResult::Splice(_) => {
+                        state.head_deleted = true;
+                    }
+                }
+            } else {
+                match child_outcome.result {
+                    DeleteCasesResult::Keep(expr) => {
+                        state.rebuilt_args = state.rebuilt_args.appended(expr);
+                    }
+                    DeleteCasesResult::Delete => {}
+                    DeleteCasesResult::Splice(items) => {
+                        state.rebuilt_args = state.rebuilt_args.appended_values(items);
+                    }
+                }
+            }
+
+            if child_outcome.exhausted {
+                let mut rebuilt_args = state.rebuilt_args.into_vec();
+                rebuilt_args.extend(
+                    state
+                        .children
+                        .as_slice()
+                        .iter()
+                        .skip(state.child_index + 1)
+                        .filter_map(|(is_head, expr, _)| (!*is_head).then_some(expr.clone())),
+                );
+                if state.head_deleted {
+                    return Ok(DeleteCasesOutcome {
+                        result: DeleteCasesResult::Splice(rebuilt_args),
+                        depth: state.max_child_depth,
+                        deleted_count: state.deleted_before - state.subtree_start,
+                        exhausted: true,
+                    });
+                }
+                return Ok(DeleteCasesOutcome {
+                    result: DeleteCasesResult::Keep(Expr::call(
+                        state
+                            .rebuilt_head
+                            .unwrap_or_else(|| system_expr("Sequence")),
+                        rebuilt_args,
+                    )),
+                    depth: state.max_child_depth.saturating_add(1),
+                    deleted_count: state.deleted_before - state.subtree_start,
+                    exhausted: true,
+                });
+            }
+
+            state.child_index += 1;
+            let Some((_, child, _)) = state.children.as_slice().get(state.child_index).cloned()
+            else {
+                let rebuilt_args = state.rebuilt_args.into_vec();
+                if state.head_deleted {
+                    return Ok(DeleteCasesOutcome {
+                        result: DeleteCasesResult::Splice(rebuilt_args),
+                        depth: state.max_child_depth,
+                        deleted_count: state.deleted_before - state.subtree_start,
+                        exhausted: state.traversal.limit_reached(state.deleted_before),
+                    });
+                }
+
+                let depth = state.max_child_depth.saturating_add(1);
+                let expr = Expr::call(
+                    state
+                        .rebuilt_head
+                        .unwrap_or_else(|| system_expr("Sequence")),
+                    rebuilt_args,
+                );
+                let finish_result = self.finish_delete_cases_at_current_node(
+                    expr,
+                    state.pattern,
+                    state.traversal,
+                    state.level - 1,
+                    depth,
+                    state.deleted_before,
+                );
+                let added = state.deleted_before - state.subtree_start;
+                return self.drive_internal_value(finish_result, move |_, mut outcome| {
+                    outcome.deleted_count += added;
+                    Ok(outcome)
+                });
+            };
+
+            let child_result = self.delete_cases_owned(
+                child,
+                state.pattern.clone(),
+                state.traversal,
+                state.level,
+                state.deleted_before,
+            );
+            match child_result {
+                Ok(outcome) => child_outcome = outcome,
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
+                        session
+                            .resume_suspended_delete_call_children(state, outcome)
+                            .map(|outcome| outcome.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn resume_suspended_delete_association_children(
+        &mut self,
+        mut state: SuspendedDeleteAssociationChildren,
+        mut child_outcome: DeleteCasesOutcome,
+    ) -> Result<DeleteCasesOutcome, EvalError> {
+        loop {
+            let (is_head, entry_key, contributes_depth) =
+                match state.children.as_slice().get(state.child_index) {
+                    Some((is_head, entry_key, _, contributes_depth)) => {
+                        (*is_head, entry_key.clone(), *contributes_depth)
+                    }
+                    None => unreachable!("pending outcome belongs to a live child index"),
+                };
+
+            state.deleted_before += child_outcome.deleted_count;
+            if contributes_depth {
+                state.max_child_depth = state.max_child_depth.max(child_outcome.depth);
+            }
+            if is_head {
+                match child_outcome.result {
+                    DeleteCasesResult::Keep(expr) => state.rebuilt_head = Some(expr),
+                    DeleteCasesResult::Delete | DeleteCasesResult::Splice(_) => {
+                        state.head_deleted = true;
+                    }
+                }
+            } else if let Some(key) = entry_key {
+                if let DeleteCasesResult::Keep(value) = child_outcome.result {
+                    state.rebuilt_entries = state
+                        .rebuilt_entries
+                        .appended(Expr::call(system_expr("Rule"), vec![key, value]));
+                }
+            } else {
+                match child_outcome.result {
+                    DeleteCasesResult::Keep(expr) => {
+                        state.rebuilt_entries = state.rebuilt_entries.appended(expr);
+                    }
+                    DeleteCasesResult::Delete => {}
+                    DeleteCasesResult::Splice(items) => {
+                        state.rebuilt_entries = state.rebuilt_entries.appended_values(items);
+                    }
+                }
+            }
+
+            if state.head_deleted {
+                return Ok(DeleteCasesOutcome {
+                    result: DeleteCasesResult::Keep(render_association(Vec::new())),
+                    depth: 2,
+                    deleted_count: state.deleted_before - state.subtree_start,
+                    exhausted: state.traversal.limit_reached(state.deleted_before),
+                });
+            }
+
+            if child_outcome.exhausted {
+                let mut rebuilt_entries = state.rebuilt_entries.into_vec();
+                rebuilt_entries.extend(
+                    state
+                        .children
+                        .as_slice()
+                        .iter()
+                        .skip(state.child_index + 1)
+                        .filter_map(|(is_head, key, expr, _)| {
+                            if *is_head {
+                                None
+                            } else if let Some(key) = key {
+                                Some(Expr::call(
+                                    system_expr("Rule"),
+                                    vec![key.clone(), expr.clone()],
+                                ))
+                            } else {
+                                Some(expr.clone())
+                            }
+                        }),
+                );
+                return Ok(DeleteCasesOutcome {
+                    result: DeleteCasesResult::Keep(Expr::call(
+                        state
+                            .rebuilt_head
+                            .unwrap_or_else(|| system_expr("Association")),
+                        rebuilt_entries,
+                    )),
+                    depth: state.max_child_depth.saturating_add(1),
+                    deleted_count: state.deleted_before - state.subtree_start,
+                    exhausted: true,
+                });
+            }
+
+            state.child_index += 1;
+            let Some((_, _, child, _)) = state.children.as_slice().get(state.child_index).cloned()
+            else {
+                let rebuilt_entries = state.rebuilt_entries.into_vec();
+                let depth = state.max_child_depth.saturating_add(1);
+                let expr = Expr::call(
+                    state
+                        .rebuilt_head
+                        .unwrap_or_else(|| system_expr("Association")),
+                    rebuilt_entries,
+                );
+                let finish_result = self.finish_delete_cases_at_current_node(
+                    expr,
+                    state.pattern,
+                    state.traversal,
+                    state.level - 1,
+                    depth,
+                    state.deleted_before,
+                );
+                let added = state.deleted_before - state.subtree_start;
+                return self.drive_internal_value(finish_result, move |_, mut outcome| {
+                    outcome.deleted_count += added;
+                    Ok(outcome)
+                });
+            };
+
+            let child_result = self.delete_cases_owned(
+                child,
+                state.pattern.clone(),
+                state.traversal,
+                state.level,
+                state.deleted_before,
+            );
+            match child_result {
+                Ok(outcome) => child_outcome = outcome,
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
+                        session
+                            .resume_suspended_delete_association_children(state, outcome)
                             .map(|outcome| outcome.into_continuation_expr())
                     });
                     return Err(EvalError::InputRequired { request });
@@ -571,3 +852,10 @@ impl Session {
         }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedDeleteAssociationChildren>();
+    assert_traces::<SuspendedDeleteCallChildren>();
+};

@@ -1,4 +1,119 @@
 use super::{outcome::*, *};
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+struct FlatSingleChoiceState {
+    flat_head: Expr,
+    one_identity: bool,
+    pattern: MatcherNode,
+    rest_patterns: Vec<MatcherArg>,
+    value_args: Vec<Expr>,
+    bindings: SymbolExprMap,
+    consume: usize,
+    max_consume: usize,
+    wrapped: bool,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedFlatSingleChoiceState {
+    flat_head: Expr,
+    one_identity: bool,
+    pattern: FrozenMatcherValue<MatcherNode>,
+    rest_patterns: FrozenMatcherSequence<MatcherArg>,
+    value_args: SharedArgs,
+    bindings: FrozenMatchBindings,
+    consume: usize,
+    max_consume: usize,
+    wrapped: bool,
+}
+
+impl SuspendedFlatSingleChoiceState {
+    fn freeze(state: FlatSingleChoiceState) -> Self {
+        Self {
+            flat_head: state.flat_head,
+            one_identity: state.one_identity,
+            pattern: FrozenMatcherValue::freeze(state.pattern),
+            rest_patterns: FrozenMatcherSequence::freeze(state.rest_patterns),
+            value_args: SharedArgs::new(state.value_args),
+            bindings: FrozenMatchBindings::freeze(state.bindings),
+            consume: state.consume,
+            max_consume: state.max_consume,
+            wrapped: state.wrapped,
+        }
+    }
+
+    fn into_owned(self) -> FlatSingleChoiceState {
+        FlatSingleChoiceState {
+            flat_head: self.flat_head,
+            one_identity: self.one_identity,
+            pattern: self.pattern.into_inner(),
+            rest_patterns: self.rest_patterns.into_vec(),
+            value_args: self.value_args.into_vec(),
+            bindings: self.bindings.into_owned(),
+            consume: self.consume,
+            max_consume: self.max_consume,
+            wrapped: self.wrapped,
+        }
+    }
+}
+
+struct FlatSingleCollectionState {
+    flat_head: Expr,
+    one_identity: bool,
+    pattern: MatcherNode,
+    rest_patterns: Vec<MatcherArg>,
+    value_args: Vec<Expr>,
+    bindings: SymbolExprMap,
+    consume: usize,
+    max_consume: usize,
+    wrapped: bool,
+    collected: Vec<SymbolExprMap>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedFlatSingleCollectionState {
+    flat_head: Expr,
+    one_identity: bool,
+    pattern: FrozenMatcherValue<MatcherNode>,
+    rest_patterns: FrozenMatcherSequence<MatcherArg>,
+    value_args: SharedArgs,
+    bindings: FrozenMatchBindings,
+    consume: usize,
+    max_consume: usize,
+    wrapped: bool,
+    collected: PersistentMatchResults,
+}
+
+impl SuspendedFlatSingleCollectionState {
+    fn freeze(state: FlatSingleCollectionState) -> Self {
+        Self {
+            flat_head: state.flat_head,
+            one_identity: state.one_identity,
+            pattern: FrozenMatcherValue::freeze(state.pattern),
+            rest_patterns: FrozenMatcherSequence::freeze(state.rest_patterns),
+            value_args: SharedArgs::new(state.value_args),
+            bindings: FrozenMatchBindings::freeze(state.bindings),
+            consume: state.consume,
+            max_consume: state.max_consume,
+            wrapped: state.wrapped,
+            collected: PersistentMatchResults::freeze(state.collected),
+        }
+    }
+
+    fn into_owned(self) -> FlatSingleCollectionState {
+        FlatSingleCollectionState {
+            flat_head: self.flat_head,
+            one_identity: self.one_identity,
+            pattern: self.pattern.into_inner(),
+            rest_patterns: self.rest_patterns.into_vec(),
+            value_args: self.value_args.into_vec(),
+            bindings: self.bindings.into_owned(),
+            consume: self.consume,
+            max_consume: self.max_consume,
+            wrapped: self.wrapped,
+            collected: self.collected.into_vec(),
+        }
+    }
+}
 
 mod entry;
 mod optional_sequence;
@@ -51,13 +166,38 @@ impl Session {
                 let rest_values = value_iter.collect::<Vec<_>>();
 
                 let pattern_result = self.match_compiled_owned(pattern, value, bindings);
-                self.drive_internal_value(pattern_result, move |session, outcome| {
-                    if !outcome.matched {
-                        return Ok(outcome);
+                match pattern_result {
+                    Ok(outcome) => {
+                        if !outcome.matched {
+                            Ok(outcome)
+                        } else {
+                            self.match_compiled_args_owned(
+                                rest_patterns,
+                                rest_values,
+                                outcome.bindings,
+                            )
+                        }
                     }
-
-                    session.match_compiled_args_owned(rest_patterns, rest_values, outcome.bindings)
-                })
+                    Err(EvalError::InputRequired { request }) => {
+                        let rest_patterns = FrozenMatcherSequence::freeze(rest_patterns);
+                        let rest_values = SharedArgs::new(rest_values);
+                        self.push_suspension_frame(move |session, payload| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                            if !outcome.matched {
+                                return Ok(outcome.into_continuation_expr());
+                            }
+                            session
+                                .match_compiled_args_owned(
+                                    rest_patterns.into_vec(),
+                                    rest_values.into_vec(),
+                                    outcome.bindings,
+                                )
+                                .map(|outcome| outcome.into_continuation_expr())
+                        });
+                        Err(EvalError::InputRequired { request })
+                    }
+                    Err(error) => Err(error),
+                }
             }
         }
     }
@@ -137,137 +277,129 @@ impl Session {
         consume: usize,
         max_consume: usize,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let selected_values = value_args.iter().take(consume).cloned().collect::<Vec<_>>();
-        let rest_values = value_args.iter().skip(consume).cloned().collect::<Vec<_>>();
-        let grouped_value = flat_match_value(&flat_head, selected_values);
-        let pattern_result =
-            self.match_compiled_owned(pattern.clone(), grouped_value, bindings.clone());
-
-        self.drive_internal_value(pattern_result, move |session, outcome| {
-            if !outcome.matched {
-                if consume == 1 && !one_identity {
-                    return session.match_compiled_flat_wrapped_single_choice_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        outcome.bindings,
-                        max_consume,
-                    );
-                }
-
-                return if consume < max_consume {
-                    session.match_compiled_flat_single_choices_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        outcome.bindings,
-                        consume + 1,
-                        max_consume,
-                    )
-                } else {
-                    Ok(match_outcome(false, outcome.bindings))
-                };
-            }
-
-            let rest_result = session.match_compiled_args_with_flat_head_owned(
-                rest_patterns.clone(),
-                rest_values,
-                outcome.bindings,
-                flat_head.clone(),
-            );
-            session.drive_internal_value(rest_result, move |session, rest_outcome| {
-                if rest_outcome.matched {
-                    Ok(rest_outcome)
-                } else if consume == 1 && !one_identity {
-                    session.match_compiled_flat_wrapped_single_choice_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        bindings,
-                        max_consume,
-                    )
-                } else if consume < max_consume {
-                    session.match_compiled_flat_single_choices_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        bindings,
-                        consume + 1,
-                        max_consume,
-                    )
-                } else {
-                    Ok(match_outcome(false, bindings))
-                }
-            })
+        self.match_flat_single_choice(FlatSingleChoiceState {
+            flat_head,
+            one_identity,
+            pattern,
+            rest_patterns,
+            value_args,
+            bindings,
+            consume,
+            max_consume,
+            wrapped: false,
         })
     }
 
-    fn match_compiled_flat_wrapped_single_choice_owned(
+    fn match_flat_single_choice(
         &mut self,
-        flat_head: Expr,
-        one_identity: bool,
-        pattern: MatcherNode,
-        rest_patterns: Vec<MatcherArg>,
-        value_args: Vec<Expr>,
-        bindings: SymbolExprMap,
-        max_consume: usize,
+        state: FlatSingleChoiceState,
     ) -> Result<CompiledMatchOutcome, EvalError> {
-        let wrapped_value = Expr::call(flat_head.clone(), vec![value_args[0].clone()]);
-        let rest_values = value_args.iter().skip(1).cloned().collect::<Vec<_>>();
-        let pattern_result =
-            self.match_compiled_owned(pattern.clone(), wrapped_value, bindings.clone());
-
-        self.drive_internal_value(pattern_result, move |session, outcome| {
-            if !outcome.matched {
-                return if max_consume > 1 {
-                    session.match_compiled_flat_single_choices_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        outcome.bindings,
-                        2,
-                        max_consume,
-                    )
-                } else {
-                    Ok(match_outcome(false, outcome.bindings))
-                };
+        let selected_value = if state.wrapped {
+            Expr::call(state.flat_head.clone(), vec![state.value_args[0].clone()])
+        } else {
+            flat_match_value(
+                &state.flat_head,
+                state
+                    .value_args
+                    .iter()
+                    .take(state.consume)
+                    .cloned()
+                    .collect(),
+            )
+        };
+        let rest_values = state
+            .value_args
+            .iter()
+            .skip(state.consume)
+            .cloned()
+            .collect::<Vec<_>>();
+        let pattern_result = self.match_compiled_owned(
+            state.pattern.clone(),
+            selected_value,
+            state.bindings.clone(),
+        );
+        match pattern_result {
+            Ok(outcome) => self.finish_flat_single_pattern(state, rest_values, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedFlatSingleChoiceState::freeze(state);
+                let rest_values = SharedArgs::new(rest_values);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_flat_single_pattern(
+                            state.into_owned(),
+                            rest_values.into_vec(),
+                            outcome,
+                        )
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
+            Err(error) => Err(error),
+        }
+    }
 
-            let rest_result = session.match_compiled_args_with_flat_head_owned(
-                rest_patterns.clone(),
-                rest_values,
-                outcome.bindings,
-                flat_head.clone(),
-            );
-            session.drive_internal_value(rest_result, move |session, rest_outcome| {
-                if rest_outcome.matched {
-                    Ok(rest_outcome)
-                } else if max_consume > 1 {
-                    session.match_compiled_flat_single_choices_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        bindings,
-                        2,
-                        max_consume,
-                    )
-                } else {
-                    Ok(match_outcome(false, bindings))
-                }
-            })
-        })
+    fn finish_flat_single_pattern(
+        &mut self,
+        mut state: FlatSingleChoiceState,
+        rest_values: Vec<Expr>,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            state.bindings = outcome.bindings;
+            return self.advance_flat_single_choice(state);
+        }
+
+        let rest_result = self.match_compiled_args_with_flat_head_owned(
+            state.rest_patterns.clone(),
+            rest_values,
+            outcome.bindings,
+            state.flat_head.clone(),
+        );
+        match rest_result {
+            Ok(outcome) => self.finish_flat_single_rest(state, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedFlatSingleChoiceState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_flat_single_rest(state.into_owned(), outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_flat_single_rest(
+        &mut self,
+        state: FlatSingleChoiceState,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if outcome.matched {
+            Ok(outcome)
+        } else {
+            self.advance_flat_single_choice(state)
+        }
+    }
+
+    fn advance_flat_single_choice(
+        &mut self,
+        mut state: FlatSingleChoiceState,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !state.wrapped && state.consume == 1 && !state.one_identity {
+            state.wrapped = true;
+            return self.match_flat_single_choice(state);
+        }
+
+        state.wrapped = false;
+        state.consume += 1;
+        if state.consume <= state.max_consume {
+            self.match_flat_single_choice(state)
+        } else {
+            Ok(match_outcome(false, state.bindings))
+        }
     }
 
     fn collect_compiled_arg_and_rest_matches_owned(
@@ -315,17 +447,38 @@ impl Session {
                 let rest_values = value_iter.collect::<Vec<_>>();
 
                 let pattern_result = self.match_compiled_owned(pattern, value, bindings);
-                self.drive_internal_value(pattern_result, move |session, outcome| {
-                    if !outcome.matched {
-                        return Ok(Vec::new());
+                match pattern_result {
+                    Ok(outcome) => {
+                        if !outcome.matched {
+                            Ok(Vec::new())
+                        } else {
+                            self.collect_compiled_args_matches_owned(
+                                rest_patterns,
+                                rest_values,
+                                outcome.bindings,
+                            )
+                        }
                     }
-
-                    session.collect_compiled_args_matches_owned(
-                        rest_patterns,
-                        rest_values,
-                        outcome.bindings,
-                    )
-                })
+                    Err(EvalError::InputRequired { request }) => {
+                        let rest_patterns = FrozenMatcherSequence::freeze(rest_patterns);
+                        let rest_values = SharedArgs::new(rest_values);
+                        self.push_suspension_frame(move |session, payload| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                            if !outcome.matched {
+                                return Ok(Vec::<SymbolExprMap>::new().into_continuation_expr());
+                            }
+                            session
+                                .collect_compiled_args_matches_owned(
+                                    rest_patterns.into_vec(),
+                                    rest_values.into_vec(),
+                                    outcome.bindings,
+                                )
+                                .map(|matches| matches.into_continuation_expr())
+                        });
+                        Err(EvalError::InputRequired { request })
+                    }
+                    Err(error) => Err(error),
+                }
             }
         }
     }
@@ -410,134 +563,125 @@ impl Session {
         max_consume: usize,
         collected: Vec<SymbolExprMap>,
     ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        if consume > max_consume {
-            return Ok(collected);
-        }
-
-        let selected_values = value_args.iter().take(consume).cloned().collect::<Vec<_>>();
-        let rest_values = value_args.iter().skip(consume).cloned().collect::<Vec<_>>();
-        let grouped_value = flat_match_value(&flat_head, selected_values);
-        let pattern_result =
-            self.match_compiled_owned(pattern.clone(), grouped_value, bindings.clone());
-
-        self.drive_internal_value(pattern_result, move |session, outcome| {
-            if !outcome.matched {
-                if consume == 1 && !one_identity {
-                    return session.collect_compiled_flat_wrapped_single_choice_matches_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        bindings,
-                        max_consume,
-                        collected,
-                    );
-                }
-
-                return session.collect_compiled_flat_single_choice_matches_owned(
-                    flat_head,
-                    one_identity,
-                    pattern,
-                    rest_patterns,
-                    value_args,
-                    bindings,
-                    consume + 1,
-                    max_consume,
-                    collected,
-                );
-            }
-
-            let rest_result = session.collect_compiled_args_matches_with_flat_head_owned(
-                rest_patterns.clone(),
-                rest_values,
-                outcome.bindings,
-                flat_head.clone(),
-            );
-            session.drive_internal_value(rest_result, move |session, mut rest_matches| {
-                let mut collected = collected;
-                collected.append(&mut rest_matches);
-                if consume == 1 && !one_identity {
-                    session.collect_compiled_flat_wrapped_single_choice_matches_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        bindings,
-                        max_consume,
-                        collected,
-                    )
-                } else {
-                    session.collect_compiled_flat_single_choice_matches_owned(
-                        flat_head,
-                        one_identity,
-                        pattern,
-                        rest_patterns,
-                        value_args,
-                        bindings,
-                        consume + 1,
-                        max_consume,
-                        collected,
-                    )
-                }
-            })
+        self.collect_flat_single_choice(FlatSingleCollectionState {
+            flat_head,
+            one_identity,
+            pattern,
+            rest_patterns,
+            value_args,
+            bindings,
+            consume,
+            max_consume,
+            wrapped: false,
+            collected,
         })
     }
 
-    fn collect_compiled_flat_wrapped_single_choice_matches_owned(
+    fn collect_flat_single_choice(
         &mut self,
-        flat_head: Expr,
-        one_identity: bool,
-        pattern: MatcherNode,
-        rest_patterns: Vec<MatcherArg>,
-        value_args: Vec<Expr>,
-        bindings: SymbolExprMap,
-        max_consume: usize,
-        collected: Vec<SymbolExprMap>,
+        state: FlatSingleCollectionState,
     ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        let wrapped_value = Expr::call(flat_head.clone(), vec![value_args[0].clone()]);
-        let rest_values = value_args.iter().skip(1).cloned().collect::<Vec<_>>();
-        let pattern_result =
-            self.match_compiled_owned(pattern.clone(), wrapped_value, bindings.clone());
+        if state.consume > state.max_consume {
+            return Ok(state.collected);
+        }
 
-        self.drive_internal_value(pattern_result, move |session, outcome| {
-            if !outcome.matched {
-                return session.collect_compiled_flat_single_choice_matches_owned(
-                    flat_head,
-                    one_identity,
-                    pattern,
-                    rest_patterns,
-                    value_args,
-                    bindings,
-                    2,
-                    max_consume,
-                    collected,
-                );
+        let selected_value = if state.wrapped {
+            Expr::call(state.flat_head.clone(), vec![state.value_args[0].clone()])
+        } else {
+            flat_match_value(
+                &state.flat_head,
+                state
+                    .value_args
+                    .iter()
+                    .take(state.consume)
+                    .cloned()
+                    .collect(),
+            )
+        };
+        let rest_values = state
+            .value_args
+            .iter()
+            .skip(state.consume)
+            .cloned()
+            .collect::<Vec<_>>();
+        let pattern_result = self.match_compiled_owned(
+            state.pattern.clone(),
+            selected_value,
+            state.bindings.clone(),
+        );
+        match pattern_result {
+            Ok(outcome) => self.finish_flat_single_collection_pattern(state, rest_values, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedFlatSingleCollectionState::freeze(state);
+                let rest_values = SharedArgs::new(rest_values);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_flat_single_collection_pattern(
+                            state.into_owned(),
+                            rest_values.into_vec(),
+                            outcome,
+                        )
+                        .map(|matches| matches.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
+            Err(error) => Err(error),
+        }
+    }
 
-            let rest_result = session.collect_compiled_args_matches_with_flat_head_owned(
-                rest_patterns.clone(),
-                rest_values,
-                outcome.bindings,
-                flat_head.clone(),
-            );
-            session.drive_internal_value(rest_result, move |session, mut rest_matches| {
-                let mut collected = collected;
-                collected.append(&mut rest_matches);
-                session.collect_compiled_flat_single_choice_matches_owned(
-                    flat_head,
-                    one_identity,
-                    pattern,
-                    rest_patterns,
-                    value_args,
-                    bindings,
-                    2,
-                    max_consume,
-                    collected,
-                )
-            })
-        })
+    fn finish_flat_single_collection_pattern(
+        &mut self,
+        state: FlatSingleCollectionState,
+        rest_values: Vec<Expr>,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        if !outcome.matched {
+            return self.advance_flat_single_collection(state);
+        }
+
+        let rest_result = self.collect_compiled_args_matches_with_flat_head_owned(
+            state.rest_patterns.clone(),
+            rest_values,
+            outcome.bindings,
+            state.flat_head.clone(),
+        );
+        match rest_result {
+            Ok(matches) => self.finish_flat_single_collection_rest(state, matches),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedFlatSingleCollectionState::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let matches = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
+                    session
+                        .finish_flat_single_collection_rest(state.into_owned(), matches)
+                        .map(|matches| matches.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_flat_single_collection_rest(
+        &mut self,
+        mut state: FlatSingleCollectionState,
+        mut matches: Vec<SymbolExprMap>,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        state.collected.append(&mut matches);
+        self.advance_flat_single_collection(state)
+    }
+
+    fn advance_flat_single_collection(
+        &mut self,
+        mut state: FlatSingleCollectionState,
+    ) -> Result<Vec<SymbolExprMap>, EvalError> {
+        if !state.wrapped && state.consume == 1 && !state.one_identity {
+            state.wrapped = true;
+        } else {
+            state.wrapped = false;
+            state.consume += 1;
+        }
+        self.collect_flat_single_choice(state)
     }
 }
 
@@ -599,3 +743,10 @@ fn flat_match_value(head: &Expr, values: Vec<Expr>) -> Expr {
         _ => Expr::call(head.clone(), values),
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedFlatSingleChoiceState>();
+    assert_traces::<SuspendedFlatSingleCollectionState>();
+};

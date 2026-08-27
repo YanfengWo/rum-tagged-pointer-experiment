@@ -1,6 +1,17 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod matching;
+
+#[derive(Clone, FrameRootTrace)]
+pub(super) struct SuspendedReplaceListScan {
+    pub(super) target: Expr,
+    pub(super) normalized_target: Expr,
+    pub(super) rules: RewriteRulePlan,
+    pub(super) max_results: Option<usize>,
+    pub(super) collected: PersistentRewriteExprs,
+    pub(super) index: usize,
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_replace_list(
@@ -47,17 +58,41 @@ impl Session {
         };
 
         let max_result = self.evaluate(max_expr);
-        self.drive_evaluated_value(max_result, move |session, resolved_max| {
-            let Some(max_results) = parse_replace_list_max_results(&resolved_max) else {
-                return Ok(session.invalid_call_with_arg_form(
-                    "ReplaceList",
-                    &call_args,
-                    "expected a non-negative integer or Infinity as the optional third argument",
-                ));
-            };
+        match max_result {
+            Ok(resolved_max) => {
+                self.finish_replace_list_limit(target, rules_expr, resolved_max, call_args)
+            }
+            Err(EvalError::InputRequired { request }) => {
+                let call_args = SharedArgs::new(call_args);
+                self.push_suspension_frame(move |session, value| {
+                    session.finish_replace_list_limit(
+                        target,
+                        rules_expr,
+                        value?,
+                        call_args.into_vec(),
+                    )
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-            session.resume_replace_list_after_limit(target, rules_expr, max_results, call_args)
-        })
+    fn finish_replace_list_limit(
+        &mut self,
+        target: Expr,
+        rules_expr: Expr,
+        resolved_max: Expr,
+        call_args: Vec<Expr>,
+    ) -> Result<Expr, EvalError> {
+        let Some(max_results) = parse_replace_list_max_results(&resolved_max) else {
+            return Ok(self.invalid_call_with_arg_form(
+                "ReplaceList",
+                &call_args,
+                "expected a non-negative integer or Infinity as the optional third argument",
+            ));
+        };
+        self.resume_replace_list_after_limit(target, rules_expr, max_results, call_args)
     }
 
     fn resume_replace_list_after_limit(
@@ -97,6 +132,7 @@ impl Session {
             .expect("normalized rewrite rule expressions should recompile");
 
         let normalized_target = self.normalize_match_expr(&target);
+        let rules = Self::shared_rewrite_rule_plan(rules);
         let results_result = self.collect_replace_list_results_owned(
             target,
             normalized_target,
@@ -114,7 +150,7 @@ impl Session {
         &mut self,
         target: Expr,
         normalized_target: Expr,
-        rules: Vec<RewriteRule>,
+        rules: RewriteRulePlan,
         max_results: Option<usize>,
         collected: Vec<Expr>,
         index: usize,
@@ -139,7 +175,7 @@ impl Session {
         &mut self,
         target: Expr,
         normalized_target: Expr,
-        rules: Vec<RewriteRule>,
+        rules: RewriteRulePlan,
         max_results: Option<usize>,
         collected: Vec<Expr>,
         mut index: usize,
@@ -150,7 +186,7 @@ impl Session {
                 return Ok(collected);
             }
 
-            let Some(rule) = rules.get(index).cloned() else {
+            let Some(rule) = rules.get(index) else {
                 return Ok(collected);
             };
 
@@ -164,18 +200,18 @@ impl Session {
                 match bindings_result {
                     Ok(bindings) => bindings,
                     Err(EvalError::InputRequired { request }) => {
+                        let state = SuspendedReplaceListScan {
+                            target,
+                            normalized_target,
+                            rules,
+                            max_results,
+                            collected: PersistentRewriteExprs::freeze(collected),
+                            index,
+                        };
                         self.push_suspension_frame(move |session, outcome| {
                             let bindings = Vec::<SymbolExprMap>::from_continuation_expr(outcome?);
                             session
-                                .collect_replace_list_results_with_pending(
-                                    target,
-                                    normalized_target,
-                                    rules,
-                                    max_results,
-                                    collected,
-                                    index,
-                                    Some(bindings),
-                                )
+                                .collect_replace_list_results_suspended(state, Some(bindings))
                                 .map(|results| results.into_continuation_expr())
                         });
                         return Err(EvalError::InputRequired { request });
@@ -196,10 +232,54 @@ impl Session {
                 max_results,
                 collected,
                 index,
-                rule,
                 bindings,
-                0,
             );
+        }
+    }
+
+    pub(super) fn collect_replace_list_results_suspended(
+        &mut self,
+        mut state: SuspendedReplaceListScan,
+        mut pending: Option<Vec<SymbolExprMap>>,
+    ) -> Result<Vec<Expr>, EvalError> {
+        loop {
+            if state
+                .max_results
+                .is_some_and(|limit| state.collected.len() >= limit)
+            {
+                return Ok(state.collected.into_vec());
+            }
+
+            let Some(rule) = state.rules.get(state.index) else {
+                return Ok(state.collected.into_vec());
+            };
+            let bindings = if let Some(bindings) = pending.take() {
+                bindings
+            } else {
+                let bindings_result = self.collect_replace_list_rule_bindings_owned(
+                    rule.matcher.clone(),
+                    state.normalized_target.clone(),
+                );
+                match bindings_result {
+                    Ok(bindings) => bindings,
+                    Err(EvalError::InputRequired { request }) => {
+                        self.push_suspension_frame(move |session, outcome| {
+                            let bindings = Vec::<SymbolExprMap>::from_continuation_expr(outcome?);
+                            session
+                                .collect_replace_list_results_suspended(state, Some(bindings))
+                                .map(|results| results.into_continuation_expr())
+                        });
+                        return Err(EvalError::InputRequired { request });
+                    }
+                    Err(error) => return Err(error),
+                }
+            };
+
+            if bindings.is_empty() {
+                state.index += 1;
+                continue;
+            }
+            return self.collect_replace_list_rule_results_suspended(state, bindings, 0);
         }
     }
 }
@@ -222,3 +302,9 @@ fn replace_list_operator_form(rules_expr: Expr) -> Expr {
         ],
     )
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedReplaceListScan>();
+};

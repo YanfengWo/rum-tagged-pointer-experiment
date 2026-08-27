@@ -6,6 +6,43 @@ use super::plan::{
     wrap_replace_part_pattern_position,
 };
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(FrameRootTrace)]
+struct SuspendedReplacePartRules {
+    expr: Expr,
+    rules: FrozenReplaceSequence<ReplacePartRule>,
+    rule_index: usize,
+}
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedReplacePartPatternCandidates>();
+    assert_traces::<SuspendedReplacePartRuleTargets>();
+    assert_traces::<SuspendedReplacePartRules>();
+};
+
+#[derive(FrameRootTrace)]
+struct SuspendedReplacePartRuleTargets {
+    expr: Expr,
+    position_specs: FrozenReplaceSequence<ReplacePartPositionSpec>,
+    rhs: Expr,
+    delayed: bool,
+    heads: ReplacePartHeadsMode,
+    collected: PersistentReplacePartTargets,
+    index: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct SuspendedReplacePartPatternCandidates {
+    pattern: Expr,
+    candidates: FrozenReplaceSequence<Vec<isize>>,
+    rhs: Expr,
+    delayed: bool,
+    collected: PersistentReplacePartTargets,
+    index: usize,
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_replace_part(
@@ -94,14 +131,14 @@ impl Session {
             match targets_result {
                 Ok(targets) => pending_targets = Some(targets),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedReplacePartRules {
+                        expr,
+                        rules: FrozenReplaceSequence::freeze(rules),
+                        rule_index,
+                    };
                     self.push_suspension_frame(move |session, outcome| {
                         let targets = Vec::<ReplacePartTarget>::from_continuation_expr(outcome?);
-                        session.apply_replace_part_rules_owned(
-                            expr,
-                            rules,
-                            rule_index,
-                            Some(targets),
-                        )
+                        session.resume_suspended_replace_part_rules(state, targets)
                     });
                     return Err(EvalError::InputRequired { request });
                 }
@@ -147,18 +184,39 @@ impl Session {
             delayed,
             heads,
         );
-        self.drive_internal_value(targets_result, move |session, mut targets| {
-            collected.append(&mut targets);
-            session.collect_rule_targets_owned(
-                expr,
-                position_specs,
-                rhs,
-                delayed,
-                heads,
-                collected,
-                index + 1,
-            )
-        })
+        match targets_result {
+            Ok(mut targets) => {
+                collected.append(&mut targets);
+                self.collect_rule_targets_owned(
+                    expr,
+                    position_specs,
+                    rhs,
+                    delayed,
+                    heads,
+                    collected,
+                    index + 1,
+                )
+            }
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedReplacePartRuleTargets {
+                    expr,
+                    position_specs: FrozenReplaceSequence::freeze(position_specs),
+                    rhs,
+                    delayed,
+                    heads,
+                    collected: PersistentReplacePartTargets::freeze(collected),
+                    index,
+                };
+                self.push_suspension_frame(move |session, value| {
+                    let targets = Vec::<ReplacePartTarget>::from_continuation_expr(value?);
+                    session
+                        .resume_suspended_replace_part_rule_targets(state, targets)
+                        .map(|targets| targets.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn collect_position_spec_targets_owned(
@@ -195,19 +253,24 @@ impl Session {
         heads: ReplacePartHeadsMode,
     ) -> Result<Vec<ReplacePartTarget>, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        self.drive_internal_value(pattern_result, move |session, resolved_pattern| {
-            let pattern = wrap_replace_part_pattern_position(resolved_pattern);
-            let include_heads = replace_part_pattern_includes_heads(&pattern, heads);
-            let candidates = collect_replace_part_candidate_paths(&expr, include_heads);
-            session.collect_pattern_position_targets_from_candidates_owned(
-                pattern,
-                candidates,
+        match pattern_result {
+            Ok(resolved_pattern) => self.finish_replace_part_pattern_resolution(
+                expr,
                 rhs,
                 delayed,
-                Vec::new(),
-                0,
-            )
-        })
+                heads,
+                resolved_pattern,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, value| {
+                    session
+                        .finish_replace_part_pattern_resolution(expr, rhs, delayed, heads, value?)
+                        .map(|targets| targets.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn collect_pattern_position_targets_from_candidates_owned(
@@ -226,24 +289,200 @@ impl Session {
         let position = replace_part_position_expr(&path);
         let match_result =
             self.match_expr_owned(pattern.clone(), position, SymbolExprMap::default());
-        self.drive_internal_value(match_result, move |session, outcome| {
-            if outcome.matched {
-                collected.push(ReplacePartTarget {
-                    path,
-                    rhs: substitute_rule_bindings(&rhs, &outcome.bindings),
+        match match_result {
+            Ok(outcome) => {
+                if outcome.matched {
+                    collected.push(ReplacePartTarget {
+                        path,
+                        rhs: substitute_rule_bindings(&rhs, &outcome.bindings),
+                        delayed,
+                    });
+                }
+                self.collect_pattern_position_targets_from_candidates_owned(
+                    pattern,
+                    candidates,
+                    rhs,
                     delayed,
+                    collected,
+                    index + 1,
+                )
+            }
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedReplacePartPatternCandidates {
+                    pattern,
+                    candidates: FrozenReplaceSequence::freeze(candidates),
+                    rhs,
+                    delayed,
+                    collected: PersistentReplacePartTargets::freeze(collected),
+                    index,
+                };
+                self.push_suspension_frame(move |session, value| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                    session
+                        .resume_suspended_replace_part_pattern_candidates(state, path, outcome)
+                        .map(|targets| targets.into_continuation_expr())
                 });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_replace_part_pattern_resolution(
+        &mut self,
+        expr: Expr,
+        rhs: Expr,
+        delayed: bool,
+        heads: ReplacePartHeadsMode,
+        resolved_pattern: Expr,
+    ) -> Result<Vec<ReplacePartTarget>, EvalError> {
+        let pattern = wrap_replace_part_pattern_position(resolved_pattern);
+        let include_heads = replace_part_pattern_includes_heads(&pattern, heads);
+        let candidates = collect_replace_part_candidate_paths(&expr, include_heads);
+        self.collect_pattern_position_targets_from_candidates_owned(
+            pattern,
+            candidates,
+            rhs,
+            delayed,
+            Vec::new(),
+            0,
+        )
+    }
+
+    fn resume_suspended_replace_part_rules(
+        &mut self,
+        mut state: SuspendedReplacePartRules,
+        targets: Vec<ReplacePartTarget>,
+    ) -> Result<Expr, EvalError> {
+        if !targets.is_empty() {
+            state.expr = self
+                .apply_replace_plan_owned(state.expr, build_replace_plan_from_targets(targets))?;
+        }
+        state.rule_index += 1;
+        let mut merged_plan = ReplacePlanNode::default();
+        loop {
+            let Some(rule) = state.rules.as_slice().get(state.rule_index) else {
+                return if merged_plan.action.is_none() && merged_plan.children.is_empty() {
+                    Ok(state.expr)
+                } else {
+                    self.apply_replace_plan_owned(state.expr, merged_plan)
+                };
+            };
+            if replace_part_rule_is_merge_safe(rule) {
+                merge_replace_part_rule_into_plan(&state.expr, &mut merged_plan, rule);
+                state.rule_index += 1;
+                continue;
+            }
+            if merged_plan.action.is_some() || !merged_plan.children.is_empty() {
+                state.expr = self.apply_replace_plan_owned(state.expr, merged_plan)?;
             }
 
-            session.collect_pattern_position_targets_from_candidates_owned(
-                pattern,
-                candidates,
-                rhs,
-                delayed,
-                collected,
-                index + 1,
-            )
-        })
+            let targets_result = self.resolve_rule_targets_owned(state.expr.clone(), rule.clone());
+            match targets_result {
+                Ok(targets) => {
+                    if !targets.is_empty() {
+                        state.expr = self.apply_replace_plan_owned(
+                            state.expr,
+                            build_replace_plan_from_targets(targets),
+                        )?;
+                    }
+                    state.rule_index += 1;
+                    merged_plan = ReplacePlanNode::default();
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let targets = Vec::<ReplacePartTarget>::from_continuation_expr(value?);
+                        session.resume_suspended_replace_part_rules(state, targets)
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn resume_suspended_replace_part_rule_targets(
+        &mut self,
+        mut state: SuspendedReplacePartRuleTargets,
+        targets: Vec<ReplacePartTarget>,
+    ) -> Result<Vec<ReplacePartTarget>, EvalError> {
+        state.collected = state.collected.appended_values(targets);
+        state.index += 1;
+        loop {
+            let Some(position_spec) = state.position_specs.as_slice().get(state.index).cloned()
+            else {
+                return Ok(state.collected.into_vec());
+            };
+            let targets_result = self.collect_position_spec_targets_owned(
+                state.expr.clone(),
+                position_spec,
+                state.rhs.clone(),
+                state.delayed,
+                state.heads,
+            );
+            match targets_result {
+                Ok(targets) => {
+                    state.collected = state.collected.appended_values(targets);
+                    state.index += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let targets = Vec::<ReplacePartTarget>::from_continuation_expr(value?);
+                        session
+                            .resume_suspended_replace_part_rule_targets(state, targets)
+                            .map(|targets| targets.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn resume_suspended_replace_part_pattern_candidates(
+        &mut self,
+        mut state: SuspendedReplacePartPatternCandidates,
+        path: Vec<isize>,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<Vec<ReplacePartTarget>, EvalError> {
+        if outcome.matched {
+            state.collected = state.collected.appended(ReplacePartTarget {
+                path,
+                rhs: substitute_rule_bindings(&state.rhs, &outcome.bindings),
+                delayed: state.delayed,
+            });
+        }
+        state.index += 1;
+        loop {
+            let Some(path) = state.candidates.as_slice().get(state.index).cloned() else {
+                return Ok(state.collected.into_vec());
+            };
+            let position = replace_part_position_expr(&path);
+            let match_result =
+                self.match_expr_owned(state.pattern.clone(), position, SymbolExprMap::default());
+            match match_result {
+                Ok(outcome) => {
+                    if outcome.matched {
+                        state.collected = state.collected.appended(ReplacePartTarget {
+                            path,
+                            rhs: substitute_rule_bindings(&state.rhs, &outcome.bindings),
+                            delayed: state.delayed,
+                        });
+                    }
+                    state.index += 1;
+                }
+                Err(EvalError::InputRequired { request }) => {
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                        session
+                            .resume_suspended_replace_part_pattern_candidates(state, path, outcome)
+                            .map(|targets| targets.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     pub(super) fn apply_replace_plan_owned(

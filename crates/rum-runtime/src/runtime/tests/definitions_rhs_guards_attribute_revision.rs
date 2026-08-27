@@ -141,6 +141,23 @@ fn repeated_attribute_bumps_preserve_every_guarded_lane() {
 }
 
 #[test]
+fn matcher_ownership_guard_is_enforced_after_attribute_revision_invalidation() {
+    let mut session = revision_guard_session();
+    session
+        .eval_text(
+            "ownershipRevision[x_] := 91 /; MatchQ[x, 7]; \
+             SetAttributes[ownershipRevisionBump, HoldFirst]",
+        )
+        .unwrap();
+
+    let outcome = session
+        .eval_text("{ownershipRevision[7], ownershipRevision[8]}")
+        .unwrap();
+    assert_eq!(outcome.value.to_string(), "List[91, ownershipRevision[8]]");
+    assert!(outcome.messages.is_empty());
+}
+
+#[test]
 fn listable_guarded_downvalue_recompiles_and_enforces_its_guard() {
     let mut session = revision_guard_session();
     session

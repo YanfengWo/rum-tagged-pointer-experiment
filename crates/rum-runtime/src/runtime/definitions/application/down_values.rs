@@ -1,4 +1,16 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(FrameRootTrace)]
+struct SuspendedDownValueApplication {
+    candidate: Expr,
+    normalized_candidate: Expr,
+    symbol: Symbol,
+    index: usize,
+    lhs: Expr,
+    rhs: Expr,
+    rhs_may_splice_without_bindings: bool,
+}
 
 impl Session {
     pub(in crate::runtime) fn try_apply_down_values(
@@ -264,18 +276,26 @@ impl Session {
             return result.map(Some);
         }
 
-        let down_value = down_value.clone();
-        let matcher = if down_value.matcher_attribute_revision == self.attribute_revision {
-            down_value.matcher.clone()
-        } else {
-            self.compile_down_value_matcher(&down_value.lhs, &down_value.guards)
+        let matcher_is_current = down_value.matcher_attribute_revision == self.attribute_revision;
+        let cached_matcher = matcher_is_current.then(|| down_value.matcher.clone());
+        let application = SuspendedDownValueApplication {
+            candidate,
+            normalized_candidate,
+            symbol,
+            index,
+            lhs: down_value.lhs.clone(),
+            rhs: down_value.rhs.clone(),
+            rhs_may_splice_without_bindings: down_value.rhs_may_splice_without_bindings,
         };
+        let matcher = cached_matcher.unwrap_or_else(|| {
+            self.compile_down_value_matcher(&application.lhs, &down_value.guards)
+        });
         let runtime_profile_compiled_matcher =
             runtime_path_timing_start("down_values.compiled_matcher");
         let compiled_matcher_start = definition_dispatch_timing_start();
         let match_result = self.match_compiled_owned(
             matcher,
-            normalized_candidate.clone(),
+            application.normalized_candidate.clone(),
             SymbolExprMap::default(),
         );
         record_profile_definition_dispatch_phase_timing(
@@ -289,61 +309,86 @@ impl Session {
             runtime_profile_outcome_for_internal_result(&match_result),
         );
 
-        self.drive_internal_value(match_result, move |session, outcome| {
-            record_profile_definition_dispatch_matcher_outcome(
-                "down_value",
-                &symbol,
-                outcome.matched,
-            );
-            if !outcome.matched {
-                return session.try_apply_down_values_from_symbol(
-                    candidate,
-                    normalized_candidate,
-                    symbol,
-                    scan,
-                );
+        match match_result {
+            Ok(outcome) => self.finish_suspended_down_value_application(application, scan, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, value| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                    session
+                        .finish_suspended_down_value_application(application, scan, outcome)
+                        .map(|result| result.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
+            Err(error) => Err(error),
+        }
+    }
 
-            let _profile_rhs_source = expression_rebuild_source_symbol(symbol);
-            let runtime_profile_rhs_substitution =
-                runtime_path_timing_start("down_values.rhs_substitution");
-            let rhs_substitution_start = definition_dispatch_timing_start();
-            let rhs = substitute_rule_bindings_for_rhs(
-                &down_value.rhs,
-                &outcome.bindings,
-                down_value.rhs_may_splice_without_bindings,
+    fn finish_suspended_down_value_application<Scan: DownValueScan>(
+        &mut self,
+        application: SuspendedDownValueApplication,
+        scan: Scan,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<Option<Expr>, EvalError> {
+        record_profile_definition_dispatch_matcher_outcome(
+            "down_value",
+            &application.symbol,
+            outcome.matched,
+        );
+        if !outcome.matched {
+            return self.try_apply_down_values_from_symbol(
+                application.candidate,
+                application.normalized_candidate,
+                application.symbol,
+                scan,
             );
-            record_profile_definition_dispatch_phase_timing(
-                "down_value",
-                &symbol,
-                "rhs_substitution",
-                rhs_substitution_start,
-            );
-            record_profile_runtime_path_timing(
-                runtime_profile_rhs_substitution,
-                RuntimeProfileOutcome::Ok,
-            );
-            let option_scope =
-                session.option_value_scope_for_definition(&down_value.lhs, &candidate);
-            let trace_rhs = rhs.clone();
-            session.push_rule_applied_trace(
-                RuleApplicationSource::DownValue,
-                &candidate,
-                &down_value.lhs,
-                &trace_rhs,
-            );
-            session.record_profile_down_value_application(&symbol);
-            let _profile_definition_source = evaluation_profile_definition_source(symbol);
-            let profile_rule_start = definition_rule_timing_start();
-            let result = session.evaluate_definition_rhs(option_scope, rhs);
-            record_profile_definition_rule_timing(
-                "down_value_rhs_eval",
-                &symbol,
-                index,
-                profile_rule_start,
-                result.is_ok(),
-            );
-            result.map(Some)
-        })
+        }
+
+        let _profile_rhs_source = expression_rebuild_source_symbol(application.symbol);
+        let runtime_profile_rhs_substitution =
+            runtime_path_timing_start("down_values.rhs_substitution");
+        let rhs_substitution_start = definition_dispatch_timing_start();
+        let rhs = substitute_rule_bindings_for_rhs(
+            &application.rhs,
+            &outcome.bindings,
+            application.rhs_may_splice_without_bindings,
+        );
+        record_profile_definition_dispatch_phase_timing(
+            "down_value",
+            &application.symbol,
+            "rhs_substitution",
+            rhs_substitution_start,
+        );
+        record_profile_runtime_path_timing(
+            runtime_profile_rhs_substitution,
+            RuntimeProfileOutcome::Ok,
+        );
+        let option_scope =
+            self.option_value_scope_for_definition(&application.lhs, &application.candidate);
+        let trace_rhs = rhs.clone();
+        self.push_rule_applied_trace(
+            RuleApplicationSource::DownValue,
+            &application.candidate,
+            &application.lhs,
+            &trace_rhs,
+        );
+        self.record_profile_down_value_application(&application.symbol);
+        let _profile_definition_source = evaluation_profile_definition_source(application.symbol);
+        let profile_rule_start = definition_rule_timing_start();
+        let result = self.evaluate_definition_rhs(option_scope, rhs);
+        record_profile_definition_rule_timing(
+            "down_value_rhs_eval",
+            &application.symbol,
+            application.index,
+            profile_rule_start,
+            result.is_ok(),
+        );
+        result.map(Some)
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedDownValueApplication>();
+};

@@ -124,7 +124,7 @@ impl RewriteRulePlan {
         }
     }
 
-    pub(super) fn get(&self, index: usize) -> Option<&RewriteRule> {
+    pub(in crate::runtime) fn get(&self, index: usize) -> Option<&RewriteRule> {
         self.0.rules.get(index)
     }
 }

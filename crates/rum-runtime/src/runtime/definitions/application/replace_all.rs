@@ -1,4 +1,6 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
 mod plan;
 
@@ -9,6 +11,75 @@ use plan::RewriteRuleScanCursor;
 struct ReplaceAllTraversalOutcome {
     expr: Expr,
     changed: bool,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct PersistentReplaceAllArgs {
+    prefix: SharedArgs,
+    tail: Option<Arc<PersistentReplaceAllArgNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct PersistentReplaceAllArgNode {
+    previous: Option<Arc<PersistentReplaceAllArgNode>>,
+    value: Expr,
+}
+
+impl PersistentReplaceAllArgs {
+    fn freeze(values: Vec<Expr>) -> Self {
+        let len = values.len();
+        Self {
+            prefix: SharedArgs::new(values),
+            tail: None,
+            len,
+        }
+    }
+
+    fn appended(&self, value: Expr) -> Self {
+        Self {
+            prefix: self.prefix.clone(),
+            tail: Some(Arc::new(PersistentReplaceAllArgNode {
+                previous: self.tail.clone(),
+                value,
+            })),
+            len: self.len + 1,
+        }
+    }
+
+    fn into_vec(self) -> Vec<Expr> {
+        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut node = self.tail;
+        while let Some(current) = node {
+            let current = Arc::try_unwrap(current)
+                .unwrap_or_else(|_| panic!("completed ReplaceAll output must be uniquely owned"));
+            suffix.push(current.value);
+            node = current.previous;
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.into_vec();
+        values.reserve(suffix.len());
+        values.extend(suffix);
+        values
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedReplaceAllArgs {
+    head: Expr,
+    rewritten_args: PersistentReplaceAllArgs,
+    remaining_args: SharedArgs,
+    rules: RewriteRulePlan,
+    changed: bool,
+    argument_index: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedRewriteRuleMatch {
+    expr: Expr,
+    normalized_expr: Expr,
+    rules: RewriteRulePlan,
 }
 
 impl ContinuationValue for ReplaceAllTraversalOutcome {
@@ -56,6 +127,16 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let outcome_result =
             self.apply_replace_all_owned(expr, RewriteRulePlan::from_slice(rules), source);
+        self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
+    }
+
+    pub(in crate::runtime) fn apply_replace_all_with_plan(
+        &mut self,
+        expr: Expr,
+        rules: RewriteRulePlan,
+        source: RuleApplicationSource,
+    ) -> Result<Expr, EvalError> {
+        let outcome_result = self.apply_replace_all_owned(expr, rules, source);
         self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
     }
 
@@ -214,19 +295,22 @@ impl Session {
             match arg_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedReplaceAllArgs {
+                        head,
+                        rewritten_args: PersistentReplaceAllArgs::freeze(rewritten_args),
+                        remaining_args,
+                        rules,
+                        changed,
+                        argument_index,
+                    };
                     self.push_suspension_frame(move |session, value| {
                         let outcome = ReplaceAllTraversalOutcome::from_continuation_expr(value?);
                         session
-                            .apply_replace_all_args(
-                                head,
-                                rewritten_args,
-                                remaining_args,
-                                rules,
+                            .resume_suspended_replace_all_args(
+                                state,
                                 source,
-                                changed,
                                 hold_attribute,
-                                argument_index,
-                                Some(outcome),
+                                outcome,
                             )
                             .map(|outcome| outcome.into_continuation_expr())
                     });
@@ -235,6 +319,90 @@ impl Session {
                 Err(error) => return Err(error),
             }
         }
+    }
+
+    fn resume_suspended_replace_all_args(
+        &mut self,
+        mut state: SuspendedReplaceAllArgs,
+        source: RuleApplicationSource,
+        hold_attribute: HoldAttribute,
+        mut outcome: ReplaceAllTraversalOutcome,
+    ) -> Result<ReplaceAllTraversalOutcome, EvalError> {
+        loop {
+            state.rewritten_args = self.append_suspended_replace_all_argument(
+                &state.head,
+                state.rewritten_args,
+                outcome.expr,
+                outcome.changed,
+            );
+            state.changed |= outcome.changed;
+            state.argument_index += 1;
+
+            loop {
+                let Some(current) = state.remaining_args.get(state.argument_index) else {
+                    return Ok(ReplaceAllTraversalOutcome {
+                        expr: Expr::call(state.head, state.rewritten_args.into_vec()),
+                        changed: state.changed,
+                    });
+                };
+
+                if source == RuleApplicationSource::ReplaceAllUnheld
+                    && hold_attribute.holds_argument(state.argument_index)
+                {
+                    state.rewritten_args = state.rewritten_args.appended(current.clone());
+                    state.argument_index += 1;
+                    continue;
+                }
+
+                let arg_result =
+                    self.apply_replace_all_owned(current.clone(), state.rules.clone(), source);
+                match arg_result {
+                    Ok(next_outcome) => {
+                        outcome = next_outcome;
+                        break;
+                    }
+                    Err(EvalError::InputRequired { request }) => {
+                        self.push_suspension_frame(move |session, value| {
+                            let outcome =
+                                ReplaceAllTraversalOutcome::from_continuation_expr(value?);
+                            session
+                                .resume_suspended_replace_all_args(
+                                    state,
+                                    source,
+                                    hold_attribute,
+                                    outcome,
+                                )
+                                .map(|outcome| outcome.into_continuation_expr())
+                        });
+                        return Err(EvalError::InputRequired { request });
+                    }
+                    Err(error) => return Err(error),
+                }
+            }
+        }
+    }
+
+    fn append_suspended_replace_all_argument(
+        &self,
+        parent_head: &Expr,
+        mut rebuilt_args: PersistentReplaceAllArgs,
+        rewritten: Expr,
+        changed: bool,
+    ) -> PersistentReplaceAllArgs {
+        if changed {
+            if let Expr::Call { head, args } = rewritten {
+                if is_system_symbol_name(&head, heads::functions::SEQUENCE)
+                    && !self.attribute_set_for_head(parent_head).sequence_hold()
+                {
+                    for arg in args {
+                        rebuilt_args = rebuilt_args.appended(arg);
+                    }
+                    return rebuilt_args;
+                }
+                return rebuilt_args.appended(Expr::call_with_shared_args(head.into_owned(), args));
+            }
+        }
+        rebuilt_args.appended(rewritten)
     }
 
     pub(in crate::runtime) fn append_changed_rewrite_argument(
@@ -293,36 +461,25 @@ impl Session {
             let outcome = match match_result {
                 Ok(outcome) => outcome,
                 Err(EvalError::InputRequired { request }) => {
-                    let rule = rules
-                        .get(index)
-                        .cloned()
-                        .expect("rewrite rule should still exist for suspended match");
-                    return self.drive_internal_value::<CompiledMatchOutcome, Option<Expr>, _>(
-                        Err(EvalError::InputRequired { request }),
-                        move |session, outcome| {
-                            record_profile_rewrite_rule_match_outcome(
+                    let state = SuspendedRewriteRuleMatch {
+                        expr,
+                        normalized_expr,
+                        rules,
+                    };
+                    self.push_suspension_frame(move |session, value| {
+                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                        session
+                            .finish_suspended_rewrite_rule_match(
+                                state,
+                                source,
+                                cursor,
+                                index,
                                 would_reject,
-                                outcome.matched,
-                            );
-                            if !outcome.matched {
-                                return session.apply_rules_once_from_list(
-                                    expr,
-                                    normalized_expr,
-                                    rules,
-                                    source,
-                                    cursor,
-                                );
-                            }
-
-                            let replaced = substitute_rule_bindings_for_rhs(
-                                &rule.rhs,
-                                &outcome.bindings,
-                                rule.rhs_may_splice_without_bindings,
-                            );
-                            session.push_rule_applied_trace(source, &expr, &rule.lhs, &replaced);
-                            Ok(Some(replaced))
-                        },
-                    );
+                                outcome,
+                            )
+                            .map(|result| result.into_continuation_expr())
+                    });
+                    return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
             };
@@ -344,4 +501,46 @@ impl Session {
             return Ok(Some(replaced));
         }
     }
+
+    fn finish_suspended_rewrite_rule_match(
+        &mut self,
+        state: SuspendedRewriteRuleMatch,
+        source: RuleApplicationSource,
+        cursor: RewriteRuleScanCursor,
+        index: usize,
+        would_reject: bool,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<Option<Expr>, EvalError> {
+        record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
+        if !outcome.matched {
+            return self.apply_rules_once_from_list(
+                state.expr,
+                state.normalized_expr,
+                state.rules,
+                source,
+                cursor,
+            );
+        }
+
+        let rule = state
+            .rules
+            .get(index)
+            .expect("rewrite rule should still exist for resumed match");
+        let replaced = substitute_rule_bindings_for_rhs(
+            &rule.rhs,
+            &outcome.bindings,
+            rule.rhs_may_splice_without_bindings,
+        );
+        self.push_rule_applied_trace(source, &state.expr, &rule.lhs, &replaced);
+        Ok(Some(replaced))
+    }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<PersistentReplaceAllArgs>();
+    assert_traces::<PersistentReplaceAllArgNode>();
+    assert_traces::<SuspendedReplaceAllArgs>();
+    assert_traces::<SuspendedRewriteRuleMatch>();
+};

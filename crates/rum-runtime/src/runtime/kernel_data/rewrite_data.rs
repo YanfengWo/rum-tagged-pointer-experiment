@@ -166,6 +166,11 @@ impl ContinuationValue for ReplaceOutcome {
 
 mod cases;
 mod replace;
+mod suspended_state;
+
+use suspended_state::{
+    FrozenRewriteQueue, FrozenRewriteValue, PersistentRewriteExprs, PersistentRewriteQueue,
+};
 
 impl Session {
     /// Evaluates the internal two-argument MatchQ bridge without constructing a call handle.

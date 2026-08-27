@@ -1,4 +1,15 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedExactDefaultValueScan {
+    down_values: Arc<[DownValue]>,
+    lookup_order: SharedArgs,
+    lookup_index: usize,
+    candidate_index: usize,
+    matched_index: usize,
+}
 
 impl Session {
     pub(super) fn try_apply_direct_default_value(
@@ -140,21 +151,79 @@ impl Session {
             match guard_result {
                 Ok(outcome) => pending = Some((index, outcome)),
                 Err(EvalError::InputRequired { request }) => {
+                    let state = SuspendedExactDefaultValueScan {
+                        down_values: Arc::from(down_values),
+                        lookup_order: SharedArgs::new(lookup_order),
+                        lookup_index,
+                        candidate_index,
+                        matched_index: index,
+                    };
                     self.push_suspension_frame(move |session, value| {
                         let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
                         session
-                            .evaluate_first_exact_default_value_from_cursor(
-                                down_values,
-                                lookup_order,
-                                lookup_index,
-                                candidate_index,
-                                Some((index, outcome)),
-                            )
+                            .resume_suspended_exact_default_value_scan(state, outcome)
                             .map(|result| result.into_continuation_expr())
                     });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
+            }
+        }
+    }
+
+    fn resume_suspended_exact_default_value_scan(
+        &mut self,
+        mut state: SuspendedExactDefaultValueScan,
+        mut outcome: CompiledMatchOutcome,
+    ) -> Result<Option<Expr>, EvalError> {
+        loop {
+            if outcome.matched {
+                let rhs = state.down_values[state.matched_index].rhs.clone();
+                return self.evaluate_definition_rhs(None, rhs).map(Some);
+            }
+            state.candidate_index = state.matched_index + 1;
+
+            loop {
+                let Some(lhs) = state.lookup_order.get(state.lookup_index) else {
+                    return Ok(None);
+                };
+                let Some((relative_index, down_value)) =
+                    exact_down_value(&state.down_values[state.candidate_index..], lhs)
+                else {
+                    state.lookup_index += 1;
+                    state.candidate_index = 0;
+                    continue;
+                };
+                state.matched_index = state.candidate_index + relative_index;
+
+                if down_value.guards.is_empty() {
+                    return self
+                        .evaluate_definition_rhs(None, down_value.rhs.clone())
+                        .map(Some);
+                }
+
+                let guard_result = self.evaluate_guard_sequence_owned(
+                    down_value.guards.clone(),
+                    SymbolExprMap::default(),
+                    SymbolExprMap::default(),
+                    None,
+                );
+                match guard_result {
+                    Ok(next_outcome) => {
+                        outcome = next_outcome;
+                        break;
+                    }
+                    Err(EvalError::InputRequired { request }) => {
+                        self.push_suspension_frame(move |session, value| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                            session
+                                .resume_suspended_exact_default_value_scan(state, outcome)
+                                .map(|result| result.into_continuation_expr())
+                        });
+                        return Err(EvalError::InputRequired { request });
+                    }
+                    Err(error) => return Err(error),
+                }
             }
         }
     }
@@ -169,3 +238,9 @@ fn exact_down_value<'a>(
         .enumerate()
         .find(|(_, down_value)| down_value.lhs == *lhs)
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedExactDefaultValueScan>();
+};

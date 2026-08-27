@@ -1,4 +1,5 @@
 use super::{outcome::*, *};
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     #[allow(dead_code)]
@@ -31,12 +32,17 @@ impl Session {
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let snapshot = BindingSnapshot::capture(&bindings, &matcher);
-        let outcome = self.match_compiled_inner_owned(matcher, value, bindings)?;
-
-        if outcome.matched {
-            Ok(outcome)
-        } else {
-            Ok(match_outcome(false, snapshot.restore(outcome.bindings)))
+        match self.match_compiled_inner_owned(matcher, value, bindings) {
+            Ok(outcome) => Ok(finish_compiled_match(snapshot, outcome)),
+            Err(EvalError::InputRequired { request }) => {
+                let snapshot = snapshot.freeze();
+                self.push_suspension_frame(move |_, value| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                    Ok(finish_suspended_compiled_match(snapshot, outcome).into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
         }
     }
 
@@ -48,16 +54,28 @@ impl Session {
         bindings_for_false: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let test_result = self.evaluate(Expr::call(test, vec![value]));
-        self.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
-            test_result,
-            move |_, result| {
-                Ok(if is_system_symbol_name(&result, "True") {
-                    match_outcome(true, bindings_for_true)
-                } else {
-                    match_outcome(false, bindings_for_false)
-                })
-            },
-        )
+        match test_result {
+            Ok(result) => Ok(if is_system_symbol_name(&result, "True") {
+                match_outcome(true, bindings_for_true)
+            } else {
+                match_outcome(false, bindings_for_false)
+            }),
+            Err(EvalError::InputRequired { request }) => {
+                let bindings_for_true = FrozenMatchBindings::freeze(bindings_for_true);
+                let bindings_for_false = FrozenMatchBindings::freeze(bindings_for_false);
+                self.push_suspension_frame(move |_, outcome| {
+                    let result = outcome?;
+                    Ok(if is_system_symbol_name(&result, "True") {
+                        match_outcome(true, bindings_for_true.into_owned())
+                    } else {
+                        match_outcome(false, bindings_for_false.into_owned())
+                    }
+                    .into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn match_compiled_alternatives_owned(
@@ -74,18 +92,44 @@ impl Session {
         let value_for_retry = value.clone();
         let alternatives_for_retry = alternatives.clone();
         let alternative_result = self.match_compiled_owned(alternative, value, bindings);
-        self.drive_internal_value(alternative_result, move |session, outcome| {
-            if outcome.matched {
-                Ok(outcome)
-            } else {
-                session.match_compiled_alternatives_owned(
-                    alternatives_for_retry,
-                    value_for_retry,
-                    outcome.bindings,
-                    index + 1,
-                )
+        match alternative_result {
+            Ok(outcome) => self.finish_compiled_alternative(
+                alternatives_for_retry,
+                value_for_retry,
+                index,
+                outcome,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                let alternatives = FrozenMatcherSequence::freeze(alternatives_for_retry);
+                self.push_suspension_frame(move |session, value| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                    session
+                        .finish_compiled_alternative(
+                            alternatives.into_vec(),
+                            value_for_retry,
+                            index,
+                            outcome,
+                        )
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
-        })
+            Err(error) => Err(error),
+        }
+    }
+
+    fn finish_compiled_alternative(
+        &mut self,
+        alternatives: Vec<MatcherNode>,
+        value: Expr,
+        index: usize,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if outcome.matched {
+            Ok(outcome)
+        } else {
+            self.match_compiled_alternatives_owned(alternatives, value, outcome.bindings, index + 1)
+        }
     }
 
     fn match_compiled_named_owned(
@@ -159,20 +203,50 @@ impl Session {
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
-        self.drive_internal_value(inner_result, move |session, outcome| {
-            if !outcome.matched {
-                return Ok(outcome);
+        match inner_result {
+            Ok(outcome) => self.finish_compiled_except_inner(excluded, value, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let excluded = FrozenMatcherValue::freeze(excluded);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_compiled_except_inner(excluded.into_inner(), value, outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
+            Err(error) => Err(error),
+        }
+    }
 
-            let excluded_result = session.match_compiled_owned(excluded, value, outcome.bindings);
-            session.drive_internal_value(excluded_result, move |_, excluded_outcome| {
-                Ok(if excluded_outcome.matched {
-                    match_outcome(false, excluded_outcome.bindings)
-                } else {
-                    match_outcome(true, excluded_outcome.bindings)
-                })
-            })
-        })
+    fn finish_compiled_except_inner(
+        &mut self,
+        excluded: MatcherNode,
+        value: Expr,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return Ok(outcome);
+        }
+
+        let excluded_result = self.match_compiled_owned(excluded, value, outcome.bindings);
+        match excluded_result {
+            Ok(excluded_outcome) => Ok(match_outcome(
+                !excluded_outcome.matched,
+                excluded_outcome.bindings,
+            )),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |_, payload| {
+                    let excluded_outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    Ok(
+                        match_outcome(!excluded_outcome.matched, excluded_outcome.bindings)
+                            .into_continuation_expr(),
+                    )
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     fn match_compiled_call_owned(
@@ -204,48 +278,37 @@ impl Session {
                 let value_head = value_head.into_owned();
                 let value_args = value_args.into_vec();
                 let head_result = self.match_compiled_owned(head, value_head, bindings);
-                self.drive_internal_value(head_result, move |session, outcome| {
-                    if !outcome.matched {
-                        let Some(one_identity_head) = one_identity_head else {
-                            return Ok(outcome);
-                        };
-
-                        return session.match_compiled_promoted_singleton_owned(
-                            args,
-                            Expr::call(flat_head, value_args),
-                            outcome.bindings,
-                            orderless,
-                            flat,
-                            Expr::Atom(Atom::Symbol(one_identity_head)),
-                        );
+                match head_result {
+                    Ok(outcome) => self.finish_compiled_call_head(
+                        args,
+                        value_args,
+                        flat_head,
+                        one_identity_head,
+                        orderless,
+                        flat,
+                        outcome,
+                    ),
+                    Err(EvalError::InputRequired { request }) => {
+                        let args = FrozenMatcherSequence::freeze(args);
+                        let value_args = SharedArgs::new(value_args);
+                        self.push_suspension_frame(move |session, payload| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                            session
+                                .finish_compiled_call_head(
+                                    args.into_vec(),
+                                    value_args.into_vec(),
+                                    flat_head,
+                                    one_identity_head,
+                                    orderless,
+                                    flat,
+                                    outcome,
+                                )
+                                .map(|outcome| outcome.into_continuation_expr())
+                        });
+                        Err(EvalError::InputRequired { request })
                     }
-
-                    if orderless {
-                        if flat {
-                            session.match_compiled_orderless_args_with_flat_head_owned(
-                                args,
-                                value_args,
-                                outcome.bindings,
-                                flat_head,
-                            )
-                        } else {
-                            session.match_compiled_orderless_args_owned(
-                                args,
-                                value_args,
-                                outcome.bindings,
-                            )
-                        }
-                    } else if flat {
-                        session.match_compiled_args_with_flat_head_owned(
-                            args,
-                            value_args,
-                            outcome.bindings,
-                            flat_head,
-                        )
-                    } else {
-                        session.match_compiled_args_owned(args, value_args, outcome.bindings)
-                    }
-                })
+                    Err(error) => Err(error),
+                }
             }
             other if one_identity_head.is_some() => self.match_compiled_promoted_singleton_owned(
                 args,
@@ -258,6 +321,55 @@ impl Session {
                 )),
             ),
             _ => Ok(match_outcome(false, bindings)),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn finish_compiled_call_head(
+        &mut self,
+        args: Vec<MatcherArg>,
+        value_args: Vec<Expr>,
+        flat_head: Expr,
+        one_identity_head: Option<Symbol>,
+        orderless: bool,
+        flat: bool,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            let Some(one_identity_head) = one_identity_head else {
+                return Ok(outcome);
+            };
+
+            return self.match_compiled_promoted_singleton_owned(
+                args,
+                Expr::call(flat_head, value_args),
+                outcome.bindings,
+                orderless,
+                flat,
+                Expr::Atom(Atom::Symbol(one_identity_head)),
+            );
+        }
+
+        if orderless {
+            if flat {
+                self.match_compiled_orderless_args_with_flat_head_owned(
+                    args,
+                    value_args,
+                    outcome.bindings,
+                    flat_head,
+                )
+            } else {
+                self.match_compiled_orderless_args_owned(args, value_args, outcome.bindings)
+            }
+        } else if flat {
+            self.match_compiled_args_with_flat_head_owned(
+                args,
+                value_args,
+                outcome.bindings,
+                flat_head,
+            )
+        } else {
+            self.match_compiled_args_owned(args, value_args, outcome.bindings)
         }
     }
 
@@ -346,59 +458,97 @@ impl Session {
                 candidate_index + 1,
             );
         }
-
-        let candidates_for_retry = candidates.clone();
-        let remaining_entries_for_retry = remaining_entries.clone();
-        let key_pattern_for_retry = key_pattern.clone();
-        let value_pattern_for_retry = value_pattern.clone();
-        let candidates_for_success = candidates.clone();
-        let remaining_entries_for_success = remaining_entries.clone();
         let candidate_key = candidate.key;
         let candidate_value = candidate.value;
+        let state = KeyValueChoiceState {
+            key_pattern,
+            value_pattern,
+            delayed,
+            remaining_entries,
+            candidates,
+            candidate_index,
+        };
 
-        let key_result = self.match_compiled_owned(key_pattern, candidate_key, bindings);
-        self.drive_internal_value(key_result, move |session, key_outcome| {
-            if !key_outcome.matched {
-                return session.match_compiled_key_value_pattern_choice_owned(
-                    key_pattern_for_retry,
-                    value_pattern_for_retry,
-                    delayed,
-                    remaining_entries_for_retry,
-                    candidates_for_retry,
-                    key_outcome.bindings,
-                    candidate_index + 1,
-                );
+        let key_result =
+            self.match_compiled_owned(state.key_pattern.clone(), candidate_key, bindings);
+        match key_result {
+            Ok(outcome) => self.finish_key_value_key_match(state, candidate_value, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedKeyValueChoice::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_key_value_key_match(state.into_owned(), candidate_value, outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
             }
+            Err(error) => Err(error),
+        }
+    }
 
-            let candidates_for_value_failure = candidates_for_success.clone();
-            let remaining_entries_for_value_failure = remaining_entries_for_success.clone();
-            let key_pattern_for_value_failure = key_pattern_for_retry.clone();
-            let value_pattern_for_value_failure = value_pattern_for_retry.clone();
+    fn finish_key_value_key_match(
+        &mut self,
+        state: KeyValueChoiceState,
+        candidate_value: Expr,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return self.match_compiled_key_value_pattern_choice_owned(
+                state.key_pattern,
+                state.value_pattern,
+                state.delayed,
+                state.remaining_entries,
+                state.candidates,
+                outcome.bindings,
+                state.candidate_index + 1,
+            );
+        }
 
-            let value_result =
-                session.match_compiled_owned(value_pattern, candidate_value, key_outcome.bindings);
-            session.drive_internal_value(value_result, move |session, value_outcome| {
-                if !value_outcome.matched {
-                    return session.match_compiled_key_value_pattern_choice_owned(
-                        key_pattern_for_value_failure,
-                        value_pattern_for_value_failure,
-                        delayed,
-                        remaining_entries_for_value_failure,
-                        candidates_for_value_failure,
-                        value_outcome.bindings,
-                        candidate_index + 1,
-                    );
-                }
+        let value_result = self.match_compiled_owned(
+            state.value_pattern.clone(),
+            candidate_value,
+            outcome.bindings,
+        );
+        match value_result {
+            Ok(outcome) => self.finish_key_value_value_match(state, outcome),
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedKeyValueChoice::freeze(state);
+                self.push_suspension_frame(move |session, payload| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                    session
+                        .finish_key_value_value_match(state.into_owned(), outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-                let mut remaining_candidates = candidates_for_success;
-                remaining_candidates.remove(candidate_index);
-                session.match_compiled_key_value_pattern_entries_owned(
-                    remaining_entries_for_success,
-                    remaining_candidates,
-                    value_outcome.bindings,
-                )
-            })
-        })
+    fn finish_key_value_value_match(
+        &mut self,
+        mut state: KeyValueChoiceState,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return self.match_compiled_key_value_pattern_choice_owned(
+                state.key_pattern,
+                state.value_pattern,
+                state.delayed,
+                state.remaining_entries,
+                state.candidates,
+                outcome.bindings,
+                state.candidate_index + 1,
+            );
+        }
+
+        state.candidates.remove(state.candidate_index);
+        self.match_compiled_key_value_pattern_entries_owned(
+            state.remaining_entries,
+            state.candidates,
+            outcome.bindings,
+        )
     }
 
     pub(super) fn evaluate_sequence_pattern_checks_owned(
@@ -420,20 +570,33 @@ impl Session {
                 let snapshot_for_next = snapshot.clone();
                 let condition_result =
                     self.evaluate_guard_owned(condition, bindings, snapshot, None);
-
-                self.drive_internal_value(condition_result, move |session, outcome| {
-                    if outcome.matched {
-                        session.evaluate_sequence_pattern_checks_owned(
-                            checks_for_next,
-                            sequence_for_next,
-                            outcome.bindings,
-                            snapshot_for_next,
-                            index + 1,
-                        )
-                    } else {
-                        Ok(outcome)
+                match condition_result {
+                    Ok(outcome) => self.finish_sequence_condition_check(
+                        checks_for_next,
+                        sequence_for_next,
+                        snapshot_for_next,
+                        index,
+                        outcome,
+                    ),
+                    Err(EvalError::InputRequired { request }) => {
+                        let checks = FrozenMatcherSequence::freeze(checks_for_next);
+                        let snapshot = FrozenMatchBindings::freeze(snapshot_for_next);
+                        self.push_suspension_frame(move |session, payload| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                            session
+                                .finish_sequence_condition_check(
+                                    checks.into_vec(),
+                                    sequence_for_next,
+                                    snapshot.into_owned(),
+                                    index,
+                                    outcome,
+                                )
+                                .map(|outcome| outcome.into_continuation_expr())
+                        });
+                        Err(EvalError::InputRequired { request })
                     }
-                })
+                    Err(error) => Err(error),
+                }
             }
             SequencePatternCheck::PatternTest(test) => {
                 let checks_for_next = checks.clone();
@@ -443,21 +606,81 @@ impl Session {
                 let snapshot_for_false = snapshot.clone();
                 let test_result =
                     self.evaluate_pattern_test_owned(test, sequence_for_test, bindings, snapshot);
-
-                self.drive_internal_value(test_result, move |session, outcome| {
-                    if outcome.matched {
-                        session.evaluate_sequence_pattern_checks_owned(
-                            checks_for_next,
-                            sequence_for_next,
-                            bindings_for_true,
-                            snapshot_for_false,
-                            index + 1,
-                        )
-                    } else {
-                        Ok(outcome)
+                match test_result {
+                    Ok(outcome) => self.finish_sequence_pattern_test_check(
+                        checks_for_next,
+                        sequence_for_next,
+                        bindings_for_true,
+                        snapshot_for_false,
+                        index,
+                        outcome,
+                    ),
+                    Err(EvalError::InputRequired { request }) => {
+                        let checks = FrozenMatcherSequence::freeze(checks_for_next);
+                        let bindings = FrozenMatchBindings::freeze(bindings_for_true);
+                        let snapshot = FrozenMatchBindings::freeze(snapshot_for_false);
+                        self.push_suspension_frame(move |session, payload| {
+                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
+                            session
+                                .finish_sequence_pattern_test_check(
+                                    checks.into_vec(),
+                                    sequence_for_next,
+                                    bindings.into_owned(),
+                                    snapshot.into_owned(),
+                                    index,
+                                    outcome,
+                                )
+                                .map(|outcome| outcome.into_continuation_expr())
+                        });
+                        Err(EvalError::InputRequired { request })
                     }
-                })
+                    Err(error) => Err(error),
+                }
             }
+        }
+    }
+
+    fn finish_sequence_condition_check(
+        &mut self,
+        checks: Vec<SequencePatternCheck>,
+        sequence_value: Expr,
+        snapshot: SymbolExprMap,
+        index: usize,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if outcome.matched {
+            self.evaluate_sequence_pattern_checks_owned(
+                checks,
+                sequence_value,
+                outcome.bindings,
+                snapshot,
+                index + 1,
+            )
+        } else {
+            Ok(outcome)
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn finish_sequence_pattern_test_check(
+        &mut self,
+        checks: Vec<SequencePatternCheck>,
+        sequence_value: Expr,
+        bindings: SymbolExprMap,
+        snapshot: SymbolExprMap,
+        index: usize,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if outcome.matched {
+            self.evaluate_sequence_pattern_checks_owned(
+                checks,
+                sequence_value,
+                bindings,
+                snapshot,
+                index + 1,
+            )
+        } else {
+            Ok(outcome)
         }
     }
 
@@ -501,6 +724,49 @@ impl Session {
     }
 }
 
+struct KeyValueChoiceState {
+    key_pattern: MatcherNode,
+    value_pattern: MatcherNode,
+    delayed: bool,
+    remaining_entries: Vec<(MatcherNode, MatcherNode, bool)>,
+    candidates: Vec<AssociationEntryForm>,
+    candidate_index: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedKeyValueChoice {
+    key_pattern: FrozenMatcherValue<MatcherNode>,
+    value_pattern: FrozenMatcherValue<MatcherNode>,
+    delayed: bool,
+    remaining_entries: FrozenMatcherSequence<(MatcherNode, MatcherNode, bool)>,
+    candidates: FrozenMatcherSequence<AssociationEntryForm>,
+    candidate_index: usize,
+}
+
+impl SuspendedKeyValueChoice {
+    fn freeze(state: KeyValueChoiceState) -> Self {
+        Self {
+            key_pattern: FrozenMatcherValue::freeze(state.key_pattern),
+            value_pattern: FrozenMatcherValue::freeze(state.value_pattern),
+            delayed: state.delayed,
+            remaining_entries: FrozenMatcherSequence::freeze(state.remaining_entries),
+            candidates: FrozenMatcherSequence::freeze(state.candidates),
+            candidate_index: state.candidate_index,
+        }
+    }
+
+    fn into_owned(self) -> KeyValueChoiceState {
+        KeyValueChoiceState {
+            key_pattern: self.key_pattern.into_inner(),
+            value_pattern: self.value_pattern.into_inner(),
+            delayed: self.delayed,
+            remaining_entries: self.remaining_entries.into_vec(),
+            candidates: self.candidates.into_vec(),
+            candidate_index: self.candidate_index,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct BindingSnapshot {
     entries: Vec<(Symbol, Option<Expr>)>,
@@ -533,6 +799,33 @@ impl BindingSnapshot {
         }
         bindings
     }
+
+    fn freeze(self) -> FrozenMatcherSequence<(Symbol, Option<Expr>)> {
+        FrozenMatcherSequence::freeze(self.entries)
+    }
+}
+
+fn finish_compiled_match(
+    snapshot: BindingSnapshot,
+    outcome: CompiledMatchOutcome,
+) -> CompiledMatchOutcome {
+    if outcome.matched {
+        outcome
+    } else {
+        match_outcome(false, snapshot.restore(outcome.bindings))
+    }
+}
+
+fn finish_suspended_compiled_match(
+    snapshot: FrozenMatcherSequence<(Symbol, Option<Expr>)>,
+    outcome: CompiledMatchOutcome,
+) -> CompiledMatchOutcome {
+    finish_compiled_match(
+        BindingSnapshot {
+            entries: snapshot.into_vec(),
+        },
+        outcome,
+    )
 }
 
 fn collect_matcher_binding_names(matcher: &MatcherNode, names: &mut BTreeSet<Symbol>) {
@@ -590,3 +883,9 @@ fn collect_matcher_arg_binding_names(arg: &MatcherArg, names: &mut BTreeSet<Symb
         }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SuspendedKeyValueChoice>();
+};

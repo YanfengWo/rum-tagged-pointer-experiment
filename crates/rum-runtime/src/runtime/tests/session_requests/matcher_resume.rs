@@ -88,6 +88,36 @@ fn sequence_binding_vec_continuation_roundtrip_preserves_multiple_bindings() {
 }
 
 #[test]
+fn matcher_binding_numeric_value_survives_suspension() {
+    assert_suspend_resume_matches_queued(
+        "bindingProbe[x_ /; MatchQ[InputString[\"binding: \"], \"yes\"]] := x; \
+         bindingProbe[41]",
+        &["yes"],
+        "41",
+    );
+}
+
+#[test]
+fn guarded_replacement_numeric_value_survives_suspension() {
+    assert_suspend_resume_matches_queued(
+        "Replace[5, x_Integer :> ((x + 10) /; \
+         MatchQ[InputString[\"replacement: \"], \"yes\"])]",
+        &["yes"],
+        "15",
+    );
+}
+
+#[test]
+fn nested_rule_application_numeric_value_survives_suspension() {
+    assert_suspend_resume_matches_queued(
+        "ReplaceAll[f[2], f[x_] :> Replace[x, y_Integer :> ((y * 3) /; \
+         MatchQ[InputString[\"nested rule: \"], \"yes\"])]]",
+        &["yes"],
+        "6",
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_conditioned_matchq() {
     let mut session = session_with_test_control_builtins();
 

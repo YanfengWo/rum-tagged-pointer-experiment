@@ -100,19 +100,55 @@ impl Session {
         let DefinitionConditionMatcher { inner, lhs, guards } = matcher;
         let option_scope = self.option_value_scope_for_definition(&lhs, &value);
         let inner_result = self.match_compiled_owned(inner, value, bindings);
-
-        self.drive_internal_value(inner_result, move |session, outcome| {
-            if !outcome.matched {
-                return Ok(outcome);
+        match inner_result {
+            Ok(outcome) => {
+                self.finish_definition_condition_match_owned(guards, option_scope, outcome)
             }
+            Err(EvalError::InputRequired { request }) => {
+                let guards = SharedArgs::new(guards.into_vec());
+                self.push_suspension_frame(move |session, value| {
+                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+                    session
+                        .finish_definition_condition_match_suspended(guards, option_scope, outcome)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
 
-            let false_bindings = outcome.bindings.clone();
-            session.evaluate_guard_sequence_owned(
-                guards,
-                outcome.bindings,
-                false_bindings,
-                option_scope,
-            )
+    fn finish_definition_condition_match_owned(
+        &mut self,
+        guards: Box<[Expr]>,
+        option_scope: Option<OptionValueScope>,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return Ok(outcome);
+        }
+
+        let false_bindings = outcome.bindings.clone();
+        self.evaluate_guard_sequence_owned(guards, outcome.bindings, false_bindings, option_scope)
+    }
+
+    fn finish_definition_condition_match_suspended(
+        &mut self,
+        guards: SharedArgs,
+        option_scope: Option<OptionValueScope>,
+        outcome: CompiledMatchOutcome,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !outcome.matched {
+            return Ok(outcome);
+        }
+
+        let false_bindings = outcome.bindings.clone();
+        self.evaluate_suspended_guards(SuspendedGuardEvaluation {
+            guards: SuspendedGuards::Many(guards),
+            bindings: FrozenMatchBindings::freeze(outcome.bindings),
+            false_bindings: FrozenMatchBindings::freeze(false_bindings),
+            option_scope,
+            index: 0,
         })
     }
 
@@ -148,6 +184,34 @@ impl Session {
         )
     }
 
+    pub(in crate::runtime) fn evaluate_guard_sequence_readonly_suspended(
+        &mut self,
+        guards: SharedArgs,
+        bindings: FrozenMatchBindings,
+        option_scope: Option<OptionValueScope>,
+    ) -> Result<bool, EvalError> {
+        self.evaluate_readonly_suspended_guards(SuspendedReadonlyGuardEvaluation {
+            guards,
+            bindings,
+            option_scope,
+            index: 0,
+        })
+    }
+
+    pub(in crate::runtime) fn evaluate_guard_sequence_same_bindings_suspended(
+        &mut self,
+        guards: SharedArgs,
+        bindings: SymbolExprMap,
+        option_scope: Option<OptionValueScope>,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        self.evaluate_single_binding_suspended_guards(SuspendedSingleBindingGuardEvaluation {
+            guards,
+            bindings: FrozenMatchBindings::freeze(bindings),
+            option_scope,
+            index: 0,
+        })
+    }
+
     fn evaluate_owned_guards(
         &mut self,
         guards: OwnedGuards,
@@ -162,11 +226,10 @@ impl Session {
 
         let guard_expr = substitute_bindings(guard, &bindings);
         let guard_result = self.evaluate_with_option_value_scope(option_scope.clone(), guard_expr);
-        self.drive_evaluated_value::<Expr, CompiledMatchOutcome, _>(
-            guard_result,
-            move |session, result| {
+        match guard_result {
+            Ok(result) => {
                 if is_system_symbol_name(&result, heads::structure::TRUE) {
-                    session.evaluate_owned_guards(
+                    self.evaluate_owned_guards(
                         guards,
                         bindings,
                         false_bindings,
@@ -176,8 +239,130 @@ impl Session {
                 } else {
                     Ok(guard_outcome(false, false_bindings))
                 }
-            },
-        )
+            }
+            Err(EvalError::InputRequired { request }) => {
+                let state = SuspendedGuardEvaluation {
+                    guards: guards.freeze(),
+                    bindings: FrozenMatchBindings::freeze(bindings),
+                    false_bindings: FrozenMatchBindings::freeze(false_bindings),
+                    option_scope,
+                    index,
+                };
+                self.push_suspension_frame(move |session, outcome| {
+                    let result = outcome?;
+                    session
+                        .resume_suspended_guard(state, result)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_suspended_guard(
+        &mut self,
+        mut state: SuspendedGuardEvaluation,
+        result: Expr,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        if !is_system_symbol_name(&result, heads::structure::TRUE) {
+            return Ok(guard_outcome(false, state.false_bindings.into_owned()));
+        }
+        state.index += 1;
+        self.evaluate_suspended_guards(state)
+    }
+
+    fn evaluate_suspended_guards(
+        &mut self,
+        state: SuspendedGuardEvaluation,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let Some(guard) = state.guards.get(state.index) else {
+            return Ok(guard_outcome(true, state.bindings.into_owned()));
+        };
+
+        let guard_expr = substitute_bindings(guard, state.bindings.as_map());
+        let guard_result =
+            self.evaluate_with_option_value_scope(state.option_scope.clone(), guard_expr);
+        match guard_result {
+            Ok(result) => self.resume_suspended_guard(state, result),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    let result = outcome?;
+                    session
+                        .resume_suspended_guard(state, result)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn evaluate_readonly_suspended_guards(
+        &mut self,
+        mut state: SuspendedReadonlyGuardEvaluation,
+    ) -> Result<bool, EvalError> {
+        let Some(guard) = state.guards.get(state.index) else {
+            return Ok(true);
+        };
+        let guard_expr = substitute_bindings(guard, state.bindings.as_map());
+        let guard_result =
+            self.evaluate_with_option_value_scope(state.option_scope.clone(), guard_expr);
+        match guard_result {
+            Ok(result) if is_system_symbol_name(&result, heads::structure::TRUE) => {
+                state.index += 1;
+                self.evaluate_readonly_suspended_guards(state)
+            }
+            Ok(_) => Ok(false),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    let result = outcome?;
+                    if !is_system_symbol_name(&result, heads::structure::TRUE) {
+                        return Ok(false.into_continuation_expr());
+                    }
+                    state.index += 1;
+                    session
+                        .evaluate_readonly_suspended_guards(state)
+                        .map(|matched| matched.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn evaluate_single_binding_suspended_guards(
+        &mut self,
+        mut state: SuspendedSingleBindingGuardEvaluation,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        let Some(guard) = state.guards.get(state.index) else {
+            return Ok(guard_outcome(true, state.bindings.into_owned()));
+        };
+        let guard_expr = substitute_bindings(guard, state.bindings.as_map());
+        let guard_result =
+            self.evaluate_with_option_value_scope(state.option_scope.clone(), guard_expr);
+        match guard_result {
+            Ok(result) if is_system_symbol_name(&result, heads::structure::TRUE) => {
+                state.index += 1;
+                self.evaluate_single_binding_suspended_guards(state)
+            }
+            Ok(_) => Ok(guard_outcome(false, state.bindings.into_owned())),
+            Err(EvalError::InputRequired { request }) => {
+                self.push_suspension_frame(move |session, outcome| {
+                    let result = outcome?;
+                    if !is_system_symbol_name(&result, heads::structure::TRUE) {
+                        return Ok(guard_outcome(false, state.bindings.into_owned())
+                            .into_continuation_expr());
+                    }
+                    state.index += 1;
+                    session
+                        .evaluate_single_binding_suspended_guards(state)
+                        .map(|outcome| outcome.into_continuation_expr())
+                });
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
     }
 }
 
@@ -194,6 +379,53 @@ impl OwnedGuards {
             Self::Many(guards) => guards.get(index),
         }
     }
+
+    fn freeze(self) -> SuspendedGuards {
+        match self {
+            Self::One(guard) => SuspendedGuards::One(guard),
+            Self::Many(guards) => SuspendedGuards::Many(SharedArgs::new(guards.into_vec())),
+        }
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
+enum SuspendedGuards {
+    One(Expr),
+    Many(SharedArgs),
+}
+
+impl SuspendedGuards {
+    fn get(&self, index: usize) -> Option<&Expr> {
+        match self {
+            Self::One(guard) => (index == 0).then_some(guard),
+            Self::Many(guards) => guards.get(index),
+        }
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedGuardEvaluation {
+    guards: SuspendedGuards,
+    bindings: FrozenMatchBindings,
+    false_bindings: FrozenMatchBindings,
+    option_scope: Option<OptionValueScope>,
+    index: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedReadonlyGuardEvaluation {
+    guards: SharedArgs,
+    bindings: FrozenMatchBindings,
+    option_scope: Option<OptionValueScope>,
+    index: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct SuspendedSingleBindingGuardEvaluation {
+    guards: SharedArgs,
+    bindings: FrozenMatchBindings,
+    option_scope: Option<OptionValueScope>,
+    index: usize,
 }
 
 fn guard_outcome(matched: bool, bindings: SymbolExprMap) -> CompiledMatchOutcome {
@@ -221,4 +453,8 @@ pub fn evaluate_definition_rhs_guards_for_match(
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<OwnedGuards>();
+    assert_traces::<SuspendedGuardEvaluation>();
+    assert_traces::<SuspendedGuards>();
+    assert_traces::<SuspendedReadonlyGuardEvaluation>();
+    assert_traces::<SuspendedSingleBindingGuardEvaluation>();
 };

@@ -7,6 +7,11 @@ mod parsing;
 mod plan;
 mod replace_at;
 mod replace_part;
+mod suspended_state;
+
+use suspended_state::{
+    FrozenReplaceSequence, PersistentReplacePartTargets, SuspendedGuardedTargetList,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct ReplacePartRule {
