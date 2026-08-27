@@ -77,6 +77,28 @@ rather than duplicating them.
    the numbers I reproduce, not the report's interpretation.
 4. Only then do I commit and dispatch the next brief.
 
+## The standard for choosing between options (user ruling 2026-08-27)
+
+**Pick the best and most correct option. Cost arguments do not count.** This
+is a research/experimental project built with coding agents: there are no
+downstream users, so no schedule pressure, and no human labour to budget. The
+closest analogy is a portfolio piece — the point is to show what is possible.
+
+Consequences for how I present and pick work:
+
+- **Never score an option down for its size.** "398 call sites" is a
+  description of the work, not an argument against it.
+- **Do not propose stopgap-now / real-fix-later** unless the user asks to stop
+  the bleeding. A temporary patch is itself debt. Go straight at the right fix.
+- The arguments that still count: correctness, semantic loss, whether the fix
+  is structurally unavoidable, whether it leaves an open-ended obligation,
+  enforceability, measurability.
+- Corollary: **a fix the compiler or a derive enforces always beats one that
+  relies on people remembering**, even an order of magnitude more expensive.
+- **The boundary**: this retires cost arguments, not design restraint. Scope
+  is still set by the problem; over-generalized scope is still a stop. Every
+  hard line below is untouched.
+
 ## Hard lines I enforce (do not let these drift)
 
 - **Reply to the user in Chinese — always.** This project's working language
