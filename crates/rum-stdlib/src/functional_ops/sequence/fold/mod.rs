@@ -55,8 +55,8 @@ pub(crate) fn eval_fold_pair(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    match args {
+    let args_slice = args.as_ref();
+    match args_slice {
         [operator, list_expr] => {
             apply_fold_pair(session, head, operator, None, list_expr, None, args)
         }
@@ -78,7 +78,7 @@ pub(crate) fn eval_fold_pair(
             Some(projector.clone()),
             args,
         ),
-        _ => Ok(session.invalid_call_with_arg_range("FoldPair", args, 2, 4)),
+        _ => Ok(session.invalid_call_with_arg_range("FoldPair", args_slice, 2, 4)),
     }
 }
 
@@ -87,8 +87,8 @@ pub(crate) fn eval_fold_while(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    match args {
+    let args_slice = args.as_ref();
+    match args_slice {
         [operator, test] => Ok(variadic_operator_form_with_suffix(
             "FoldWhile",
             vec![operator.clone()],
@@ -130,7 +130,7 @@ pub(crate) fn eval_fold_while(
             Some(n_expr),
             args,
         ),
-        _ => Ok(session.invalid_call_with_arg_range("FoldWhile", args, 2, 6)),
+        _ => Ok(session.invalid_call_with_arg_range("FoldWhile", args_slice, 2, 6)),
     }
 }
 
@@ -139,8 +139,8 @@ pub(crate) fn eval_sequence_fold(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    match args {
+    let args_slice = args.as_ref();
+    match args_slice {
         [operator, seeds, items] => {
             apply_sequence_fold(session, head, operator, seeds, items, None, false, args)
         }
@@ -154,7 +154,7 @@ pub(crate) fn eval_sequence_fold(
             false,
             args,
         ),
-        _ => Ok(session.invalid_call_with_arg_range("SequenceFold", args, 3, 4)),
+        _ => Ok(session.invalid_call_with_arg_range("SequenceFold", args_slice, 3, 4)),
     }
 }
 
@@ -163,8 +163,8 @@ pub(crate) fn eval_sequence_fold_list(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    match args {
+    let args_slice = args.as_ref();
+    match args_slice {
         [operator, seeds, items] => {
             apply_sequence_fold(session, head, operator, seeds, items, None, true, args)
         }
@@ -178,7 +178,7 @@ pub(crate) fn eval_sequence_fold_list(
             true,
             args,
         ),
-        _ => Ok(session.invalid_call_with_arg_range("SequenceFoldList", args, 3, 4)),
+        _ => Ok(session.invalid_call_with_arg_range("SequenceFoldList", args_slice, 3, 4)),
     }
 }
 

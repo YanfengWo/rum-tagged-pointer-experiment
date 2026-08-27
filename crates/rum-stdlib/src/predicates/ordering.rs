@@ -12,10 +12,25 @@ struct OrderedQComparatorState {
 }
 
 #[derive(FrameRootTrace)]
+struct SuspendedOrderedQComparatorState {
+    ordering: Expr,
+    items: FrozenPredicateSequence<Expr>,
+    index: usize,
+}
+
+#[derive(FrameRootTrace)]
 struct LexicographicListComparatorState {
     ordering: Expr,
     lhs: Vec<Expr>,
     rhs: Vec<Expr>,
+    index: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct SuspendedLexicographicListComparatorState {
+    ordering: Expr,
+    lhs: FrozenPredicateSequence<Expr>,
+    rhs: FrozenPredicateSequence<Expr>,
     index: usize,
 }
 
@@ -126,8 +141,13 @@ fn resume_ordered_q_comparator(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedOrderedQComparatorState {
+                            ordering: state.ordering,
+                            items: FrozenPredicateSequence::freeze(state.items),
+                            index: state.index,
+                        };
                         move |session, value| {
-                            resume_ordered_q_comparator_with_value(session, state, value)
+                            resume_suspended_ordered_q_comparator_with_value(session, state, value)
                         }
                     },
                 );
@@ -144,17 +164,51 @@ fn resume_ordered_q_comparator(
     Ok(predicate_bool_expr(true))
 }
 
-fn resume_ordered_q_comparator_with_value(
+fn resume_suspended_ordered_q_comparator(
     session: &mut Session,
-    mut state: OrderedQComparatorState,
+    mut state: SuspendedOrderedQComparatorState,
+) -> Result<Expr, EvalError> {
+    while state.index + 1 < state.items.len() {
+        let value = match eval_binary_predicate(
+            session,
+            &state.ordering,
+            state.items.get(state.index).expect("item should exist"),
+            state
+                .items
+                .get(state.index + 1)
+                .expect("next item should exist"),
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_ordered_q_comparator_with_value(session, state, value)
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        if !comparator_says_before(&value) {
+            return Ok(predicate_bool_expr(false));
+        }
+        state.index += 1;
+    }
+    Ok(predicate_bool_expr(true))
+}
+
+fn resume_suspended_ordered_q_comparator_with_value(
+    session: &mut Session,
+    mut state: SuspendedOrderedQComparatorState,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if !comparator_says_before(&value) {
         return Ok(predicate_bool_expr(false));
     }
-
     state.index += 1;
-    resume_ordered_q_comparator(session, state)
+    resume_suspended_ordered_q_comparator(session, state)
 }
 
 pub(crate) fn eval_lexicographic_order(
@@ -220,8 +274,14 @@ fn resume_lexicographic_list_comparator(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedLexicographicListComparatorState {
+                            ordering: state.ordering,
+                            lhs: FrozenPredicateSequence::freeze(state.lhs),
+                            rhs: FrozenPredicateSequence::freeze(state.rhs),
+                            index: state.index,
+                        };
                         move |session, value| {
-                            resume_lexicographic_list_comparator_with_forward_value(
+                            resume_suspended_lexicographic_list_comparator_with_forward_value(
                                 session, state, value,
                             )
                         }
@@ -246,8 +306,14 @@ fn resume_lexicographic_list_comparator(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedLexicographicListComparatorState {
+                            ordering: state.ordering,
+                            lhs: FrozenPredicateSequence::freeze(state.lhs),
+                            rhs: FrozenPredicateSequence::freeze(state.rhs),
+                            index: state.index,
+                        };
                         move |session, value| {
-                            resume_lexicographic_list_comparator_with_reverse_value(
+                            resume_suspended_lexicographic_list_comparator_with_reverse_value(
                                 session, state, value,
                             )
                         }
@@ -266,20 +332,77 @@ fn resume_lexicographic_list_comparator(
     Ok(order_result_expr(state.lhs.len().cmp(&state.rhs.len())))
 }
 
-fn resume_lexicographic_list_comparator_with_forward_value(
+fn resume_suspended_lexicographic_list_comparator(
     session: &mut Session,
-    state: LexicographicListComparatorState,
+    mut state: SuspendedLexicographicListComparatorState,
+) -> Result<Expr, EvalError> {
+    while state.index < state.lhs.len() && state.index < state.rhs.len() {
+        let forward_value = match eval_binary_predicate(
+            session,
+            &state.ordering,
+            state.lhs.get(state.index).expect("lhs item should exist"),
+            state.rhs.get(state.index).expect("rhs item should exist"),
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_lexicographic_list_comparator_with_forward_value(
+                                session, state, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        if comparator_says_before(&forward_value) {
+            return Ok(order_result_expr(std::cmp::Ordering::Less));
+        }
+        let reverse_value = match eval_binary_predicate(
+            session,
+            &state.ordering,
+            state.rhs.get(state.index).expect("rhs item should exist"),
+            state.lhs.get(state.index).expect("lhs item should exist"),
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_lexicographic_list_comparator_with_reverse_value(
+                                session, state, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        if comparator_says_before(&reverse_value) {
+            return Ok(order_result_expr(std::cmp::Ordering::Greater));
+        }
+        state.index += 1;
+    }
+    Ok(order_result_expr(state.lhs.len().cmp(&state.rhs.len())))
+}
+
+fn resume_suspended_lexicographic_list_comparator_with_forward_value(
+    session: &mut Session,
+    state: SuspendedLexicographicListComparatorState,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if comparator_says_before(&value) {
         return Ok(order_result_expr(std::cmp::Ordering::Less));
     }
-
     let value = match eval_binary_predicate(
         session,
         &state.ordering,
-        &state.rhs[state.index],
-        &state.lhs[state.index],
+        state.rhs.get(state.index).expect("rhs item should exist"),
+        state.lhs.get(state.index).expect("lhs item should exist"),
     ) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
@@ -287,7 +410,7 @@ fn resume_lexicographic_list_comparator_with_forward_value(
                 Err(EvalError::InputRequired { request }),
                 || {
                     move |session, value| {
-                        resume_lexicographic_list_comparator_with_reverse_value(
+                        resume_suspended_lexicographic_list_comparator_with_reverse_value(
                             session, state, value,
                         )
                     }
@@ -296,21 +419,19 @@ fn resume_lexicographic_list_comparator_with_forward_value(
         }
         Err(error) => return Err(error),
     };
-
-    resume_lexicographic_list_comparator_with_reverse_value(session, state, value)
+    resume_suspended_lexicographic_list_comparator_with_reverse_value(session, state, value)
 }
 
-fn resume_lexicographic_list_comparator_with_reverse_value(
+fn resume_suspended_lexicographic_list_comparator_with_reverse_value(
     session: &mut Session,
-    mut state: LexicographicListComparatorState,
+    mut state: SuspendedLexicographicListComparatorState,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if comparator_says_before(&value) {
         return Ok(order_result_expr(std::cmp::Ordering::Greater));
     }
-
     state.index += 1;
-    resume_lexicographic_list_comparator(session, state)
+    resume_suspended_lexicographic_list_comparator(session, state)
 }
 
 fn resume_lexicographic_pair_comparator(
@@ -516,4 +637,6 @@ const _: fn() = || {
     assert_traces::<LexicographicListComparatorState>();
     assert_traces::<LexicographicPairComparatorState>();
     assert_traces::<OrderedQComparatorState>();
+    assert_traces::<SuspendedOrderedQComparatorState>();
+    assert_traces::<SuspendedLexicographicListComparatorState>();
 };

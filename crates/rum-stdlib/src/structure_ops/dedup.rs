@@ -33,6 +33,11 @@ impl AdaptiveExprSet {
         }
         true
     }
+
+    fn into_hash_set(self) -> HashSet<Expr> {
+        self.indexed
+            .unwrap_or_else(|| self.linear.into_iter().collect())
+    }
 }
 
 #[derive(FrameRootTrace)]
@@ -167,8 +172,11 @@ fn resume_delete_duplicates_by_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let items = FrozenStructureSequence::freeze(items);
+                        let keys = PersistentStructureSet::freeze(keys.into_hash_set());
+                        let kept = PersistentStructureSequence::freeze(kept);
                         move |session, key| {
-                            resume_delete_duplicates_by_with_key(
+                            resume_suspended_delete_duplicates_by_with_key(
                                 session, expr_head, function, items, index, keys, kept, item, key,
                             )
                         }
@@ -186,21 +194,60 @@ fn resume_delete_duplicates_by_from_index(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn resume_delete_duplicates_by_with_key(
+fn resume_suspended_delete_duplicates_by_from_index(
     session: &mut Session,
     expr_head: Expr,
     function: Expr,
-    items: Vec<Expr>,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    mut keys: PersistentStructureSet<Expr>,
+    mut kept: PersistentStructureSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            return Ok(Expr::call(expr_head, kept.to_vec()));
+        };
+        let key = match session.evaluate(Expr::call(function.clone(), vec![item.clone()])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, key| {
+                            resume_suspended_delete_duplicates_by_with_key(
+                                session, expr_head, function, items, index, keys, kept, item, key,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        let (next_keys, inserted) = keys.inserted(key);
+        keys = next_keys;
+        if inserted {
+            kept = kept.appended(item);
+        }
+        index += 1;
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_delete_duplicates_by_with_key(
+    session: &mut Session,
+    expr_head: Expr,
+    function: Expr,
+    items: FrozenStructureSequence<Expr>,
     index: usize,
-    mut keys: AdaptiveExprSet,
-    mut kept: Vec<Expr>,
+    keys: PersistentStructureSet<Expr>,
+    kept: PersistentStructureSequence<Expr>,
     item: Expr,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    if keys.insert(key) {
-        kept.push(item);
-    }
-    resume_delete_duplicates_by_from_index(
+    let (keys, inserted) = keys.inserted(key);
+    let kept = if inserted { kept.appended(item) } else { kept };
+    resume_suspended_delete_duplicates_by_from_index(
         session,
         expr_head,
         function,
@@ -240,9 +287,18 @@ fn resume_delete_duplicates_test_from_kept(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let items = FrozenStructureSequence::freeze(state.items);
+                        let kept = PersistentStructureSequence::freeze(state.kept);
                         move |session, value| {
-                            resume_delete_duplicates_test_with_value(
-                                session, state, kept_index, value,
+                            resume_suspended_delete_duplicates_test_with_value(
+                                session,
+                                state.expr_head,
+                                state.test,
+                                items,
+                                state.index,
+                                kept,
+                                kept_index,
+                                value,
                             )
                         }
                     },
@@ -260,18 +316,79 @@ fn resume_delete_duplicates_test_from_kept(
     }
 }
 
-fn resume_delete_duplicates_test_with_value(
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_delete_duplicates_test_from_kept(
     session: &mut Session,
-    mut state: DeleteDuplicatesTestState,
+    expr_head: Expr,
+    test: Expr,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    mut kept: PersistentStructureSequence<Expr>,
+    mut kept_index: usize,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= items.len() {
+            return Ok(Expr::call(expr_head, kept.to_vec()));
+        }
+        if kept_index >= kept.len() {
+            kept = kept.appended(items.get(index).expect("item should exist").clone());
+            index += 1;
+            kept_index = 0;
+            continue;
+        }
+
+        let result = eval_binary_predicate(
+            session,
+            &test,
+            items.get(index).expect("item should exist"),
+            kept.get(kept_index).expect("kept item should exist"),
+        );
+        let value = match result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_delete_duplicates_test_with_value(
+                                session, expr_head, test, items, index, kept, kept_index, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if is_true_expr(&value) {
+            index += 1;
+            kept_index = 0;
+        } else {
+            kept_index += 1;
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_delete_duplicates_test_with_value(
+    session: &mut Session,
+    expr_head: Expr,
+    test: Expr,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    kept: PersistentStructureSequence<Expr>,
     kept_index: usize,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        state.index += 1;
-        resume_delete_duplicates_test_from_kept(session, state, 0)
+    let kept_index = if is_true_expr(&value) {
+        index += 1;
+        0
     } else {
-        resume_delete_duplicates_test_from_kept(session, state, kept_index + 1)
-    }
+        kept_index + 1
+    };
+    resume_suspended_delete_duplicates_test_from_kept(
+        session, expr_head, test, items, index, kept, kept_index,
+    )
 }
 
 fn invalid_delete_duplicates_normal_call(

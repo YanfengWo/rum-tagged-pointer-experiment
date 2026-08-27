@@ -186,14 +186,12 @@ pub(crate) fn eval_associate_to(
         let args = args.clone();
         let target_expr = target_expr.clone();
         let spec = spec.clone();
-        move |session, expr| {
-            finish_associate_to_value(session, args.as_ref().to_vec(), target_expr, expr, spec)
-        }
+        move |session, expr| finish_associate_to_value(session, args, target_expr, expr, spec)
     })?;
 
     finish_associate_to_value(
         session,
-        args_slice.to_vec(),
+        args.clone(),
         target_expr.clone(),
         expr,
         spec.clone(),
@@ -202,7 +200,7 @@ pub(crate) fn eval_associate_to(
 
 fn finish_associate_to_value(
     session: &mut Session,
-    call_args: Vec<Expr>,
+    call_args: SharedArgs,
     target_expr: Expr,
     expr: Expr,
     spec: Expr,
@@ -210,7 +208,7 @@ fn finish_associate_to_value(
     let Some(updated) = apply_associate_to_value(expr, spec) else {
         return Ok(session.invalid_call_with_message(
             "AssociateTo",
-            &call_args,
+            call_args.as_ref(),
             "invak",
             invalid_association_message(&target_expr),
         ));
@@ -319,14 +317,12 @@ pub(crate) fn eval_key_drop_from(
         let args = args.clone();
         let target_expr = target_expr.clone();
         let key_spec = key_spec.clone();
-        move |session, expr| {
-            finish_key_drop_from_value(session, args.as_ref().to_vec(), target_expr, expr, key_spec)
-        }
+        move |session, expr| finish_key_drop_from_value(session, args, target_expr, expr, key_spec)
     })?;
 
     finish_key_drop_from_value(
         session,
-        args_slice.to_vec(),
+        args.clone(),
         target_expr.clone(),
         expr,
         key_spec.clone(),
@@ -335,7 +331,7 @@ pub(crate) fn eval_key_drop_from(
 
 fn finish_key_drop_from_value(
     session: &mut Session,
-    call_args: Vec<Expr>,
+    call_args: SharedArgs,
     target_expr: Expr,
     expr: Expr,
     key_spec: Expr,
@@ -343,7 +339,7 @@ fn finish_key_drop_from_value(
     let Some(updated) = apply_key_drop_from_value(expr, key_spec) else {
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
-            &call_args,
+            call_args.as_ref(),
             "invak",
             invalid_association_message(&target_expr),
         ));

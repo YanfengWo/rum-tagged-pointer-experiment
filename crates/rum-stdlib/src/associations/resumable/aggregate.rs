@@ -83,7 +83,7 @@ pub(crate) fn eval_merge_nested(
 
 pub(crate) fn eval_counts_by(
     session: &mut Session,
-    head: &Expr,
+    _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     let args = args.as_ref();
@@ -101,8 +101,6 @@ pub(crate) fn eval_counts_by(
 
             resume_counts_by_from_index(
                 session,
-                head.clone(),
-                args.to_vec(),
                 function.clone(),
                 items.to_vec(),
                 0,
@@ -136,8 +134,10 @@ fn resume_merge_nested_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let grouped = FrozenAssociationSequence::freeze(grouped);
+                        let merged = PersistentAssociationSequence::freeze(merged);
                         move |session, value| {
-                            resume_merge_nested_with_value(
+                            resume_suspended_merge_nested_with_value(
                                 session, combiner, grouped, index, merged, key, value,
                             )
                         }
@@ -152,17 +152,51 @@ fn resume_merge_nested_from_index(
     }
 }
 
-fn resume_merge_nested_with_value(
+fn resume_suspended_merge_nested_from_index(
     session: &mut Session,
     combiner: Expr,
-    grouped: Vec<(Expr, Vec<Expr>)>,
+    grouped: FrozenAssociationSequence<(Expr, Vec<Expr>)>,
+    mut index: usize,
+    mut merged: PersistentAssociationSequence<(Expr, Expr)>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some((key, values)) = grouped.get(index).cloned() else {
+            return Ok(render_association(merged.to_vec()));
+        };
+
+        let value = match evaluate_merge_nested_group(session, combiner.clone(), values) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_merge_nested_with_value(
+                                session, combiner, grouped, index, merged, key, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        merged = merged.appended((key, value));
+        index += 1;
+    }
+}
+
+fn resume_suspended_merge_nested_with_value(
+    session: &mut Session,
+    combiner: Expr,
+    grouped: FrozenAssociationSequence<(Expr, Vec<Expr>)>,
     index: usize,
-    mut merged: Vec<(Expr, Expr)>,
+    merged: PersistentAssociationSequence<(Expr, Expr)>,
     key: Expr,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    merged.push((key, value));
-    resume_merge_nested_from_index(session, combiner, grouped, index + 1, merged)
+    let merged = merged.appended((key, value));
+    resume_suspended_merge_nested_from_index(session, combiner, grouped, index + 1, merged)
 }
 
 fn evaluate_merge_nested_group(
@@ -211,8 +245,10 @@ fn resume_merge_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let grouped = FrozenAssociationSequence::freeze(grouped);
+                        let merged = PersistentAssociationSequence::freeze(merged);
                         move |session, combined| {
-                            resume_merge_with_value(
+                            resume_suspended_merge_with_value(
                                 session, combiner, grouped, index, merged, key, combined,
                             )
                         }
@@ -239,23 +275,58 @@ fn inert_call(head: &Expr, args: &[Expr]) -> Expr {
     Expr::call(head.clone(), args.to_vec())
 }
 
-fn resume_merge_with_value(
+fn resume_suspended_merge_from_index(
     session: &mut Session,
     combiner: Expr,
-    grouped: Vec<(Expr, Vec<Expr>)>,
+    grouped: FrozenAssociationSequence<(Expr, Vec<Expr>)>,
+    mut index: usize,
+    mut merged: PersistentAssociationSequence<(Expr, Expr)>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some((key, values)) = grouped.get(index).cloned() else {
+            return Ok(render_association(merged.to_vec()));
+        };
+
+        let combined = match session.evaluate(Expr::call(
+            combiner.clone(),
+            vec![Expr::call(system_expr("List"), values)],
+        )) {
+            Ok(combined) => combined,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, combined| {
+                            resume_suspended_merge_with_value(
+                                session, combiner, grouped, index, merged, key, combined,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        merged = merged.appended((key, combined));
+        index += 1;
+    }
+}
+
+fn resume_suspended_merge_with_value(
+    session: &mut Session,
+    combiner: Expr,
+    grouped: FrozenAssociationSequence<(Expr, Vec<Expr>)>,
     index: usize,
-    mut merged: Vec<(Expr, Expr)>,
+    merged: PersistentAssociationSequence<(Expr, Expr)>,
     key: Expr,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    merged.push((key, value));
-    resume_merge_from_index(session, combiner, grouped, index + 1, merged)
+    let merged = merged.appended((key, value));
+    resume_suspended_merge_from_index(session, combiner, grouped, index + 1, merged)
 }
 
 fn resume_counts_by_from_index(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     function: Expr,
     items: Vec<Expr>,
     mut index: usize,
@@ -278,9 +349,11 @@ fn resume_counts_by_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let items = FrozenAssociationSequence::freeze(items);
+                        let counts = PersistentAssociationGroups::freeze(counts);
                         move |session, key| {
-                            resume_counts_by_with_value(
-                                session, head, call_args, function, items, index, counts, key,
+                            resume_suspended_counts_by_with_value(
+                                session, function, items, index, counts, key,
                             )
                         }
                     },
@@ -295,16 +368,54 @@ fn resume_counts_by_from_index(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn resume_counts_by_with_value(
+fn resume_suspended_counts_by_from_index(
     session: &mut Session,
-    head: Expr,
-    call_args: Vec<Expr>,
     function: Expr,
-    items: Vec<Expr>,
+    items: FrozenAssociationSequence<Expr>,
+    mut index: usize,
+    mut counts: PersistentAssociationGroups<()>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            return Ok(render_association(
+                counts
+                    .to_entries()
+                    .into_iter()
+                    .map(|(key, occurrences)| (key, Expr::integer(BigInt::from(occurrences.len()))))
+                    .collect(),
+            ));
+        };
+
+        let key = match session.evaluate(Expr::call(function.clone(), vec![item])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, key| {
+                            resume_suspended_counts_by_with_value(
+                                session, function, items, index, counts, key,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        counts = counts.appended(key, ());
+        index += 1;
+    }
+}
+
+fn resume_suspended_counts_by_with_value(
+    session: &mut Session,
+    function: Expr,
+    items: FrozenAssociationSequence<Expr>,
     index: usize,
-    mut counts: IndexedGroups<()>,
+    counts: PersistentAssociationGroups<()>,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    counts.push(key, ());
-    resume_counts_by_from_index(session, head, call_args, function, items, index + 1, counts)
+    let counts = counts.appended(key, ());
+    resume_suspended_counts_by_from_index(session, function, items, index + 1, counts)
 }

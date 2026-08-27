@@ -314,8 +314,11 @@ fn resume_key_union_missing_values_from_index(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let plan = FrozenAssociationValue::freeze(plan);
+                            let missing_keys = FrozenAssociationSequence::freeze(missing_keys);
+                            let fill_values = PersistentAssociationSequence::freeze(fill_values);
                             move |session, fill_value| {
-                                resume_key_union_missing_value(
+                                resume_suspended_key_union_missing_value(
                                     session,
                                     fill_function,
                                     plan,
@@ -337,24 +340,69 @@ fn resume_key_union_missing_values_from_index(
     }
 }
 
-fn resume_key_union_missing_value(
+fn resume_suspended_key_union_missing_values_from_index(
     session: &mut Session,
     fill_function: Expr,
-    plan: KeyUnionPlan,
-    missing_keys: Vec<Expr>,
+    plan: FrozenAssociationValue<KeyUnionPlan>,
+    missing_keys: FrozenAssociationSequence<Expr>,
+    mut index: usize,
+    mut fill_values: PersistentAssociationSequence<(Expr, Expr)>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(key) = missing_keys.get(index).cloned() else {
+            return Ok(render_key_union_result(
+                plan.as_ref(),
+                &fill_values.to_vec(),
+            ));
+        };
+
+        let fill_value =
+            match session.evaluate(Expr::call(fill_function.clone(), vec![key.clone()])) {
+                Ok(fill_value) => fill_value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, fill_value| {
+                                resume_suspended_key_union_missing_value(
+                                    session,
+                                    fill_function,
+                                    plan,
+                                    missing_keys,
+                                    index,
+                                    fill_values,
+                                    key,
+                                    fill_value,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+
+        fill_values = fill_values.appended((key, fill_value));
+        index += 1;
+    }
+}
+
+fn resume_suspended_key_union_missing_value(
+    session: &mut Session,
+    fill_function: Expr,
+    plan: FrozenAssociationValue<KeyUnionPlan>,
+    missing_keys: FrozenAssociationSequence<Expr>,
     index: usize,
-    mut fill_values: Vec<(Expr, Expr)>,
+    fill_values: PersistentAssociationSequence<(Expr, Expr)>,
     key: Expr,
     fill_value: Expr,
 ) -> Result<Expr, EvalError> {
-    fill_values.push((key, fill_value));
-    resume_key_union_missing_values_from_index(
+    resume_suspended_key_union_missing_values_from_index(
         session,
         fill_function,
         plan,
         missing_keys,
         index + 1,
-        fill_values,
+        fill_values.appended((key, fill_value)),
     )
 }
 

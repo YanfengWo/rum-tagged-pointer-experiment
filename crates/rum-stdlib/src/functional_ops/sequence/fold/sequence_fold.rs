@@ -3,13 +3,35 @@ use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(FrameRootTrace)]
 struct SequenceFoldEvalState {
-    head: Expr,
     operator: Expr,
     items: Vec<Expr>,
     seed_len: usize,
     consumed_per_step: usize,
     collect_all: bool,
-    raw_args: Vec<Expr>,
+    fallback: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedSequenceFoldEvalState {
+    operator: Expr,
+    items: FrozenFunctionalSequence<Expr>,
+    seed_len: usize,
+    consumed_per_step: usize,
+    collect_all: bool,
+    fallback: Expr,
+}
+
+impl SuspendedSequenceFoldEvalState {
+    fn freeze(state: SequenceFoldEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            items: FrozenFunctionalSequence::freeze(state.items),
+            seed_len: state.seed_len,
+            consumed_per_step: state.consumed_per_step,
+            collect_all: state.collect_all,
+            fallback: state.fallback,
+        }
+    }
 }
 
 fn resume_sequence_fold_from_offset(
@@ -48,8 +70,12 @@ fn resume_sequence_fold_from_offset(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedSequenceFoldEvalState::freeze(state);
+                        let history = PersistentFunctionalSequence::freeze(history);
                         move |session, value| {
-                            resume_sequence_fold_with_value(session, state, offset, history, value)
+                            resume_suspended_sequence_fold_with_value(
+                                session, state, offset, history, value,
+                            )
                         }
                     },
                 );
@@ -62,16 +88,60 @@ fn resume_sequence_fold_from_offset(
     }
 }
 
-fn resume_sequence_fold_with_value(
+fn resume_suspended_sequence_fold_from_offset(
     session: &mut Session,
-    state: SequenceFoldEvalState,
+    state: SuspendedSequenceFoldEvalState,
+    mut offset: usize,
+    mut history: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if offset + state.consumed_per_step > state.items.len() {
+            return Ok(finish_suspended_sequence_fold_result(state, history));
+        }
+
+        let mut call_args = if state.seed_len == 0 {
+            Vec::new()
+        } else {
+            history.recent(state.seed_len)
+        };
+        call_args.extend(
+            state.items.as_slice()[offset..offset + state.consumed_per_step]
+                .iter()
+                .cloned(),
+        );
+
+        let value = match session.evaluate(Expr::call(state.operator.clone(), call_args)) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_sequence_fold_with_value(
+                                session, state, offset, history, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        history = history.appended(value);
+        offset += state.consumed_per_step;
+    }
+}
+
+fn resume_suspended_sequence_fold_with_value(
+    session: &mut Session,
+    state: SuspendedSequenceFoldEvalState,
     offset: usize,
-    mut history: Vec<Expr>,
+    history: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    history.push(value);
+    let history = history.appended(value);
     let next_offset = offset + state.consumed_per_step;
-    resume_sequence_fold_from_offset(session, state, next_offset, history)
+    resume_suspended_sequence_fold_from_offset(session, state, next_offset, history)
 }
 
 pub(super) fn apply_sequence_fold(
@@ -82,13 +152,13 @@ pub(super) fn apply_sequence_fold(
     items_expr: &Expr,
     arity_expr: Option<&Expr>,
     collect_all: bool,
-    raw_args: &[Expr],
+    raw_args: &rum_core::SharedArgs,
 ) -> Result<Expr, EvalError> {
     let Some(seeds) = iterable_items(seeds_expr) else {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
+        return Ok(Expr::call_with_shared_args(head.clone(), raw_args.clone()));
     };
     let Some(items) = iterable_items(items_expr) else {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
+        return Ok(Expr::call_with_shared_args(head.clone(), raw_args.clone()));
     };
 
     let seed_len = seeds.len();
@@ -125,13 +195,12 @@ pub(super) fn apply_sequence_fold(
     resume_sequence_fold_from_offset(
         session,
         SequenceFoldEvalState {
-            head: head.clone(),
             operator: operator.clone(),
             items,
             seed_len,
             consumed_per_step: arity - seed_len,
             collect_all,
-            raw_args: raw_args.to_vec(),
+            fallback: Expr::call_with_shared_args(head.clone(), raw_args.clone()),
         },
         0,
         seeds,
@@ -142,14 +211,23 @@ fn finish_sequence_fold_result(state: SequenceFoldEvalState, history: Vec<Expr>)
     if state.collect_all {
         Expr::call(system_expr("List"), history)
     } else {
-        history
-            .last()
-            .cloned()
-            .unwrap_or_else(|| Expr::call(state.head, state.raw_args))
+        history.last().cloned().unwrap_or(state.fallback)
+    }
+}
+
+fn finish_suspended_sequence_fold_result(
+    state: SuspendedSequenceFoldEvalState,
+    history: PersistentFunctionalSequence<Expr>,
+) -> Expr {
+    if state.collect_all {
+        Expr::call(system_expr("List"), history.to_vec())
+    } else {
+        history.last().cloned().unwrap_or(state.fallback)
     }
 }
 #[cfg(test)]
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SequenceFoldEvalState>();
+    assert_traces::<SuspendedSequenceFoldEvalState>();
 };

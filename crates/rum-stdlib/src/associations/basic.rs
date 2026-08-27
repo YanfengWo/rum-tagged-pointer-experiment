@@ -12,19 +12,19 @@ pub(crate) fn eval_association(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    let source_items = match args {
+    let args_slice = args.as_ref();
+    let source_items = match args_slice {
         [
             Expr::Call {
                 head: list_head,
                 args: items,
             },
         ] if is_system_symbol_name(list_head, heads::structure::LIST) => items.clone(),
-        _ => args.to_vec().into(),
+        _ => args.clone(),
     };
 
     let Some(entries) = parse_association_entry_forms_deep(&source_items) else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+        return Ok(Expr::call_with_shared_args(head.clone(), args.clone()));
     };
 
     resume_association_key_evaluation(session, entries, Vec::new(), 0)
@@ -50,8 +50,11 @@ fn resume_association_key_evaluation(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let entries = FrozenAssociationSequence::freeze(entries);
+                        let evaluated_entries =
+                            PersistentAssociationSequence::freeze(evaluated_entries);
                         move |session, key| {
-                            resume_association_key_evaluation_with_key(
+                            resume_suspended_association_key_evaluation_with_key(
                                 session,
                                 entries,
                                 evaluated_entries,
@@ -72,17 +75,58 @@ fn resume_association_key_evaluation(
     }
 }
 
-fn resume_association_key_evaluation_with_key(
+fn resume_suspended_association_key_evaluation(
     session: &mut Session,
-    entries: Vec<AssociationEntryForm>,
-    mut evaluated_entries: Vec<AssociationEntryForm>,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
+    mut evaluated_entries: PersistentAssociationSequence<AssociationEntryForm>,
+    mut index: usize,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(mut entry) = entries.get(index).cloned() else {
+            return Ok(render_association_entry_forms_preserving_heads(
+                evaluated_entries.to_vec(),
+            ));
+        };
+
+        let key = match session.evaluate(entry.key.clone()) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, key| {
+                            resume_suspended_association_key_evaluation_with_key(
+                                session,
+                                entries,
+                                evaluated_entries,
+                                index,
+                                entry,
+                                key,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        entry.key = key;
+        evaluated_entries = evaluated_entries.appended(entry);
+        index += 1;
+    }
+}
+
+fn resume_suspended_association_key_evaluation_with_key(
+    session: &mut Session,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
+    evaluated_entries: PersistentAssociationSequence<AssociationEntryForm>,
     index: usize,
     mut entry: AssociationEntryForm,
     key: Expr,
 ) -> Result<Expr, EvalError> {
     entry.key = key;
-    evaluated_entries.push(entry);
-    resume_association_key_evaluation(session, entries, evaluated_entries, index + 1)
+    let evaluated_entries = evaluated_entries.appended(entry);
+    resume_suspended_association_key_evaluation(session, entries, evaluated_entries, index + 1)
 }
 
 pub(crate) fn eval_association_q(
@@ -110,33 +154,33 @@ pub(crate) fn eval_lookup(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    if args.is_empty() || args.len() > 4 {
+    let args_slice = args.as_ref();
+    if args_slice.is_empty() || args_slice.len() > 4 {
         return Ok(session.invalid_call_with_message(
             "Lookup",
-            args,
+            args_slice,
             "argb",
-            lookup_arg_count_message(args.len()),
+            lookup_arg_count_message(args_slice.len()),
         ));
     }
 
-    if let [key] = args {
+    if let [key] = args_slice {
         return Ok(keyed_operator_form_slot_first("Lookup", key.clone()));
     }
 
-    let [expr, key, rest @ ..] = args else {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+    let [expr, key, ..] = args_slice else {
+        return Ok(Expr::call_with_shared_args(head.clone(), args.clone()));
     };
 
     let expr_result = session.evaluate(expr.clone());
     let expr = session.suspend_with_frame_lazy(expr_result, || {
         let head = head.clone();
         let key = key.clone();
-        let rest = rest.to_vec();
-        move |session, expr| eval_lookup_with_evaluated_data(session, head, expr, key, rest)
+        let call_args = args.clone();
+        move |session, expr| eval_lookup_with_evaluated_data(session, head, expr, key, call_args)
     })?;
 
-    eval_lookup_with_evaluated_data(session, head.clone(), expr, key.clone(), rest.to_vec())
+    eval_lookup_with_evaluated_data(session, head.clone(), expr, key.clone(), args.clone())
 }
 
 fn eval_lookup_with_evaluated_data(
@@ -144,17 +188,17 @@ fn eval_lookup_with_evaluated_data(
     head: Expr,
     expr: Expr,
     key: Expr,
-    rest: Vec<Expr>,
+    call_args: SharedArgs,
 ) -> Result<Expr, EvalError> {
     let key_result = session.evaluate(key);
     let key = session.suspend_with_frame_lazy(key_result, || {
         let head = head.clone();
         let expr = expr.clone();
-        let rest = rest.clone();
-        move |session, key| finish_eval_lookup(session, head, expr, key, rest)
+        let call_args = call_args.clone();
+        move |session, key| finish_eval_lookup(session, head, expr, key, call_args)
     })?;
 
-    finish_eval_lookup(session, head, expr, key, rest)
+    finish_eval_lookup(session, head, expr, key, call_args)
 }
 
 fn finish_eval_lookup(
@@ -162,10 +206,10 @@ fn finish_eval_lookup(
     head: Expr,
     expr: Expr,
     key: Expr,
-    rest: Vec<Expr>,
+    call_args: SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let default = rest.first().cloned();
-    let wrapper = rest.get(1).cloned();
+    let default = call_args.get(2).cloned();
+    let wrapper = call_args.get(3).cloned();
     let Some(lookup) = prepare_lookup(&expr, &key) else {
         session.push_message(
             "Lookup",
@@ -173,7 +217,7 @@ fn finish_eval_lookup(
             invalid_association_or_rule_list_message(&expr),
         );
         let mut args = vec![expr, key];
-        args.extend(rest);
+        args.extend(call_args.as_ref().iter().skip(2).cloned());
         return Ok(Expr::call(head, args));
     };
 
@@ -185,8 +229,14 @@ fn finish_eval_lookup(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let lookup = FrozenAssociationValue::freeze(lookup);
                             move |session, default| {
-                                finish_prepared_lookup(session, lookup, Some(default), wrapper)
+                                finish_suspended_prepared_lookup(
+                                    session,
+                                    lookup,
+                                    Some(default),
+                                    wrapper,
+                                )
                             }
                         },
                     );
@@ -217,8 +267,12 @@ fn finish_prepared_lookup(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let lookup = FrozenAssociationValue::freeze(lookup);
                             move |_, wrapper| {
-                                Ok(lookup.outcome.into_expr(default.as_ref(), Some(&wrapper)))
+                                Ok(lookup
+                                    .as_ref()
+                                    .outcome
+                                    .to_expr(default.as_ref(), Some(&wrapper)))
                             }
                         },
                     );
@@ -233,6 +287,44 @@ fn finish_prepared_lookup(
     };
 
     Ok(lookup.outcome.into_expr(default.as_ref(), wrapper.as_ref()))
+}
+
+fn finish_suspended_prepared_lookup(
+    session: &mut Session,
+    lookup: FrozenAssociationValue<PreparedLookup>,
+    default: Option<Expr>,
+    wrapper: Option<Expr>,
+) -> Result<Expr, EvalError> {
+    let wrapper = if lookup.as_ref().plan.has_hit {
+        if let Some(wrapper) = wrapper {
+            match session.evaluate(wrapper) {
+                Ok(wrapper) => Some(wrapper),
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |_, wrapper| {
+                                Ok(lookup
+                                    .as_ref()
+                                    .outcome
+                                    .to_expr(default.as_ref(), Some(&wrapper)))
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    Ok(lookup
+        .as_ref()
+        .outcome
+        .to_expr(default.as_ref(), wrapper.as_ref()))
 }
 
 pub(crate) fn eval_key(
@@ -517,6 +609,22 @@ impl LookupOutcome {
                 items
                     .into_iter()
                     .map(|item| item.into_expr(default, wrapper))
+                    .collect(),
+            ),
+        }
+    }
+
+    fn to_expr(&self, default: Option<&Expr>, wrapper: Option<&Expr>) -> Expr {
+        match self {
+            Self::Hit(value) => wrap_keyed_result(value.clone(), wrapper),
+            Self::Missing(key) => default
+                .cloned()
+                .unwrap_or_else(|| missing_key_absent_expr(key.clone())),
+            Self::List(items) => Expr::call(
+                system_expr("List"),
+                items
+                    .iter()
+                    .map(|item| item.to_expr(default, wrapper))
                     .collect(),
             ),
         }

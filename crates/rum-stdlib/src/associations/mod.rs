@@ -18,9 +18,14 @@ mod key_reshape;
 mod missing;
 mod mutation;
 mod resumable;
+mod suspended_state;
 mod transforms;
 
 use self::data::*;
+use self::suspended_state::{
+    FrozenAssociationSequence, FrozenAssociationValue, PersistentAssociationGroups,
+    PersistentAssociationSequence,
+};
 
 pub(crate) use self::{
     aggregate::{eval_catenate, eval_counts, eval_position_index},

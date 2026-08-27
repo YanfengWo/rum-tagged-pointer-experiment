@@ -11,6 +11,27 @@ struct ArrayEvalState {
     total: usize,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedArrayEvalState {
+    operator: Expr,
+    output_head: Expr,
+    shape: FrozenFunctionalSequence<usize>,
+    origins: FrozenFunctionalSequence<Expr>,
+    total: usize,
+}
+
+impl SuspendedArrayEvalState {
+    fn freeze(state: ArrayEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            output_head: state.output_head,
+            shape: FrozenFunctionalSequence::freeze(state.shape),
+            origins: FrozenFunctionalSequence::freeze(state.origins),
+            total: state.total,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct OuterInput {
     shape: Vec<usize>,
@@ -25,6 +46,29 @@ struct OuterEvalState {
     input_values: Vec<Vec<Expr>>,
     output_shape: Vec<usize>,
     total: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedOuterEvalState {
+    operator: Expr,
+    output_head: Expr,
+    input_shapes: FrozenFunctionalSequence<Vec<usize>>,
+    input_values: FrozenFunctionalSequence<Vec<Expr>>,
+    output_shape: FrozenFunctionalSequence<usize>,
+    total: usize,
+}
+
+impl SuspendedOuterEvalState {
+    fn freeze(state: OuterEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            output_head: state.output_head,
+            input_shapes: FrozenFunctionalSequence::freeze(state.input_shapes),
+            input_values: FrozenFunctionalSequence::freeze(state.input_values),
+            output_shape: FrozenFunctionalSequence::freeze(state.output_shape),
+            total: state.total,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -195,8 +239,10 @@ fn resume_array_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedArrayEvalState::freeze(state);
+                        let outputs = PersistentFunctionalSequence::freeze(outputs);
                         move |session, value| {
-                            resume_array_with_value(session, state, index, outputs, value)
+                            resume_suspended_array_with_value(session, state, index, outputs, value)
                         }
                     },
                 );
@@ -209,15 +255,54 @@ fn resume_array_from_index(
     }
 }
 
-fn resume_array_with_value(
+fn resume_suspended_array_from_index(
     session: &mut Session,
-    state: ArrayEvalState,
+    state: SuspendedArrayEvalState,
+    mut index: usize,
+    mut outputs: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= state.total {
+            return Ok(rebuild_tensor_expr(
+                &state.output_head,
+                state.shape.as_slice(),
+                &outputs.to_vec(),
+            ));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            array_index_args(state.shape.as_slice(), state.origins.as_slice(), index),
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_array_with_value(session, state, index, outputs, value)
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        outputs = outputs.appended(value);
+        index += 1;
+    }
+}
+
+fn resume_suspended_array_with_value(
+    session: &mut Session,
+    state: SuspendedArrayEvalState,
     index: usize,
-    mut outputs: Vec<Expr>,
+    outputs: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    outputs.push(value);
-    resume_array_from_index(session, state, index + 1, outputs)
+    let outputs = outputs.appended(value);
+    resume_suspended_array_from_index(session, state, index + 1, outputs)
 }
 
 fn resume_outer_from_index(
@@ -242,8 +327,10 @@ fn resume_outer_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedOuterEvalState::freeze(state);
+                        let outputs = PersistentFunctionalSequence::freeze(outputs);
                         move |session, value| {
-                            resume_outer_with_value(session, state, index, outputs, value)
+                            resume_suspended_outer_with_value(session, state, index, outputs, value)
                         }
                     },
                 );
@@ -256,15 +343,54 @@ fn resume_outer_from_index(
     }
 }
 
-fn resume_outer_with_value(
+fn resume_suspended_outer_from_index(
     session: &mut Session,
-    state: OuterEvalState,
+    state: SuspendedOuterEvalState,
+    mut index: usize,
+    mut outputs: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= state.total {
+            return Ok(rebuild_tensor_expr(
+                &state.output_head,
+                state.output_shape.as_slice(),
+                &outputs.to_vec(),
+            ));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            suspended_outer_call_args(&state, index),
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_outer_with_value(session, state, index, outputs, value)
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        outputs = outputs.appended(value);
+        index += 1;
+    }
+}
+
+fn resume_suspended_outer_with_value(
+    session: &mut Session,
+    state: SuspendedOuterEvalState,
     index: usize,
-    mut outputs: Vec<Expr>,
+    outputs: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    outputs.push(value);
-    resume_outer_from_index(session, state, index + 1, outputs)
+    let outputs = outputs.appended(value);
+    resume_suspended_outer_from_index(session, state, index + 1, outputs)
 }
 
 fn invalid_outer_heads_call(
@@ -482,6 +608,28 @@ fn outer_call_args(state: &OuterEvalState, flat_index: usize) -> Vec<Expr> {
     args
 }
 
+fn suspended_outer_call_args(state: &SuspendedOuterEvalState, flat_index: usize) -> Vec<Expr> {
+    let output_index = decode_tensor_index(flat_index, state.output_shape.as_slice());
+    let mut offset = 0usize;
+    let mut args = Vec::with_capacity(state.input_shapes.len());
+
+    for (shape, values) in state
+        .input_shapes
+        .as_slice()
+        .iter()
+        .zip(state.input_values.as_slice())
+    {
+        let end = offset + shape.len();
+        let input_index = &output_index[offset..end];
+        let flat = tensor_flat_offset(shape, input_index)
+            .expect("decoded Outer output indices should map into input tensors");
+        args.push(values[flat].clone());
+        offset = end;
+    }
+
+    args
+}
+
 fn decode_tensor_index(mut index: usize, shape: &[usize]) -> Vec<usize> {
     if shape.is_empty() {
         return Vec::new();
@@ -504,4 +652,6 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<ArrayEvalState>();
     assert_traces::<OuterEvalState>();
+    assert_traces::<SuspendedArrayEvalState>();
+    assert_traces::<SuspendedOuterEvalState>();
 };

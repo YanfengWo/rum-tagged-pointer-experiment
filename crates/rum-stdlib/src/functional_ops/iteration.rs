@@ -8,14 +8,14 @@ struct NestWhileConfig {
     max_iterations: Option<usize>,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct NestEvalState {
     operator: Expr,
     count: usize,
     collect_all: bool,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct FixedPointEvalState {
     operator: Expr,
     max_iterations: Option<usize>,
@@ -23,7 +23,7 @@ struct FixedPointEvalState {
     collect_all: bool,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct NestWhileEvalState {
     operator: Expr,
     test: Expr,
@@ -267,9 +267,57 @@ fn resume_nest_from_iteration(
     match value_result {
         Ok(value) => resume_nest_with_value(session, state, iteration, items, value),
         Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            move |session, value| resume_nest_with_value(session, state, iteration, items, value)
+            let items = PersistentFunctionalSequence::freeze(items);
+            move |session, value| {
+                resume_suspended_nest_with_value(session, state, iteration, items, value)
+            }
         }),
     }
+}
+
+fn resume_suspended_nest_from_iteration(
+    session: &mut Session,
+    state: NestEvalState,
+    iteration: usize,
+    current: Expr,
+    items: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    if iteration >= state.count {
+        return Ok(finish_nest_result(
+            state.collect_all,
+            current,
+            items.to_vec(),
+        ));
+    }
+
+    let limit = session.resource_limits().evaluation_pass_limit;
+    if iteration >= limit {
+        return Err(EvalError::EvaluationPassLimitExceeded { limit });
+    }
+
+    let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
+    match value_result {
+        Ok(value) => resume_suspended_nest_with_value(session, state, iteration, items, value),
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, value| {
+                resume_suspended_nest_with_value(session, state, iteration, items, value)
+            }
+        }),
+    }
+}
+
+fn resume_suspended_nest_with_value(
+    session: &mut Session,
+    state: NestEvalState,
+    iteration: usize,
+    mut items: PersistentFunctionalSequence<Expr>,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if state.collect_all {
+        items = items.appended(value.clone());
+    }
+
+    resume_suspended_nest_from_iteration(session, state, iteration + 1, value, items)
 }
 
 fn resume_nest_with_value(
@@ -304,13 +352,81 @@ fn resume_fixed_point_from_iteration(
             resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
         }
         Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            let seen = PersistentFunctionalSequence::freeze(seen);
+            let items = PersistentFunctionalSequence::freeze(items);
             move |session, value| {
-                resume_fixed_point_with_value(
+                resume_suspended_fixed_point_with_value(
                     session, state, iteration, current, seen, items, value,
                 )
             }
         }),
     }
+}
+
+fn resume_suspended_fixed_point_from_iteration(
+    session: &mut Session,
+    state: FixedPointEvalState,
+    iteration: usize,
+    current: Expr,
+    seen: PersistentFunctionalSequence<Expr>,
+    items: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    if iteration >= state.limit {
+        return finish_fixed_point_at_limit(state, current, items.to_vec());
+    }
+
+    let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current.clone()]));
+    match value_result {
+        Ok(value) => resume_suspended_fixed_point_with_value(
+            session, state, iteration, current, seen, items, value,
+        ),
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, value| {
+                resume_suspended_fixed_point_with_value(
+                    session, state, iteration, current, seen, items, value,
+                )
+            }
+        }),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_fixed_point_with_value(
+    session: &mut Session,
+    state: FixedPointEvalState,
+    iteration: usize,
+    current: Expr,
+    mut seen: PersistentFunctionalSequence<Expr>,
+    mut items: PersistentFunctionalSequence<Expr>,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    if value == current {
+        if state.collect_all {
+            items = items.appended(value.clone());
+        }
+        return finish_fixed_point_value(state, value, items.to_vec());
+    }
+
+    if state.max_iterations.is_none() {
+        let repeats = if state.collect_all {
+            items.any(|previous| previous == &value)
+        } else {
+            seen.any(|previous| previous == &value)
+        };
+        if repeats {
+            return Err(EvalError::EvaluationCycleDetected {
+                expr: value.to_string(),
+            });
+        }
+    }
+
+    if state.collect_all {
+        items = items.appended(value.clone());
+    } else if state.max_iterations.is_none() {
+        seen = seen.appended(value.clone());
+    }
+    let next_iteration = iteration + 1;
+    resume_suspended_fixed_point_from_iteration(session, state, next_iteration, value, seen, items)
 }
 
 fn resume_fixed_point_with_value(
@@ -360,8 +476,33 @@ fn resume_nest_while_test_from_iteration(
             resume_nest_while_with_test_value(session, state, iteration, history, test_value)
         }
         Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            let history = PersistentFunctionalSequence::freeze(history);
             move |session, test_value| {
-                resume_nest_while_with_test_value(session, state, iteration, history, test_value)
+                resume_suspended_nest_while_with_test_value(
+                    session, state, iteration, history, test_value,
+                )
+            }
+        }),
+    }
+}
+
+fn resume_suspended_nest_while_test_from_iteration(
+    session: &mut Session,
+    state: NestWhileEvalState,
+    iteration: usize,
+    history: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    let test_args = persistent_nest_while_test_args(&history, state.config.test_arity);
+    let value_result = session.evaluate(Expr::call(state.test.clone(), test_args));
+    match value_result {
+        Ok(test_value) => resume_suspended_nest_while_with_test_value(
+            session, state, iteration, history, test_value,
+        ),
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, test_value| {
+                resume_suspended_nest_while_with_test_value(
+                    session, state, iteration, history, test_value,
+                )
             }
         }),
     }
@@ -394,11 +535,69 @@ fn resume_nest_while_with_test_value(
     match value_result {
         Ok(value) => resume_nest_while_with_step_value(session, state, iteration, history, value),
         Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            let history = PersistentFunctionalSequence::freeze(history);
             move |session, value| {
-                resume_nest_while_with_step_value(session, state, iteration, history, value)
+                resume_suspended_nest_while_with_step_value(
+                    session, state, iteration, history, value,
+                )
             }
         }),
     }
+}
+
+fn resume_suspended_nest_while_with_test_value(
+    session: &mut Session,
+    state: NestWhileEvalState,
+    iteration: usize,
+    history: PersistentFunctionalSequence<Expr>,
+    test_value: Expr,
+) -> Result<Expr, EvalError> {
+    if truthiness_symbol(&test_value) != Some(true) {
+        return Ok(finish_suspended_nest_while_result(
+            state.collect_all,
+            history,
+        ));
+    }
+
+    if iteration >= state.limit {
+        return if state.config.max_iterations.is_some() {
+            Ok(finish_suspended_nest_while_result(
+                state.collect_all,
+                history,
+            ))
+        } else {
+            Err(EvalError::EvaluationPassLimitExceeded { limit: state.limit })
+        };
+    }
+
+    let current = history
+        .last()
+        .cloned()
+        .expect("NestWhile history always starts with the initial expression");
+    let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
+    match value_result {
+        Ok(value) => {
+            resume_suspended_nest_while_with_step_value(session, state, iteration, history, value)
+        }
+        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
+            move |session, value| {
+                resume_suspended_nest_while_with_step_value(
+                    session, state, iteration, history, value,
+                )
+            }
+        }),
+    }
+}
+
+fn resume_suspended_nest_while_with_step_value(
+    session: &mut Session,
+    state: NestWhileEvalState,
+    iteration: usize,
+    history: PersistentFunctionalSequence<Expr>,
+    value: Expr,
+) -> Result<Expr, EvalError> {
+    let history = history.appended(value);
+    resume_suspended_nest_while_test_from_iteration(session, state, iteration + 1, history)
 }
 
 fn resume_nest_while_with_step_value(
@@ -590,6 +789,30 @@ fn finish_nest_while_result(collect_all: bool, history: Vec<Expr>) -> Expr {
             .last()
             .cloned()
             .expect("NestWhile history always starts with the initial expression")
+    }
+}
+
+fn finish_suspended_nest_while_result(
+    collect_all: bool,
+    history: PersistentFunctionalSequence<Expr>,
+) -> Expr {
+    if collect_all {
+        Expr::call(system_expr("List"), history.to_vec())
+    } else {
+        history
+            .last()
+            .cloned()
+            .expect("NestWhile history always starts with the initial expression")
+    }
+}
+
+fn persistent_nest_while_test_args(
+    history: &PersistentFunctionalSequence<Expr>,
+    arity: NestWhileTestArity,
+) -> Vec<Expr> {
+    match arity {
+        NestWhileTestArity::Count(count) => history.recent(count),
+        NestWhileTestArity::All => history.to_vec(),
     }
 }
 #[cfg(test)]

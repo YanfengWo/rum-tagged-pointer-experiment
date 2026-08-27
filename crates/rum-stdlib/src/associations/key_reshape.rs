@@ -159,8 +159,10 @@ fn resume_key_group_by_from_index(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let entries = FrozenAssociationSequence::freeze(entries);
+                            let grouped = PersistentAssociationGroups::freeze(grouped);
                             move |session, group_key| {
-                                resume_key_group_by_with_key(
+                                resume_suspended_key_group_by_with_key(
                                     session, function, reducer, entries, index, grouped, entry,
                                     group_key,
                                 )
@@ -176,18 +178,62 @@ fn resume_key_group_by_from_index(
     }
 }
 
-fn resume_key_group_by_with_key(
+fn resume_suspended_key_group_by_from_index(
     session: &mut Session,
     function: Expr,
     reducer: Option<Expr>,
-    entries: Vec<AssociationEntryForm>,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
+    mut index: usize,
+    mut grouped: PersistentAssociationGroups<AssociationEntryForm>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(entry) = entries.get(index).cloned() else {
+            return finish_key_group_by_grouped(session, reducer, grouped.to_entries());
+        };
+
+        let group_key =
+            match session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()])) {
+                Ok(group_key) => group_key,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, group_key| {
+                                resume_suspended_key_group_by_with_key(
+                                    session, function, reducer, entries, index, grouped, entry,
+                                    group_key,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+
+        grouped = grouped.appended(group_key, entry);
+        index += 1;
+    }
+}
+
+fn resume_suspended_key_group_by_with_key(
+    session: &mut Session,
+    function: Expr,
+    reducer: Option<Expr>,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
     index: usize,
-    mut grouped: IndexedGroups<AssociationEntryForm>,
+    grouped: PersistentAssociationGroups<AssociationEntryForm>,
     entry: AssociationEntryForm,
     group_key: Expr,
 ) -> Result<Expr, EvalError> {
-    grouped.push(group_key, entry);
-    resume_key_group_by_from_index(session, function, reducer, entries, index + 1, grouped)
+    let grouped = grouped.appended(group_key, entry);
+    resume_suspended_key_group_by_from_index(
+        session,
+        function,
+        reducer,
+        entries,
+        index + 1,
+        grouped,
+    )
 }
 
 fn finish_key_group_by_grouped(
@@ -222,8 +268,10 @@ fn resume_key_group_by_reduce_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let grouped = FrozenAssociationSequence::freeze(grouped);
+                        let reduced = PersistentAssociationSequence::freeze(reduced);
                         move |session, value| {
-                            resume_key_group_by_reduce_with_value(
+                            resume_suspended_key_group_by_reduce_with_value(
                                 session, reducer, grouped, index, reduced, group_key, value,
                             )
                         }
@@ -238,17 +286,52 @@ fn resume_key_group_by_reduce_from_index(
     }
 }
 
-fn resume_key_group_by_reduce_with_value(
+fn resume_suspended_key_group_by_reduce_from_index(
     session: &mut Session,
     reducer: Expr,
-    grouped: Vec<(Expr, Vec<AssociationEntryForm>)>,
+    grouped: FrozenAssociationSequence<(Expr, Vec<AssociationEntryForm>)>,
+    mut index: usize,
+    mut reduced: PersistentAssociationSequence<(Expr, Expr)>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some((group_key, entries)) = grouped.get(index).cloned() else {
+            return Ok(render_association(reduced.to_vec()));
+        };
+
+        let group = render_association_entry_forms_preserving_heads(entries);
+        let value = match session.evaluate(Expr::call(reducer.clone(), vec![group])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_key_group_by_reduce_with_value(
+                                session, reducer, grouped, index, reduced, group_key, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        reduced = reduced.appended((group_key, value));
+        index += 1;
+    }
+}
+
+fn resume_suspended_key_group_by_reduce_with_value(
+    session: &mut Session,
+    reducer: Expr,
+    grouped: FrozenAssociationSequence<(Expr, Vec<AssociationEntryForm>)>,
     index: usize,
-    mut reduced: Vec<(Expr, Expr)>,
+    reduced: PersistentAssociationSequence<(Expr, Expr)>,
     group_key: Expr,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    reduced.push((group_key, value));
-    resume_key_group_by_reduce_from_index(session, reducer, grouped, index + 1, reduced)
+    let reduced = reduced.appended((group_key, value));
+    resume_suspended_key_group_by_reduce_from_index(session, reducer, grouped, index + 1, reduced)
 }
 
 fn key_group_by_groups(grouped: Vec<(Expr, Vec<AssociationEntryForm>)>) -> Vec<(Expr, Expr)> {

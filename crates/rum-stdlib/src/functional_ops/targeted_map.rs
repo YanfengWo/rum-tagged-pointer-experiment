@@ -19,10 +19,42 @@ struct MapAtEvalState {
 }
 
 #[derive(Clone, FrameRootTrace)]
+struct SuspendedMapAtEvalState {
+    operator: Expr,
+    paths: FrozenFunctionalSequence<Vec<isize>>,
+}
+
+impl SuspendedMapAtEvalState {
+    fn freeze(state: MapAtEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            paths: FrozenFunctionalSequence::freeze(state.paths),
+        }
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
 struct SubsetMapEvalState {
     expr: Expr,
     paths: Vec<Vec<isize>>,
     fallback: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedSubsetMapEvalState {
+    expr: Expr,
+    paths: FrozenFunctionalSequence<Vec<isize>>,
+    fallback: Expr,
+}
+
+impl SuspendedSubsetMapEvalState {
+    fn freeze(state: SubsetMapEvalState) -> Self {
+        Self {
+            expr: state.expr,
+            paths: FrozenFunctionalSequence::freeze(state.paths),
+            fallback: state.fallback,
+        }
+    }
 }
 
 struct MissingExactPath {
@@ -296,8 +328,11 @@ fn resume_map_at_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedMapAtEvalState::freeze(state);
                         move |session, mapped| {
-                            resume_map_at_with_value(session, state, index, current, mapped)
+                            resume_suspended_map_at_with_value(
+                                session, state, index, current, mapped,
+                            )
                         }
                     },
                 );
@@ -310,9 +345,47 @@ fn resume_map_at_from_index(
     }
 }
 
-fn resume_map_at_with_value(
+fn resume_suspended_map_at_from_index(
     session: &mut Session,
-    state: MapAtEvalState,
+    state: SuspendedMapAtEvalState,
+    mut index: usize,
+    mut current: Expr,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(path) = state.paths.get(index) else {
+            return Ok(current);
+        };
+
+        let Some(part) = exact_expr_at_path(&current, path) else {
+            index += 1;
+            continue;
+        };
+
+        let mapped = match session.evaluate(Expr::call(state.operator.clone(), vec![part])) {
+            Ok(mapped) => mapped,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, mapped| {
+                            resume_suspended_map_at_with_value(
+                                session, state, index, current, mapped,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        current = replace_exact_path(current, path, mapped);
+        index += 1;
+    }
+}
+
+fn resume_suspended_map_at_with_value(
+    session: &mut Session,
+    state: SuspendedMapAtEvalState,
     index: usize,
     current: Expr,
     mapped: Expr,
@@ -322,7 +395,7 @@ fn resume_map_at_with_value(
     };
 
     let current = replace_exact_path(current, path, mapped);
-    resume_map_at_from_index(session, state, index + 1, current)
+    resume_suspended_map_at_from_index(session, state, index + 1, current)
 }
 
 fn finish_subset_map_from_mapped(
@@ -344,6 +417,31 @@ fn finish_subset_map_from_mapped(
     let mut current = state.expr;
     for (path, replacement) in state.paths.iter().zip(replacements.into_iter()) {
         current = replace_exact_path(current, path, replacement);
+    }
+
+    let evaluated_result = session.evaluate(current);
+    session.suspend_with_frame_lazy(evaluated_result, || |_, value| Ok(value))
+}
+
+fn finish_suspended_subset_map_from_mapped(
+    session: &mut Session,
+    state: SuspendedSubsetMapEvalState,
+    mapped: Expr,
+) -> Result<Expr, EvalError> {
+    let Expr::Call {
+        args: replacements, ..
+    } = mapped
+    else {
+        return Ok(state.fallback);
+    };
+
+    if replacements.len() != state.paths.len() {
+        return Ok(state.fallback);
+    }
+
+    let mut current = state.expr;
+    for (path, replacement) in state.paths.as_slice().iter().zip(replacements.iter()) {
+        current = replace_exact_path(current, path, replacement.clone());
     }
 
     let evaluated_result = session.evaluate(current);
@@ -571,12 +669,18 @@ fn apply_subset_map(
         operator.clone(),
         vec![Expr::call(system_expr("List"), parts)],
     ));
-    let mapped = session.suspend_with_frame_lazy(mapped_result, || {
-        let suspended_state = state.clone();
-        move |session, mapped| finish_subset_map_from_mapped(session, suspended_state, mapped)
-    })?;
-
-    finish_subset_map_from_mapped(session, state, mapped)
+    match mapped_result {
+        Ok(mapped) => finish_subset_map_from_mapped(session, state, mapped),
+        Err(EvalError::InputRequired { request }) => {
+            session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
+                let suspended_state = SuspendedSubsetMapEvalState::freeze(state);
+                move |session, mapped| {
+                    finish_suspended_subset_map_from_mapped(session, suspended_state, mapped)
+                }
+            })
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn map_at_explicit_integer_paths_from_expr(spec_expr: &Expr) -> Option<Vec<Vec<isize>>> {
@@ -680,4 +784,6 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<MapAtEvalState>();
     assert_traces::<SubsetMapEvalState>();
+    assert_traces::<SuspendedMapAtEvalState>();
+    assert_traces::<SuspendedSubsetMapEvalState>();
 };

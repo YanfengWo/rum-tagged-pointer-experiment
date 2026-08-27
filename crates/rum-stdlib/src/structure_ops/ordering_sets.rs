@@ -8,6 +8,10 @@ use super::resumable_merge_sort::{
 };
 use super::*;
 
+mod suspended;
+
+use self::suspended::{SuspendedSetSameTestState, resume_suspended_set_same_test_with_value};
+
 const SET_MEMBERSHIP_INDEX_THRESHOLD: usize = 16;
 
 #[derive(Clone, Debug, FrameRootTrace)]
@@ -534,8 +538,11 @@ fn resume_set_same_test(
                             return session.suspend_with_frame_lazy(
                                 Err(EvalError::InputRequired { request }),
                                 || {
+                                    let state = SuspendedSetSameTestState::freeze(state);
                                     move |session, value| {
-                                        resume_set_same_test_with_value(session, state, value)
+                                        resume_suspended_set_same_test_with_value(
+                                            session, state, value,
+                                        )
                                     }
                                 },
                             );
@@ -570,8 +577,9 @@ fn resume_set_same_test(
                         return session.suspend_with_frame_lazy(
                             Err(EvalError::InputRequired { request }),
                             || {
+                                let state = SuspendedSetSameTestState::freeze(state);
                                 move |session, value| {
-                                    resume_set_same_test_with_value(session, state, value)
+                                    resume_suspended_set_same_test_with_value(session, state, value)
                                 }
                             },
                         );
@@ -599,8 +607,9 @@ fn resume_set_same_test(
                         return session.suspend_with_frame_lazy(
                             Err(EvalError::InputRequired { request }),
                             || {
+                                let state = SuspendedSetSameTestState::freeze(state);
                                 move |session, value| {
-                                    resume_set_same_test_with_value(session, state, value)
+                                    resume_suspended_set_same_test_with_value(session, state, value)
                                 }
                             },
                         );
@@ -611,15 +620,6 @@ fn resume_set_same_test(
             }
         }
     }
-}
-
-fn resume_set_same_test_with_value(
-    session: &mut Session,
-    mut state: SetSameTestState,
-    value: Expr,
-) -> Result<Expr, EvalError> {
-    advance_set_same_test_after_value(&mut state, &value);
-    resume_set_same_test(session, state)
 }
 
 fn begin_set_same_test_membership(state: &mut SetSameTestState) {
@@ -941,6 +941,7 @@ const _: fn() = || {
     assert_traces::<SetOperationKind>();
     assert_traces::<SetSameTestPhase>();
     assert_traces::<SetSameTestState>();
+    assert_traces::<SuspendedSetSameTestState>();
     assert_traces::<SortByCompletion>();
     assert_traces::<SortByEntry>();
     assert_traces::<SortCompletion>();

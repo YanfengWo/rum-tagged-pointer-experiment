@@ -145,8 +145,8 @@ pub(crate) fn eval_group_by(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    match args {
+    let args_slice = args.as_ref();
+    match args_slice {
         [function] => Ok(keyed_operator_form_slot_first("GroupBy", function.clone())),
         [expr, function] => {
             let specs = group_by_specs(function);
@@ -155,7 +155,7 @@ pub(crate) fn eval_group_by(
                     return finish_association_group_by_leaf(
                         session,
                         head.clone(),
-                        args.to_vec(),
+                        args.clone(),
                         None,
                         entries,
                     );
@@ -164,7 +164,7 @@ pub(crate) fn eval_group_by(
                 return resume_association_group_by_from_index(
                     session,
                     head.clone(),
-                    args.to_vec(),
+                    args.clone(),
                     specs,
                     0,
                     None,
@@ -177,7 +177,7 @@ pub(crate) fn eval_group_by(
             let Some(items) = list_items(expr) else {
                 return Ok(session.invalid_call_with_message(
                     "GroupBy",
-                    args,
+                    args_slice,
                     "list1",
                     invalid_keyed_collection_list_message(expr),
                 ));
@@ -187,7 +187,7 @@ pub(crate) fn eval_group_by(
                 return finish_group_by_leaf(
                     session,
                     head.clone(),
-                    args.to_vec(),
+                    args.clone(),
                     None,
                     items.to_vec(),
                 );
@@ -196,7 +196,7 @@ pub(crate) fn eval_group_by(
             resume_group_by_from_index(
                 session,
                 head.clone(),
-                args.to_vec(),
+                args.clone(),
                 specs,
                 0,
                 None,
@@ -212,7 +212,7 @@ pub(crate) fn eval_group_by(
                     return finish_association_group_by_leaf(
                         session,
                         head.clone(),
-                        args.to_vec(),
+                        args.clone(),
                         Some(reducer.clone()),
                         entries,
                     );
@@ -221,7 +221,7 @@ pub(crate) fn eval_group_by(
                 return resume_association_group_by_from_index(
                     session,
                     head.clone(),
-                    args.to_vec(),
+                    args.clone(),
                     specs,
                     0,
                     Some(reducer.clone()),
@@ -234,7 +234,7 @@ pub(crate) fn eval_group_by(
             let Some(items) = list_items(expr) else {
                 return Ok(session.invalid_call_with_message(
                     "GroupBy",
-                    args,
+                    args_slice,
                     "list1",
                     invalid_keyed_collection_list_message(expr),
                 ));
@@ -244,7 +244,7 @@ pub(crate) fn eval_group_by(
                 return finish_group_by_leaf(
                     session,
                     head.clone(),
-                    args.to_vec(),
+                    args.clone(),
                     Some(reducer.clone()),
                     items.to_vec(),
                 );
@@ -253,7 +253,7 @@ pub(crate) fn eval_group_by(
             resume_group_by_from_index(
                 session,
                 head.clone(),
-                args.to_vec(),
+                args.clone(),
                 specs,
                 0,
                 Some(reducer.clone()),
@@ -264,9 +264,9 @@ pub(crate) fn eval_group_by(
         }
         _ => Ok(session.invalid_call_with_message(
             "GroupBy",
-            args,
+            args_slice,
             "argb",
-            between_one_and_three_argument_count_message("GroupBy", args.len()),
+            between_one_and_three_argument_count_message("GroupBy", args_slice.len()),
         )),
     }
 }

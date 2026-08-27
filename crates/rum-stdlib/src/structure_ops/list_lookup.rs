@@ -20,6 +20,13 @@ struct SelectPositionsState {
     positions: Vec<Expr>,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedSelectPositionsState {
+    items: FrozenStructureSequence<Expr>,
+    criterion: Expr,
+    limit: SelectPositionsLimit,
+}
+
 impl SelectPositionsLimit {
     fn reached(self, count: usize) -> bool {
         match self {
@@ -169,8 +176,20 @@ fn resume_select_positions_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let suspended = SuspendedSelectPositionsState {
+                            items: FrozenStructureSequence::freeze(state.items),
+                            criterion: state.criterion,
+                            limit: state.limit,
+                        };
+                        let positions = PersistentStructureSequence::freeze(state.positions);
                         move |session, value| {
-                            resume_select_positions_with_value(session, state, value)
+                            resume_suspended_select_positions_with_value(
+                                session,
+                                suspended,
+                                state.index,
+                                positions,
+                                value,
+                            )
                         }
                     },
                 );
@@ -183,14 +202,68 @@ fn resume_select_positions_from_index(
     }
 }
 
-fn resume_select_positions_with_value(
+fn resume_suspended_select_positions_from_index(
     session: &mut Session,
-    mut state: SelectPositionsState,
+    state: SuspendedSelectPositionsState,
+    mut index: usize,
+    mut positions: PersistentStructureSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if state.limit.reached(positions.len()) || index >= state.items.len() {
+            return Ok(Expr::call(system_expr("List"), positions.to_vec()));
+        }
+        if index >= session.resource_limits().iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: session.resource_limits().iteration_work_limit,
+            });
+        }
+
+        let item = state.items.get(index).expect("item should exist").clone();
+        let value = match session.evaluate(Expr::call(state.criterion.clone(), vec![item])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_select_positions_with_value(
+                                session, state, index, positions, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        positions = append_position_if_true(session, positions, index, value)?;
+        index += 1;
+    }
+}
+
+fn resume_suspended_select_positions_with_value(
+    session: &mut Session,
+    state: SuspendedSelectPositionsState,
+    index: usize,
+    positions: PersistentStructureSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    push_position_if_true(session, &mut state, value)?;
-    state.index += 1;
-    resume_select_positions_from_index(session, state)
+    let positions = append_position_if_true(session, positions, index, value)?;
+    resume_suspended_select_positions_from_index(session, state, index + 1, positions)
+}
+
+fn append_position_if_true(
+    session: &mut Session,
+    positions: PersistentStructureSequence<Expr>,
+    index: usize,
+    value: Expr,
+) -> Result<PersistentStructureSequence<Expr>, EvalError> {
+    if truthiness_symbol(&value) != Some(true) {
+        return Ok(positions);
+    }
+    let next_len = positions.len() + 1;
+    session.enforce_generated_element_limit_for_count(next_len)?;
+    Ok(positions.appended(position_path_expr(index + 1)))
 }
 
 fn push_position_if_true(
@@ -238,4 +311,5 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SelectPositionsLimit>();
     assert_traces::<SelectPositionsState>();
+    assert_traces::<SuspendedSelectPositionsState>();
 };

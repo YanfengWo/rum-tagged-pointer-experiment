@@ -59,7 +59,6 @@ pub(crate) fn eval_all_true(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     eval_truth_aggregate(session, head, args, TruthAggregateKind::All)
 }
 
@@ -68,7 +67,6 @@ pub(crate) fn eval_any_true(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     eval_truth_aggregate(session, head, args, TruthAggregateKind::Any)
 }
 
@@ -77,30 +75,30 @@ pub(crate) fn eval_none_true(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     eval_truth_aggregate(session, head, args, TruthAggregateKind::None)
 }
 
 fn eval_truth_aggregate(
     session: &mut Session,
     head: &Expr,
-    args: &[Expr],
+    args: &SharedArgs,
     kind: TruthAggregateKind,
 ) -> Result<Expr, EvalError> {
-    if args.len() == 1 {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+    let args_slice = args.as_ref();
+    if args_slice.len() == 1 {
+        return Ok(Expr::call_with_shared_args(head.clone(), args.clone()));
     }
 
-    if !(2..=3).contains(&args.len()) {
+    if !(2..=3).contains(&args_slice.len()) {
         let symbol = truth_aggregate_name(kind);
-        return Ok(session.invalid_call_with_arg_range(symbol, args, 2, 3));
+        return Ok(session.invalid_call_with_arg_range(symbol, args_slice, 2, 3));
     }
 
-    let traversal = if let Some(levelspec) = args.get(2) {
+    let traversal = if let Some(levelspec) = args_slice.get(2) {
         let Some(levels) = parse_standard_level_spec(levelspec) else {
             return Ok(session.invalid_call_with_arg_form(
                 truth_aggregate_name(kind),
-                args,
+                args_slice,
                 "expected a standard levelspec as the third argument",
             ));
         };
@@ -109,15 +107,15 @@ fn eval_truth_aggregate(
         CasesTraversalConfig::default_cases()
     };
 
-    let parts = collect_level_parts_owned(&args[0], traversal, 0);
+    let parts = collect_level_parts_owned(&args_slice[0], traversal, 0);
 
     resume_truth_aggregate_from_index(
         session,
         kind,
         head.clone(),
-        args.to_vec(),
+        args.clone(),
         parts,
-        args[1].clone(),
+        args_slice[1].clone(),
         0,
         false,
     )
@@ -127,7 +125,7 @@ fn resume_truth_aggregate_from_index(
     session: &mut Session,
     kind: TruthAggregateKind,
     head: Expr,
-    call_args: Vec<Expr>,
+    call_args: SharedArgs,
     parts: Vec<Expr>,
     criterion: Expr,
     mut index: usize,
@@ -141,8 +139,9 @@ fn resume_truth_aggregate_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let parts = FrozenPredicateSequence::freeze(parts);
                         move |session, value| {
-                            resume_truth_aggregate_with_value(
+                            resume_suspended_truth_aggregate_with_value(
                                 session,
                                 kind,
                                 head,
@@ -179,12 +178,65 @@ fn resume_truth_aggregate_from_index(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn resume_truth_aggregate_with_value(
+fn resume_suspended_truth_aggregate_from_index(
     session: &mut Session,
     kind: TruthAggregateKind,
     head: Expr,
-    call_args: Vec<Expr>,
-    parts: Vec<Expr>,
+    call_args: SharedArgs,
+    parts: FrozenPredicateSequence<Expr>,
+    criterion: Expr,
+    mut index: usize,
+    mut saw_unknown: bool,
+) -> Result<Expr, EvalError> {
+    while let Some(part) = parts.get(index).cloned() {
+        let value = match session.evaluate(Expr::call(criterion.clone(), vec![part])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_truth_aggregate_with_value(
+                                session,
+                                kind,
+                                head,
+                                call_args,
+                                parts,
+                                criterion,
+                                index,
+                                saw_unknown,
+                                value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        match truthiness_symbol(&value) {
+            Some(true) => match kind {
+                TruthAggregateKind::All => {}
+                TruthAggregateKind::Any => return Ok(system_expr(heads::structure::TRUE)),
+                TruthAggregateKind::None => return Ok(system_expr(heads::structure::FALSE)),
+            },
+            Some(false) => match kind {
+                TruthAggregateKind::All => return Ok(system_expr(heads::structure::FALSE)),
+                TruthAggregateKind::Any | TruthAggregateKind::None => {}
+            },
+            None => saw_unknown = true,
+        }
+        index += 1;
+    }
+    Ok(finalize_truth_aggregate(kind, head, call_args, saw_unknown))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_truth_aggregate_with_value(
+    session: &mut Session,
+    kind: TruthAggregateKind,
+    head: Expr,
+    call_args: SharedArgs,
+    parts: FrozenPredicateSequence<Expr>,
     criterion: Expr,
     index: usize,
     saw_unknown: bool,
@@ -192,7 +244,7 @@ fn resume_truth_aggregate_with_value(
 ) -> Result<Expr, EvalError> {
     match truthiness_symbol(&value) {
         Some(true) => match kind {
-            TruthAggregateKind::All => resume_truth_aggregate_from_index(
+            TruthAggregateKind::All => resume_suspended_truth_aggregate_from_index(
                 session,
                 kind,
                 head,
@@ -208,7 +260,7 @@ fn resume_truth_aggregate_with_value(
         Some(false) => match kind {
             TruthAggregateKind::All => Ok(system_expr(heads::structure::FALSE)),
             TruthAggregateKind::Any | TruthAggregateKind::None => {
-                resume_truth_aggregate_from_index(
+                resume_suspended_truth_aggregate_from_index(
                     session,
                     kind,
                     head,
@@ -220,7 +272,7 @@ fn resume_truth_aggregate_with_value(
                 )
             }
         },
-        None => resume_truth_aggregate_from_index(
+        None => resume_suspended_truth_aggregate_from_index(
             session,
             kind,
             head,
@@ -244,11 +296,11 @@ fn truth_aggregate_name(kind: TruthAggregateKind) -> &'static str {
 fn finalize_truth_aggregate(
     kind: TruthAggregateKind,
     head: Expr,
-    call_args: Vec<Expr>,
+    call_args: SharedArgs,
     saw_unknown: bool,
 ) -> Expr {
     if saw_unknown {
-        Expr::call(head, call_args)
+        Expr::call_with_shared_args(head, call_args)
     } else {
         match kind {
             TruthAggregateKind::All | TruthAggregateKind::None => {

@@ -23,6 +23,12 @@ mod selectors;
 mod sequence;
 pub(crate) mod stable_groups;
 mod surface;
+mod suspended_state;
+
+use self::suspended_state::{
+    FrozenStructureSequence, FrozenStructureValue, PersistentStructureCounts,
+    PersistentStructureSequence, PersistentStructureSet,
+};
 
 pub(crate) use self::{
     collection_stats::{

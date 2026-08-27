@@ -9,6 +9,25 @@ pub(super) struct TensorCallbackEvalState {
     pub(super) operator_args: Vec<Expr>,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedTensorCallbackEvalState {
+    operator: Expr,
+    output_head: Expr,
+    output_shape: FrozenFunctionalSequence<usize>,
+    operator_args: FrozenFunctionalSequence<Expr>,
+}
+
+impl SuspendedTensorCallbackEvalState {
+    fn freeze(state: TensorCallbackEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            output_head: state.output_head,
+            output_shape: FrozenFunctionalSequence::freeze(state.output_shape),
+            operator_args: FrozenFunctionalSequence::freeze(state.operator_args),
+        }
+    }
+}
+
 #[derive(FrameRootTrace)]
 struct InnerEvalState {
     f: Expr,
@@ -22,6 +41,39 @@ struct InnerEvalState {
     output_indices: Vec<Vec<usize>>,
     contract_dim: usize,
     left_prefix_rank: usize,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedInnerEvalState {
+    f: Expr,
+    g: Expr,
+    head: Expr,
+    left_shape: FrozenFunctionalSequence<usize>,
+    right_shape: FrozenFunctionalSequence<usize>,
+    left_flat: FrozenFunctionalSequence<Expr>,
+    right_flat: FrozenFunctionalSequence<Expr>,
+    output_shape: FrozenFunctionalSequence<usize>,
+    output_indices: FrozenFunctionalSequence<Vec<usize>>,
+    contract_dim: usize,
+    left_prefix_rank: usize,
+}
+
+impl SuspendedInnerEvalState {
+    fn freeze(state: InnerEvalState) -> Self {
+        Self {
+            f: state.f,
+            g: state.g,
+            head: state.head,
+            left_shape: FrozenFunctionalSequence::freeze(state.left_shape),
+            right_shape: FrozenFunctionalSequence::freeze(state.right_shape),
+            left_flat: FrozenFunctionalSequence::freeze(state.left_flat),
+            right_flat: FrozenFunctionalSequence::freeze(state.right_flat),
+            output_shape: FrozenFunctionalSequence::freeze(state.output_shape),
+            output_indices: FrozenFunctionalSequence::freeze(state.output_indices),
+            contract_dim: state.contract_dim,
+            left_prefix_rank: state.left_prefix_rank,
+        }
+    }
 }
 
 pub(super) fn apply_array_reduce(
@@ -235,8 +287,12 @@ pub(super) fn resume_tensor_callback_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedTensorCallbackEvalState::freeze(state);
+                        let outputs = PersistentFunctionalSequence::freeze(outputs);
                         move |session, value| {
-                            resume_tensor_callback_with_value(session, state, index, outputs, value)
+                            resume_suspended_tensor_callback_with_value(
+                                session, state, index, outputs, value,
+                            )
                         }
                     },
                 );
@@ -249,15 +305,52 @@ pub(super) fn resume_tensor_callback_from_index(
     }
 }
 
-fn resume_tensor_callback_with_value(
+fn resume_suspended_tensor_callback_from_index(
     session: &mut Session,
-    state: TensorCallbackEvalState,
+    state: SuspendedTensorCallbackEvalState,
+    mut index: usize,
+    mut outputs: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(operator_arg) = state.operator_args.get(index).cloned() else {
+            return Ok(rebuild_tensor_expr(
+                &state.output_head,
+                state.output_shape.as_slice(),
+                &outputs.to_vec(),
+            ));
+        };
+
+        let value = match session.evaluate(Expr::call(state.operator.clone(), vec![operator_arg])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_tensor_callback_with_value(
+                                session, state, index, outputs, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        outputs = outputs.appended(value);
+        index += 1;
+    }
+}
+
+fn resume_suspended_tensor_callback_with_value(
+    session: &mut Session,
+    state: SuspendedTensorCallbackEvalState,
     index: usize,
-    mut outputs: Vec<Expr>,
+    outputs: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    outputs.push(value);
-    resume_tensor_callback_from_index(session, state, index + 1, outputs)
+    let outputs = outputs.appended(value);
+    resume_suspended_tensor_callback_from_index(session, state, index + 1, outputs)
 }
 
 fn resume_inner_output_from_index(
@@ -326,8 +419,12 @@ fn resume_inner_from_indices(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let state = SuspendedInnerEvalState::freeze(state);
+                            let terms = PersistentFunctionalSequence::freeze(terms);
+                            let output_scalars =
+                                PersistentFunctionalSequence::freeze(output_scalars);
                             move |session, term| {
-                                resume_inner_term_with_value(
+                                resume_suspended_inner_term_with_value(
                                     session,
                                     state,
                                     output_index,
@@ -353,8 +450,10 @@ fn resume_inner_from_indices(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedInnerEvalState::freeze(state);
+                        let output_scalars = PersistentFunctionalSequence::freeze(output_scalars);
                         move |session, reduced| {
-                            resume_inner_reduced_with_value(
+                            resume_suspended_inner_reduced_with_value(
                                 session,
                                 state,
                                 output_index,
@@ -375,17 +474,130 @@ fn resume_inner_from_indices(
     }
 }
 
-fn resume_inner_term_with_value(
+fn resume_suspended_inner_from_indices(
     session: &mut Session,
-    state: InnerEvalState,
+    state: SuspendedInnerEvalState,
+    mut output_index: usize,
+    mut contract_index: usize,
+    mut terms: PersistentFunctionalSequence<Expr>,
+    mut output_scalars: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if output_index >= state.output_indices.len() {
+            return Ok(rebuild_tensor_expr(
+                &state.head,
+                state.output_shape.as_slice(),
+                &output_scalars.to_vec(),
+            ));
+        }
+
+        while contract_index < state.contract_dim {
+            let Some(output_indices) = state.output_indices.get(output_index) else {
+                return Ok(rebuild_tensor_expr(
+                    &state.head,
+                    state.output_shape.as_slice(),
+                    &output_scalars.to_vec(),
+                ));
+            };
+            let (left_index, right_index) = output_indices.split_at(state.left_prefix_rank);
+            let mut lhs = left_index.to_vec();
+            lhs.push(contract_index);
+            let mut rhs = vec![contract_index];
+            rhs.extend_from_slice(right_index);
+
+            let Some(lhs_value) = tensor_scalar_at(
+                state.left_flat.as_slice(),
+                state.left_shape.as_slice(),
+                &lhs,
+            ) else {
+                return Ok(rebuild_tensor_expr(
+                    &state.head,
+                    state.output_shape.as_slice(),
+                    &output_scalars.to_vec(),
+                ));
+            };
+            let Some(rhs_value) = tensor_scalar_at(
+                state.right_flat.as_slice(),
+                state.right_shape.as_slice(),
+                &rhs,
+            ) else {
+                return Ok(rebuild_tensor_expr(
+                    &state.head,
+                    state.output_shape.as_slice(),
+                    &output_scalars.to_vec(),
+                ));
+            };
+
+            let term = match session.evaluate(Expr::call(
+                state.f.clone(),
+                vec![lhs_value.clone(), rhs_value.clone()],
+            )) {
+                Ok(term) => term,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, term| {
+                                resume_suspended_inner_term_with_value(
+                                    session,
+                                    state,
+                                    output_index,
+                                    contract_index,
+                                    terms,
+                                    output_scalars,
+                                    term,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+
+            terms = terms.appended(term);
+            contract_index += 1;
+        }
+
+        let reduced = match session.evaluate(Expr::call(state.g.clone(), terms.to_vec())) {
+            Ok(reduced) => reduced,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, reduced| {
+                            resume_suspended_inner_reduced_with_value(
+                                session,
+                                state,
+                                output_index,
+                                output_scalars,
+                                reduced,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        output_scalars = output_scalars.appended(reduced);
+        output_index += 1;
+        contract_index = 0;
+        terms = PersistentFunctionalSequence::freeze(Vec::new());
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_inner_term_with_value(
+    session: &mut Session,
+    state: SuspendedInnerEvalState,
     output_index: usize,
     contract_index: usize,
-    mut terms: Vec<Expr>,
-    output_scalars: Vec<Expr>,
+    terms: PersistentFunctionalSequence<Expr>,
+    output_scalars: PersistentFunctionalSequence<Expr>,
     term: Expr,
 ) -> Result<Expr, EvalError> {
-    terms.push(term);
-    resume_inner_from_indices(
+    let terms = terms.appended(term);
+    resume_suspended_inner_from_indices(
         session,
         state,
         output_index,
@@ -395,20 +607,20 @@ fn resume_inner_term_with_value(
     )
 }
 
-fn resume_inner_reduced_with_value(
+fn resume_suspended_inner_reduced_with_value(
     session: &mut Session,
-    state: InnerEvalState,
+    state: SuspendedInnerEvalState,
     output_index: usize,
-    mut output_scalars: Vec<Expr>,
+    output_scalars: PersistentFunctionalSequence<Expr>,
     reduced: Expr,
 ) -> Result<Expr, EvalError> {
-    output_scalars.push(reduced);
-    resume_inner_from_indices(
+    let output_scalars = output_scalars.appended(reduced);
+    resume_suspended_inner_from_indices(
         session,
         state,
         output_index + 1,
         0,
-        Vec::new(),
+        PersistentFunctionalSequence::freeze(Vec::new()),
         output_scalars,
     )
 }
@@ -559,4 +771,6 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<InnerEvalState>();
     assert_traces::<TensorCallbackEvalState>();
+    assert_traces::<SuspendedInnerEvalState>();
+    assert_traces::<SuspendedTensorCallbackEvalState>();
 };

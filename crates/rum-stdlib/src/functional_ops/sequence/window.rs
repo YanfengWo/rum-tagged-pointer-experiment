@@ -8,6 +8,29 @@ enum SequenceLikeExpr {
     Association(Vec<(Expr, Expr)>),
 }
 
+#[derive(Clone, FrameRootTrace)]
+enum SuspendedSequenceLikeExpr {
+    Call {
+        head: Expr,
+        items: FrozenFunctionalSequence<Expr>,
+    },
+    Association(FrozenFunctionalSequence<(Expr, Expr)>),
+}
+
+impl SuspendedSequenceLikeExpr {
+    fn freeze(sequence: SequenceLikeExpr) -> Self {
+        match sequence {
+            SequenceLikeExpr::Call { head, items } => Self::Call {
+                head,
+                items: FrozenFunctionalSequence::freeze(items),
+            },
+            SequenceLikeExpr::Association(entries) => {
+                Self::Association(FrozenFunctionalSequence::freeze(entries))
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 enum WhileSequenceMode {
     Take,
@@ -23,13 +46,34 @@ struct BlockMapEvalState {
     offset: usize,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedBlockMapEvalState {
+    operator: Expr,
+    block_head: Expr,
+    items: FrozenFunctionalSequence<Expr>,
+    size: usize,
+    offset: usize,
+}
+
+impl SuspendedBlockMapEvalState {
+    fn freeze(state: BlockMapEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            block_head: state.block_head,
+            items: FrozenFunctionalSequence::freeze(state.items),
+            size: state.size,
+            offset: state.offset,
+        }
+    }
+}
+
 pub(crate) fn eval_block_map(
     session: &mut Session,
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    match args {
+    let args_slice = args.as_ref();
+    match args_slice {
         [operator, size] => Ok(unary_operator_form_with_tail(
             "BlockMap",
             operator.clone(),
@@ -74,7 +118,7 @@ pub(crate) fn eval_block_map(
 
             apply_block_map(session, head, operator, expr, size, offset, args)
         }
-        _ => Ok(session.invalid_call_with_arg_range("BlockMap", args, 2, 4)),
+        _ => Ok(session.invalid_call_with_arg_range("BlockMap", args_slice, 2, 4)),
     }
 }
 
@@ -182,8 +226,9 @@ fn resume_while_sequence_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
                         move |session, value| {
-                            resume_while_sequence_with_value(
+                            resume_suspended_while_sequence_with_value(
                                 session, sequence, criterion, index, mode, value,
                             )
                         }
@@ -200,18 +245,57 @@ fn resume_while_sequence_from_index(
     }
 }
 
-fn resume_while_sequence_with_value(
+fn resume_suspended_while_sequence_from_index(
     session: &mut Session,
-    sequence: SequenceLikeExpr,
+    sequence: SuspendedSequenceLikeExpr,
+    criterion: Expr,
+    mut index: usize,
+    mode: WhileSequenceMode,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= sequence.len() {
+            return Ok(finish_suspended_while_sequence(sequence, index, mode));
+        }
+
+        let Some(item) = sequence.value_at(index) else {
+            return Ok(finish_suspended_while_sequence(sequence, index, mode));
+        };
+        let value = match session.evaluate(Expr::call(criterion.clone(), vec![item])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_while_sequence_with_value(
+                                session, sequence, criterion, index, mode, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&value) != Some(true) {
+            return Ok(finish_suspended_while_sequence(sequence, index, mode));
+        }
+        index += 1;
+    }
+}
+
+fn resume_suspended_while_sequence_with_value(
+    session: &mut Session,
+    sequence: SuspendedSequenceLikeExpr,
     criterion: Expr,
     index: usize,
     mode: WhileSequenceMode,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if truthiness_symbol(&value) == Some(true) {
-        resume_while_sequence_from_index(session, sequence, criterion, index + 1, mode)
+        resume_suspended_while_sequence_from_index(session, sequence, criterion, index + 1, mode)
     } else {
-        Ok(finish_while_sequence(sequence, index, mode))
+        Ok(finish_suspended_while_sequence(sequence, index, mode))
     }
 }
 
@@ -236,8 +320,10 @@ fn resume_accumulate_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
+                        let accumulated = PersistentFunctionalSequence::freeze(accumulated);
                         move |session, value| {
-                            resume_accumulate_with_value(
+                            resume_suspended_accumulate_with_value(
                                 session,
                                 sequence,
                                 index,
@@ -257,15 +343,57 @@ fn resume_accumulate_from_index(
     }
 }
 
-fn resume_accumulate_with_value(
+fn resume_suspended_accumulate_from_index(
     session: &mut Session,
-    sequence: SequenceLikeExpr,
+    sequence: SuspendedSequenceLikeExpr,
+    mut index: usize,
+    mut current: Expr,
+    mut accumulated: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= sequence.len() {
+            return Ok(sequence.render_with_values(accumulated.to_vec()));
+        }
+
+        let Some(item) = sequence.value_at(index) else {
+            return Ok(sequence.render_with_values(accumulated.to_vec()));
+        };
+        let value = match session.evaluate(Expr::call(system_expr("Plus"), vec![current, item])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_accumulate_with_value(
+                                session,
+                                sequence,
+                                index,
+                                accumulated,
+                                value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        accumulated = accumulated.appended(value.clone());
+        current = value;
+        index += 1;
+    }
+}
+
+fn resume_suspended_accumulate_with_value(
+    session: &mut Session,
+    sequence: SuspendedSequenceLikeExpr,
     index: usize,
-    mut accumulated: Vec<Expr>,
+    accumulated: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    accumulated.push(value.clone());
-    resume_accumulate_from_index(session, sequence, index + 1, value, accumulated)
+    let accumulated = accumulated.appended(value.clone());
+    resume_suspended_accumulate_from_index(session, sequence, index + 1, value, accumulated)
 }
 
 fn resume_block_map_from_index(
@@ -289,8 +417,12 @@ fn resume_block_map_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedBlockMapEvalState::freeze(state);
+                        let results = PersistentFunctionalSequence::freeze(results);
                         move |session, value| {
-                            resume_block_map_with_value(session, state, index, results, value)
+                            resume_suspended_block_map_with_value(
+                                session, state, index, results, value,
+                            )
                         }
                     },
                 );
@@ -303,16 +435,53 @@ fn resume_block_map_from_index(
     }
 }
 
-fn resume_block_map_with_value(
+fn resume_suspended_block_map_from_index(
     session: &mut Session,
-    state: BlockMapEvalState,
+    state: SuspendedBlockMapEvalState,
+    mut index: usize,
+    mut results: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index + state.size > state.items.len() {
+            return Ok(Expr::call(system_expr("List"), results.to_vec()));
+        }
+
+        let block = Expr::call(
+            state.block_head.clone(),
+            state.items.as_slice()[index..index + state.size].to_vec(),
+        );
+        let value = match session.evaluate(Expr::call(state.operator.clone(), vec![block])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_block_map_with_value(
+                                session, state, index, results, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        results = results.appended(value);
+        index += state.offset;
+    }
+}
+
+fn resume_suspended_block_map_with_value(
+    session: &mut Session,
+    state: SuspendedBlockMapEvalState,
     index: usize,
-    mut results: Vec<Expr>,
+    results: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    results.push(value);
+    let results = results.appended(value);
     let next_index = index + state.offset;
-    resume_block_map_from_index(session, state, next_index, results)
+    resume_suspended_block_map_from_index(session, state, next_index, results)
 }
 
 impl SequenceLikeExpr {
@@ -355,6 +524,48 @@ impl SequenceLikeExpr {
     }
 }
 
+impl SuspendedSequenceLikeExpr {
+    fn len(&self) -> usize {
+        match self {
+            Self::Call { items, .. } => items.len(),
+            Self::Association(entries) => entries.len(),
+        }
+    }
+
+    fn value_at(&self, index: usize) -> Option<Expr> {
+        match self {
+            Self::Call { items, .. } => items.get(index).cloned(),
+            Self::Association(entries) => entries.get(index).map(|(_, value)| value.clone()),
+        }
+    }
+
+    fn render_prefix(&self, count: usize) -> Expr {
+        match self {
+            Self::Call { head, items } => Expr::call(
+                head.clone(),
+                items.as_slice().iter().take(count).cloned().collect(),
+            ),
+            Self::Association(entries) => {
+                render_association(entries.as_slice().iter().take(count).cloned().collect())
+            }
+        }
+    }
+
+    fn render_with_values(&self, values: Vec<Expr>) -> Expr {
+        match self {
+            Self::Call { head, .. } => Expr::call(head.clone(), values),
+            Self::Association(entries) => render_association(
+                entries
+                    .as_slice()
+                    .iter()
+                    .map(|(key, _)| key.clone())
+                    .zip(values)
+                    .collect(),
+            ),
+        }
+    }
+}
+
 fn sequence_like_from_expr(expr: &Expr) -> Option<SequenceLikeExpr> {
     if let Some(entries) = association_entries_from_expr(expr) {
         return Some(SequenceLikeExpr::Association(entries));
@@ -388,14 +599,14 @@ fn apply_block_map(
     expr: &Expr,
     size: usize,
     offset: usize,
-    raw_args: &[Expr],
+    raw_args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     let Expr::Call {
         head: block_head,
         args: items,
     } = expr
     else {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
+        return Ok(Expr::call_with_shared_args(head.clone(), raw_args.clone()));
     };
 
     resume_block_map_from_index(
@@ -410,6 +621,17 @@ fn apply_block_map(
         0,
         Vec::new(),
     )
+}
+
+fn finish_suspended_while_sequence(
+    sequence: SuspendedSequenceLikeExpr,
+    count: usize,
+    mode: WhileSequenceMode,
+) -> Expr {
+    match mode {
+        WhileSequenceMode::Take => sequence.render_prefix(count),
+        WhileSequenceMode::Length => Expr::integer(BigInt::from(count)),
+    }
 }
 
 fn finish_while_sequence(
@@ -427,4 +649,6 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<BlockMapEvalState>();
     assert_traces::<SequenceLikeExpr>();
+    assert_traces::<SuspendedBlockMapEvalState>();
+    assert_traces::<SuspendedSequenceLikeExpr>();
 };

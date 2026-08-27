@@ -65,8 +65,10 @@ fn resume_association_map_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let keys = FrozenAssociationSequence::freeze(keys);
+                        let entries = PersistentAssociationSequence::freeze(entries);
                         move |session, value| {
-                            resume_association_map_with_value(
+                            resume_suspended_association_map_with_value(
                                 session, function, keys, index, entries, key, value,
                             )
                         }
@@ -81,17 +83,56 @@ fn resume_association_map_from_index(
     }
 }
 
-fn resume_association_map_with_value(
+fn resume_suspended_association_map_from_index(
     session: &mut Session,
     function: Expr,
-    keys: Vec<Expr>,
+    keys: FrozenAssociationSequence<Expr>,
+    mut index: usize,
+    mut entries: PersistentAssociationSequence<(Expr, Expr)>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(key) = keys.get(index).cloned() else {
+            return Ok(render_association(entries.to_vec()));
+        };
+
+        let value = match session.evaluate(Expr::call(function.clone(), vec![key.clone()])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_association_map_with_value(
+                                session, function, keys, index, entries, key, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        entries = entries.appended((key, value));
+        index += 1;
+    }
+}
+
+fn resume_suspended_association_map_with_value(
+    session: &mut Session,
+    function: Expr,
+    keys: FrozenAssociationSequence<Expr>,
     index: usize,
-    mut entries: Vec<(Expr, Expr)>,
+    entries: PersistentAssociationSequence<(Expr, Expr)>,
     key: Expr,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    entries.push((key, value));
-    resume_association_map_from_index(session, function, keys, index + 1, entries)
+    resume_suspended_association_map_from_index(
+        session,
+        function,
+        keys,
+        index + 1,
+        entries.appended((key, value)),
+    )
 }
 
 fn resume_association_map_association_from_index(
@@ -113,8 +154,10 @@ fn resume_association_map_association_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let items = FrozenAssociationSequence::freeze(items);
+                        let mapped_items = PersistentAssociationSequence::freeze(mapped_items);
                         move |session, value| {
-                            resume_association_map_association_with_value(
+                            resume_suspended_association_map_association_with_value(
                                 session,
                                 function,
                                 items,
@@ -135,18 +178,67 @@ fn resume_association_map_association_from_index(
     }
 }
 
-fn resume_association_map_association_with_value(
+fn resume_suspended_association_map_association_from_index(
     session: &mut Session,
     function: Expr,
-    items: Vec<Expr>,
+    items: FrozenAssociationSequence<Expr>,
+    mut index: usize,
+    mut mapped_items: PersistentAssociationSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            let mapped_items = mapped_items.to_vec();
+            return Ok(render_association_preserving_rule_heads(&mapped_items)
+                .unwrap_or_else(|| Expr::call(system_expr("Association"), mapped_items)));
+        };
+
+        let value = match session.evaluate(Expr::call(function.clone(), vec![item.clone()])) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_association_map_association_with_value(
+                                session,
+                                function,
+                                items,
+                                index,
+                                mapped_items,
+                                item,
+                                value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        report_invalid_association_map_value(session, &function, &item, &value);
+        mapped_items = mapped_items.appended(value);
+        index += 1;
+    }
+}
+
+fn resume_suspended_association_map_association_with_value(
+    session: &mut Session,
+    function: Expr,
+    items: FrozenAssociationSequence<Expr>,
     index: usize,
-    mut mapped_items: Vec<Expr>,
+    mapped_items: PersistentAssociationSequence<Expr>,
     item: Expr,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    push_association_map_association_value(session, &function, &item, &mut mapped_items, value);
+    report_invalid_association_map_value(session, &function, &item, &value);
 
-    resume_association_map_association_from_index(session, function, items, index + 1, mapped_items)
+    resume_suspended_association_map_association_from_index(
+        session,
+        function,
+        items,
+        index + 1,
+        mapped_items.appended(value),
+    )
 }
 
 fn push_association_map_association_value(
@@ -156,7 +248,17 @@ fn push_association_map_association_value(
     mapped_items: &mut Vec<Expr>,
     value: Expr,
 ) {
-    if render_association_preserving_rule_heads(std::slice::from_ref(&value)).is_none() {
+    report_invalid_association_map_value(session, function, item, &value);
+    mapped_items.push(value);
+}
+
+fn report_invalid_association_map_value(
+    session: &mut Session,
+    function: &Expr,
+    item: &Expr,
+    value: &Expr,
+) {
+    if render_association_preserving_rule_heads(std::slice::from_ref(value)).is_none() {
         session.push_message(
                 "AssociationMap",
                 "invrlf",
@@ -165,6 +267,4 @@ fn push_association_map_association_value(
                 ),
             );
     }
-
-    mapped_items.push(value);
 }

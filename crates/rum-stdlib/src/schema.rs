@@ -55,20 +55,20 @@ pub(crate) fn eval_schema_errors(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    if args.len() == 1 {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+    let args_slice = args.as_ref();
+    if args_slice.len() == 1 {
+        return Ok(Expr::call_with_shared_args(head.clone(), args.clone()));
     }
-    if args.len() >= 2 {
-        let value_result = session.evaluate(args[0].clone());
+    if args_slice.len() >= 2 {
+        let value_result = session.evaluate(args_slice[0].clone());
         let value = session.suspend_with_frame_lazy(value_result, || {
-            let tail = args[1..].to_vec();
-            move |session, value| eval_schema_errors_with_value(session, value, &tail)
+            let args = args.clone();
+            move |session, value| eval_schema_errors_with_value(session, value, &args.as_ref()[1..])
         })?;
-        return eval_schema_errors_with_value(session, value, &args[1..]);
+        return eval_schema_errors_with_value(session, value, &args_slice[1..]);
     }
 
-    finish_schema_errors(session, args)
+    finish_schema_errors(session, args_slice)
 }
 
 fn eval_schema_errors_with_value(
@@ -101,20 +101,22 @@ pub(crate) fn eval_conform_schema(
     head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    if args.len() == 1 {
-        return Ok(Expr::call(head.clone(), args.to_vec()));
+    let args_slice = args.as_ref();
+    if args_slice.len() == 1 {
+        return Ok(Expr::call_with_shared_args(head.clone(), args.clone()));
     }
-    if args.len() >= 2 {
-        let value_result = session.evaluate(args[0].clone());
+    if args_slice.len() >= 2 {
+        let value_result = session.evaluate(args_slice[0].clone());
         let value = session.suspend_with_frame_lazy(value_result, || {
-            let tail = args[1..].to_vec();
-            move |session, value| eval_conform_schema_with_value(session, value, &tail)
+            let args = args.clone();
+            move |session, value| {
+                eval_conform_schema_with_value(session, value, &args.as_ref()[1..])
+            }
         })?;
-        return eval_conform_schema_with_value(session, value, &args[1..]);
+        return eval_conform_schema_with_value(session, value, &args_slice[1..]);
     }
 
-    finish_conform_schema(session, args)
+    finish_conform_schema(session, args_slice)
 }
 
 fn eval_conform_schema_with_value(

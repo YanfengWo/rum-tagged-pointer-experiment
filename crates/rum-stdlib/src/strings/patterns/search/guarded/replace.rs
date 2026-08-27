@@ -110,22 +110,41 @@ fn resume_replace_string_value_from_candidate(
                 end,
                 &bindings,
             );
-            return session.drive_internal_value::<bool, String, _>(
-                guard_result,
-                move |session, accepted| {
-                    resume_replace_string_value_after_guard(
-                        session,
-                        state,
-                        index,
-                        end,
-                        replacements,
-                        rule_index,
-                        output,
-                        bindings,
-                        accepted,
+            return match guard_result {
+                Ok(accepted) => resume_replace_string_value_after_guard(
+                    session,
+                    state,
+                    index,
+                    end,
+                    replacements,
+                    rule_index,
+                    output,
+                    bindings,
+                    accepted,
+                ),
+                Err(EvalError::InputRequired { request }) => {
+                    let state = FrozenStringValue::freeze(state);
+                    let output = PersistentStringText::freeze(output);
+                    let bindings = FrozenStringValue::freeze(bindings);
+                    session.drive_internal_value::<bool, String, _>(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, accepted| {
+                            resume_suspended_replace_string_value_after_guard(
+                                session,
+                                state,
+                                index,
+                                end,
+                                replacements,
+                                rule_index,
+                                output,
+                                bindings,
+                                accepted,
+                            )
+                        },
                     )
-                },
-            );
+                }
+                Err(error) => Err(error),
+            };
         }
 
         return evaluate_replace_string_output(
@@ -204,21 +223,266 @@ fn evaluate_replace_string_output(
             output,
             rendered_expr,
         ),
-        Err(error) => session.drive_evaluated_value::<Expr, String, _>(
-            Err(error),
-            move |session, rendered_expr| {
-                resume_replace_string_value_with_output(
+        Err(EvalError::InputRequired { request }) => {
+            let state = FrozenStringValue::freeze(state);
+            let output = PersistentStringText::freeze(output);
+            session.drive_evaluated_value::<Expr, String, _>(
+                Err(EvalError::InputRequired { request }),
+                move |session, rendered_expr| {
+                    resume_suspended_replace_string_value_with_output(
+                        session,
+                        state,
+                        index,
+                        end,
+                        replacements,
+                        output,
+                        rendered_expr,
+                    )
+                },
+            )
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn resume_suspended_replace_string_value_from_candidate(
+    session: &mut Session,
+    state: FrozenStringValue<GuardedStringReplaceRuleEvalState>,
+    mut index: usize,
+    replacements: usize,
+    mut rule_index: usize,
+    mut output: PersistentStringText,
+) -> Result<String, EvalError> {
+    loop {
+        let fixed = state.as_ref();
+        if replacements >= fixed.max_replacements {
+            return Ok(output
+                .appended(fixed.chars[index..].iter().collect::<String>())
+                .to_string());
+        }
+
+        let Some(rule) = fixed.rules.get(rule_index) else {
+            if index == fixed.chars.len() {
+                return Ok(output.to_string());
+            }
+            output = output.appended(fixed.chars[index].to_string());
+            index += 1;
+            rule_index = 0;
+            continue;
+        };
+
+        let Some(match_state) =
+            best_pattern_match_state(&rule.rule.pattern, &fixed.chars, index, fixed.config)
+        else {
+            rule_index += 1;
+            continue;
+        };
+        let end = match_state.end;
+        let bindings = match_state.bindings;
+
+        if let Some(guard) = &rule.guard {
+            let guard_result = evaluate_string_rule_guard_result(
+                session,
+                guard,
+                &fixed.chars,
+                index,
+                end,
+                &bindings,
+            );
+            return match guard_result {
+                Ok(accepted) => resume_suspended_replace_string_value_after_guard_owned(
                     session,
                     state,
                     index,
                     end,
                     replacements,
+                    rule_index,
                     output,
-                    rendered_expr,
-                )
-            },
-        ),
+                    bindings,
+                    accepted,
+                ),
+                Err(EvalError::InputRequired { request }) => {
+                    let bindings = FrozenStringValue::freeze(bindings);
+                    session.drive_internal_value::<bool, String, _>(
+                        Err(EvalError::InputRequired { request }),
+                        move |session, accepted| {
+                            resume_suspended_replace_string_value_after_guard(
+                                session,
+                                state,
+                                index,
+                                end,
+                                replacements,
+                                rule_index,
+                                output,
+                                bindings,
+                                accepted,
+                            )
+                        },
+                    )
+                }
+                Err(error) => Err(error),
+            };
+        }
+
+        return evaluate_suspended_replace_string_output(
+            session,
+            state,
+            index,
+            end,
+            replacements,
+            output,
+            &bindings,
+            rule_index,
+        );
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_replace_string_value_after_guard(
+    session: &mut Session,
+    state: FrozenStringValue<GuardedStringReplaceRuleEvalState>,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    rule_index: usize,
+    output: PersistentStringText,
+    bindings: FrozenStringValue<SymbolExprMap>,
+    accepted: bool,
+) -> Result<String, EvalError> {
+    if !accepted {
+        return resume_suspended_replace_string_value_from_candidate(
+            session,
+            state,
+            index,
+            replacements,
+            rule_index + 1,
+            output,
+        );
+    }
+    evaluate_suspended_replace_string_output(
+        session,
+        state,
+        index,
+        end,
+        replacements,
+        output,
+        bindings.as_ref(),
+        rule_index,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_replace_string_value_after_guard_owned(
+    session: &mut Session,
+    state: FrozenStringValue<GuardedStringReplaceRuleEvalState>,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    rule_index: usize,
+    output: PersistentStringText,
+    bindings: SymbolExprMap,
+    accepted: bool,
+) -> Result<String, EvalError> {
+    if !accepted {
+        return resume_suspended_replace_string_value_from_candidate(
+            session,
+            state,
+            index,
+            replacements,
+            rule_index + 1,
+            output,
+        );
+    }
+    evaluate_suspended_replace_string_output(
+        session,
+        state,
+        index,
+        end,
+        replacements,
+        output,
+        &bindings,
+        rule_index,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn evaluate_suspended_replace_string_output(
+    session: &mut Session,
+    state: FrozenStringValue<GuardedStringReplaceRuleEvalState>,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    output: PersistentStringText,
+    bindings: &SymbolExprMap,
+    rule_index: usize,
+) -> Result<String, EvalError> {
+    let rule = &state.as_ref().rules[rule_index].rule;
+    let output_expr = match &rule.replacement {
+        ExactStringReplacementValue::Immediate(expr)
+        | ExactStringReplacementValue::Delayed(expr) => expr.clone(),
+    };
+    let output_result = evaluate_string_rule_output_expr_result(session, &output_expr, bindings);
+    match output_result {
+        Ok(rendered_expr) => resume_suspended_replace_string_value_with_output(
+            session,
+            state,
+            index,
+            end,
+            replacements,
+            output,
+            rendered_expr,
+        ),
+        Err(EvalError::InputRequired { request }) => session
+            .drive_evaluated_value::<Expr, String, _>(
+                Err(EvalError::InputRequired { request }),
+                move |session, rendered_expr| {
+                    resume_suspended_replace_string_value_with_output(
+                        session,
+                        state,
+                        index,
+                        end,
+                        replacements,
+                        output,
+                        rendered_expr,
+                    )
+                },
+            ),
+        Err(error) => Err(error),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_replace_string_value_with_output(
+    session: &mut Session,
+    state: FrozenStringValue<GuardedStringReplaceRuleEvalState>,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    output: PersistentStringText,
+    rendered_expr: Expr,
+) -> Result<String, EvalError> {
+    let rendered = expr_as_string(&rendered_expr)
+        .map(str::to_owned)
+        .unwrap_or_else(|| rendered_expr.to_string());
+    let mut output = output.appended(rendered);
+    let fixed = state.as_ref();
+    let next_index = if end == index {
+        if index == fixed.chars.len() {
+            return Ok(output.to_string());
+        }
+        output = output.appended(fixed.chars[index].to_string());
+        index + 1
+    } else {
+        end
+    };
+    resume_suspended_replace_string_value_from_candidate(
+        session,
+        state,
+        next_index,
+        replacements + 1,
+        0,
+        output,
+    )
 }
 
 fn resume_replace_string_value_with_output(
@@ -279,10 +543,12 @@ fn resume_replace_string_values_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
+                let state = FrozenStringValue::freeze(state);
+                let rendered = PersistentStringSequence::freeze(rendered);
                 return session.drive_internal_value::<String, Expr, _>(
                     Err(EvalError::InputRequired { request }),
                     move |session, value| {
-                        resume_replace_string_values_with_value(
+                        resume_suspended_replace_string_values_with_value(
                             session, state, index, rendered, value,
                         )
                     },
@@ -293,15 +559,57 @@ fn resume_replace_string_values_from_index(
     }
 }
 
-fn resume_replace_string_values_with_value(
+fn resume_suspended_replace_string_values_from_index(
     session: &mut Session,
-    state: GuardedStringReplaceValuesEvalState,
+    state: FrozenStringValue<GuardedStringReplaceValuesEvalState>,
+    mut index: usize,
+    mut rendered: PersistentStringSequence<String>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let fixed = state.as_ref();
+        let Some(value) = fixed.values.get(index) else {
+            return Ok(string_list_expr(rendered.to_vec()));
+        };
+        let result = replace_string_value_with_guarded_rules(
+            session,
+            value,
+            &fixed.rules,
+            fixed.max_replacements,
+            fixed.config,
+        );
+        match result {
+            Ok(value) => {
+                rendered = rendered.appended(value);
+                index += 1;
+            }
+            Err(EvalError::InputRequired { request }) => {
+                return session.drive_internal_value::<String, Expr, _>(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_suspended_replace_string_values_with_value(
+                            session, state, index, rendered, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn resume_suspended_replace_string_values_with_value(
+    session: &mut Session,
+    state: FrozenStringValue<GuardedStringReplaceValuesEvalState>,
     index: usize,
-    mut rendered: Vec<String>,
+    rendered: PersistentStringSequence<String>,
     value: String,
 ) -> Result<Expr, EvalError> {
-    rendered.push(value);
-    resume_replace_string_values_from_index(session, state, index + 1, rendered)
+    resume_suspended_replace_string_values_from_index(
+        session,
+        state,
+        index + 1,
+        rendered.appended(value),
+    )
 }
 #[cfg(test)]
 const _: fn() = || {

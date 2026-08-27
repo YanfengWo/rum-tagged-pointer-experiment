@@ -8,6 +8,23 @@ struct FoldEvalState {
     collect_all: bool,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedFoldEvalState {
+    operator: Expr,
+    items: FrozenFunctionalSequence<Expr>,
+    collect_all: bool,
+}
+
+impl SuspendedFoldEvalState {
+    fn freeze(state: FoldEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            items: FrozenFunctionalSequence::freeze(state.items),
+            collect_all: state.collect_all,
+        }
+    }
+}
+
 fn resume_fold_from_index(
     session: &mut Session,
     state: FoldEvalState,
@@ -30,8 +47,10 @@ fn resume_fold_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedFoldEvalState::freeze(state);
+                        let history = PersistentFunctionalSequence::freeze(history);
                         move |session, value| {
-                            resume_fold_with_value(session, state, index, history, value)
+                            resume_suspended_fold_with_value(session, state, index, history, value)
                         }
                     },
                 );
@@ -47,18 +66,68 @@ fn resume_fold_from_index(
     }
 }
 
-fn resume_fold_with_value(
+fn resume_suspended_fold_from_index(
     session: &mut Session,
-    state: FoldEvalState,
+    state: SuspendedFoldEvalState,
+    mut index: usize,
+    mut current: Expr,
+    mut history: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= state.items.len() {
+            return Ok(finish_fold_result(
+                state.collect_all,
+                current,
+                history.to_vec(),
+            ));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![
+                current,
+                state
+                    .items
+                    .get(index)
+                    .expect("fold item should exist")
+                    .clone(),
+            ],
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_fold_with_value(session, state, index, history, value)
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if state.collect_all {
+            history = history.appended(value.clone());
+        }
+        current = value;
+        index += 1;
+    }
+}
+
+fn resume_suspended_fold_with_value(
+    session: &mut Session,
+    state: SuspendedFoldEvalState,
     index: usize,
-    mut history: Vec<Expr>,
+    mut history: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if state.collect_all {
-        history.push(value.clone());
+        history = history.appended(value.clone());
     }
 
-    resume_fold_from_index(session, state, index + 1, value, history)
+    resume_suspended_fold_from_index(session, state, index + 1, value, history)
 }
 
 pub(super) fn apply_fold(
@@ -125,4 +194,5 @@ fn finish_fold_result(collect_all: bool, current: Expr, history: Vec<Expr>) -> E
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<FoldEvalState>();
+    assert_traces::<SuspendedFoldEvalState>();
 };

@@ -52,8 +52,10 @@ fn resume_key_select_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let entries = FrozenAssociationSequence::freeze(entries);
+                        let selected = PersistentAssociationSequence::freeze(selected);
                         move |session, outcome| {
-                            resume_key_select_with_value(
+                            resume_suspended_key_select_with_value(
                                 session, entries, criterion, index, selected, entry, outcome,
                             )
                         }
@@ -70,18 +72,59 @@ fn resume_key_select_from_index(
     }
 }
 
-fn resume_key_select_with_value(
+fn resume_suspended_key_select_from_index(
     session: &mut Session,
-    entries: Vec<AssociationEntryForm>,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
+    criterion: Expr,
+    mut index: usize,
+    mut selected: PersistentAssociationSequence<AssociationEntryForm>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(entry) = entries.get(index).cloned() else {
+            return Ok(render_association_entry_forms_preserving_heads(
+                selected.to_vec(),
+            ));
+        };
+
+        let call = Expr::call(criterion.clone(), vec![entry.key.clone()]);
+        let criterion_result = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, outcome| {
+                            resume_suspended_key_select_with_value(
+                                session, entries, criterion, index, selected, entry, outcome,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&criterion_result) == Some(true) {
+            selected = selected.appended(entry);
+        }
+        index += 1;
+    }
+}
+
+fn resume_suspended_key_select_with_value(
+    session: &mut Session,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
     criterion: Expr,
     index: usize,
-    mut selected: Vec<AssociationEntryForm>,
+    selected: PersistentAssociationSequence<AssociationEntryForm>,
     entry: AssociationEntryForm,
     criterion_value: Expr,
 ) -> Result<Expr, EvalError> {
-    if truthiness_symbol(&criterion_value) == Some(true) {
-        selected.push(entry);
-    }
+    let selected = if truthiness_symbol(&criterion_value) == Some(true) {
+        selected.appended(entry)
+    } else {
+        selected
+    };
 
-    resume_key_select_from_index(session, entries, criterion, index + 1, selected)
+    resume_suspended_key_select_from_index(session, entries, criterion, index + 1, selected)
 }

@@ -40,6 +40,25 @@ struct DecorateByState {
     operation: DecoratedOperation,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedDecorateByState {
+    expr_head: Expr,
+    function: Expr,
+    items: FrozenStructureSequence<Expr>,
+    operation: DecoratedOperation,
+}
+
+impl SuspendedDecorateByState {
+    fn freeze(state: DecorateByState) -> Self {
+        Self {
+            expr_head: state.expr_head,
+            function: state.function,
+            items: FrozenStructureSequence::freeze(state.items),
+            operation: state.operation,
+        }
+    }
+}
+
 #[derive(FrameRootTrace)]
 struct TallyTestState {
     test: Expr,
@@ -135,8 +154,18 @@ fn resume_tally_test_from_count(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let items = FrozenStructureSequence::freeze(state.items);
+                        let counts = PersistentStructureCounts::freeze(state.counts);
                         move |session, value| {
-                            resume_tally_test_with_value(session, state, count_index, value)
+                            resume_suspended_tally_test_with_value(
+                                session,
+                                state.test,
+                                items,
+                                state.index,
+                                counts,
+                                count_index,
+                                value,
+                            )
                         }
                     },
                 );
@@ -154,19 +183,80 @@ fn resume_tally_test_from_count(
     }
 }
 
-fn resume_tally_test_with_value(
+fn resume_suspended_tally_test_from_count(
     session: &mut Session,
-    mut state: TallyTestState,
+    test: Expr,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    mut counts: PersistentStructureCounts,
+    mut count_index: usize,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= items.len() {
+            return Ok(render_tally_counts(counts.to_vec()));
+        }
+        if count_index >= counts.len() {
+            counts = counts.appended(items.get(index).expect("item should exist").clone());
+            index += 1;
+            count_index = 0;
+            continue;
+        }
+        let count_item = counts.item(count_index).expect("count item should exist");
+        let result = eval_binary_predicate(
+            session,
+            &test,
+            items.get(index).expect("item should exist"),
+            &count_item,
+        );
+        let value = match result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_tally_test_with_value(
+                                session,
+                                test,
+                                items,
+                                index,
+                                counts,
+                                count_index,
+                                value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        if is_true_expr(&value) {
+            counts = counts.incremented(count_index);
+            index += 1;
+            count_index = 0;
+        } else {
+            count_index += 1;
+        }
+    }
+}
+
+fn resume_suspended_tally_test_with_value(
+    session: &mut Session,
+    test: Expr,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    mut counts: PersistentStructureCounts,
     count_index: usize,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    if is_true_expr(&value) {
-        state.counts[count_index].1 += 1;
-        state.index += 1;
-        resume_tally_test_from_count(session, state, 0)
+    let count_index = if is_true_expr(&value) {
+        counts = counts.incremented(count_index);
+        index += 1;
+        0
     } else {
-        resume_tally_test_from_count(session, state, count_index + 1)
-    }
+        count_index + 1
+    };
+    resume_suspended_tally_test_from_count(session, test, items, index, counts, count_index)
 }
 
 fn render_tally_counts(counts: Vec<(Expr, usize)>) -> Expr {
@@ -416,8 +506,22 @@ fn resume_gather_by_function_list_from_position(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let item_index = state.item_index;
+                        let function_index = state.function_index;
+                        let items = FrozenStructureSequence::freeze(state.items);
+                        let functions = FrozenStructureSequence::freeze(state.functions);
+                        let keys =
+                            PersistentStructureSequence::freeze(flatten_gather_keys(state.keys));
                         move |session, key| {
-                            resume_gather_by_function_list_with_key(session, state, key)
+                            resume_suspended_gather_by_function_list_with_key(
+                                session,
+                                items,
+                                functions,
+                                item_index,
+                                function_index,
+                                keys,
+                                key,
+                            )
                         }
                     },
                 );
@@ -430,14 +534,97 @@ fn resume_gather_by_function_list_from_position(
     }
 }
 
-fn resume_gather_by_function_list_with_key(
+fn flatten_gather_keys(keys: Vec<Vec<Expr>>) -> Vec<(usize, Expr)> {
+    keys.into_iter()
+        .enumerate()
+        .flat_map(|(item_index, keys)| keys.into_iter().map(move |key| (item_index, key)))
+        .collect()
+}
+
+fn render_suspended_hierarchical_gather_by(
+    items: &FrozenStructureSequence<Expr>,
+    functions: &FrozenStructureSequence<Expr>,
+    keys: &PersistentStructureSequence<(usize, Expr)>,
+) -> Expr {
+    let mut materialized = vec![Vec::with_capacity(functions.len()); items.len()];
+    for (item_index, key) in keys.to_vec() {
+        materialized[item_index].push(key);
+    }
+    render_hierarchical_gather_by(items.as_slice().to_vec(), materialized)
+}
+
+fn resume_suspended_gather_by_function_list_from_position(
     session: &mut Session,
-    mut state: GatherByFunctionListState,
+    items: FrozenStructureSequence<Expr>,
+    functions: FrozenStructureSequence<Expr>,
+    mut item_index: usize,
+    mut function_index: usize,
+    mut keys: PersistentStructureSequence<(usize, Expr)>,
+) -> Result<Expr, EvalError> {
+    if functions.len() == 0 {
+        return Ok(list_expr(items.as_slice().to_vec()));
+    }
+    loop {
+        if item_index >= items.len() {
+            return Ok(render_suspended_hierarchical_gather_by(
+                &items, &functions, &keys,
+            ));
+        }
+        if function_index >= functions.len() {
+            item_index += 1;
+            function_index = 0;
+            continue;
+        }
+        let item = items.get(item_index).expect("item should exist").clone();
+        let function = functions
+            .get(function_index)
+            .expect("function should exist")
+            .clone();
+        let key = match session.evaluate(Expr::call(function, vec![item])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, key| {
+                            resume_suspended_gather_by_function_list_with_key(
+                                session,
+                                items,
+                                functions,
+                                item_index,
+                                function_index,
+                                keys,
+                                key,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        keys = keys.appended((item_index, key));
+        function_index += 1;
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_gather_by_function_list_with_key(
+    session: &mut Session,
+    items: FrozenStructureSequence<Expr>,
+    functions: FrozenStructureSequence<Expr>,
+    item_index: usize,
+    function_index: usize,
+    keys: PersistentStructureSequence<(usize, Expr)>,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    state.keys[state.item_index].push(key);
-    state.function_index += 1;
-    resume_gather_by_function_list_from_position(session, state)
+    resume_suspended_gather_by_function_list_from_position(
+        session,
+        items,
+        functions,
+        item_index,
+        function_index + 1,
+        keys.appended((item_index, key)),
+    )
 }
 
 fn render_hierarchical_gather_by(items: Vec<Expr>, keys: Vec<Vec<Expr>>) -> Expr {
@@ -601,8 +788,12 @@ fn resume_decorate_by_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedDecorateByState::freeze(state);
+                        let decorated = PersistentStructureSequence::freeze(decorated);
                         move |session, key| {
-                            resume_decorate_by_with_key(session, state, index, decorated, item, key)
+                            resume_suspended_decorate_by_with_key(
+                                session, state, index, decorated, item, key,
+                            )
                         }
                     },
                 );
@@ -615,34 +806,75 @@ fn resume_decorate_by_from_index(
     }
 }
 
-fn resume_decorate_by_with_key(
+fn resume_suspended_decorate_by_from_index(
     session: &mut Session,
-    state: DecorateByState,
+    state: SuspendedDecorateByState,
+    mut index: usize,
+    mut decorated: PersistentStructureSequence<KeyedEntry>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = state.items.get(index).cloned() else {
+            return finish_decorated_parts(state.expr_head, state.operation, decorated.to_vec());
+        };
+        let key = match session.evaluate(Expr::call(state.function.clone(), vec![item.clone()])) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, key| {
+                            resume_suspended_decorate_by_with_key(
+                                session, state, index, decorated, item, key,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        decorated = decorated.appended(KeyedEntry { item, key, index });
+        index += 1;
+    }
+}
+
+fn resume_suspended_decorate_by_with_key(
+    session: &mut Session,
+    state: SuspendedDecorateByState,
     index: usize,
-    mut decorated: Vec<KeyedEntry>,
+    decorated: PersistentStructureSequence<KeyedEntry>,
     item: Expr,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    decorated.push(KeyedEntry { item, key, index });
-    resume_decorate_by_from_index(session, state, index + 1, decorated)
+    resume_suspended_decorate_by_from_index(
+        session,
+        state,
+        index + 1,
+        decorated.appended(KeyedEntry { item, key, index }),
+    )
 }
 
 fn finish_decorated(state: DecorateByState, decorated: Vec<KeyedEntry>) -> Result<Expr, EvalError> {
-    match state.operation {
+    finish_decorated_parts(state.expr_head, state.operation, decorated)
+}
+
+fn finish_decorated_parts(
+    expr_head: Expr,
+    operation: DecoratedOperation,
+    decorated: Vec<KeyedEntry>,
+) -> Result<Expr, EvalError> {
+    match operation {
         DecoratedOperation::MaxBy { select_max } => Ok(select_extreme_by(decorated, select_max)
-            .unwrap_or_else(|| Expr::call(state.expr_head, Vec::new()))),
+            .unwrap_or_else(|| Expr::call(expr_head, Vec::new()))),
         DecoratedOperation::ExtremalElementsBy { select_max } => Ok(Expr::call(
-            state.expr_head,
+            expr_head,
             select_extremal_elements_by(decorated, select_max),
         )),
-        DecoratedOperation::ExtremeByCount { largest, count } => Ok(Expr::call(
-            state.expr_head,
-            take_by(decorated, largest, count),
-        )),
-        DecoratedOperation::TakeBy { largest, count } => Ok(Expr::call(
-            state.expr_head,
-            take_by(decorated, largest, count),
-        )),
+        DecoratedOperation::ExtremeByCount { largest, count } => {
+            Ok(Expr::call(expr_head, take_by(decorated, largest, count)))
+        }
+        DecoratedOperation::TakeBy { largest, count } => {
+            Ok(Expr::call(expr_head, take_by(decorated, largest, count)))
+        }
         DecoratedOperation::ReverseSortBy => {
             let mut sorted = decorated;
             sorted.sort_by(|lhs, rhs| {
@@ -650,7 +882,7 @@ fn finish_decorated(state: DecorateByState, decorated: Vec<KeyedEntry>) -> Resul
             });
             sorted.reverse();
             Ok(Expr::call(
-                state.expr_head,
+                expr_head,
                 sorted.into_iter().map(|entry| entry.item).collect(),
             ))
         }
@@ -844,6 +1076,7 @@ fn signed_position_in_range(position: isize, start: isize, end: isize, step: isi
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<DecorateByState>();
+    assert_traces::<SuspendedDecorateByState>();
     assert_traces::<DecoratedOperation>();
     assert_traces::<GatherByFunctionListState>();
     assert_traces::<KeyedEntry>();

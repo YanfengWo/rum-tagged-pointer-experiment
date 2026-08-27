@@ -17,9 +17,14 @@ mod encoding;
 mod patterns;
 mod scripting;
 mod similarity;
+mod suspended_state;
 mod template;
 mod text;
 mod tokenize;
+
+use self::suspended_state::{
+    FrozenStringSequence, FrozenStringValue, PersistentStringSequence, PersistentStringText,
+};
 
 #[cfg(feature = "hash")]
 pub(crate) use encoding::eval_hash;
@@ -146,6 +151,25 @@ struct StringApplyEvalState {
     list_output: bool,
 }
 
+#[derive(FrameRootTrace)]
+struct SuspendedStringApplyEvalState {
+    head: Expr,
+    operator: Expr,
+    values: FrozenStringSequence<String>,
+    list_output: bool,
+}
+
+impl SuspendedStringApplyEvalState {
+    fn freeze(state: StringApplyEvalState) -> Self {
+        Self {
+            head: state.head,
+            operator: state.operator,
+            values: FrozenStringSequence::freeze(state.values),
+            list_output: state.list_output,
+        }
+    }
+}
+
 fn string_apply_value(
     session: &mut Session,
     head: &Expr,
@@ -206,8 +230,10 @@ fn resume_string_apply_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedStringApplyEvalState::freeze(state);
+                        let outputs = PersistentStringSequence::freeze(outputs);
                         move |session, evaluated| {
-                            resume_string_apply_with_value(
+                            resume_suspended_string_apply_with_value(
                                 session, state, index, outputs, evaluated,
                             )
                         }
@@ -238,15 +264,83 @@ fn push_string_apply_output(
     outputs.push(string_apply_output_expr(evaluated).unwrap_or(fallback));
 }
 
-fn resume_string_apply_with_value(
+fn resume_suspended_string_apply_from_index(
     session: &mut Session,
-    state: StringApplyEvalState,
+    state: SuspendedStringApplyEvalState,
+    mut index: usize,
+    mut outputs: PersistentStringSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(value) = state.values.get(index) else {
+            let outputs = outputs.to_vec();
+            return Ok(if state.list_output {
+                list_expr(outputs)
+            } else {
+                outputs
+                    .into_iter()
+                    .next()
+                    .unwrap_or_else(|| Expr::call(state.head, Vec::new()))
+            });
+        };
+
+        let applied = Expr::call(
+            state.operator.clone(),
+            vec![list_expr(
+                value
+                    .chars()
+                    .map(|ch| Expr::string(ch.to_string()))
+                    .collect(),
+            )],
+        );
+        match session.evaluate(applied) {
+            Ok(evaluated) => {
+                outputs = outputs.appended(suspended_string_apply_output(&state, index, evaluated));
+                index += 1;
+            }
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, evaluated| {
+                            resume_suspended_string_apply_with_value(
+                                session, state, index, outputs, evaluated,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn resume_suspended_string_apply_with_value(
+    session: &mut Session,
+    state: SuspendedStringApplyEvalState,
     index: usize,
-    mut outputs: Vec<Expr>,
+    outputs: PersistentStringSequence<Expr>,
     evaluated: Expr,
 ) -> Result<Expr, EvalError> {
-    push_string_apply_output(&state, index, &mut outputs, evaluated);
-    resume_string_apply_from_index(session, state, index + 1, outputs)
+    let output = suspended_string_apply_output(&state, index, evaluated);
+    resume_suspended_string_apply_from_index(session, state, index + 1, outputs.appended(output))
+}
+
+fn suspended_string_apply_output(
+    state: &SuspendedStringApplyEvalState,
+    index: usize,
+    evaluated: Expr,
+) -> Expr {
+    let fallback = state
+        .values
+        .get(index)
+        .map(|value| {
+            Expr::call(
+                state.head.clone(),
+                vec![state.operator.clone(), Expr::string(value.clone())],
+            )
+        })
+        .unwrap_or_else(|| Expr::call(state.head.clone(), Vec::new()));
+    string_apply_output_expr(evaluated).unwrap_or(fallback)
 }
 
 fn resume_string_apply_values(
@@ -313,4 +407,5 @@ fn string_list_expr(items: Vec<String>) -> Expr {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<StringApplyEvalState>();
+    assert_traces::<SuspendedStringApplyEvalState>();
 };

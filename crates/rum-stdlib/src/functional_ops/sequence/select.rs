@@ -14,6 +14,29 @@ enum SelectSource {
     Association(Vec<(Expr, Expr)>),
 }
 
+#[derive(Clone, FrameRootTrace)]
+enum SuspendedSelectSource {
+    Call {
+        head: Expr,
+        items: FrozenFunctionalSequence<Expr>,
+    },
+    Association(FrozenFunctionalSequence<(Expr, Expr)>),
+}
+
+impl SuspendedSelectSource {
+    fn freeze(source: SelectSource) -> Self {
+        match source {
+            SelectSource::Call { head, items } => Self::Call {
+                head,
+                items: FrozenFunctionalSequence::freeze(items),
+            },
+            SelectSource::Association(entries) => {
+                Self::Association(FrozenFunctionalSequence::freeze(entries))
+            }
+        }
+    }
+}
+
 impl SelectLimit {
     fn reached(self, count: usize) -> bool {
         match self {
@@ -133,8 +156,10 @@ fn resume_select_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let source = SuspendedSelectSource::freeze(source);
+                        let selected = PersistentFunctionalSequence::freeze(selected);
                         move |session, value| {
-                            resume_select_with_value(
+                            resume_suspended_select_with_value(
                                 session, source, criterion, limit, index, selected, value,
                             )
                         }
@@ -149,17 +174,63 @@ fn resume_select_from_index(
     }
 }
 
-fn resume_select_with_value(
+fn resume_suspended_select_from_index(
     session: &mut Session,
-    source: SelectSource,
+    source: SuspendedSelectSource,
+    criterion: Expr,
+    limit: SelectLimit,
+    mut index: usize,
+    mut selected: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if limit.reached(selected.len()) || index >= suspended_source_len(&source) {
+            return Ok(render_suspended_select_result(source, selected));
+        }
+        if index >= session.resource_limits().iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: session.resource_limits().iteration_work_limit,
+            });
+        }
+
+        let Some(item) = suspended_source_item_value(&source, index) else {
+            return Ok(render_suspended_select_result(source, selected));
+        };
+        let call = Expr::call(criterion.clone(), vec![item]);
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_select_with_value(
+                                session, source, criterion, limit, index, selected, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        selected =
+            append_suspended_selected_value_if_true(session, &source, index, selected, value)?;
+        index += 1;
+    }
+}
+
+fn resume_suspended_select_with_value(
+    session: &mut Session,
+    source: SuspendedSelectSource,
     criterion: Expr,
     limit: SelectLimit,
     index: usize,
-    mut selected: Vec<Expr>,
+    selected: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    push_selected_value_if_true(session, &source, index, &mut selected, value)?;
-    resume_select_from_index(session, source, criterion, limit, index + 1, selected)
+    let selected =
+        append_suspended_selected_value_if_true(session, &source, index, selected, value)?;
+    resume_suspended_select_from_index(session, source, criterion, limit, index + 1, selected)
 }
 
 fn push_selected_value_if_true(
@@ -179,6 +250,25 @@ fn push_selected_value_if_true(
     }
 
     Ok(())
+}
+
+fn append_suspended_selected_value_if_true(
+    session: &mut Session,
+    source: &SuspendedSelectSource,
+    index: usize,
+    selected: PersistentFunctionalSequence<Expr>,
+    value: Expr,
+) -> Result<PersistentFunctionalSequence<Expr>, EvalError> {
+    if truthiness_symbol(&value) != Some(true) {
+        return Ok(selected);
+    }
+
+    let next_len = selected.len() + 1;
+    session.enforce_active_memory_limit_for_projected_bytes(
+        generated_expr_nodes_memory_proxy_bytes(next_len + 1),
+    )?;
+    session.enforce_generated_element_limit_for_count(next_len)?;
+    Ok(selected.appended(suspended_source_item_expr(source, index)))
 }
 
 fn resume_select_first_from_index(
@@ -208,8 +298,9 @@ fn resume_select_first_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let source = SuspendedSelectSource::freeze(source);
                         move |session, value| {
-                            resume_select_first_with_value(
+                            resume_suspended_select_first_with_value(
                                 session, source, criterion, default, index, value,
                             )
                         }
@@ -226,19 +317,64 @@ fn resume_select_first_from_index(
     }
 }
 
-fn resume_select_first_with_value(
+fn resume_suspended_select_first_from_index(
     session: &mut Session,
-    source: SelectSource,
+    source: SuspendedSelectSource,
+    criterion: Expr,
+    default: Expr,
+    mut index: usize,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= suspended_source_len(&source) {
+            return Ok(default);
+        }
+        if index >= session.resource_limits().iteration_work_limit {
+            return Err(EvalError::IterationWorkLimitExceeded {
+                limit: session.resource_limits().iteration_work_limit,
+            });
+        }
+
+        let Some(item) = suspended_source_item_value(&source, index) else {
+            return Ok(default);
+        };
+        let call = Expr::call(criterion.clone(), vec![item]);
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_select_first_with_value(
+                                session, source, criterion, default, index, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&value) == Some(true) {
+            return Ok(suspended_source_item_value(&source, index).unwrap_or(default));
+        }
+        index += 1;
+    }
+}
+
+fn resume_suspended_select_first_with_value(
+    session: &mut Session,
+    source: SuspendedSelectSource,
     criterion: Expr,
     default: Expr,
     index: usize,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if truthiness_symbol(&value) == Some(true) {
-        return Ok(source_item_value(&source, index).unwrap_or(default));
+        return Ok(suspended_source_item_value(&source, index).unwrap_or(default));
     }
 
-    resume_select_first_from_index(session, source, criterion, default, index + 1)
+    resume_suspended_select_first_from_index(session, source, criterion, default, index + 1)
 }
 
 fn parse_select_limit(expr: &Expr) -> Option<SelectLimit> {
@@ -299,10 +435,65 @@ fn source_item_expr(source: &SelectSource, index: usize) -> Expr {
     }
 }
 
+fn suspended_source_len(source: &SuspendedSelectSource) -> usize {
+    match source {
+        SuspendedSelectSource::Call { items, .. } => items.len(),
+        SuspendedSelectSource::Association(entries) => entries.len(),
+    }
+}
+
+fn suspended_source_item_value(source: &SuspendedSelectSource, index: usize) -> Option<Expr> {
+    match source {
+        SuspendedSelectSource::Call { items, .. } => items.get(index).cloned(),
+        SuspendedSelectSource::Association(entries) => {
+            entries.get(index).map(|(_, value)| value.clone())
+        }
+    }
+}
+
+fn suspended_source_item_expr(source: &SuspendedSelectSource, index: usize) -> Expr {
+    match source {
+        SuspendedSelectSource::Call { items, .. } => items
+            .get(index)
+            .expect("selected call item should exist")
+            .clone(),
+        SuspendedSelectSource::Association(entries) => {
+            let (key, value) = entries
+                .get(index)
+                .expect("selected association entry should exist");
+            Expr::call(system_expr("Rule"), vec![key.clone(), value.clone()])
+        }
+    }
+}
+
 fn render_select_result(source: SelectSource, selected: Vec<Expr>) -> Expr {
     match source {
         SelectSource::Call { head, .. } => Expr::call(head, selected),
         SelectSource::Association(_) => render_association(
+            selected
+                .into_iter()
+                .filter_map(|expr| {
+                    let Expr::Call { head, args } = expr else {
+                        return None;
+                    };
+                    if !is_system_symbol_name(&head, "Rule") || args.len() != 2 {
+                        return None;
+                    }
+                    Some((args[0].clone(), args[1].clone()))
+                })
+                .collect(),
+        ),
+    }
+}
+
+fn render_suspended_select_result(
+    source: SuspendedSelectSource,
+    selected: PersistentFunctionalSequence<Expr>,
+) -> Expr {
+    let selected = selected.to_vec();
+    match source {
+        SuspendedSelectSource::Call { head, .. } => Expr::call(head, selected),
+        SuspendedSelectSource::Association(_) => render_association(
             selected
                 .into_iter()
                 .filter_map(|expr| {
@@ -326,4 +517,5 @@ fn missing_not_found_expr() -> Expr {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SelectSource>();
+    assert_traces::<SuspendedSelectSource>();
 };

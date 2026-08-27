@@ -2,6 +2,7 @@ use rum_core::SharedArgs;
 use std::collections::HashSet;
 
 use super::shared::{negated_relation_head_name, predicate_bool_expr};
+use super::suspended_state::PersistentLogicSequence;
 use rum_core::{Expr, heads};
 use rum_runtime::kernel_api::{
     EvalError, Session, is_system_symbol_name, system_expr, truthiness_symbol,
@@ -12,8 +13,7 @@ pub(crate) fn eval_and(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    resume_and_from_index(session, args.to_vec(), 0, Vec::new())
+    resume_and_from_index(session, args.clone(), 0, Vec::new())
 }
 
 pub(crate) fn eval_or(
@@ -21,8 +21,7 @@ pub(crate) fn eval_or(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    resume_or_from_index(session, args.to_vec(), 0, Vec::new())
+    resume_or_from_index(session, args.clone(), 0, Vec::new())
 }
 
 pub(crate) fn eval_nand(
@@ -30,8 +29,7 @@ pub(crate) fn eval_nand(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    resume_nand_from_index(session, args.to_vec(), 0, Vec::new())
+    resume_nand_from_index(session, args.clone(), 0, Vec::new())
 }
 
 pub(crate) fn eval_nor(
@@ -39,8 +37,7 @@ pub(crate) fn eval_nor(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
-    resume_nor_from_index(session, args.to_vec(), 0, Vec::new())
+    resume_nor_from_index(session, args.clone(), 0, Vec::new())
 }
 
 pub(crate) fn eval_xor(
@@ -164,7 +161,7 @@ pub(crate) fn eval_not(
 
 fn resume_and_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
     mut index: usize,
     mut residual: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
@@ -179,8 +176,11 @@ fn resume_and_from_index(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let residual = PersistentLogicSequence::freeze(residual);
                             move |session, value| {
-                                resume_and_with_value(session, args, index, residual, value)
+                                resume_suspended_and_with_value(
+                                    session, args, index, residual, value,
+                                )
                             }
                         },
                     );
@@ -200,26 +200,66 @@ fn resume_and_from_index(
     Ok(finalize_logical_sequence("And", residual, true))
 }
 
-fn resume_and_with_value(
+fn resume_suspended_and_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
+    mut index: usize,
+    mut residual: PersistentLogicSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    while index < args.len() {
+        let arg = args[index].clone();
+        let value = if let Some(truth) = truthiness_symbol(&arg) {
+            predicate_bool_expr(truth)
+        } else {
+            match session.evaluate(arg) {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, value| {
+                                resume_suspended_and_with_value(
+                                    session, args, index, residual, value,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        match truthiness_symbol(&value) {
+            Some(true) => {}
+            Some(false) => return Ok(system_expr(heads::structure::FALSE)),
+            None => residual = append_flat_logical_residual(residual, value, "And"),
+        }
+        index += 1;
+    }
+    Ok(finalize_logical_sequence("And", residual.to_vec(), true))
+}
+
+fn resume_suspended_and_with_value(
+    session: &mut Session,
+    args: SharedArgs,
     index: usize,
-    mut residual: Vec<Expr>,
+    residual: PersistentLogicSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     match truthiness_symbol(&value) {
-        Some(true) => resume_and_from_index(session, args, index + 1, residual),
+        Some(true) => resume_suspended_and_from_index(session, args, index + 1, residual),
         Some(false) => Ok(system_expr(heads::structure::FALSE)),
-        None => {
-            extend_flat_logical_residual(&mut residual, value, "And");
-            resume_and_from_index(session, args, index + 1, residual)
-        }
+        None => resume_suspended_and_from_index(
+            session,
+            args,
+            index + 1,
+            append_flat_logical_residual(residual, value, "And"),
+        ),
     }
 }
 
 fn resume_or_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
     mut index: usize,
     mut residual: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
@@ -234,8 +274,11 @@ fn resume_or_from_index(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let residual = PersistentLogicSequence::freeze(residual);
                             move |session, value| {
-                                resume_or_with_value(session, args, index, residual, value)
+                                resume_suspended_or_with_value(
+                                    session, args, index, residual, value,
+                                )
                             }
                         },
                     );
@@ -255,26 +298,66 @@ fn resume_or_from_index(
     Ok(finalize_logical_sequence("Or", residual, false))
 }
 
-fn resume_or_with_value(
+fn resume_suspended_or_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
+    mut index: usize,
+    mut residual: PersistentLogicSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    while index < args.len() {
+        let arg = args[index].clone();
+        let value = if let Some(truth) = truthiness_symbol(&arg) {
+            predicate_bool_expr(truth)
+        } else {
+            match session.evaluate(arg) {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, value| {
+                                resume_suspended_or_with_value(
+                                    session, args, index, residual, value,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        match truthiness_symbol(&value) {
+            Some(true) => return Ok(system_expr(heads::structure::TRUE)),
+            Some(false) => {}
+            None => residual = append_flat_logical_residual(residual, value, "Or"),
+        }
+        index += 1;
+    }
+    Ok(finalize_logical_sequence("Or", residual.to_vec(), false))
+}
+
+fn resume_suspended_or_with_value(
+    session: &mut Session,
+    args: SharedArgs,
     index: usize,
-    mut residual: Vec<Expr>,
+    residual: PersistentLogicSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     match truthiness_symbol(&value) {
         Some(true) => Ok(system_expr(heads::structure::TRUE)),
-        Some(false) => resume_or_from_index(session, args, index + 1, residual),
-        None => {
-            extend_flat_logical_residual(&mut residual, value, "Or");
-            resume_or_from_index(session, args, index + 1, residual)
-        }
+        Some(false) => resume_suspended_or_from_index(session, args, index + 1, residual),
+        None => resume_suspended_or_from_index(
+            session,
+            args,
+            index + 1,
+            append_flat_logical_residual(residual, value, "Or"),
+        ),
     }
 }
 
 fn resume_nand_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
     mut index: usize,
     mut residual: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
@@ -289,8 +372,11 @@ fn resume_nand_from_index(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let residual = PersistentLogicSequence::freeze(residual);
                             move |session, value| {
-                                resume_nand_with_value(session, args, index, residual, value)
+                                resume_suspended_nand_with_value(
+                                    session, args, index, residual, value,
+                                )
                             }
                         },
                     );
@@ -310,26 +396,67 @@ fn resume_nand_from_index(
     Ok(finalize_negated_logical_sequence("Nand", residual, false))
 }
 
-fn resume_nand_with_value(
+fn resume_suspended_nand_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
+    mut index: usize,
+    mut residual: PersistentLogicSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    while index < args.len() {
+        let arg = args[index].clone();
+        let value = if let Some(truth) = truthiness_symbol(&arg) {
+            predicate_bool_expr(truth)
+        } else {
+            match session.evaluate(arg) {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, value| {
+                                resume_suspended_nand_with_value(
+                                    session, args, index, residual, value,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        match truthiness_symbol(&value) {
+            Some(false) => return Ok(system_expr(heads::structure::TRUE)),
+            Some(true) => {}
+            None => residual = residual.appended(value),
+        }
+        index += 1;
+    }
+    Ok(finalize_negated_logical_sequence(
+        "Nand",
+        residual.to_vec(),
+        false,
+    ))
+}
+
+fn resume_suspended_nand_with_value(
+    session: &mut Session,
+    args: SharedArgs,
     index: usize,
-    mut residual: Vec<Expr>,
+    residual: PersistentLogicSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     match truthiness_symbol(&value) {
         Some(false) => Ok(system_expr(heads::structure::TRUE)),
-        Some(true) => resume_nand_from_index(session, args, index + 1, residual),
+        Some(true) => resume_suspended_nand_from_index(session, args, index + 1, residual),
         None => {
-            residual.push(value);
-            resume_nand_from_index(session, args, index + 1, residual)
+            resume_suspended_nand_from_index(session, args, index + 1, residual.appended(value))
         }
     }
 }
 
 fn resume_nor_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
     mut index: usize,
     mut residual: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
@@ -344,8 +471,11 @@ fn resume_nor_from_index(
                     return session.suspend_with_frame_lazy(
                         Err(EvalError::InputRequired { request }),
                         || {
+                            let residual = PersistentLogicSequence::freeze(residual);
                             move |session, value| {
-                                resume_nor_with_value(session, args, index, residual, value)
+                                resume_suspended_nor_with_value(
+                                    session, args, index, residual, value,
+                                )
                             }
                         },
                     );
@@ -365,20 +495,75 @@ fn resume_nor_from_index(
     Ok(finalize_negated_logical_sequence("Nor", residual, true))
 }
 
-fn resume_nor_with_value(
+fn resume_suspended_nor_from_index(
     session: &mut Session,
-    args: Vec<Expr>,
+    args: SharedArgs,
+    mut index: usize,
+    mut residual: PersistentLogicSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    while index < args.len() {
+        let arg = args[index].clone();
+        let value = if let Some(truth) = truthiness_symbol(&arg) {
+            predicate_bool_expr(truth)
+        } else {
+            match session.evaluate(arg) {
+                Ok(value) => value,
+                Err(EvalError::InputRequired { request }) => {
+                    return session.suspend_with_frame_lazy(
+                        Err(EvalError::InputRequired { request }),
+                        || {
+                            move |session, value| {
+                                resume_suspended_nor_with_value(
+                                    session, args, index, residual, value,
+                                )
+                            }
+                        },
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        };
+        match truthiness_symbol(&value) {
+            Some(true) => return Ok(system_expr(heads::structure::FALSE)),
+            Some(false) => {}
+            None => residual = residual.appended(value),
+        }
+        index += 1;
+    }
+    Ok(finalize_negated_logical_sequence(
+        "Nor",
+        residual.to_vec(),
+        true,
+    ))
+}
+
+fn resume_suspended_nor_with_value(
+    session: &mut Session,
+    args: SharedArgs,
     index: usize,
-    mut residual: Vec<Expr>,
+    residual: PersistentLogicSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     match truthiness_symbol(&value) {
         Some(true) => Ok(system_expr(heads::structure::FALSE)),
-        Some(false) => resume_nor_from_index(session, args, index + 1, residual),
-        None => {
-            residual.push(value);
-            resume_nor_from_index(session, args, index + 1, residual)
+        Some(false) => resume_suspended_nor_from_index(session, args, index + 1, residual),
+        None => resume_suspended_nor_from_index(session, args, index + 1, residual.appended(value)),
+    }
+}
+
+fn append_flat_logical_residual(
+    mut residual: PersistentLogicSequence<Expr>,
+    value: Expr,
+    head_name: &str,
+) -> PersistentLogicSequence<Expr> {
+    match value {
+        Expr::Call { head, args } if is_system_symbol_name(&head, head_name) => {
+            for value in args {
+                residual = residual.appended(value);
+            }
+            residual
         }
+        other => residual.appended(other),
     }
 }
 

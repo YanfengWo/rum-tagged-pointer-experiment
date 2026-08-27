@@ -12,7 +12,10 @@ mod basic;
 mod collections;
 mod numeric;
 mod ordering;
+mod suspended_state;
 mod truth;
+
+use self::suspended_state::{FrozenPredicateSequence, PersistentPredicateMatches};
 
 pub(crate) use self::arrays::{eval_array_q, eval_matrix_q, eval_vector_q};
 pub(crate) use self::basic::{

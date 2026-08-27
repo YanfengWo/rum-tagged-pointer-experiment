@@ -3,12 +3,32 @@ use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(FrameRootTrace)]
 struct FoldWhileEvalState {
-    head: Expr,
     operator: Expr,
     items: Vec<Expr>,
     test: Expr,
     config: FoldWhileConfig,
-    raw_args: Vec<Expr>,
+    fallback: Expr,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedFoldWhileEvalState {
+    operator: Expr,
+    items: FrozenFunctionalSequence<Expr>,
+    test: Expr,
+    config: FoldWhileConfig,
+    fallback: Expr,
+}
+
+impl SuspendedFoldWhileEvalState {
+    fn freeze(state: FoldWhileEvalState) -> Self {
+        Self {
+            operator: state.operator,
+            items: FrozenFunctionalSequence::freeze(state.items),
+            test: state.test,
+            config: state.config,
+            fallback: state.fallback,
+        }
+    }
 }
 
 fn resume_fold_while_from_index(
@@ -33,8 +53,12 @@ fn resume_fold_while_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedFoldWhileEvalState::freeze(state);
+                        let history = PersistentFunctionalSequence::freeze(history);
                         move |session, value| {
-                            resume_fold_while_with_step_value(session, state, index, history, value)
+                            resume_suspended_fold_while_with_step_value(
+                                session, state, index, history, value,
+                            )
                         }
                     },
                 );
@@ -54,8 +78,10 @@ fn resume_fold_while_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedFoldWhileEvalState::freeze(state);
+                        let history = PersistentFunctionalSequence::freeze(history);
                         move |session, test_value| {
-                            resume_fold_while_with_test_value(
+                            resume_suspended_fold_while_with_test_value(
                                 session, state, next_index, value, history, test_value,
                             )
                         }
@@ -75,18 +101,93 @@ fn resume_fold_while_from_index(
     }
 }
 
-fn resume_fold_while_with_step_value(
+fn resume_suspended_fold_while_from_index(
     session: &mut Session,
-    state: FoldWhileEvalState,
+    state: SuspendedFoldWhileEvalState,
+    mut index: usize,
+    mut current: Expr,
+    mut history: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        if index >= state.items.len() {
+            return Ok(finish_suspended_fold_while_result(state, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![
+                current,
+                state
+                    .items
+                    .get(index)
+                    .expect("fold-while item should exist")
+                    .clone(),
+            ],
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_fold_while_with_step_value(
+                                session, state, index, history, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        history = history.appended(value.clone());
+        let next_index = index + 1;
+        let call = Expr::call(
+            state.test.clone(),
+            suspended_test_args(&history, state.config.test_arity),
+        );
+        let test_value = match session.evaluate(call) {
+            Ok(test_value) => test_value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, test_value| {
+                            resume_suspended_fold_while_with_test_value(
+                                session, state, next_index, value, history, test_value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        if truthiness_symbol(&test_value) == Some(true) {
+            current = value;
+            index = next_index;
+            continue;
+        }
+
+        return finish_suspended_fold_while_after_false_test(
+            session, state, next_index, value, history,
+        );
+    }
+}
+
+fn resume_suspended_fold_while_with_step_value(
+    session: &mut Session,
+    state: SuspendedFoldWhileEvalState,
     index: usize,
-    mut history: Vec<Expr>,
+    history: PersistentFunctionalSequence<Expr>,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    history.push(value.clone());
+    let history = history.appended(value.clone());
     let next_index = index + 1;
     let call = Expr::call(
         state.test.clone(),
-        nest_while_test_args(&history, state.config.test_arity),
+        suspended_test_args(&history, state.config.test_arity),
     );
     let test_value = match session.evaluate(call) {
         Ok(test_value) => test_value,
@@ -95,7 +196,7 @@ fn resume_fold_while_with_step_value(
                 Err(EvalError::InputRequired { request }),
                 || {
                     move |session, test_value| {
-                        resume_fold_while_with_test_value(
+                        resume_suspended_fold_while_with_test_value(
                             session, state, next_index, value, history, test_value,
                         )
                     }
@@ -105,22 +206,24 @@ fn resume_fold_while_with_step_value(
         Err(error) => return Err(error),
     };
 
-    resume_fold_while_with_test_value(session, state, next_index, value, history, test_value)
+    resume_suspended_fold_while_with_test_value(
+        session, state, next_index, value, history, test_value,
+    )
 }
 
-fn resume_fold_while_with_test_value(
+fn resume_suspended_fold_while_with_test_value(
     session: &mut Session,
-    state: FoldWhileEvalState,
+    state: SuspendedFoldWhileEvalState,
     index: usize,
     current: Expr,
-    history: Vec<Expr>,
+    history: PersistentFunctionalSequence<Expr>,
     test_value: Expr,
 ) -> Result<Expr, EvalError> {
     if truthiness_symbol(&test_value) == Some(true) {
-        return resume_fold_while_from_index(session, state, index, current, history);
+        return resume_suspended_fold_while_from_index(session, state, index, current, history);
     }
 
-    finish_fold_while_after_false_test(session, state, index, current, history)
+    finish_suspended_fold_while_after_false_test(session, state, index, current, history)
 }
 
 fn finish_fold_while_after_false_test(
@@ -174,8 +277,10 @@ fn resume_fold_while_tail_from_index(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedFoldWhileEvalState::freeze(state);
+                        let history = PersistentFunctionalSequence::freeze(history);
                         move |session, value| {
-                            resume_fold_while_tail_with_value(
+                            resume_suspended_fold_while_tail_with_value(
                                 session, state, index, history, remaining, value,
                             )
                         }
@@ -192,16 +297,101 @@ fn resume_fold_while_tail_from_index(
     }
 }
 
-fn resume_fold_while_tail_with_value(
+fn finish_suspended_fold_while_after_false_test(
     session: &mut Session,
-    state: FoldWhileEvalState,
+    state: SuspendedFoldWhileEvalState,
     index: usize,
-    mut history: Vec<Expr>,
+    current: Expr,
+    history: PersistentFunctionalSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    if state.config.tail_adjustment > 0 {
+        let remaining = usize::try_from(state.config.tail_adjustment).unwrap_or(0);
+        return resume_suspended_fold_while_tail_from_index(
+            session, state, index, current, history, remaining,
+        );
+    }
+
+    if state.config.tail_adjustment < 0 {
+        let drop_count = state
+            .config
+            .tail_adjustment
+            .checked_neg()
+            .and_then(|value| usize::try_from(value).ok())
+            .unwrap_or(usize::MAX);
+        let mut values = history.to_vec();
+        let keep_len = values.len().saturating_sub(drop_count).max(1);
+        values.truncate(keep_len);
+        return Ok(values.last().cloned().unwrap_or(state.fallback));
+    }
+
+    Ok(finish_suspended_fold_while_result(state, history))
+}
+
+fn resume_suspended_fold_while_tail_from_index(
+    session: &mut Session,
+    state: SuspendedFoldWhileEvalState,
+    mut index: usize,
+    mut current: Expr,
+    mut history: PersistentFunctionalSequence<Expr>,
+    mut remaining: usize,
+) -> Result<Expr, EvalError> {
+    loop {
+        if remaining == 0 || index >= state.items.len() {
+            return Ok(finish_suspended_fold_while_result(state, history));
+        }
+
+        let call = Expr::call(
+            state.operator.clone(),
+            vec![
+                current,
+                state
+                    .items
+                    .get(index)
+                    .expect("fold-while tail item should exist")
+                    .clone(),
+            ],
+        );
+        let value = match session.evaluate(call) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_fold_while_tail_with_value(
+                                session, state, index, history, remaining, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        history = history.appended(value.clone());
+        current = value;
+        index += 1;
+        remaining -= 1;
+    }
+}
+
+fn resume_suspended_fold_while_tail_with_value(
+    session: &mut Session,
+    state: SuspendedFoldWhileEvalState,
+    index: usize,
+    history: PersistentFunctionalSequence<Expr>,
     remaining: usize,
     value: Expr,
 ) -> Result<Expr, EvalError> {
-    history.push(value.clone());
-    resume_fold_while_tail_from_index(session, state, index + 1, value, history, remaining - 1)
+    let history = history.appended(value.clone());
+    resume_suspended_fold_while_tail_from_index(
+        session,
+        state,
+        index + 1,
+        value,
+        history,
+        remaining - 1,
+    )
 }
 
 pub(super) fn apply_fold_while(
@@ -213,7 +403,7 @@ pub(super) fn apply_fold_while(
     test: &Expr,
     m_expr: Option<&Expr>,
     n_expr: Option<&Expr>,
-    raw_args: &[Expr],
+    raw_args: &rum_core::SharedArgs,
 ) -> Result<Expr, EvalError> {
     let Some(config) = parse_fold_while_config(m_expr, n_expr) else {
         return Ok(session.invalid_call_with_arg_form(
@@ -224,14 +414,14 @@ pub(super) fn apply_fold_while(
     };
 
     let Some(items) = iterable_items(list_expr) else {
-        return Ok(Expr::call(head.clone(), raw_args.to_vec()));
+        return Ok(Expr::call_with_shared_args(head.clone(), raw_args.clone()));
     };
 
     let (current, start_index, history) = if let Some(initial) = initial {
         (initial.clone(), 0usize, vec![initial])
     } else {
         let Some((first, rest)) = items.split_first() else {
-            return Ok(Expr::call(head.clone(), raw_args.to_vec()));
+            return Ok(Expr::call_with_shared_args(head.clone(), raw_args.clone()));
         };
         (first.clone(), items.len() - rest.len(), vec![first.clone()])
     };
@@ -239,12 +429,11 @@ pub(super) fn apply_fold_while(
     resume_fold_while_from_index(
         session,
         FoldWhileEvalState {
-            head: head.clone(),
             operator: operator.clone(),
             items,
             test: test.clone(),
             config,
-            raw_args: raw_args.to_vec(),
+            fallback: Expr::call_with_shared_args(head.clone(), raw_args.clone()),
         },
         start_index,
         current,
@@ -253,13 +442,28 @@ pub(super) fn apply_fold_while(
 }
 
 fn finish_fold_while_result(state: FoldWhileEvalState, history: Vec<Expr>) -> Expr {
-    history
-        .last()
-        .cloned()
-        .unwrap_or_else(|| Expr::call(state.head, state.raw_args))
+    history.last().cloned().unwrap_or(state.fallback)
+}
+
+fn finish_suspended_fold_while_result(
+    state: SuspendedFoldWhileEvalState,
+    history: PersistentFunctionalSequence<Expr>,
+) -> Expr {
+    history.last().cloned().unwrap_or(state.fallback)
+}
+
+fn suspended_test_args(
+    history: &PersistentFunctionalSequence<Expr>,
+    arity: NestWhileTestArity,
+) -> Vec<Expr> {
+    match arity {
+        NestWhileTestArity::Count(count) => history.recent(count),
+        NestWhileTestArity::All => history.to_vec(),
+    }
 }
 #[cfg(test)]
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<FoldWhileEvalState>();
+    assert_traces::<SuspendedFoldWhileEvalState>();
 };

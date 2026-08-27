@@ -380,6 +380,50 @@ fn resume_eval_request_with_input_can_finish_accumulate_and_blockmap_callbacks()
     );
 }
 
+#[test]
+fn numeric_suspend_resume_liveness_probes_return_exact_values() {
+    for (label, source, prompt, expected) in [
+        (
+            "callback_sort",
+            r#"calls = 0; {Sort[{3, 1, 2}, Function[{a, b}, calls = calls + 1; If[calls == 1, InputString["sort: "], Null]; Less[a, b]]], calls}"#,
+            "sort: ",
+            "List[List[1, 2, 3], 3]",
+        ),
+        (
+            "association_grouping",
+            r#"calls = 0; {GroupBy[{1, 2, 3}, Function[x, calls = calls + 1; If[calls == 2, InputString["group: "], Null]; Mod[x, 2]]], calls}"#,
+            "group: ",
+            "List[Association[Rule[1, List[1, 3]], Rule[0, List[2]]], 3]",
+        ),
+        (
+            "fold",
+            r#"calls = 0; {Fold[Function[{a, b}, calls = calls + 1; If[calls == 2, InputString["fold: "], Null]; a + b], 0, {1, 2, 3}], calls}"#,
+            "fold: ",
+            "List[6, 3]",
+        ),
+        (
+            "string_pattern",
+            r#"calls = 0; {StringLength[StringReplace["aba", "b" :> (calls = calls + 1; InputString["string: "]; "22")]], calls}"#,
+            "string: ",
+            "List[4, 1]",
+        ),
+    ] {
+        let mut session = core_session();
+        let failure = session
+            .eval_request(source)
+            .expect_err("numeric liveness probe should suspend");
+        assert_input_prompt(&failure.error, prompt);
+
+        let response = session
+            .resume_eval_request_with_input("ignored")
+            .expect("numeric liveness probe should resume to an exact value");
+        let actual = response.value.to_string();
+        println!("{label}={actual}");
+        assert_eq!(actual, expected);
+        assert!(session.pending_input_request().is_none());
+    }
+}
+
 fn assert_input_prompt(error: &SessionRequestError, expected: &str) {
     match error {
         SessionRequestError::InputRequired { request } => {

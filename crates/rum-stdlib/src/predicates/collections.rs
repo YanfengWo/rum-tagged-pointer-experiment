@@ -25,6 +25,14 @@ struct DuplicateFreeSameTestState {
 }
 
 #[derive(FrameRootTrace)]
+struct SuspendedDuplicateFreeSameTestState {
+    same_test: Expr,
+    items: FrozenPredicateSequence<Expr>,
+    lhs_index: usize,
+    rhs_index: usize,
+}
+
+#[derive(FrameRootTrace)]
 struct SameTestMatrixState {
     same_test: Expr,
     lhs: Vec<Expr>,
@@ -32,6 +40,17 @@ struct SameTestMatrixState {
     lhs_index: usize,
     rhs_index: usize,
     matches: Vec<Vec<bool>>,
+    kind: SameTestRelationKind,
+}
+
+#[derive(FrameRootTrace)]
+struct SuspendedSameTestMatrixState {
+    same_test: Expr,
+    lhs: FrozenPredicateSequence<Expr>,
+    rhs: FrozenPredicateSequence<Expr>,
+    lhs_index: usize,
+    rhs_index: usize,
+    matches: PersistentPredicateMatches,
     kind: SameTestRelationKind,
 }
 
@@ -384,8 +403,16 @@ fn resume_duplicate_free_same_test(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedDuplicateFreeSameTestState {
+                            same_test: state.same_test,
+                            items: FrozenPredicateSequence::freeze(state.items),
+                            lhs_index: state.lhs_index,
+                            rhs_index: state.rhs_index,
+                        };
                         move |session, value| {
-                            resume_duplicate_free_same_test_with_value(session, state, value)
+                            resume_suspended_duplicate_free_same_test_with_value(
+                                session, state, value,
+                            )
                         }
                     },
                 );
@@ -400,17 +427,59 @@ fn resume_duplicate_free_same_test(
     }
 }
 
-fn resume_duplicate_free_same_test_with_value(
+fn resume_suspended_duplicate_free_same_test(
     session: &mut Session,
-    mut state: DuplicateFreeSameTestState,
+    mut state: SuspendedDuplicateFreeSameTestState,
+) -> Result<Expr, EvalError> {
+    loop {
+        loop {
+            if state.lhs_index >= state.items.len().saturating_sub(1) {
+                return Ok(predicate_bool_expr(true));
+            }
+            if state.rhs_index < state.items.len() {
+                break;
+            }
+            state.lhs_index += 1;
+            state.rhs_index = state.lhs_index + 1;
+        }
+        let value = match eval_same_test_pair(
+            session,
+            &state.same_test,
+            state.items.get(state.lhs_index).expect("lhs should exist"),
+            state.items.get(state.rhs_index).expect("rhs should exist"),
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_duplicate_free_same_test_with_value(
+                                session, state, value,
+                            )
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        if is_true_expr(&value) {
+            return Ok(predicate_bool_expr(false));
+        }
+        state.rhs_index += 1;
+    }
+}
+
+fn resume_suspended_duplicate_free_same_test_with_value(
+    session: &mut Session,
+    mut state: SuspendedDuplicateFreeSameTestState,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if is_true_expr(&value) {
         return Ok(predicate_bool_expr(false));
     }
-
     state.rhs_index += 1;
-    resume_duplicate_free_same_test(session, state)
+    resume_suspended_duplicate_free_same_test(session, state)
 }
 
 fn eval_same_test_relation(
@@ -466,8 +535,17 @@ fn resume_same_test_matrix(
                 return session.suspend_with_frame_lazy(
                     Err(EvalError::InputRequired { request }),
                     || {
+                        let state = SuspendedSameTestMatrixState {
+                            same_test: state.same_test,
+                            lhs: FrozenPredicateSequence::freeze(state.lhs),
+                            rhs: FrozenPredicateSequence::freeze(state.rhs),
+                            lhs_index: state.lhs_index,
+                            rhs_index: state.rhs_index,
+                            matches: PersistentPredicateMatches::freeze(state.matches),
+                            kind: state.kind,
+                        };
                         move |session, value| {
-                            resume_same_test_matrix_with_value(session, state, value)
+                            resume_suspended_same_test_matrix_with_value(session, state, value)
                         }
                     },
                 );
@@ -482,16 +560,63 @@ fn resume_same_test_matrix(
     }
 }
 
-fn resume_same_test_matrix_with_value(
+fn resume_suspended_same_test_matrix(
     session: &mut Session,
-    mut state: SameTestMatrixState,
+    mut state: SuspendedSameTestMatrixState,
+) -> Result<Expr, EvalError> {
+    loop {
+        loop {
+            if state.lhs_index >= state.lhs.len() {
+                let matches = state.matches.to_vec();
+                return Ok(predicate_bool_expr(same_test_relation_result(
+                    state.kind,
+                    &matches,
+                    state.lhs.len(),
+                    state.rhs.len(),
+                )));
+            }
+            if state.rhs_index < state.rhs.len() {
+                break;
+            }
+            state.lhs_index += 1;
+            state.rhs_index = 0;
+        }
+        let value = match eval_same_test_pair(
+            session,
+            &state.same_test,
+            state.lhs.get(state.lhs_index).expect("lhs should exist"),
+            state.rhs.get(state.rhs_index).expect("rhs should exist"),
+        ) {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                return session.suspend_with_frame_lazy(
+                    Err(EvalError::InputRequired { request }),
+                    || {
+                        move |session, value| {
+                            resume_suspended_same_test_matrix_with_value(session, state, value)
+                        }
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+        if is_true_expr(&value) {
+            state.matches = state.matches.matched(state.lhs_index, state.rhs_index);
+        }
+        state.rhs_index += 1;
+    }
+}
+
+fn resume_suspended_same_test_matrix_with_value(
+    session: &mut Session,
+    mut state: SuspendedSameTestMatrixState,
     value: Expr,
 ) -> Result<Expr, EvalError> {
     if is_true_expr(&value) {
-        state.matches[state.lhs_index][state.rhs_index] = true;
+        state.matches = state.matches.matched(state.lhs_index, state.rhs_index);
     }
     state.rhs_index += 1;
-    resume_same_test_matrix(session, state)
+    resume_suspended_same_test_matrix(session, state)
 }
 
 fn eval_same_test_pair(
@@ -779,6 +904,8 @@ mod matching_tests {
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<DuplicateFreeSameTestState>();
+    assert_traces::<SuspendedDuplicateFreeSameTestState>();
     assert_traces::<SameTestMatrixState>();
+    assert_traces::<SuspendedSameTestMatrixState>();
     assert_traces::<SameTestRelationKind>();
 };

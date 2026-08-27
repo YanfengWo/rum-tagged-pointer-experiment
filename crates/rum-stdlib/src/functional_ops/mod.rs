@@ -13,7 +13,10 @@ mod arrays;
 mod callable;
 mod iteration;
 mod sequence;
+mod suspended_state;
 mod targeted_map;
+
+use self::suspended_state::{FrozenFunctionalSequence, PersistentFunctionalSequence};
 
 pub(crate) use self::{
     apply_map::{

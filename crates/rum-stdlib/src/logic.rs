@@ -1,5 +1,6 @@
 mod comparison;
 mod shared;
+mod suspended_state;
 mod truth;
 
 pub(crate) use self::comparison::eval_comparison_operator_wrapper;

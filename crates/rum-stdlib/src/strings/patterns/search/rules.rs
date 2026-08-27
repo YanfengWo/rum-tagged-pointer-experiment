@@ -281,21 +281,215 @@ fn drive_replace_string_output_result(
             output,
             rendered_expr,
         ),
-        Err(error) => session.drive_evaluated_value::<Expr, String, _>(
-            Err(error),
-            move |session, rendered_expr| {
-                resume_replace_string_value_with_output(
-                    session,
-                    state,
-                    index,
-                    end,
-                    replacements,
-                    output,
-                    rendered_expr,
-                )
-            },
-        ),
+        Err(error @ EvalError::InputRequired { .. }) => {
+            suspend_replace_string_output(session, error, state, index, end, replacements, output)
+        }
+        Err(error) => Err(error),
     }
+}
+
+#[cold]
+#[inline(never)]
+fn suspend_replace_string_output(
+    session: &mut Session,
+    error: EvalError,
+    state: StringReplaceRuleEvalState,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    output: String,
+) -> Result<String, EvalError> {
+    let literal_match_index = state.literal_match_index;
+    let state = FrozenStringValue::freeze(state);
+    let output = PersistentStringText::freeze(output);
+    session.drive_evaluated_value::<Expr, String, _>(Err(error), move |session, rendered_expr| {
+        resume_suspended_replace_string_value_with_output(
+            session,
+            state,
+            index,
+            end,
+            replacements,
+            literal_match_index,
+            output,
+            rendered_expr,
+        )
+    })
+}
+
+fn resume_suspended_replace_string_value_from_index(
+    session: &mut Session,
+    state: FrozenStringValue<StringReplaceRuleEvalState>,
+    mut index: usize,
+    replacements: usize,
+    mut literal_match_index: usize,
+    mut output: PersistentStringText,
+) -> Result<String, EvalError> {
+    let fixed = state.as_ref();
+    if fixed.literal_matches.is_some() {
+        if replacements >= fixed.max_replacements {
+            return Ok(output
+                .appended(fixed.chars[index..].iter().collect::<String>())
+                .to_string());
+        }
+
+        let next_match = fixed
+            .literal_matches
+            .as_ref()
+            .and_then(|matches| matches.get(literal_match_index))
+            .copied();
+        let Some((start, end)) = next_match else {
+            return Ok(output
+                .appended(fixed.chars[index..].iter().collect::<String>())
+                .to_string());
+        };
+        debug_assert!(start >= index);
+        output = output.appended(fixed.chars[index..start].iter().collect::<String>());
+        literal_match_index += 1;
+
+        let rule = fixed
+            .rules
+            .first()
+            .expect("literal replacement matching requires one rule");
+        let output_expr = match &rule.replacement {
+            ExactStringReplacementValue::Immediate(expr)
+            | ExactStringReplacementValue::Delayed(expr) => expr.clone(),
+        };
+        let rendered_result = evaluate_string_rule_output_expr_result(
+            session,
+            &output_expr,
+            &SymbolExprMap::default(),
+        );
+        return drive_suspended_replace_string_output_result(
+            session,
+            state,
+            start,
+            end,
+            replacements,
+            literal_match_index,
+            output,
+            rendered_result,
+        );
+    }
+
+    while index <= fixed.chars.len() {
+        if replacements >= fixed.max_replacements {
+            return Ok(output
+                .appended(fixed.chars[index..].iter().collect::<String>())
+                .to_string());
+        }
+
+        if let Some((output_expr, end, bindings)) = fixed.rules.iter().find_map(|rule| {
+            best_pattern_match_state(&rule.pattern, &fixed.chars, index, fixed.config).map(
+                |match_state| {
+                    let output_expr = match &rule.replacement {
+                        ExactStringReplacementValue::Immediate(expr)
+                        | ExactStringReplacementValue::Delayed(expr) => expr.clone(),
+                    };
+                    (output_expr, match_state.end, match_state.bindings)
+                },
+            )
+        }) {
+            let rendered_result =
+                evaluate_string_rule_output_expr_result(session, &output_expr, &bindings);
+            return drive_suspended_replace_string_output_result(
+                session,
+                state,
+                index,
+                end,
+                replacements,
+                literal_match_index,
+                output,
+                rendered_result,
+            );
+        }
+
+        if index == fixed.chars.len() {
+            break;
+        }
+        output = output.appended(fixed.chars[index].to_string());
+        index += 1;
+    }
+
+    Ok(output.to_string())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn drive_suspended_replace_string_output_result(
+    session: &mut Session,
+    state: FrozenStringValue<StringReplaceRuleEvalState>,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    literal_match_index: usize,
+    output: PersistentStringText,
+    rendered_result: Result<Expr, EvalError>,
+) -> Result<String, EvalError> {
+    match rendered_result {
+        Ok(rendered_expr) => resume_suspended_replace_string_value_with_output(
+            session,
+            state,
+            index,
+            end,
+            replacements,
+            literal_match_index,
+            output,
+            rendered_expr,
+        ),
+        Err(EvalError::InputRequired { request }) => session
+            .drive_evaluated_value::<Expr, String, _>(
+                Err(EvalError::InputRequired { request }),
+                move |session, rendered_expr| {
+                    resume_suspended_replace_string_value_with_output(
+                        session,
+                        state,
+                        index,
+                        end,
+                        replacements,
+                        literal_match_index,
+                        output,
+                        rendered_expr,
+                    )
+                },
+            ),
+        Err(error) => Err(error),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_replace_string_value_with_output(
+    session: &mut Session,
+    state: FrozenStringValue<StringReplaceRuleEvalState>,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    literal_match_index: usize,
+    output: PersistentStringText,
+    rendered_expr: Expr,
+) -> Result<String, EvalError> {
+    let rendered = expr_as_string(&rendered_expr)
+        .map(str::to_owned)
+        .unwrap_or_else(|| rendered_expr.to_string());
+    let mut output = output.appended(rendered);
+    let fixed = state.as_ref();
+
+    let next_index = if end == index {
+        if index == fixed.chars.len() {
+            return Ok(output.to_string());
+        }
+        output = output.appended(fixed.chars[index].to_string());
+        index + 1
+    } else {
+        end
+    };
+
+    resume_suspended_replace_string_value_from_index(
+        session,
+        state,
+        next_index,
+        replacements + 1,
+        literal_match_index,
+        output,
+    )
 }
 
 fn resume_replace_string_value_with_output(
@@ -353,10 +547,12 @@ fn resume_replace_string_values_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
+                let state = FrozenStringValue::freeze(state);
+                let rendered = PersistentStringSequence::freeze(rendered);
                 return session.drive_internal_value::<String, Expr, _>(
                     Err(EvalError::InputRequired { request }),
                     move |session, value| {
-                        resume_replace_string_values_with_value(
+                        resume_suspended_replace_string_values_with_value(
                             session, state, index, rendered, value,
                         )
                     },
@@ -367,15 +563,58 @@ fn resume_replace_string_values_from_index(
     }
 }
 
-fn resume_replace_string_values_with_value(
+fn resume_suspended_replace_string_values_from_index(
     session: &mut Session,
-    state: StringReplaceValuesEvalState,
+    state: FrozenStringValue<StringReplaceValuesEvalState>,
+    mut index: usize,
+    mut rendered: PersistentStringSequence<String>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let fixed = state.as_ref();
+        let Some(value) = fixed.values.get(index) else {
+            return Ok(string_list_expr(rendered.to_vec()));
+        };
+
+        let result = replace_string_value_with_rules(
+            session,
+            value,
+            &fixed.rules,
+            fixed.max_replacements,
+            fixed.config,
+        );
+        match result {
+            Ok(value) => {
+                rendered = rendered.appended(value);
+                index += 1;
+            }
+            Err(EvalError::InputRequired { request }) => {
+                return session.drive_internal_value::<String, Expr, _>(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, value| {
+                        resume_suspended_replace_string_values_with_value(
+                            session, state, index, rendered, value,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn resume_suspended_replace_string_values_with_value(
+    session: &mut Session,
+    state: FrozenStringValue<StringReplaceValuesEvalState>,
     index: usize,
-    mut rendered: Vec<String>,
+    rendered: PersistentStringSequence<String>,
     value: String,
 ) -> Result<Expr, EvalError> {
-    rendered.push(value);
-    resume_replace_string_values_from_index(session, state, index + 1, rendered)
+    resume_suspended_replace_string_values_from_index(
+        session,
+        state,
+        index + 1,
+        rendered.appended(value),
+    )
 }
 
 fn resume_collect_string_cases_from_index(
@@ -502,13 +741,211 @@ fn drive_string_cases_output_result(
         Ok(output) => {
             resume_collect_string_cases_with_output(session, state, index, end, matches, output)
         }
-        Err(error) => session.drive_evaluated_value::<Expr, Vec<Expr>, _>(
-            Err(error),
-            move |session, output| {
-                resume_collect_string_cases_with_output(session, state, index, end, matches, output)
-            },
-        ),
+        Err(EvalError::InputRequired { request }) => {
+            let literal_match_index = state.literal_match_index;
+            let state = FrozenStringValue::freeze(state);
+            let matches = PersistentStringSequence::freeze(matches);
+            session.drive_evaluated_value::<Expr, Vec<Expr>, _>(
+                Err(EvalError::InputRequired { request }),
+                move |session, output| {
+                    resume_suspended_collect_string_cases_with_output(
+                        session,
+                        state,
+                        index,
+                        end,
+                        literal_match_index,
+                        matches,
+                        output,
+                    )
+                },
+            )
+        }
+        Err(error) => Err(error),
     }
+}
+
+fn resume_suspended_collect_string_cases_from_index(
+    session: &mut Session,
+    state: FrozenStringValue<StringCasesRuleEvalState>,
+    mut index: usize,
+    mut literal_match_index: usize,
+    mut matches: PersistentStringSequence<Expr>,
+) -> Result<Vec<Expr>, EvalError> {
+    let fixed = state.as_ref();
+    if fixed.literal_matches.is_some() {
+        if matches.len() >= fixed.max_matches {
+            return Ok(matches.to_vec());
+        }
+        let next_match = fixed
+            .literal_matches
+            .as_ref()
+            .and_then(|ranges| ranges.get(literal_match_index))
+            .copied();
+        let Some((start, end)) = next_match else {
+            return Ok(matches.to_vec());
+        };
+        literal_match_index += 1;
+
+        let ExactStringCaseSpec::Rules(rules) = &fixed.spec else {
+            unreachable!("literal rule matching requires a rule specification");
+        };
+        let rule = rules
+            .first()
+            .expect("literal case matching requires one rule");
+        let output_expr = match &rule.output {
+            ExactStringCaseOutput::Immediate(expr) | ExactStringCaseOutput::Delayed(expr) => {
+                expr.clone()
+            }
+        };
+        let output_result = evaluate_string_rule_output_expr_result(
+            session,
+            &output_expr,
+            &SymbolExprMap::default(),
+        );
+        return drive_suspended_string_cases_output_result(
+            session,
+            state,
+            start,
+            end,
+            literal_match_index,
+            matches,
+            output_result,
+        );
+    }
+
+    while index <= fixed.chars.len() && matches.len() < fixed.max_matches {
+        match &fixed.spec {
+            ExactStringCaseSpec::Patterns(patterns) => {
+                if let Some((_pattern_index, match_state)) = best_pattern_match_at_with_bindings(
+                    patterns,
+                    &fixed.chars,
+                    index,
+                    fixed.config.match_config,
+                ) {
+                    matches = matches.appended(Expr::string(pattern_match_text(
+                        &fixed.chars[index..match_state.end],
+                    )));
+                    let Some(next_index) = next_string_match_index(
+                        index,
+                        match_state.end,
+                        fixed.chars.len(),
+                        fixed.config.overlaps,
+                    ) else {
+                        break;
+                    };
+                    index = next_index;
+                } else {
+                    if index == fixed.chars.len() {
+                        break;
+                    }
+                    index += 1;
+                }
+            }
+            ExactStringCaseSpec::Rules(rules) => {
+                if let Some((output_expr, end, bindings)) = rules.iter().find_map(|rule| {
+                    best_pattern_match_state(
+                        &rule.pattern,
+                        &fixed.chars,
+                        index,
+                        fixed.config.match_config,
+                    )
+                    .map(|match_state| {
+                        let output_expr = match &rule.output {
+                            ExactStringCaseOutput::Immediate(expr)
+                            | ExactStringCaseOutput::Delayed(expr) => expr.clone(),
+                        };
+                        (output_expr, match_state.end, match_state.bindings)
+                    })
+                }) {
+                    let output_result =
+                        evaluate_string_rule_output_expr_result(session, &output_expr, &bindings);
+                    return drive_suspended_string_cases_output_result(
+                        session,
+                        state,
+                        index,
+                        end,
+                        literal_match_index,
+                        matches,
+                        output_result,
+                    );
+                }
+
+                if index == fixed.chars.len() {
+                    break;
+                }
+                index += 1;
+            }
+        }
+    }
+
+    Ok(matches.to_vec())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn drive_suspended_string_cases_output_result(
+    session: &mut Session,
+    state: FrozenStringValue<StringCasesRuleEvalState>,
+    index: usize,
+    end: usize,
+    literal_match_index: usize,
+    matches: PersistentStringSequence<Expr>,
+    output_result: Result<Expr, EvalError>,
+) -> Result<Vec<Expr>, EvalError> {
+    match output_result {
+        Ok(output) => resume_suspended_collect_string_cases_with_output(
+            session,
+            state,
+            index,
+            end,
+            literal_match_index,
+            matches,
+            output,
+        ),
+        Err(EvalError::InputRequired { request }) => session
+            .drive_evaluated_value::<Expr, Vec<Expr>, _>(
+                Err(EvalError::InputRequired { request }),
+                move |session, output| {
+                    resume_suspended_collect_string_cases_with_output(
+                        session,
+                        state,
+                        index,
+                        end,
+                        literal_match_index,
+                        matches,
+                        output,
+                    )
+                },
+            ),
+        Err(error) => Err(error),
+    }
+}
+
+fn resume_suspended_collect_string_cases_with_output(
+    session: &mut Session,
+    state: FrozenStringValue<StringCasesRuleEvalState>,
+    index: usize,
+    end: usize,
+    literal_match_index: usize,
+    matches: PersistentStringSequence<Expr>,
+    output: Expr,
+) -> Result<Vec<Expr>, EvalError> {
+    let matches = matches.appended(output);
+    let Some(next_index) = next_string_match_index(
+        index,
+        end,
+        state.as_ref().chars.len(),
+        state.as_ref().config.overlaps,
+    ) else {
+        return Ok(matches.to_vec());
+    };
+
+    resume_suspended_collect_string_cases_from_index(
+        session,
+        state,
+        next_index,
+        literal_match_index,
+        matches,
+    )
 }
 
 fn resume_collect_string_cases_with_output(
@@ -557,10 +994,12 @@ fn resume_collect_string_cases_values_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
+                let state = FrozenStringValue::freeze(state);
+                let outputs = PersistentStringSequence::freeze(outputs);
                 return session.drive_internal_value::<Vec<Expr>, Expr, _>(
                     Err(EvalError::InputRequired { request }),
                     move |session, items| {
-                        resume_collect_string_cases_values_with_value(
+                        resume_suspended_collect_string_cases_values_with_value(
                             session, state, index, outputs, items,
                         )
                     },
@@ -571,15 +1010,58 @@ fn resume_collect_string_cases_values_from_index(
     }
 }
 
-fn resume_collect_string_cases_values_with_value(
+fn resume_suspended_collect_string_cases_values_from_index(
     session: &mut Session,
-    state: StringCasesValuesEvalState,
+    state: FrozenStringValue<StringCasesValuesEvalState>,
+    mut index: usize,
+    mut outputs: PersistentStringSequence<Expr>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let fixed = state.as_ref();
+        let Some(value) = fixed.values.get(index) else {
+            return Ok(list_expr(outputs.to_vec()));
+        };
+
+        let result = collect_string_cases_with_rule_evaluation(
+            session,
+            value,
+            &fixed.spec,
+            fixed.max_matches,
+            fixed.config,
+        );
+        match result {
+            Ok(items) => {
+                outputs = outputs.appended(list_expr(items));
+                index += 1;
+            }
+            Err(EvalError::InputRequired { request }) => {
+                return session.drive_internal_value::<Vec<Expr>, Expr, _>(
+                    Err(EvalError::InputRequired { request }),
+                    move |session, items| {
+                        resume_suspended_collect_string_cases_values_with_value(
+                            session, state, index, outputs, items,
+                        )
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn resume_suspended_collect_string_cases_values_with_value(
+    session: &mut Session,
+    state: FrozenStringValue<StringCasesValuesEvalState>,
     index: usize,
-    mut outputs: Vec<Expr>,
+    outputs: PersistentStringSequence<Expr>,
     items: Vec<Expr>,
 ) -> Result<Expr, EvalError> {
-    outputs.push(list_expr(items));
-    resume_collect_string_cases_values_from_index(session, state, index + 1, outputs)
+    resume_suspended_collect_string_cases_values_from_index(
+        session,
+        state,
+        index + 1,
+        outputs.appended(list_expr(items)),
+    )
 }
 
 pub(super) fn evaluate_string_rule_output_expr_result(
