@@ -1,3 +1,7 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 
@@ -73,7 +77,7 @@ pub(crate) fn eval_delete_missing(
     Ok(value)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum DeleteMissingMode {
     Recursive(DeleteMissingDepth),
     Target {
@@ -82,7 +86,7 @@ enum DeleteMissingMode {
     },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum DeleteMissingDepth {
     Finite(usize),
     Infinity,
@@ -238,15 +242,16 @@ fn resume_delete_missing_list_at_target_level(
                 child_value,
             ),
             Err(EvalError::InputRequired { request }) => {
-                session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                    let items = FrozenAssociationSequence::freeze(items);
-                    let kept = PersistentAssociationSequence::freeze(kept);
-                    move |session, value| {
-                        resume_suspended_delete_missing_list_after_child(
-                            session, items, level, scan, index, kept, value,
-                        )
-                    }
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let items = FrozenAssociationSequence::freeze(items);
+                                    let kept = PersistentAssociationSequence::freeze(kept);
+                ResumeDeleteMissingListAtTargetLevelSuspensionFrameL244C21 { items, level, scan, index, kept }
+                },
+                )
             }
             Err(error) => Err(error),
         };
@@ -272,15 +277,16 @@ fn resume_delete_missing_list_at_target_level(
                 child_value,
             ),
             Err(EvalError::InputRequired { request }) => {
-                session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                    let items = FrozenAssociationSequence::freeze(items);
-                    let kept = PersistentAssociationSequence::freeze(kept);
-                    move |session, value| {
-                        resume_suspended_delete_missing_list_after_child(
-                            session, items, level, scan, index, kept, value,
-                        )
-                    }
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let items = FrozenAssociationSequence::freeze(items);
+                                    let kept = PersistentAssociationSequence::freeze(kept);
+                ResumeDeleteMissingListAtTargetLevelSuspensionFrameL278C21 { items, level, scan, index, kept }
+                },
+                )
             }
             Err(error) => Err(error),
         };
@@ -370,13 +376,12 @@ fn resume_suspended_delete_missing_list_at_target_level(
             session, items, level, scan, index, kept, value,
         ),
         Err(EvalError::InputRequired { request }) => {
-            session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                move |session, value| {
-                    resume_suspended_delete_missing_list_after_child(
-                        session, items, level, scan, index, kept, value,
-                    )
-                }
-            })
+            rum_runtime::resume_or_suspend!(
+                session,
+                Err(EvalError::InputRequired { request }),
+                ok(value) => Ok(value),
+                suspend => ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrameL374C17 { items, level, scan, index, kept },
+            )
         }
         Err(error) => Err(error),
     }
@@ -442,15 +447,16 @@ fn resume_delete_missing_association_at_target_level(
                 predicate_value,
             ),
             Err(EvalError::InputRequired { request }) => {
-                session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                    let entries = FrozenAssociationSequence::freeze(entries);
-                    let kept = PersistentAssociationSequence::freeze(kept);
-                    move |session, value| {
-                        resume_suspended_delete_missing_association_after_predicate(
-                            session, entries, level, scan, index, kept, entry, value,
-                        )
-                    }
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let entries = FrozenAssociationSequence::freeze(entries);
+                                    let kept = PersistentAssociationSequence::freeze(kept);
+                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL448C21 { entries, level, scan, index, kept, entry }
+                },
+                )
             }
             Err(error) => Err(error),
         };
@@ -496,15 +502,16 @@ fn resume_delete_missing_association_at_target_level(
                 child_value,
             ),
             Err(EvalError::InputRequired { request }) => {
-                session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                    let entries = FrozenAssociationSequence::freeze(entries);
-                    let kept = PersistentAssociationSequence::freeze(kept);
-                    move |session, value| {
-                        resume_suspended_delete_missing_association_after_child(
-                            session, entries, level, scan, index, kept, entry, value,
-                        )
-                    }
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let entries = FrozenAssociationSequence::freeze(entries);
+                                    let kept = PersistentAssociationSequence::freeze(kept);
+                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL502C21 { entries, level, scan, index, kept, entry }
+                },
+                )
             }
             Err(error) => Err(error),
         };
@@ -531,15 +538,16 @@ fn resume_delete_missing_association_at_target_level(
                 child_value,
             ),
             Err(EvalError::InputRequired { request }) => {
-                session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                    let entries = FrozenAssociationSequence::freeze(entries);
-                    let kept = PersistentAssociationSequence::freeze(kept);
-                    move |session, value| {
-                        resume_suspended_delete_missing_association_after_child(
-                            session, entries, level, scan, index, kept, entry, value,
-                        )
-                    }
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let entries = FrozenAssociationSequence::freeze(entries);
+                                    let kept = PersistentAssociationSequence::freeze(kept);
+                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL537C21 { entries, level, scan, index, kept, entry }
+                },
+                )
             }
             Err(error) => Err(error),
         };
@@ -640,13 +648,12 @@ fn resume_suspended_delete_missing_association_at_target_level(
                 session, entries, level, scan, index, kept, entry, value,
             ),
             Err(EvalError::InputRequired { request }) => {
-                session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                    move |session, value| {
-                        resume_suspended_delete_missing_association_after_predicate(
-                            session, entries, level, scan, index, kept, entry, value,
-                        )
-                    }
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL644C21 { entries, level, scan, index, kept, entry },
+                )
             }
             Err(error) => Err(error),
         };
@@ -708,13 +715,12 @@ fn resume_suspended_delete_missing_association_at_target_level(
             session, entries, level, scan, index, kept, entry, value,
         ),
         Err(EvalError::InputRequired { request }) => {
-            session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                move |session, value| {
-                    resume_suspended_delete_missing_association_after_child(
-                        session, entries, level, scan, index, kept, entry, value,
-                    )
-                }
-            })
+            rum_runtime::resume_or_suspend!(
+                session,
+                Err(EvalError::InputRequired { request }),
+                ok(value) => Ok(value),
+                suspend => ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL712C17 { entries, level, scan, index, kept, entry },
+            )
         }
         Err(error) => Err(error),
     }

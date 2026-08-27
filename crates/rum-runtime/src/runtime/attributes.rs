@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -79,19 +80,21 @@ impl Session {
 
         let symbol_name = symbol.to_string();
         let resolved_result = self.evaluate(args_slice[1].clone());
-        let resolved_attributes = self.suspend_with_frame_lazy(resolved_result, || {
-            let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
-            let args = args.clone();
-            move |session, resolved| {
-                session.finish_update_attributes_after_resolved_attributes(
-                    &symbol_name,
-                    args.as_ref(),
-                    targets.as_ref(),
-                    update,
-                    resolved,
-                )
-            }
-        })?;
+        let resolved_attributes = crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
+                    let args = args.clone();
+        EvalUpdateAttributesSuspensionFrameL85C13 {
+            symbol_name: std::sync::Arc::new(symbol_name),
+            args,
+            targets,
+            update,
+        }
+        },
+        )?;
 
         self.finish_update_attributes_after_resolved_attributes(
             symbol,
@@ -217,5 +220,43 @@ impl Session {
         } else {
             true
         }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalUpdateAttributesSuspensionFrameL85C13 {
+    pub(super) symbol_name: std::sync::Arc<std::string::String>,
+    pub(super) args: rum_core::SharedArgs,
+    pub(super) targets: std::sync::Arc<[rum_core::Symbol]>,
+    pub(super) update: crate::runtime::session::session_state::AttributeUpdate,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalUpdateAttributesSuspensionFrameL85C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut symbol_name = self.symbol_name.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        #[allow(unused_mut)]
+        let mut targets = self.targets.clone();
+        #[allow(unused_mut)]
+        let mut update = self.update.clone();
+        let resumed = match outcome {
+            Ok(resolved) => (|| {
+                session.finish_update_attributes_after_resolved_attributes(
+                    symbol_name.as_str(),
+                    args.as_ref(),
+                    targets.as_ref(),
+                    update,
+                    resolved,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

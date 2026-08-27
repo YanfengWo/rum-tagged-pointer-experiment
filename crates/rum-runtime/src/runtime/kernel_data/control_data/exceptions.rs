@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -172,12 +175,15 @@ impl Session {
         };
 
         let body_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let handlers = handlers.take().map(Arc::<[ExceptionHandler]>::from);
-            move |session, outcome| {
-                session.resume_suspended_catch_exceptions_after_body(handlers, outcome)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let handlers = handlers.take().map(Arc::<[ExceptionHandler]>::from);
+        EvalCatchExceptionsSuspensionFrameL177C13 { handlers }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -311,9 +317,7 @@ impl Session {
                                 handler_index,
                                 ancestor_index,
                             };
-                            self.push_suspension_frame(move |session, outcome| {
-                                session.resume_suspended_exception_guard(state, outcome)
-                            });
+                            crate::resume_or_suspend!(insert self, DispatchExceptionHandlersOwnedSuspensionFrameL314C56 { state });
                             return Err(EvalError::InputRequired { request });
                         }
                         Err(error) => return Err(error),
@@ -328,9 +332,7 @@ impl Session {
                         handler_index,
                         ancestor_index,
                     };
-                    self.push_suspension_frame(move |session, outcome| {
-                        session.resume_suspended_exception_match(state, outcome)
-                    });
+                    crate::resume_or_suspend!(insert self, DispatchExceptionHandlersOwnedSuspensionFrameL331C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -365,9 +367,7 @@ impl Session {
                     return self.resume_suspended_exception_match_outcome(state, outcome);
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        session.resume_suspended_exception_match(state, outcome)
-                    });
+                    crate::resume_or_suspend!(insert self, DispatchSuspendedExceptionHandlersSuspensionFrameL368C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -409,9 +409,7 @@ impl Session {
         match guard_result {
             Ok(outcome) => self.resume_suspended_exception_guard_outcome(state, outcome),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| {
-                    session.resume_suspended_exception_guard(state, outcome)
-                });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedExceptionMatchOutcomeSuspensionFrameL412C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -452,7 +450,12 @@ impl Session {
             handler.rhs_may_splice_without_bindings,
         );
         let rhs_result = self.evaluate(rhs);
-        self.suspend_with_frame_lazy(rhs_result, || |_, value| Ok(value))
+        crate::resume_or_suspend!(
+            self,
+            rhs_result,
+            ok(value) => Ok(value),
+            suspend => EvaluateExceptionHandlerRhsSuspensionFrameL455C53,
+        )
     }
 }
 

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::parsing::{parse_replace_part_heads_option, parse_replace_part_rules};
 use super::plan::{
     build_replace_plan_from_targets, collect_replace_part_candidate_paths,
@@ -8,7 +11,15 @@ use super::plan::{
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+struct SuspendedReplacePartTargetsCompletion(PersistentReplacePartTargets);
+
+impl SuspendedReplacePartTargetsCompletion {
+    fn finish(self) -> Vec<ReplacePartTarget> {
+        self.0.into_vec()
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplacePartRules {
     expr: Expr,
     rules: FrozenReplaceSequence<ReplacePartRule>,
@@ -23,7 +34,7 @@ const _: fn() = || {
     assert_traces::<SuspendedReplacePartRules>();
 };
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplacePartRuleTargets {
     expr: Expr,
     position_specs: FrozenReplaceSequence<ReplacePartPositionSpec>,
@@ -34,7 +45,7 @@ struct SuspendedReplacePartRuleTargets {
     index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplacePartPatternCandidates {
     pattern: Expr,
     candidates: FrozenReplaceSequence<Vec<isize>>,
@@ -136,10 +147,7 @@ impl Session {
                         rules: FrozenReplaceSequence::freeze(rules),
                         rule_index,
                     };
-                    self.push_suspension_frame(move |session, outcome| {
-                        let targets = Vec::<ReplacePartTarget>::from_continuation_expr(outcome?);
-                        session.resume_suspended_replace_part_rules(state, targets)
-                    });
+                    crate::resume_or_suspend!(insert self, ApplyReplacePartRulesOwnedSuspensionFrameL139C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -207,12 +215,7 @@ impl Session {
                     collected: PersistentReplacePartTargets::freeze(collected),
                     index,
                 };
-                self.push_suspension_frame(move |session, value| {
-                    let targets = Vec::<ReplacePartTarget>::from_continuation_expr(value?);
-                    session
-                        .resume_suspended_replace_part_rule_targets(state, targets)
-                        .map(|targets| targets.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectRuleTargetsOwnedSuspensionFrameL210C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -262,11 +265,7 @@ impl Session {
                 resolved_pattern,
             ),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, value| {
-                    session
-                        .finish_replace_part_pattern_resolution(expr, rhs, delayed, heads, value?)
-                        .map(|targets| targets.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectPatternPositionTargetsOwnedSuspensionFrameL265C44 { expr, rhs, delayed, heads });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -316,11 +315,9 @@ impl Session {
                     collected: PersistentReplacePartTargets::freeze(collected),
                     index,
                 };
-                self.push_suspension_frame(move |session, value| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                    session
-                        .resume_suspended_replace_part_pattern_candidates(state, path, outcome)
-                        .map(|targets| targets.into_continuation_expr())
+                crate::resume_or_suspend!(insert self, CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrameL319C44 {
+                    state,
+                    path: std::sync::Arc::from(path),
                 });
                 Err(EvalError::InputRequired { request })
             }
@@ -390,10 +387,7 @@ impl Session {
                     merged_plan = ReplacePlanNode::default();
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let targets = Vec::<ReplacePartTarget>::from_continuation_expr(value?);
-                        session.resume_suspended_replace_part_rules(state, targets)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartRulesSuspensionFrameL393C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -405,13 +399,13 @@ impl Session {
         &mut self,
         mut state: SuspendedReplacePartRuleTargets,
         targets: Vec<ReplacePartTarget>,
-    ) -> Result<Vec<ReplacePartTarget>, EvalError> {
+    ) -> Result<SuspendedReplacePartTargetsCompletion, EvalError> {
         state.collected = state.collected.appended_values(targets);
         state.index += 1;
         loop {
             let Some(position_spec) = state.position_specs.as_slice().get(state.index).cloned()
             else {
-                return Ok(state.collected.into_vec());
+                return Ok(SuspendedReplacePartTargetsCompletion(state.collected));
             };
             let targets_result = self.collect_position_spec_targets_owned(
                 state.expr.clone(),
@@ -426,12 +420,7 @@ impl Session {
                     state.index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let targets = Vec::<ReplacePartTarget>::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_replace_part_rule_targets(state, targets)
-                            .map(|targets| targets.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartRuleTargetsSuspensionFrameL429C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -442,12 +431,12 @@ impl Session {
     fn resume_suspended_replace_part_pattern_candidates(
         &mut self,
         mut state: SuspendedReplacePartPatternCandidates,
-        path: Vec<isize>,
+        path: std::sync::Arc<[isize]>,
         outcome: CompiledMatchOutcome,
-    ) -> Result<Vec<ReplacePartTarget>, EvalError> {
+    ) -> Result<SuspendedReplacePartTargetsCompletion, EvalError> {
         if outcome.matched {
             state.collected = state.collected.appended(ReplacePartTarget {
-                path,
+                path: path.as_ref().to_vec(),
                 rhs: substitute_rule_bindings(&state.rhs, &outcome.bindings),
                 delayed: state.delayed,
             });
@@ -455,7 +444,7 @@ impl Session {
         state.index += 1;
         loop {
             let Some(path) = state.candidates.as_slice().get(state.index).cloned() else {
-                return Ok(state.collected.into_vec());
+                return Ok(SuspendedReplacePartTargetsCompletion(state.collected));
             };
             let position = replace_part_position_expr(&path);
             let match_result =
@@ -472,11 +461,9 @@ impl Session {
                     state.index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_replace_part_pattern_candidates(state, path, outcome)
-                            .map(|targets| targets.into_continuation_expr())
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartPatternCandidatesSuspensionFrameL475C48 {
+                        state,
+                        path: std::sync::Arc::from(path),
                     });
                     return Err(EvalError::InputRequired { request });
                 }

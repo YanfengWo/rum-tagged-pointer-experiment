@@ -1,6 +1,10 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::super::matcher::best_pattern_match_state;
 use super::super::rules::evaluate_string_rule_output_expr_result;
 use super::*;
+use rum_runtime::RuntimeInputRequest;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(FrameRootTrace)]
@@ -123,24 +127,16 @@ fn resume_replace_string_value_from_candidate(
                     accepted,
                 ),
                 Err(EvalError::InputRequired { request }) => {
-                    let state = FrozenStringValue::freeze(state);
-                    let output = PersistentStringText::freeze(output);
-                    let bindings = FrozenStringValue::freeze(bindings);
-                    session.drive_internal_value::<bool, String, _>(
-                        Err(EvalError::InputRequired { request }),
-                        move |session, accepted| {
-                            resume_suspended_replace_string_value_after_guard(
-                                session,
-                                state,
-                                index,
-                                end,
-                                replacements,
-                                rule_index,
-                                output,
-                                bindings,
-                                accepted,
-                            )
-                        },
+                    suspend_replace_string_value_after_guard(
+                        session,
+                        state,
+                        index,
+                        end,
+                        replacements,
+                        rule_index,
+                        output,
+                        bindings,
+                        request,
                     )
                 }
                 Err(error) => Err(error),
@@ -158,6 +154,27 @@ fn resume_replace_string_value_from_candidate(
             rule_index,
         );
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cold]
+#[inline(never)]
+fn suspend_replace_string_value_after_guard(
+    session: &mut Session,
+    state: GuardedStringReplaceRuleEvalState,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    rule_index: usize,
+    output: String,
+    bindings: SymbolExprMap,
+    request: RuntimeInputRequest,
+) -> Result<String, EvalError> {
+    let state = FrozenStringValue::freeze(state);
+    let output = PersistentStringText::freeze(output);
+    let bindings = FrozenStringValue::freeze(bindings);
+    rum_runtime::resume_or_suspend!(insert session, ResumeReplaceStringValueFromCandidateSuspensionFrameL131C25 { state, index, end, replacements, rule_index, output, bindings });
+    Err(EvalError::InputRequired { request })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -224,25 +241,28 @@ fn evaluate_replace_string_output(
             rendered_expr,
         ),
         Err(EvalError::InputRequired { request }) => {
-            let state = FrozenStringValue::freeze(state);
-            let output = PersistentStringText::freeze(output);
-            session.drive_evaluated_value::<Expr, String, _>(
-                Err(EvalError::InputRequired { request }),
-                move |session, rendered_expr| {
-                    resume_suspended_replace_string_value_with_output(
-                        session,
-                        state,
-                        index,
-                        end,
-                        replacements,
-                        output,
-                        rendered_expr,
-                    )
-                },
-            )
+            suspend_replace_string_output(session, state, index, end, replacements, output, request)
         }
         Err(error) => Err(error),
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+#[cold]
+#[inline(never)]
+fn suspend_replace_string_output(
+    session: &mut Session,
+    state: GuardedStringReplaceRuleEvalState,
+    index: usize,
+    end: usize,
+    replacements: usize,
+    output: String,
+    request: RuntimeInputRequest,
+) -> Result<String, EvalError> {
+    let state = FrozenStringValue::freeze(state);
+    let output = PersistentStringText::freeze(output);
+    rum_runtime::resume_or_suspend!(insert session, EvaluateReplaceStringOutputSuspensionFrameL231C17 { state, index, end, replacements, output });
+    Err(EvalError::InputRequired { request })
 }
 
 fn resume_suspended_replace_string_value_from_candidate(
@@ -303,21 +323,23 @@ fn resume_suspended_replace_string_value_from_candidate(
                 ),
                 Err(EvalError::InputRequired { request }) => {
                     let bindings = FrozenStringValue::freeze(bindings);
-                    session.drive_internal_value::<bool, String, _>(
+                    rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        move |session, accepted| {
-                            resume_suspended_replace_string_value_after_guard(
-                                session,
-                                state,
-                                index,
-                                end,
-                                replacements,
-                                rule_index,
-                                output,
-                                bindings,
-                                accepted,
-                            )
-                        },
+                        ok(accepted) => { (|| {
+                                                resume_suspended_replace_string_value_after_guard(
+                                                    session,
+                                                    state,
+                                                    index,
+                                                    end,
+                                                    replacements,
+                                                    rule_index,
+                                                    output,
+                                                    bindings,
+                                                    accepted,
+                                                )
+                                            })() },
+                        suspend => ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrameL308C25 { state, index, end, replacements, rule_index, output, bindings },
                     )
                 }
                 Err(error) => Err(error),
@@ -432,21 +454,22 @@ fn evaluate_suspended_replace_string_output(
             output,
             rendered_expr,
         ),
-        Err(EvalError::InputRequired { request }) => session
-            .drive_evaluated_value::<Expr, String, _>(
-                Err(EvalError::InputRequired { request }),
-                move |session, rendered_expr| {
-                    resume_suspended_replace_string_value_with_output(
-                        session,
-                        state,
-                        index,
-                        end,
-                        replacements,
-                        output,
-                        rendered_expr,
-                    )
-                },
-            ),
+        Err(EvalError::InputRequired { request }) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(EvalError::InputRequired { request }),
+            ok(rendered_expr_expr) => { let rendered_expr = <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(rendered_expr_expr); (|| {
+                            resume_suspended_replace_string_value_with_output(
+                                session,
+                                state,
+                                index,
+                                end,
+                                replacements,
+                                output,
+                                rendered_expr,
+                            )
+                        })() },
+            suspend => EvaluateSuspendedReplaceStringOutputSuspensionFrameL438C17 { state, index, end, replacements, output },
+        ),
         Err(error) => Err(error),
     }
 }
@@ -545,13 +568,15 @@ fn resume_replace_string_values_from_index(
             Err(EvalError::InputRequired { request }) => {
                 let state = FrozenStringValue::freeze(state);
                 let rendered = PersistentStringSequence::freeze(rendered);
-                return session.drive_internal_value::<String, Expr, _>(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_suspended_replace_string_values_with_value(
-                            session, state, index, rendered, value,
-                        )
-                    },
+                    ok(value) => { (|| {
+                                        resume_suspended_replace_string_values_with_value(
+                                            session, state, index, rendered, value,
+                                        )
+                                    })() },
+                    suspend => ResumeReplaceStringValuesFromIndexSuspensionFrameL550C21 { state, index, rendered },
                 );
             }
             Err(error) => return Err(error),
@@ -583,13 +608,15 @@ fn resume_suspended_replace_string_values_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
-                return session.drive_internal_value::<String, Expr, _>(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_suspended_replace_string_values_with_value(
-                            session, state, index, rendered, value,
-                        )
-                    },
+                    ok(value) => { (|| {
+                                        resume_suspended_replace_string_values_with_value(
+                                            session, state, index, rendered, value,
+                                        )
+                                    })() },
+                    suspend => ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrameL588C21 { state, index, rendered },
                 );
             }
             Err(error) => return Err(error),

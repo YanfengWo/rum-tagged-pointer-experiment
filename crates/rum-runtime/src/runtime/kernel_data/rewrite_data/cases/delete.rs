@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -18,17 +21,16 @@ impl Session {
         }
 
         let target_result = self.evaluate(args_slice[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let args = args.clone();
-            move |session, target| {
-                session.resume_delete_cases_after_target(
-                    target,
-                    args[1].clone(),
-                    args[2..].to_vec(),
-                    args.as_ref().to_vec(),
-                )
+        let target = match target_result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                let args = args.clone();
+                crate::resume_or_suspend!(insert self, EvalDeleteCasesSuspensionFrameL23C13 { args });
+                crate::resume_or_suspend!(insert self, ContinueDeleteCasesFrame);
+                return Err(EvalError::InputRequired { request });
             }
-        })?;
+            Err(error) => return Err(error),
+        };
 
         self.resume_delete_cases_after_target(
             target,
@@ -51,16 +53,55 @@ impl Session {
                 self.resume_delete_cases_after_pattern(target, pattern, option_exprs, call_args)
             }
             Err(EvalError::InputRequired { request }) => {
-                let option_exprs = SharedArgs::new(option_exprs);
                 let call_args = SharedArgs::new(call_args);
-                self.push_suspension_frame(move |session, value| {
-                    session.resume_delete_cases_after_pattern(
-                        target,
-                        value?,
-                        option_exprs.into_vec(),
-                        call_args.into_vec(),
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeDeleteCasesAfterTargetSuspensionFrameL56C44 { target, call_args });
+                crate::resume_or_suspend!(insert self, ContinueDeleteCasesFrame);
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_delete_cases_after_target_suspended(
+        &mut self,
+        target: Expr,
+        call_args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let pattern_expr = call_args
+            .get(1)
+            .expect("DeleteCases suspended call stores its pattern")
+            .clone();
+        let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
+        match pattern_result {
+            Ok(pattern) => {
+                self.resume_delete_cases_after_pattern_suspended(target, pattern, call_args)
+            }
+            Err(EvalError::InputRequired { request }) => {
+                crate::resume_or_suspend!(insert self, ResumeDeleteCasesAfterTargetSuspensionFrameL56C44 { target, call_args });
+                crate::resume_or_suspend!(insert self, ContinueDeleteCasesFrame);
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_delete_cases_after_pattern_suspended(
+        &mut self,
+        target: Expr,
+        pattern: Expr,
+        call_args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let mut defaults = CasesTraversalConfig::default_cases();
+        defaults.include_heads = self.system_option_bool("DeleteCases", "Heads", false)?;
+        let traversal_result =
+            self.resolve_cases_traversal_shared_from(call_args.clone(), 2, defaults);
+        match traversal_result {
+            Ok(traversal) => self.finish_delete_cases_after_resolved_traversal_suspended(
+                target, pattern, traversal, call_args,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                crate::resume_or_suspend!(insert self, ResumeDeleteCasesAfterPatternSuspensionFrameL86C44 { target, pattern, call_args });
+                crate::resume_or_suspend!(insert self, ContinueDeleteCasesFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -83,15 +124,8 @@ impl Session {
             ),
             Err(EvalError::InputRequired { request }) => {
                 let call_args = SharedArgs::new(call_args);
-                self.push_suspension_frame(move |session, value| {
-                    let traversal = CasesTraversalResolution::from_continuation_expr(value?);
-                    session.finish_delete_cases_after_resolved_traversal(
-                        target,
-                        pattern,
-                        traversal,
-                        call_args.into_vec(),
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeDeleteCasesAfterPatternSuspensionFrameL86C44 { target, pattern, call_args });
+                crate::resume_or_suspend!(insert self, ContinueDeleteCasesFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -113,13 +147,51 @@ impl Session {
         };
 
         let deleted_result = self.delete_cases_owned(target, pattern, traversal, 0, 0);
-        self.drive_internal_value(deleted_result, move |_, outcome| {
-            Ok(match outcome.result {
-                DeleteCasesResult::Keep(expr) => expr,
-                DeleteCasesResult::Delete => Expr::call(system_expr("Sequence"), Vec::new()),
-                DeleteCasesResult::Splice(items) => Expr::call(system_expr("Sequence"), items),
-            })
-        })
+        crate::resume_or_suspend!(
+            self,
+            deleted_result,
+            ok(outcome) => { (|| {
+                    Ok(match outcome.result {
+                        DeleteCasesResult::Keep(expr) => expr,
+                        DeleteCasesResult::Delete => Expr::call(system_expr("Sequence"), Vec::new()),
+                        DeleteCasesResult::Splice(items) => Expr::call(system_expr("Sequence"), items),
+                    })
+                })() },
+            suspend => FinishDeleteCasesAfterResolvedTraversalSuspensionFrameL116C51,
+        )
+    }
+
+    fn finish_delete_cases_after_resolved_traversal_suspended(
+        &mut self,
+        target: Expr,
+        pattern: Expr,
+        traversal: CasesTraversalResolution,
+        call_args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let traversal = match traversal {
+            CasesTraversalResolution::Valid(traversal) => traversal,
+            CasesTraversalResolution::Invalid(error) => {
+                return Ok(self.invalid_cases_traversal_call(
+                    "DeleteCases",
+                    call_args.as_ref(),
+                    error,
+                ));
+            }
+        };
+
+        let deleted_result = self.delete_cases_owned(target, pattern, traversal, 0, 0);
+        crate::resume_or_suspend!(
+            self,
+            deleted_result,
+            ok(outcome) => { (|| {
+                    Ok(match outcome.result {
+                        DeleteCasesResult::Keep(expr) => expr,
+                        DeleteCasesResult::Delete => Expr::call(system_expr("Sequence"), Vec::new()),
+                        DeleteCasesResult::Splice(items) => Expr::call(system_expr("Sequence"), items),
+                    })
+                })() },
+            suspend => FinishDeleteCasesAfterResolvedTraversalSuspensionFrameL116C51,
+        )
     }
 
     fn finish_delete_cases_at_current_node(
@@ -149,23 +221,28 @@ impl Session {
             })
         };
 
-        self.drive_internal_value(match_result, move |_, outcome| {
-            if outcome.matched {
-                Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Delete,
-                    depth,
-                    deleted_count: 1,
-                    exhausted: traversal.limit_reached(deleted_before + 1),
-                })
-            } else {
-                Ok(DeleteCasesOutcome {
-                    result: DeleteCasesResult::Keep(expr),
-                    depth,
-                    deleted_count: 0,
-                    exhausted: false,
-                })
-            }
-        })
+        crate::resume_or_suspend!(
+            self,
+            match_result,
+            ok(outcome) => { (|| {
+                    if outcome.matched {
+                        Ok(DeleteCasesOutcome {
+                            result: DeleteCasesResult::Delete,
+                            depth,
+                            deleted_count: 1,
+                            exhausted: traversal.limit_reached(deleted_before + 1),
+                        })
+                    } else {
+                        Ok(DeleteCasesOutcome {
+                            result: DeleteCasesResult::Keep(expr),
+                            depth,
+                            deleted_count: 0,
+                            exhausted: false,
+                        })
+                    }
+                })() },
+            suspend => FinishDeleteCasesAtCurrentNodeSuspensionFrameL152C49 { depth, traversal, deleted_before, expr },
+        )
     }
 
     fn delete_cases_owned(
@@ -348,10 +425,15 @@ impl Session {
                     depth,
                     deleted_before,
                 );
-                return self.drive_internal_value(finish_result, move |_, mut outcome| {
-                    outcome.deleted_count += deleted_before - subtree_start;
-                    Ok(outcome)
-                });
+                return crate::resume_or_suspend!(
+                    self,
+                    finish_result,
+                    ok(mut outcome) => { (|| {
+                                    outcome.deleted_count += deleted_before - subtree_start;
+                                    Ok(outcome)
+                                })() },
+                    suspend => DeleteCasesCallChildrenFromQueueSuspensionFrameL351C65 { deleted_before, subtree_start },
+                );
             };
 
             let child_result =
@@ -373,12 +455,7 @@ impl Session {
                         rebuilt_head,
                         head_deleted,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_delete_call_children(state, outcome)
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, DeleteCasesCallChildrenFromQueueSuspensionFrameL376C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -555,10 +632,15 @@ impl Session {
                     depth,
                     deleted_before,
                 );
-                return self.drive_internal_value(finish_result, move |_, mut outcome| {
-                    outcome.deleted_count += deleted_before - subtree_start;
-                    Ok(outcome)
-                });
+                return crate::resume_or_suspend!(
+                    self,
+                    finish_result,
+                    ok(mut outcome) => { (|| {
+                                    outcome.deleted_count += deleted_before - subtree_start;
+                                    Ok(outcome)
+                                })() },
+                    suspend => DeleteCasesAssociationChildrenFromQueueSuspensionFrameL558C65 { deleted_before, subtree_start },
+                );
             };
 
             let child_result =
@@ -580,12 +662,7 @@ impl Session {
                         rebuilt_head,
                         head_deleted,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_delete_association_children(state, outcome)
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, DeleteCasesAssociationChildrenFromQueueSuspensionFrameL583C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -688,10 +765,15 @@ impl Session {
                     state.deleted_before,
                 );
                 let added = state.deleted_before - state.subtree_start;
-                return self.drive_internal_value(finish_result, move |_, mut outcome| {
-                    outcome.deleted_count += added;
-                    Ok(outcome)
-                });
+                return crate::resume_or_suspend!(
+                    self,
+                    finish_result,
+                    ok(mut outcome) => { (|| {
+                                    outcome.deleted_count += added;
+                                    Ok(outcome)
+                                })() },
+                    suspend => ResumeSuspendedDeleteCallChildrenSuspensionFrameL691C65 { added },
+                );
             };
 
             let child_result = self.delete_cases_owned(
@@ -704,12 +786,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => child_outcome = outcome,
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_delete_call_children(state, outcome)
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedDeleteCallChildrenSuspensionFrameL707C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -823,10 +900,15 @@ impl Session {
                     state.deleted_before,
                 );
                 let added = state.deleted_before - state.subtree_start;
-                return self.drive_internal_value(finish_result, move |_, mut outcome| {
-                    outcome.deleted_count += added;
-                    Ok(outcome)
-                });
+                return crate::resume_or_suspend!(
+                    self,
+                    finish_result,
+                    ok(mut outcome) => { (|| {
+                                    outcome.deleted_count += added;
+                                    Ok(outcome)
+                                })() },
+                    suspend => ResumeSuspendedDeleteAssociationChildrenSuspensionFrameL826C65 { added },
+                );
             };
 
             let child_result = self.delete_cases_owned(
@@ -839,12 +921,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => child_outcome = outcome,
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = DeleteCasesOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_delete_association_children(state, outcome)
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedDeleteAssociationChildrenSuspensionFrameL842C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

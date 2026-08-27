@@ -8,12 +8,12 @@ use std::sync::OnceLock;
 const DOWN_VALUE_DISPATCH_INDEX_THRESHOLD: usize = 32;
 const NO_DOWN_VALUE_INDEX: usize = usize::MAX;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct LinearDownValueScan {
     next_rule_index: usize,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct IndexedDownValueScan {
     next_non_ground_position: usize,
     exact_rule_index: Option<usize>,
@@ -22,7 +22,9 @@ pub(in crate::runtime) struct IndexedDownValueScan {
     evaluation_epoch: u64,
 }
 
-pub(in crate::runtime) trait DownValueScan: Copy + Send + 'static {
+pub(in crate::runtime) trait DownValueScan:
+    Copy + FrameRootTrace + Send + Sync + 'static
+{
     fn next_rule_index(
         &mut self,
         definition: &SymbolDefinition,

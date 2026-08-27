@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) enum CasesTraversalNormalizationError {
@@ -308,15 +309,43 @@ impl Session {
         defaults: CasesTraversalConfig,
     ) -> Result<CasesTraversalResolution, EvalError> {
         let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
-        self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
-            Ok(
-                match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs, defaults)
-                {
-                    Ok(config) => CasesTraversalResolution::Valid(config),
-                    Err(error) => CasesTraversalResolution::Invalid(error),
-                },
-            )
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_exprs_result,
+            ok(resolved_exprs) => { let session = self; (|| {
+                    Ok(
+                        match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                        {
+                            Ok(config) => CasesTraversalResolution::Valid(config),
+                            Err(error) => CasesTraversalResolution::Invalid(error),
+                        },
+                    )
+                })() },
+            suspend => ResolveCasesTraversalOwnedSuspensionFrameL311C58 { defaults },
+        )
+    }
+
+    pub(in crate::runtime) fn resolve_cases_traversal_shared_from(
+        &mut self,
+        exprs: SharedArgs,
+        cursor: usize,
+        defaults: CasesTraversalConfig,
+    ) -> Result<CasesTraversalResolution, EvalError> {
+        let resolved_exprs_result = self.resolve_argument_exprs_shared_from(exprs, cursor);
+        crate::resume_or_suspend!(
+            self,
+            resolved_exprs_result,
+            ok(resolved_exprs) => { let session = self; (|| {
+                    Ok(
+                        match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                        {
+                            Ok(config) => CasesTraversalResolution::Valid(config),
+                            Err(error) => CasesTraversalResolution::Invalid(error),
+                        },
+                    )
+                })() },
+            suspend => ResolveCasesTraversalOwnedSuspensionFrameL311C58 { defaults },
+        )
     }
 
     pub(in crate::runtime) fn resolve_position_traversal_owned(
@@ -325,16 +354,21 @@ impl Session {
         defaults: CasesTraversalConfig,
     ) -> Result<CasesTraversalResolution, EvalError> {
         let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
-        self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
-            Ok(
-                match session
-                    .compile_position_traversal_from_resolved_exprs(&resolved_exprs, defaults)
-                {
-                    Ok(config) => CasesTraversalResolution::Valid(config),
-                    Err(error) => CasesTraversalResolution::Invalid(error),
-                },
-            )
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_exprs_result,
+            ok(resolved_exprs) => { let session = self; (|| {
+                    Ok(
+                        match session
+                            .compile_position_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                        {
+                            Ok(config) => CasesTraversalResolution::Valid(config),
+                            Err(error) => CasesTraversalResolution::Invalid(error),
+                        },
+                    )
+                })() },
+            suspend => ResolvePositionTraversalOwnedSuspensionFrameL328C58 { defaults },
+        )
     }
 
     pub(in crate::runtime) fn resolve_traversal_without_limit_owned(
@@ -343,7 +377,114 @@ impl Session {
         defaults: CasesTraversalConfig,
     ) -> Result<TraversalWithoutLimitResolution, EvalError> {
         let resolved_exprs_result = self.resolve_argument_exprs_owned(exprs);
-        self.drive_internal_value(resolved_exprs_result, move |session, resolved_exprs| {
+        crate::resume_or_suspend!(
+            self,
+            resolved_exprs_result,
+            ok(resolved_exprs) => { let session = self; (|| {
+                    Ok(
+                        match session
+                            .compile_traversal_without_limit_from_resolved_exprs(&resolved_exprs, defaults)
+                        {
+                            Ok(config) => TraversalWithoutLimitResolution::Valid(config),
+                            Err(error) => TraversalWithoutLimitResolution::Invalid(error),
+                        },
+                    )
+                })() },
+            suspend => ResolveTraversalWithoutLimitOwnedSuspensionFrameL346C58 { defaults },
+        )
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResolveCasesTraversalOwnedSuspensionFrameL311C58 {
+    pub(super) defaults: crate::runtime::CasesTraversalConfig,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResolveCasesTraversalOwnedSuspensionFrameL311C58
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut defaults = self.defaults.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved_exprs = <Vec<rum_core::Expr> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<CasesTraversalResolution, EvalError> {
+            Ok(
+                match session.compile_cases_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                {
+                    Ok(config) => CasesTraversalResolution::Valid(config),
+                    Err(error) => CasesTraversalResolution::Invalid(error),
+                },
+            )
+        })()
+                    .map(|value| <CasesTraversalResolution as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResolvePositionTraversalOwnedSuspensionFrameL328C58 {
+    pub(super) defaults: crate::runtime::CasesTraversalConfig,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResolvePositionTraversalOwnedSuspensionFrameL328C58
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut defaults = self.defaults.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved_exprs = <Vec<rum_core::Expr> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<CasesTraversalResolution, EvalError> {
+            Ok(
+                match session
+                    .compile_position_traversal_from_resolved_exprs(&resolved_exprs, defaults)
+                {
+                    Ok(config) => CasesTraversalResolution::Valid(config),
+                    Err(error) => CasesTraversalResolution::Invalid(error),
+                },
+            )
+        })()
+                    .map(|value| <CasesTraversalResolution as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResolveTraversalWithoutLimitOwnedSuspensionFrameL346C58 {
+    pub(super) defaults: crate::runtime::CasesTraversalConfig,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResolveTraversalWithoutLimitOwnedSuspensionFrameL346C58
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut defaults = self.defaults.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved_exprs = <Vec<rum_core::Expr> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<TraversalWithoutLimitResolution, EvalError> {
             Ok(
                 match session
                     .compile_traversal_without_limit_from_resolved_exprs(&resolved_exprs, defaults)
@@ -352,6 +493,11 @@ impl Session {
                     Err(error) => TraversalWithoutLimitResolution::Invalid(error),
                 },
             )
-        })
+        })()
+                    .map(|value| <TraversalWithoutLimitResolution as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

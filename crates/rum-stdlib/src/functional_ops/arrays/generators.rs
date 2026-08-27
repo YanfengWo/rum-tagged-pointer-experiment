@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -236,15 +239,15 @@ fn resume_array_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedArrayEvalState::freeze(state);
-                        let outputs = PersistentFunctionalSequence::freeze(outputs);
-                        move |session, value| {
-                            resume_suspended_array_with_value(session, state, index, outputs, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedArrayEvalState::freeze(state);
+                                        let outputs = PersistentFunctionalSequence::freeze(outputs);
+                ResumeArrayFromIndexSuspensionFrameL244C25 { state, index, outputs }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -277,13 +280,11 @@ fn resume_suspended_array_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_array_with_value(session, state, index, outputs, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedArrayFromIndexSuspensionFrameL283C25 { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -324,15 +325,15 @@ fn resume_outer_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedOuterEvalState::freeze(state);
-                        let outputs = PersistentFunctionalSequence::freeze(outputs);
-                        move |session, value| {
-                            resume_suspended_outer_with_value(session, state, index, outputs, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedOuterEvalState::freeze(state);
+                                        let outputs = PersistentFunctionalSequence::freeze(outputs);
+                ResumeOuterFromIndexSuspensionFrameL332C25 { state, index, outputs }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -365,13 +366,11 @@ fn resume_suspended_outer_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_outer_with_value(session, state, index, outputs, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedOuterFromIndexSuspensionFrameL371C25 { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),

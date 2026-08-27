@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::grouping::IndexedGroups;
 use super::*;
 use rum_core::SharedArgs;
@@ -172,18 +175,16 @@ fn resume_counts_association_entries_from_index(
             match session.evaluate(entry.value) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            let entries = FrozenAssociationSequence::freeze(entries);
-                            let values = PersistentAssociationSequence::freeze(values);
-                            let spec_keys = spec_keys.map(FrozenAssociationSequence::freeze);
-                            move |session, value| {
-                                resume_suspended_counts_after_association_value(
-                                    session, entries, index, values, spec_keys, value,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let entries = FrozenAssociationSequence::freeze(entries);
+                                                let values = PersistentAssociationSequence::freeze(values);
+                                                let spec_keys = spec_keys.map(FrozenAssociationSequence::freeze);
+                    ResumeCountsAssociationEntriesFromIndexSuspensionFrameL181C29 { entries, index, values, spec_keys }
+                    },
                     );
                 }
                 Err(error) => return Err(error),
@@ -216,15 +217,11 @@ fn resume_suspended_counts_association_entries_from_index(
             match session.evaluate(entry.value) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            move |session, value| {
-                                resume_suspended_counts_after_association_value(
-                                    session, entries, index, values, spec_keys, value,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => ResumeSuspendedCountsAssociationEntriesFromIndexSuspensionFrameL222C29 { entries, index, values, spec_keys },
                     );
                 }
                 Err(error) => return Err(error),
@@ -272,17 +269,15 @@ fn resume_catenate_direct_association_entries_from_index(
             match session.evaluate(entry.value) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            let entries = FrozenAssociationSequence::freeze(entries);
-                            let values = PersistentAssociationSequence::freeze(values);
-                            move |session, value| {
-                                resume_suspended_catenate_direct_association_value(
-                                    session, call_args, entries, index, values, value,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let entries = FrozenAssociationSequence::freeze(entries);
+                                                let values = PersistentAssociationSequence::freeze(values);
+                    ResumeCatenateDirectAssociationEntriesFromIndexSuspensionFrameL280C29 { call_args, entries, index, values }
+                    },
                     );
                 }
                 Err(error) => return Err(error),
@@ -312,15 +307,11 @@ fn resume_suspended_catenate_direct_association_entries_from_index(
             match session.evaluate(entry.value) {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            move |session, value| {
-                                resume_suspended_catenate_direct_association_value(
-                                    session, call_args, entries, index, values, value,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => ResumeSuspendedCatenateDirectAssociationEntriesFromIndexSuspensionFrameL318C29 { call_args, entries, index, values },
                     );
                 }
                 Err(error) => return Err(error),
@@ -407,18 +398,16 @@ fn resume_catenate_steps_from_index(
                     match session.evaluate(value) {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
-                            return session.suspend_with_frame_lazy(
+                            return rum_runtime::resume_or_suspend!(
+                                session,
                                 Err(EvalError::InputRequired { request }),
-                                || {
-                                    let steps = FrozenAssociationSequence::freeze(steps);
-                                    let flattened =
-                                        PersistentAssociationSequence::freeze(flattened);
-                                    move |session, value| {
-                                        resume_suspended_catenate_after_association_value(
-                                            session, call_args, steps, index, flattened, value,
-                                        )
-                                    }
-                                },
+                                ok(value) => Ok(value),
+                                suspend => {
+                            let steps = FrozenAssociationSequence::freeze(steps);
+                                                                let flattened =
+                                                                    PersistentAssociationSequence::freeze(flattened);
+                            ResumeCatenateStepsFromIndexSuspensionFrameL416C37 { call_args, steps, index, flattened }
+                            },
                             );
                         }
                         Err(error) => return Err(error),
@@ -465,15 +454,11 @@ fn resume_suspended_catenate_steps_from_index(
                     match session.evaluate(value.clone()) {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
-                            return session.suspend_with_frame_lazy(
+                            return rum_runtime::resume_or_suspend!(
+                                session,
                                 Err(EvalError::InputRequired { request }),
-                                || {
-                                    move |session, value| {
-                                        resume_suspended_catenate_after_association_value(
-                                            session, call_args, steps, index, flattened, value,
-                                        )
-                                    }
-                                },
+                                ok(value) => Ok(value),
+                                suspend => ResumeSuspendedCatenateStepsFromIndexSuspensionFrameL471C37 { call_args, steps, index, flattened },
                             );
                         }
                         Err(error) => return Err(error),

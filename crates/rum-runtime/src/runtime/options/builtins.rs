@@ -46,18 +46,16 @@ impl Session {
 
         let tail = Expr::call(system_expr("List"), args_slice[1..].to_vec());
         let resolved_result = self.evaluate(tail);
-        let resolved = self.suspend_with_frame_lazy(resolved_result, || {
-            let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
-            let args = args.clone();
-            move |session, resolved| {
-                session.finish_set_options_from_resolved(
-                    targets.as_ref(),
-                    preserve_target_list_shape,
-                    args.as_ref(),
-                    resolved,
-                )
-            }
-        })?;
+        let resolved = crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
+                    let args = args.clone();
+        EvalSetOptionsSuspensionFrameL52C13 { targets, preserve_target_list_shape, args }
+        },
+        )?;
 
         self.finish_set_options_from_resolved(
             &targets,
@@ -132,23 +130,21 @@ impl Session {
 
                 let mut query = Some(query);
                 let explicit_result = self.evaluate(explicit_expr.clone());
-                let explicit = self.suspend_with_frame_lazy(explicit_result, || {
-                    let target = target.clone();
-                    let query = Arc::new(
-                        query
-                            .take()
-                            .expect("option query is frozen only after input suspension"),
-                    );
-                    let args = args.clone();
-                    move |session, resolved| {
-                        session.finish_option_value_from_explicit(
-                            target,
-                            query.as_ref(),
-                            args.as_ref(),
-                            resolved,
-                        )
-                    }
-                })?;
+                let explicit = crate::resume_or_suspend!(
+                    self,
+                    explicit_result,
+                    ok(value) => Ok(value),
+                    suspend => {
+                let target = target.clone();
+                                    let query = Arc::new(
+                                        query
+                                            .take()
+                                            .expect("option query is frozen only after input suspension"),
+                                    );
+                                    let args = args.clone();
+                EvalOptionValueSuspensionFrameL143C21 { target, query, args }
+                },
+                )?;
 
                 self.finish_option_value_from_explicit(
                     target,
@@ -413,3 +409,71 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<OptionValueQuery>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalSetOptionsSuspensionFrameL52C13 {
+    pub(super) targets: std::sync::Arc<[rum_core::Symbol]>,
+    pub(super) preserve_target_list_shape: bool,
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalSetOptionsSuspensionFrameL52C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut targets = self.targets.clone();
+        #[allow(unused_mut)]
+        let mut preserve_target_list_shape = self.preserve_target_list_shape.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(resolved) => (|| {
+                session.finish_set_options_from_resolved(
+                    targets.as_ref(),
+                    preserve_target_list_shape,
+                    args.as_ref(),
+                    resolved,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct EvalOptionValueSuspensionFrameL143C21 {
+    pub(super) target: rum_core::Symbol,
+    pub(super) query: std::sync::Arc<crate::runtime::options::builtins::OptionValueQuery>,
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalOptionValueSuspensionFrameL143C21 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut target = self.target.clone();
+        #[allow(unused_mut)]
+        let mut query = self.query.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(resolved) => (|| {
+                session.finish_option_value_from_explicit(
+                    target,
+                    query.as_ref(),
+                    args.as_ref(),
+                    resolved,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

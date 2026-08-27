@@ -334,6 +334,313 @@ fn manual_frame_root_trace_implementations_match_sorted_allowlist() {
     assert_eq!(implementations, MANUAL_FRAME_ROOT_TRACE_IMPLS);
 }
 
+#[test]
+fn suspension_protocol_repository_invariants_hold() {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("runtime crate should live under the workspace crates directory");
+    let mut files = Vec::new();
+    collect_rust_sources(&workspace.join("crates/rum-runtime/src"), &mut files);
+    collect_rust_sources(&workspace.join("crates/rum-stdlib/src"), &mut files);
+
+    let core_path = workspace.join("crates/rum-runtime/src/runtime/suspension/core.rs");
+    let banned_legacy_names = [
+        "ClosureFrame",
+        "suspend_with_frame",
+        "suspend_with_result_frame",
+        "drive_evaluated_value",
+        "drive_internal_value",
+        "push_suspension_frame",
+    ];
+    let queue_mutations = [
+        ".frames.push_back(",
+        ".frames.push_front(",
+        ".frames.pop_front(",
+        ".frames.append(",
+        ".frames.extend(",
+        ".frames.insert(",
+    ];
+    let ownership_operations = [
+        ".into_owned(",
+        ".into_vec(",
+        ".to_vec(",
+        "Arc::try_unwrap(",
+        "Arc::make_mut(",
+    ];
+    let mut frame_count = 0usize;
+    let mut finalizer_count = 0usize;
+    let mut ownership_violations = Vec::new();
+
+    for path in &files {
+        let source = fs::read_to_string(path).expect("source gate should read Rust source");
+        let compact = remove_ascii_whitespace(&source);
+
+        for banned in banned_legacy_names {
+            assert!(
+                !source.contains(banned),
+                "legacy suspension API name {banned} remains in {}",
+                path.display()
+            );
+        }
+        if path != &core_path {
+            for mutation in queue_mutations {
+                assert!(
+                    !compact.contains(mutation),
+                    "direct suspension queue mutation {mutation} escaped core in {}",
+                    path.display()
+                );
+            }
+            assert!(
+                !compact.contains("insert_suspension_frame("),
+                "named frames must be inserted only through the data-only macro in {}",
+                path.display()
+            );
+        }
+
+        for block in trait_impl_blocks(&source, "SuspensionFrame") {
+            if block.header.contains("PureFrameFinalizer") {
+                continue;
+            }
+            frame_count += 1;
+            let type_name = implemented_type_name(block.header, "SuspensionFrame");
+            let declaration = format!("struct {type_name}");
+            let declaration_offset = source.find(&declaration).unwrap_or_else(|| {
+                panic!(
+                    "SuspensionFrame {type_name} must be a named struct in {}",
+                    path.display()
+                )
+            });
+            let derive_start = declaration_offset.saturating_sub(300);
+            assert!(
+                source[derive_start..declaration_offset].contains("FrameRootTrace"),
+                "SuspensionFrame {type_name} must derive FrameRootTrace in {}",
+                path.display()
+            );
+            let body = declared_struct_body(&source, declaration_offset)
+                .expect("named frame declarations should have a body or be unit structs");
+            for owned in directly_owned_frame_fields(body) {
+                ownership_violations.push(format!(
+                    "{}: SuspensionFrame {type_name} directly owns {owned}",
+                    path.display()
+                ));
+            }
+            let compact_block = remove_ascii_whitespace(block.body);
+            for operation in ownership_operations {
+                if compact_block.contains(operation) {
+                    ownership_violations.push(format!(
+                        "{}: SuspensionFrame {type_name} performs {operation} before drop",
+                        path.display()
+                    ));
+                }
+            }
+        }
+
+        for block in trait_impl_blocks(&source, "PureFrameFinalizer") {
+            finalizer_count += 1;
+            let type_name = implemented_type_name(block.header, "PureFrameFinalizer");
+            let declaration = format!("struct {type_name}");
+            let declaration_offset = source.find(&declaration).unwrap_or_else(|| {
+                panic!(
+                    "PureFrameFinalizer {type_name} must be a named struct in {}",
+                    path.display()
+                )
+            });
+            let line_start = source[..declaration_offset]
+                .rfind('\n')
+                .map_or(0, |offset| offset + 1);
+            assert!(
+                !source[line_start..declaration_offset].contains("pub"),
+                "PureFrameFinalizer {type_name} must be internal in {}",
+                path.display()
+            );
+            let compact_block = remove_ascii_whitespace(block.body);
+            assert!(
+                compact_block.contains("fnfinish(self:Box<Self>)->Result<Expr,EvalError>"),
+                "PureFrameFinalizer {type_name} must use the closed Session-free signature in {}",
+                path.display()
+            );
+            for forbidden in [
+                "Session",
+                ".evaluate(",
+                "resume_or_suspend!",
+                "insert_suspension_frame",
+                "FrameAction",
+                "InputRequired",
+            ] {
+                assert!(
+                    !compact_block.contains(forbidden),
+                    "PureFrameFinalizer {type_name} contains forbidden capability {forbidden} in {}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    let core = fs::read_to_string(&core_path).expect("source gate should read suspension core");
+    let compact_core = remove_ascii_whitespace(&core);
+    assert!(
+        !compact_core.contains("Box<dynFn") && !compact_core.contains("Arc<dynFn"),
+        "the suspension protocol must not contain a runtime closure factory"
+    );
+    assert!(compact_core.contains(
+        "pubtraitSuspensionFrame:FrameRootTrace+Send+Sync+'static{fnresume(self:Arc<Self>,session:&mutSession,outcome:Result<Expr,EvalError>,)->FrameAction;"
+    ));
+    assert!(compact_core.contains(
+        "pubtraitPureFrameFinalizer:Send+'static{fnfinish(self:Box<Self>)->Result<Expr,EvalError>;"
+    ));
+    let action_declaration = compact_core
+        .find("pubenumFrameAction{")
+        .expect("the frame transition protocol should be a closed enum");
+    let action_open = action_declaration
+        + compact_core[action_declaration..]
+            .find('{')
+            .expect("FrameAction should have a body");
+    let action_close =
+        matching_brace(&compact_core, action_open).expect("FrameAction should have a closed body");
+    assert_eq!(
+        &compact_core[action_open + 1..action_close],
+        "Complete(Result<Expr,EvalError>),Evaluate{expr:Expr,next_frame:Arc<DynSuspensionFrame>,},Finalize(Box<dynPureFrameFinalizer>),"
+    );
+    let resume_index = compact_core
+        .find("letaction=dispatch_frame.resume(self,outcome);")
+        .expect("driver should invoke the still-rooted front frame");
+    let drop_index = compact_core[resume_index..]
+        .find("drop(completed_frame);")
+        .map(|offset| offset + resume_index)
+        .expect("driver should explicitly drop the rooted completed frame");
+    let finalize_index = compact_core[drop_index..]
+        .find("FrameAction::Finalize(finalizer)=>finalizer.finish()")
+        .map(|offset| offset + drop_index)
+        .expect("driver should invoke pure finalizers");
+    assert!(resume_index < drop_index && drop_index < finalize_index);
+
+    println!("named_suspension_frames={frame_count}");
+    println!("named_pure_finalizers={finalizer_count}");
+    assert!(
+        ownership_violations.is_empty(),
+        "suspension ownership violations:\n{}",
+        ownership_violations.join("\n")
+    );
+    println!("legacy_api_hits=0 direct_queue_mutation_hits=0 ownership_hits=0");
+    assert!(frame_count > 367);
+    assert!(finalizer_count > 0);
+}
+
+struct TraitImplBlock<'a> {
+    header: &'a str,
+    body: &'a str,
+}
+
+fn trait_impl_blocks<'a>(source: &'a str, trait_name: &str) -> Vec<TraitImplBlock<'a>> {
+    let mut blocks = Vec::new();
+    let mut cursor = 0usize;
+    while let Some(relative_impl) = source[cursor..].find("impl") {
+        let impl_offset = cursor + relative_impl;
+        let Some(relative_open) = source[impl_offset..].find('{') else {
+            break;
+        };
+        let open = impl_offset + relative_open;
+        let header = &source[impl_offset..open];
+        if !header.contains(trait_name) || !header.contains(" for ") {
+            cursor = open + 1;
+            continue;
+        }
+        let close = matching_brace(source, open).unwrap_or_else(|| {
+            panic!("trait implementation beginning at byte {impl_offset} must close")
+        });
+        blocks.push(TraitImplBlock {
+            header,
+            body: &source[open + 1..close],
+        });
+        cursor = close + 1;
+    }
+    blocks
+}
+
+fn implemented_type_name(header: &str, trait_name: &str) -> String {
+    let compact = remove_ascii_whitespace(header);
+    let marker = format!("{trait_name}for");
+    let suffix = compact
+        .split_once(&marker)
+        .unwrap_or_else(|| panic!("implementation header must contain {marker}"))
+        .1;
+    suffix
+        .chars()
+        .take_while(|character| character.is_ascii_alphanumeric() || *character == '_')
+        .collect()
+}
+
+fn declared_struct_body(source: &str, declaration_offset: usize) -> Option<&str> {
+    let tail = &source[declaration_offset..];
+    let semicolon = tail.find(';');
+    let open = tail.find('{');
+    if semicolon.is_some_and(|semicolon| open.is_none_or(|open| semicolon < open)) {
+        return Some("");
+    }
+    let open = declaration_offset + open?;
+    let close = matching_brace(source, open)?;
+    Some(&source[open + 1..close])
+}
+
+fn matching_brace(source: &str, open: usize) -> Option<usize> {
+    let mut depth = 0usize;
+    for (offset, byte) in source.as_bytes()[open..].iter().enumerate() {
+        match byte {
+            b'{' => depth += 1,
+            b'}' => {
+                depth = depth.checked_sub(1)?;
+                if depth == 0 {
+                    return Some(open + offset);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn remove_ascii_whitespace(value: &str) -> String {
+    value
+        .chars()
+        .filter(|character| !character.is_ascii_whitespace())
+        .collect()
+}
+
+fn directly_owned_frame_fields(body: &str) -> Vec<String> {
+    let compact = remove_ascii_whitespace(body);
+    compact
+        .split(',')
+        .filter_map(|field| {
+            let bytes = field.as_bytes();
+            let delimiter = bytes.iter().enumerate().find_map(|(index, byte)| {
+                if *byte == b':'
+                    && bytes.get(index.wrapping_sub(1)) != Some(&b':')
+                    && bytes.get(index + 1) != Some(&b':')
+                {
+                    Some(index)
+                } else {
+                    None
+                }
+            })?;
+            let field_type = &field[delimiter + 1..];
+            [
+                "Vec<",
+                "std::vec::Vec<",
+                "VecDeque<",
+                "std::collections::VecDeque<",
+                "String",
+                "std::string::String",
+                "Box<",
+                "std::boxed::Box<",
+            ]
+            .iter()
+            .any(|owned| field_type.starts_with(owned))
+            .then(|| field_type.to_string())
+        })
+        .collect()
+}
+
 fn collect_rust_sources(path: &Path, files: &mut Vec<PathBuf>) {
     if path.is_dir() {
         for entry in fs::read_dir(path).expect("source gate should read source directories") {

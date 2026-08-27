@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -60,6 +63,11 @@ struct SuspendedCallArgumentPreparation {
     args: SharedArgs,
     cursor: usize,
     prepared: PreparedArgumentAccumulator,
+    unevaluated_restores: Option<UnevaluatedRestoreAccumulator>,
+}
+
+struct SuspendedPreparedCallArguments {
+    evaluated_args: PreparedArgumentAccumulator,
     unevaluated_restores: Option<UnevaluatedRestoreAccumulator>,
 }
 
@@ -262,6 +270,99 @@ fn append_suspended_prepared_argument(
     prepared
 }
 
+fn finish_suspended_prepared_call(state: SuspendedPreparedCallArguments) -> Expr {
+    let evaluated_args = state.evaluated_args.into_vec();
+    let restores = state
+        .unevaluated_restores
+        .map(UnevaluatedRestoreAccumulator::into_vec)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(position, wrapper)| {
+            Expr::call(
+                system_expr("InternalContinuationUnevaluatedRestore"),
+                vec![Expr::integer(BigInt::from(position)), wrapper],
+            )
+        })
+        .collect::<Vec<_>>();
+    Expr::call(
+        system_expr("InternalContinuationPreparedCallArguments"),
+        vec![
+            Expr::call(system_expr("List"), evaluated_args),
+            Expr::call(system_expr("List"), restores),
+        ],
+    )
+}
+
+pub(super) fn prepared_call_arguments_from_continuation_expr(
+    expr: Expr,
+) -> Result<PreparedCallArguments, Expr> {
+    let Expr::Call { head, args } = expr else {
+        return Err(expr);
+    };
+    if !is_system_symbol_name(&head, "InternalContinuationPreparedCallArguments") {
+        return Err(Expr::Call { head, args });
+    }
+    let mut parts = args.into_iter();
+    let evaluated_expr = parts
+        .next()
+        .expect("prepared-call continuation stores evaluated arguments");
+    let restores_expr = parts
+        .next()
+        .expect("prepared-call continuation stores Unevaluated wrappers");
+    assert!(parts.next().is_none());
+
+    let Expr::Call {
+        head: evaluated_head,
+        args: evaluated_args,
+    } = evaluated_expr
+    else {
+        panic!("prepared-call arguments should be stored as a List")
+    };
+    assert!(is_system_symbol_name(&evaluated_head, "List"));
+    let Expr::Call {
+        head: restores_head,
+        args: restores,
+    } = restores_expr
+    else {
+        panic!("prepared-call restore entries should be stored as a List")
+    };
+    assert!(is_system_symbol_name(&restores_head, "List"));
+
+    let wrappers = restores
+        .into_iter()
+        .map(|entry| {
+            let Expr::Call { head, args } = entry else {
+                panic!("prepared-call restore entry should be a call")
+            };
+            assert!(is_system_symbol_name(
+                &head,
+                "InternalContinuationUnevaluatedRestore"
+            ));
+            let mut fields = args.into_iter();
+            let position = fields
+                .next()
+                .as_ref()
+                .and_then(expr_as_non_negative_usize)
+                .expect("prepared-call restore position should be non-negative");
+            let wrapper = fields
+                .next()
+                .expect("prepared-call restore entry stores its wrapper");
+            assert!(fields.next().is_none());
+            (position, wrapper)
+        })
+        .collect::<Vec<_>>();
+    let unevaluated_restore = (!wrappers.is_empty()).then(|| {
+        Box::new(UnevaluatedRestorePlan {
+            prepared_args: evaluated_args.clone(),
+            wrappers,
+        })
+    });
+    Ok(PreparedCallArguments {
+        evaluated_args,
+        unevaluated_restore,
+    })
+}
+
 fn prepared_argument_splices(
     value: &Expr,
     allow_sequence_splice: bool,
@@ -370,14 +471,7 @@ impl Session {
                                     unevaluated_restores: unevaluated_restores
                                         .map(UnevaluatedRestoreAccumulator::freeze),
                                 };
-                                self.push_suspension_frame(move |session, outcome| {
-                                    let value = outcome?;
-                                    session.resume_suspended_call_after_argument(
-                                        state,
-                                        value,
-                                        allow_sequence_splice,
-                                    )
-                                });
+                                crate::resume_or_suspend!(insert self, PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrameL373C60 { state, allow_sequence_splice });
                                 return Err(EvalError::InputRequired { request });
                             }
                             Err(error) => return Err(error),
@@ -497,7 +591,7 @@ impl Session {
         mut state: SuspendedCallArgumentPreparation,
         value: Expr,
         allow_sequence_splice: bool,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<SuspendedPreparedCallArguments, EvalError> {
         let list_drops_nothing = is_system_symbol_name(&state.head, heads::structure::LIST);
         state.prepared = append_suspended_prepared_argument(
             state.prepared,
@@ -512,27 +606,16 @@ impl Session {
     fn resume_suspended_call_argument_preparation(
         &mut self,
         mut state: SuspendedCallArgumentPreparation,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<SuspendedPreparedCallArguments, EvalError> {
         let sequence_hold = state.attributes.sequence_hold();
         let list_drops_nothing = is_system_symbol_name(&state.head, heads::structure::LIST);
 
         loop {
             let Some(arg) = state.args.get(state.cursor).cloned() else {
-                let head = state.head;
-                let evaluated_args = SharedArgs::new(state.prepared.into_vec());
-                let unevaluated_restore = state.unevaluated_restores.map(|restores| {
-                    Box::new(UnevaluatedRestorePlan {
-                        prepared_args: evaluated_args.clone(),
-                        wrappers: restores.into_vec(),
-                    })
+                return Ok(SuspendedPreparedCallArguments {
+                    evaluated_args: state.prepared,
+                    unevaluated_restores: state.unevaluated_restores,
                 });
-                return self.resume_call_from_prepared_args_with_unevaluated_restore(
-                    head,
-                    PreparedCallArguments {
-                        evaluated_args,
-                        unevaluated_restore,
-                    },
-                );
             };
 
             let index = state.cursor;
@@ -555,14 +638,7 @@ impl Session {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
                             state.cursor += 1;
-                            self.push_suspension_frame(move |session, outcome| {
-                                let value = outcome?;
-                                session.resume_suspended_call_after_argument(
-                                    state,
-                                    value,
-                                    allow_sequence_splice,
-                                )
-                            });
+                            crate::resume_or_suspend!(insert self, ResumeSuspendedCallArgumentPreparationSuspensionFrameL558C56 { state, allow_sequence_splice });
                             return Err(EvalError::InputRequired { request });
                         }
                         Err(error) => return Err(error),

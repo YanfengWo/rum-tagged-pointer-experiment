@@ -80,13 +80,15 @@ impl Session {
         spec_index: usize,
     ) -> Result<Expr, EvalError> {
         let spec_result = evaluate_do_spec_expr(self, args[spec_index + 1].clone());
-        let spec_expr = self.suspend_with_frame_lazy(spec_result, || {
-            let args = args.clone();
-            move |session, spec_expr| {
-                session
-                    .finish_iteration_aggregate_spec_eval(aggregate, &args, spec_index, spec_expr)
-            }
-        })?;
+        let spec_expr = crate::resume_or_suspend!(
+            self,
+            spec_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        ResumeIterationAggregateAfterSpecEvalSuspensionFrameL85C13 { aggregate, args, spec_index }
+        },
+        )?;
 
         self.finish_iteration_aggregate_spec_eval(aggregate, args, spec_index, spec_expr)
     }
@@ -161,9 +163,7 @@ impl Session {
                         iteration,
                         collected: PersistentExprAccumulator::freeze(collected),
                     };
-                    self.push_suspension_frame(move |session, outcome| {
-                        session.resume_suspended_iteration_aggregate_after_iteration(state, outcome)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeIterationAggregateIterationsSuspensionFrameL164C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -228,9 +228,7 @@ impl Session {
                     state.iteration += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        session.resume_suspended_iteration_aggregate_after_iteration(state, outcome)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedIterationAggregateSuspensionFrameL231C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -252,3 +250,77 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedIterationAggregate>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeIterationAggregateAfterSpecEvalSuspensionFrameL85C13 {
+    pub(super) aggregate: crate::runtime::kernel_data::control_data::branching_loops::iteration_aggregate::IterationAggregate,
+    pub(super) args: rum_core::SharedArgs,
+    pub(super) spec_index: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeIterationAggregateAfterSpecEvalSuspensionFrameL85C13
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut aggregate = self.aggregate.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        #[allow(unused_mut)]
+        let mut spec_index = self.spec_index.clone();
+        let resumed = match outcome {
+            Ok(spec_expr) => (|| {
+                session
+                    .finish_iteration_aggregate_spec_eval(aggregate, &args, spec_index, spec_expr)
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeIterationAggregateIterationsSuspensionFrameL164C48 {
+    pub(super) state: crate::runtime::kernel_data::control_data::branching_loops::iteration_aggregate::SuspendedIterationAggregate,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeIterationAggregateIterationsSuspensionFrameL164C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let resumed =
+            (|| session.resume_suspended_iteration_aggregate_after_iteration(state, outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeSuspendedIterationAggregateSuspensionFrameL231C48 {
+    pub(super) state: crate::runtime::kernel_data::control_data::branching_loops::iteration_aggregate::SuspendedIterationAggregate,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedIterationAggregateSuspensionFrameL231C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let resumed =
+            (|| session.resume_suspended_iteration_aggregate_after_iteration(state, outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

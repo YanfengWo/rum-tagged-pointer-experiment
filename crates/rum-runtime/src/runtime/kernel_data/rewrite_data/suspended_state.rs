@@ -44,6 +44,15 @@ pub(super) struct PersistentRewriteQueue<T: FrameRootTrace> {
     len: usize,
 }
 
+impl<T: FrameRootTrace> Clone for PersistentRewriteQueue<T> {
+    fn clone(&self) -> Self {
+        Self {
+            head: self.head.clone(),
+            len: self.len,
+        }
+    }
+}
+
 #[derive(FrameRootTrace)]
 struct PersistentRewriteQueueNode<T: FrameRootTrace> {
     value: T,
@@ -71,6 +80,15 @@ impl<T: FrameRootTrace> PersistentRewriteQueue<T> {
                 len: self.len - 1,
             },
         ))
+    }
+
+    pub(super) fn into_vec(mut self) -> Vec<T> {
+        let mut values = Vec::with_capacity(self.len);
+        while let Some((value, remaining)) = self.pop_front() {
+            values.push(value);
+            self = remaining;
+        }
+        values
     }
 }
 

@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_replace_repeated(
@@ -24,18 +25,17 @@ impl Session {
         };
 
         let current_result = self.evaluate(args_slice[0].clone());
-        let current = self.suspend_with_frame_lazy(current_result, || {
-            let args = args.clone();
-            let max_iterations_expr = max_iterations_expr.clone();
-            move |session, current| {
-                session.resume_replace_repeated_after_current(
-                    current,
-                    args[1].clone(),
-                    max_iterations_expr,
-                    args.as_ref().to_vec(),
-                )
+        let current = match current_result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                let args = args.clone();
+                let max_iterations_expr = max_iterations_expr.clone();
+                crate::resume_or_suspend!(insert self, EvalReplaceRepeatedSuspensionFrameL30C13 { args, max_iterations_expr });
+                crate::resume_or_suspend!(insert self, ContinueReplaceRepeatedTargetFrame);
+                return Err(EvalError::InputRequired { request });
             }
-        })?;
+            Err(error) => return Err(error),
+        };
 
         self.resume_replace_repeated_after_current(
             current,
@@ -85,19 +85,28 @@ impl Session {
         let rules = Self::shared_rewrite_rule_plan(rules);
 
         let limit_result = self.resolve_replace_repeated_limit_owned(max_iterations_expr);
-        self.drive_internal_value(limit_result, move |session, effective_limit| {
-            let Some(effective_limit_expr) = effective_limit else {
-                return Ok(session.invalid_call_with_arg_form(
-                    "ReplaceRepeated",
-                    &call_args,
-                    "expected MaxIterations -> Automatic, Infinity, or a positive integer",
-                ));
-            };
-            let effective_limit = expr_as_non_negative_usize(&effective_limit_expr)
-                .expect("replace-repeated limit should be non-negative");
+        crate::resume_or_suspend!(
+            self,
+            limit_result,
+            ok(effective_limit) => { let session = self; (|| {
+                    let Some(effective_limit_expr) = effective_limit else {
+                        return Ok(session.invalid_call_with_arg_form(
+                            "ReplaceRepeated",
+                            &call_args,
+                            "expected MaxIterations -> Automatic, Infinity, or a positive integer",
+                        ));
+                    };
+                    let effective_limit = expr_as_non_negative_usize(&effective_limit_expr)
+                        .expect("replace-repeated limit should be non-negative");
 
-            session.resume_replace_repeated_loop(current, rules, 0, effective_limit)
-        })
+                    session.resume_replace_repeated_loop(current, rules, 0, effective_limit)
+                })() },
+            suspend => ResumeReplaceRepeatedAfterRuleExprsSuspensionFrameL88C49 {
+                call_args: SharedArgs::new(call_args),
+                current,
+                rules,
+            },
+        )
     }
 
     fn resolve_replace_repeated_limit_owned(
@@ -110,13 +119,18 @@ impl Session {
         };
 
         let resolved_result = self.evaluate(max_iterations_expr);
-        self.drive_evaluated_value(resolved_result, move |_, resolved| {
-            let Some(value) = replace_repeated_max_iterations_option_value(&resolved) else {
-                return Ok(None);
-            };
-            Ok(parse_replace_repeated_max_iterations_value(value, ceiling)
-                .map(|limit| Expr::integer(BigInt::from(limit))))
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(resolved_expr) => { let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
+                    let Some(value) = replace_repeated_max_iterations_option_value(&resolved) else {
+                        return Ok(None);
+                    };
+                    Ok(parse_replace_repeated_max_iterations_value(value, ceiling)
+                        .map(|limit| Expr::integer(BigInt::from(limit))))
+                })() },
+            suspend => ResolveReplaceRepeatedLimitOwnedSuspensionFrameL113C53 { ceiling },
+        )
     }
 
     fn resume_replace_repeated_loop(
@@ -138,19 +152,16 @@ impl Session {
             RuleApplicationSource::ReplaceRepeated,
         )?;
         let next_result = self.evaluate(replaced);
-        let next = self.suspend_with_frame_lazy(next_result, || {
-            let current = current.clone();
-            let rules = rules.clone();
-            move |session, next| {
-                session.resume_replace_repeated_after_next(
-                    current,
-                    rules,
-                    iteration,
-                    effective_limit,
-                    next,
-                )
-            }
-        })?;
+        let next = crate::resume_or_suspend!(
+            self,
+            next_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let current = current.clone();
+                    let rules = rules.clone();
+        ResumeReplaceRepeatedLoopSuspensionFrameL144C13 { current, rules, iteration, effective_limit }
+        },
+        )?;
 
         self.resume_replace_repeated_after_next(current, rules, iteration, effective_limit, next)
     }
@@ -205,4 +216,207 @@ fn parse_replace_repeated_max_iterations_value(value: &Expr, ceiling: usize) -> 
     expr_as_non_negative_usize(value)
         .filter(|limit| *limit > 0)
         .map(|limit| limit.min(ceiling))
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalReplaceRepeatedSuspensionFrameL30C13 {
+    pub(super) args: rum_core::SharedArgs,
+    pub(super) max_iterations_expr: std::option::Option<rum_core::Expr>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceRepeatedSuspensionFrameL30C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(current) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareReplaceRepeatedTargetFinalizer {
+                    current,
+                    args: self.args.clone(),
+                    max_iterations_expr: self.max_iterations_expr.clone(),
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+struct PrepareReplaceRepeatedTargetFinalizer {
+    current: Expr,
+    args: SharedArgs,
+    max_iterations_expr: Option<Expr>,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareReplaceRepeatedTargetFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        Ok(Expr::call(
+            system_expr("InternalContinuationReplaceRepeatedTarget"),
+            vec![
+                self.current,
+                self.args.into_vec().into_continuation_expr(),
+                self.max_iterations_expr.into_continuation_expr(),
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueReplaceRepeatedTargetFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceRepeatedTargetFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected ReplaceRepeated target continuation payload")
+            };
+            assert!(
+                is_system_symbol_name(&head, "InternalContinuationReplaceRepeatedTarget"),
+                "unexpected ReplaceRepeated target continuation tag: {head:?}"
+            );
+            let mut args = args.into_iter();
+            let current = args
+                .next()
+                .expect("ReplaceRepeated target continuation stores current value");
+            let call_args = Vec::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceRepeated target continuation stores call arguments"),
+            );
+            let max_iterations_expr = Option::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceRepeated target continuation stores its option"),
+            );
+            debug_assert!(args.next().is_none());
+            session.resume_replace_repeated_after_current(
+                current,
+                call_args[1].clone(),
+                max_iterations_expr,
+                call_args,
+            )
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceRepeatedAfterRuleExprsSuspensionFrameL88C49 {
+    pub(super) call_args: rum_core::SharedArgs,
+    pub(super) current: rum_core::Expr,
+    pub(super) rules: crate::runtime::RewriteRulePlan,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceRepeatedAfterRuleExprsSuspensionFrameL88C49
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let call_args = self.call_args.clone();
+        #[allow(unused_mut)]
+        let mut current = self.current.clone();
+        #[allow(unused_mut)]
+        let mut rules = self.rules.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let effective_limit = <Option<rum_core::Expr> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+            let Some(effective_limit_expr) = effective_limit else {
+                return Ok(session.invalid_call_with_arg_form(
+                    "ReplaceRepeated",
+                    call_args.as_ref(),
+                    "expected MaxIterations -> Automatic, Infinity, or a positive integer",
+                ));
+            };
+            let effective_limit = expr_as_non_negative_usize(&effective_limit_expr)
+                .expect("replace-repeated limit should be non-negative");
+
+            session.resume_replace_repeated_loop(current, rules, 0, effective_limit)
+        })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResolveReplaceRepeatedLimitOwnedSuspensionFrameL113C53 {
+    pub(super) ceiling: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResolveReplaceRepeatedLimitOwnedSuspensionFrameL113C53
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut ceiling = self.ceiling.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<Option<rum_core::Expr>, EvalError> {
+            let Some(value) = replace_repeated_max_iterations_option_value(&resolved) else {
+                return Ok(None);
+            };
+            Ok(parse_replace_repeated_max_iterations_value(value, ceiling)
+                .map(|limit| Expr::integer(BigInt::from(limit))))
+        })()
+                    .map(|value| <Option<rum_core::Expr> as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceRepeatedLoopSuspensionFrameL144C13 {
+    pub(super) current: rum_core::Expr,
+    pub(super) rules: crate::runtime::RewriteRulePlan,
+    pub(super) iteration: usize,
+    pub(super) effective_limit: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceRepeatedLoopSuspensionFrameL144C13
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut current = self.current.clone();
+        #[allow(unused_mut)]
+        let mut rules = self.rules.clone();
+        #[allow(unused_mut)]
+        let mut iteration = self.iteration.clone();
+        #[allow(unused_mut)]
+        let mut effective_limit = self.effective_limit.clone();
+        let resumed = match outcome {
+            Ok(next) => (|| {
+                session.resume_replace_repeated_after_next(
+                    current,
+                    rules,
+                    iteration,
+                    effective_limit,
+                    next,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

@@ -12,6 +12,98 @@ struct SequenceChoiceCollectionState {
     collected: Vec<SymbolExprMap>,
 }
 
+impl SequenceChoiceCollectionState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationSequenceChoiceCollectionState"),
+            vec![
+                self.flat_head.into_continuation_expr(),
+                sequence_pattern_into_continuation_expr(self.spec),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                self.value_args.into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings),
+                Expr::call(
+                    system_expr("InternalContinuationUsizeVec"),
+                    self.consumes
+                        .into_iter()
+                        .map(usize_into_continuation_expr)
+                        .collect(),
+                ),
+                usize_into_continuation_expr(self.index),
+                self.collected.into_continuation_expr(),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected sequence-choice-collection continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationSequenceChoiceCollectionState"),
+            "unexpected sequence-choice-collection continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let flat_head = Option::<Expr>::from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores its flat head"),
+        );
+        let spec = sequence_pattern_from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores its specification"),
+        );
+        let rest_patterns = matcher_args_from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores remaining patterns"),
+        );
+        let value_args = Vec::<Expr>::from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores its values"),
+        );
+        let bindings = binding_map_from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores its bindings"),
+        );
+        let consumes_expr = args
+            .next()
+            .expect("sequence choice collection stores candidate lengths");
+        let Expr::Call {
+            head: consumes_head,
+            args: consumes,
+        } = consumes_expr
+        else {
+            panic!("unexpected sequence candidate-length continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&consumes_head, "InternalContinuationUsizeVec"),
+            "unexpected sequence candidate-length tag: {consumes_head:?}"
+        );
+        let consumes = consumes
+            .into_iter()
+            .map(usize_from_continuation_expr)
+            .collect();
+        let index = usize_from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores its cursor"),
+        );
+        let collected = Vec::<SymbolExprMap>::from_continuation_expr(
+            args.next()
+                .expect("sequence choice collection stores collected bindings"),
+        );
+        debug_assert!(args.next().is_none());
+        Self {
+            flat_head,
+            spec,
+            rest_patterns,
+            value_args,
+            bindings,
+            consumes,
+            index,
+            collected,
+        }
+    }
+}
+
 #[derive(Clone, FrameRootTrace)]
 struct SuspendedSequenceChoiceCollection {
     flat_head: Option<Expr>,
@@ -128,16 +220,8 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedSequenceChoiceCollection::freeze(state);
                 let rest_values = SharedArgs::new(rest_values);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_sequence_choice_collection(
-                            state.into_owned(),
-                            rest_values.into_vec(),
-                            outcome,
-                        )
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectSequenceChoiceMatchesSuspensionFrameL131C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, ContinueSequenceChoiceCollectionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -173,12 +257,8 @@ impl Session {
             Ok(matches) => self.finish_sequence_choice_rest_collection(state, matches),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedSequenceChoiceCollection::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let matches = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
-                    session
-                        .finish_sequence_choice_rest_collection(state.into_owned(), matches)
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishSequenceChoiceCollectionSuspensionFrameL176C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueSequenceChoiceCollectionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -201,3 +281,151 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedSequenceChoiceCollection>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct CollectSequenceChoiceMatchesSuspensionFrameL131C44 {
+    pub(super) state: crate::runtime::pattern_matching::sequence::optional_sequence::collect::SuspendedSequenceChoiceCollection,
+    pub(super) rest_values: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for CollectSequenceChoiceMatchesSuspensionFrameL131C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareSequenceChoiceCollectionFinalizer {
+                    state: self.state.clone(),
+                    rest_values: Some(self.rest_values.clone()),
+                    result,
+                    kind: SequenceChoiceCollectionContinuationKind::Pattern,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct FinishSequenceChoiceCollectionSuspensionFrameL176C44 {
+    pub(super) state: crate::runtime::pattern_matching::sequence::optional_sequence::collect::SuspendedSequenceChoiceCollection,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for FinishSequenceChoiceCollectionSuspensionFrameL176C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareSequenceChoiceCollectionFinalizer {
+                    state: self.state.clone(),
+                    rest_values: None,
+                    result,
+                    kind: SequenceChoiceCollectionContinuationKind::Rest,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+enum SequenceChoiceCollectionContinuationKind {
+    Pattern,
+    Rest,
+}
+
+struct PrepareSequenceChoiceCollectionFinalizer {
+    state: SuspendedSequenceChoiceCollection,
+    rest_values: Option<SharedArgs>,
+    result: Expr,
+    kind: SequenceChoiceCollectionContinuationKind,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareSequenceChoiceCollectionFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        let tag = match self.kind {
+            SequenceChoiceCollectionContinuationKind::Pattern => {
+                "InternalContinuationSequenceChoiceCollectionPattern"
+            }
+            SequenceChoiceCollectionContinuationKind::Rest => {
+                "InternalContinuationSequenceChoiceCollectionRest"
+            }
+        };
+        Ok(Expr::call(
+            system_expr(tag),
+            vec![
+                self.state.into_owned().into_continuation_expr(),
+                self.rest_values
+                    .map(SharedArgs::into_vec)
+                    .into_continuation_expr(),
+                self.result,
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueSequenceChoiceCollectionFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueSequenceChoiceCollectionFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected sequence-choice-collection continuation payload")
+            };
+            let is_pattern =
+                is_system_symbol_name(&head, "InternalContinuationSequenceChoiceCollectionPattern");
+            assert!(
+                is_pattern
+                    || is_system_symbol_name(
+                        &head,
+                        "InternalContinuationSequenceChoiceCollectionRest"
+                    ),
+                "unexpected sequence-choice-collection continuation tag: {head:?}"
+            );
+            let mut args = args.into_iter();
+            let state = SequenceChoiceCollectionState::from_continuation_expr(
+                args.next()
+                    .expect("sequence choice collection stores its state"),
+            );
+            let rest_values = Option::<Vec<Expr>>::from_continuation_expr(
+                args.next()
+                    .expect("sequence choice collection stores remaining values"),
+            );
+            let result = args
+                .next()
+                .expect("sequence choice collection stores its result");
+            debug_assert!(args.next().is_none());
+            if is_pattern {
+                session
+                    .finish_sequence_choice_collection(
+                        state,
+                        rest_values.expect("pattern result stores remaining values"),
+                        CompiledMatchOutcome::from_continuation_expr(result),
+                    )
+                    .map(Vec::<SymbolExprMap>::into_continuation_expr)
+            } else {
+                debug_assert!(rest_values.is_none());
+                session
+                    .finish_sequence_choice_rest_collection(
+                        state,
+                        Vec::<SymbolExprMap>::from_continuation_expr(result),
+                    )
+                    .map(Vec::<SymbolExprMap>::into_continuation_expr)
+            }
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

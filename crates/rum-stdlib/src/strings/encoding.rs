@@ -1,5 +1,6 @@
 use super::*;
 use rum_core::SharedArgs;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[cfg(feature = "hash")]
 use crc32fast::Hasher as Crc32Hasher;
@@ -122,7 +123,12 @@ pub(crate) fn eval_uncompress(
 
     if let Some(wrapper) = wrapper {
         let wrapped_result = session.evaluate(Expr::call(wrapper.clone(), vec![restored]));
-        return session.suspend_with_frame_lazy(wrapped_result, || |_, value| Ok(value));
+        return rum_runtime::resume_or_suspend!(
+            session,
+            wrapped_result,
+            ok(value) => Ok(value),
+            suspend => EvalUncompressSuspensionFrameL125C67,
+        );
     }
 
     Ok(restored)
@@ -364,5 +370,22 @@ fn nibble_to_hex(nibble: u8) -> char {
         0..=9 => char::from(b'0' + nibble),
         10..=15 => char::from(b'a' + (nibble - 10)),
         _ => unreachable!("nibbles are always in 0..=15"),
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalUncompressSuspensionFrameL125C67;
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalUncompressSuspensionFrameL125C67 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
     }
 }

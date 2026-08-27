@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -307,33 +310,25 @@ fn resume_key_union_missing_values_from_index(
             return Ok(render_key_union_result(&plan, &fill_values));
         };
 
-        let fill_value =
-            match session.evaluate(Expr::call(fill_function.clone(), vec![key.clone()])) {
-                Ok(fill_value) => fill_value,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
-                        Err(EvalError::InputRequired { request }),
-                        || {
-                            let plan = FrozenAssociationValue::freeze(plan);
-                            let missing_keys = FrozenAssociationSequence::freeze(missing_keys);
-                            let fill_values = PersistentAssociationSequence::freeze(fill_values);
-                            move |session, fill_value| {
-                                resume_suspended_key_union_missing_value(
-                                    session,
-                                    fill_function,
-                                    plan,
-                                    missing_keys,
-                                    index,
-                                    fill_values,
-                                    key,
-                                    fill_value,
-                                )
-                            }
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
+        let fill_value = match session
+            .evaluate(Expr::call(fill_function.clone(), vec![key.clone()]))
+        {
+            Ok(fill_value) => fill_value,
+            Err(EvalError::InputRequired { request }) => {
+                return rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let plan = FrozenAssociationValue::freeze(plan);
+                                            let missing_keys = FrozenAssociationSequence::freeze(missing_keys);
+                                            let fill_values = PersistentAssociationSequence::freeze(fill_values);
+                ResumeKeyUnionMissingValuesFromIndexSuspensionFrameL320C29 { fill_function, plan, missing_keys, index, fill_values, key }
+                },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
         fill_values.push((key, fill_value));
         index += 1;
@@ -356,30 +351,20 @@ fn resume_suspended_key_union_missing_values_from_index(
             ));
         };
 
-        let fill_value =
-            match session.evaluate(Expr::call(fill_function.clone(), vec![key.clone()])) {
-                Ok(fill_value) => fill_value,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
-                        Err(EvalError::InputRequired { request }),
-                        || {
-                            move |session, fill_value| {
-                                resume_suspended_key_union_missing_value(
-                                    session,
-                                    fill_function,
-                                    plan,
-                                    missing_keys,
-                                    index,
-                                    fill_values,
-                                    key,
-                                    fill_value,
-                                )
-                            }
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
+        let fill_value = match session
+            .evaluate(Expr::call(fill_function.clone(), vec![key.clone()]))
+        {
+            Ok(fill_value) => fill_value,
+            Err(EvalError::InputRequired { request }) => {
+                return rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrameL366C29 { fill_function, plan, missing_keys, index, fill_values, key },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
         fill_values = fill_values.appended((key, fill_value));
         index += 1;

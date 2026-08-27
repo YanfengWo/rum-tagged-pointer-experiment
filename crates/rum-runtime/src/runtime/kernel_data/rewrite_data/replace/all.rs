@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_replace_all(
@@ -13,10 +14,15 @@ impl Session {
         }
 
         let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let rules_expr = args[1].clone();
-            move |session, target| session.resume_replace_all_after_target(target, rules_expr)
-        })?;
+        let target = crate::resume_or_suspend!(
+            self,
+            target_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let rules_expr = args[1].clone();
+        EvalReplaceAllSuspensionFrameL18C13 { rules_expr }
+        },
+        )?;
 
         self.resume_replace_all_after_target(target, args[1].clone())
     }
@@ -55,7 +61,12 @@ impl Session {
             return Ok(replaced);
         }
         let replaced_result = self.evaluate(replaced);
-        self.suspend_with_frame_lazy(replaced_result, || |_, value| Ok(value))
+        crate::resume_or_suspend!(
+            self,
+            replaced_result,
+            ok(value) => Ok(value),
+            suspend => ResumeReplaceAllAfterRulesSuspensionFrameL58C58,
+        )
     }
 
     pub(in crate::runtime) fn eval_replace_all_unheld(
@@ -70,12 +81,15 @@ impl Session {
         }
 
         let target_result = self.evaluate(args[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let rules_expr = args[1].clone();
-            move |session, target| {
-                session.resume_replace_all_unheld_after_target(target, rules_expr)
-            }
-        })?;
+        let target = crate::resume_or_suspend!(
+            self,
+            target_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let rules_expr = args[1].clone();
+        EvalReplaceAllUnheldSuspensionFrameL75C13 { rules_expr }
+        },
+        )?;
 
         self.resume_replace_all_unheld_after_target(target, args[1].clone())
     }
@@ -115,6 +129,91 @@ impl Session {
             return Ok(replaced);
         }
         let replaced_result = self.evaluate(replaced);
-        self.suspend_with_frame_lazy(replaced_result, || |_, value| Ok(value))
+        crate::resume_or_suspend!(
+            self,
+            replaced_result,
+            ok(value) => Ok(value),
+            suspend => ResumeReplaceAllUnheldAfterRulesSuspensionFrameL118C58,
+        )
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalReplaceAllSuspensionFrameL18C13 {
+    pub(super) rules_expr: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllSuspensionFrameL18C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut rules_expr = self.rules_expr.clone();
+        let resumed = match outcome {
+            Ok(target) => (|| session.resume_replace_all_after_target(target, rules_expr))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceAllAfterRulesSuspensionFrameL58C58;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceAllAfterRulesSuspensionFrameL58C58
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalReplaceAllUnheldSuspensionFrameL75C13 {
+    pub(super) rules_expr: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllUnheldSuspensionFrameL75C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut rules_expr = self.rules_expr.clone();
+        let resumed = match outcome {
+            Ok(target) => (|| session.resume_replace_all_unheld_after_target(target, rules_expr))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceAllUnheldAfterRulesSuspensionFrameL118C58;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceAllUnheldAfterRulesSuspensionFrameL118C58
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

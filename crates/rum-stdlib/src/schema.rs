@@ -1,4 +1,5 @@
 use rum_core::SharedArgs;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
 use rum_core::Expr;
@@ -61,10 +62,15 @@ pub(crate) fn eval_schema_errors(
     }
     if args_slice.len() >= 2 {
         let value_result = session.evaluate(args_slice[0].clone());
-        let value = session.suspend_with_frame_lazy(value_result, || {
-            let args = args.clone();
-            move |session, value| eval_schema_errors_with_value(session, value, &args.as_ref()[1..])
-        })?;
+        let value = rum_runtime::resume_or_suspend!(
+            session,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalSchemaErrorsSuspensionFrameL66C13 { args }
+        },
+        )?;
         return eval_schema_errors_with_value(session, value, &args_slice[1..]);
     }
 
@@ -107,12 +113,15 @@ pub(crate) fn eval_conform_schema(
     }
     if args_slice.len() >= 2 {
         let value_result = session.evaluate(args_slice[0].clone());
-        let value = session.suspend_with_frame_lazy(value_result, || {
-            let args = args.clone();
-            move |session, value| {
-                eval_conform_schema_with_value(session, value, &args.as_ref()[1..])
-            }
-        })?;
+        let value = rum_runtime::resume_or_suspend!(
+            session,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalConformSchemaSuspensionFrameL112C13 { args }
+        },
+        )?;
         return eval_conform_schema_with_value(session, value, &args_slice[1..]);
     }
 
@@ -570,4 +579,46 @@ fn finish_abort(
 
 fn empty_path_label(path: &str) -> &str {
     if path.is_empty() { "<root>" } else { path }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalSchemaErrorsSuspensionFrameL66C13 {
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalSchemaErrorsSuspensionFrameL66C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| eval_schema_errors_with_value(session, value, &args.as_ref()[1..]))(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalConformSchemaSuspensionFrameL112C13 {
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalConformSchemaSuspensionFrameL112C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| eval_conform_schema_with_value(session, value, &args.as_ref()[1..]))(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
 }

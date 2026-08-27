@@ -10,7 +10,7 @@ pub(super) const DEFAULT_GENERATED_ELEMENT_LIMIT: usize = 100_000;
 pub(super) const DEFAULT_INTEGER_WORK_LIMIT: usize = 100_000;
 pub(super) const DEFAULT_ITERATION_WORK_LIMIT: usize = 100_000;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub enum HoldAttribute {
     None,
     HoldFirst,

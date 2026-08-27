@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::*;
 use super::incremental_mutation::DefinitionValueRollback;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -142,10 +145,7 @@ impl Session {
                         cursor: index,
                         evaluated: EvaluatedSelectorAccumulator::freeze(evaluated_selectors),
                     };
-                    self.push_suspension_frame(move |session, outcome| {
-                        let selector = outcome?;
-                        session.resume_suspended_positional_part_assignment(suspended, selector)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumePositionalPartSelectorEvaluationSuspensionFrameL145C48 { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -176,10 +176,7 @@ impl Session {
                     state.cursor += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        let selector = outcome?;
-                        session.resume_suspended_positional_part_assignment(state, selector)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedPositionalPartAssignmentSuspensionFrameL179C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

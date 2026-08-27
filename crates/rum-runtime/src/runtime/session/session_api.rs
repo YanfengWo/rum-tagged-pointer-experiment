@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::*;
 use std::sync::{Arc, atomic::AtomicBool};
 use std::time::Duration;
@@ -532,12 +535,12 @@ impl Session {
     pub fn evaluate_with_random_state_restored(&mut self, body: Expr) -> Result<Expr, EvalError> {
         let saved = self.prng_state;
         let result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(result, || {
-            move |session, outcome| {
-                session.prng_state = saved;
-                outcome
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            result,
+            ok(value) => Ok(value),
+            suspend => EvaluateWithRandomStateRestoredSuspensionFrameL536C13 { saved },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),

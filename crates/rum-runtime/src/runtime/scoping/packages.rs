@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -46,6 +49,170 @@ struct PackageInstallPlan {
     forms: Vec<Expr>,
     source_unit: SourceUnit,
     minted_sealed: Vec<Symbol>,
+}
+
+impl PackageInstallPlan {
+    fn into_continuation_expr(self, index: usize) -> Expr {
+        let source_unit = self.source_unit;
+        let private_index = source_unit
+            .private_index
+            .into_iter()
+            .map(|(name, symbol)| {
+                Expr::call(
+                    system_expr("InternalContinuationPackagePrivateSymbol"),
+                    vec![Expr::string(name), Expr::Atom(Atom::Symbol(symbol))],
+                )
+            })
+            .collect();
+        Expr::call(
+            system_expr("InternalContinuationPackageInstall"),
+            vec![
+                self.forms.into_continuation_expr(),
+                Expr::string(source_unit.package_context),
+                source_unit.held_wrapper,
+                Expr::string(source_unit.epoch.to_string()),
+                symbols_into_continuation_expr(source_unit.public),
+                symbols_into_continuation_expr(source_unit.package_scope),
+                Expr::call(
+                    system_expr("InternalContinuationPackagePrivateIndex"),
+                    private_index,
+                ),
+                symbols_into_continuation_expr(self.minted_sealed),
+                Expr::string(index.to_string()),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> (Self, usize) {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected package-install continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationPackageInstall"),
+            "unexpected package-install continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let forms = Vec::<Expr>::from_continuation_expr(
+            args.next().expect("package install stores its forms"),
+        );
+        let package_context = continuation_string(
+            args.next().expect("package install stores its context"),
+            "package context",
+        );
+        let held_wrapper = args
+            .next()
+            .expect("package install stores its held wrapper");
+        let epoch = continuation_string(
+            args.next().expect("package install stores its epoch"),
+            "package epoch",
+        )
+        .parse()
+        .expect("package continuation epoch should be a u64");
+        let public = symbols_from_continuation_expr(
+            args.next()
+                .expect("package install stores its public symbols"),
+        );
+        let package_scope = symbols_from_continuation_expr(
+            args.next()
+                .expect("package install stores its package-scope symbols"),
+        );
+        let private_index_expr = args
+            .next()
+            .expect("package install stores its private index");
+        let Expr::Call {
+            head: private_head,
+            args: private_entries,
+        } = private_index_expr
+        else {
+            panic!("unexpected package private-index continuation payload")
+        };
+        assert!(is_system_symbol_name(
+            &private_head,
+            "InternalContinuationPackagePrivateIndex"
+        ));
+        let private_index = private_entries
+            .into_iter()
+            .map(|entry| {
+                let Expr::Call { head, args } = entry else {
+                    panic!("unexpected package private-symbol continuation payload")
+                };
+                assert!(is_system_symbol_name(
+                    &head,
+                    "InternalContinuationPackagePrivateSymbol"
+                ));
+                let mut args = args.into_iter();
+                let name = continuation_string(
+                    args.next().expect("private symbol stores its name"),
+                    "private symbol name",
+                );
+                let symbol =
+                    continuation_symbol(args.next().expect("private symbol stores its symbol"));
+                debug_assert!(args.next().is_none());
+                (name, symbol)
+            })
+            .collect();
+        let minted_sealed = symbols_from_continuation_expr(
+            args.next()
+                .expect("package install stores its minted symbols"),
+        );
+        let index = continuation_string(
+            args.next().expect("package install stores its cursor"),
+            "package cursor",
+        )
+        .parse()
+        .expect("package continuation cursor should be a usize");
+        debug_assert!(args.next().is_none());
+        (
+            Self {
+                forms,
+                source_unit: SourceUnit {
+                    package_context,
+                    held_wrapper,
+                    epoch,
+                    public,
+                    package_scope,
+                    private_index,
+                },
+                minted_sealed,
+            },
+            index,
+        )
+    }
+}
+
+fn symbols_into_continuation_expr(symbols: Vec<Symbol>) -> Expr {
+    Expr::call(
+        system_expr("InternalContinuationPackageSymbols"),
+        symbols
+            .into_iter()
+            .map(|symbol| Expr::Atom(Atom::Symbol(symbol)))
+            .collect(),
+    )
+}
+
+fn symbols_from_continuation_expr(expr: Expr) -> Vec<Symbol> {
+    let Expr::Call { head, args } = expr else {
+        panic!("unexpected package-symbol continuation payload")
+    };
+    assert!(is_system_symbol_name(
+        &head,
+        "InternalContinuationPackageSymbols"
+    ));
+    args.into_iter().map(continuation_symbol).collect()
+}
+
+fn continuation_symbol(expr: Expr) -> Symbol {
+    let Expr::Atom(Atom::Symbol(symbol)) = expr else {
+        panic!("package continuation symbol should be a symbol: {expr:?}")
+    };
+    symbol
+}
+
+fn continuation_string(expr: Expr, field: &str) -> String {
+    let Expr::Atom(Atom::String(value)) = expr else {
+        panic!("package continuation {field} should be a string: {expr:?}")
+    };
+    value
 }
 
 #[derive(Clone, FrameRootTrace)]
@@ -233,7 +400,12 @@ impl Session {
 
         let rewritten = substitute_lexical_bindings(&held_args[0], &rewrites, &BTreeSet::new());
         let result = self.evaluate(rewritten);
-        self.drive_evaluated_value(result, |_session, _value: Expr| Ok(system_expr("Null")))
+        crate::resume_or_suspend!(
+            self,
+            result,
+            ok(_value_expr) => { let _session = self; let _value = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(_value_expr); (|| { Ok(system_expr("Null")) })() },
+            suspend => EvalRestoreSealedReferencesSuspensionFrameL236C44,
+        )
     }
 
     pub(in crate::runtime) fn sealed_source_unit_for_symbol(
@@ -274,58 +446,11 @@ impl Session {
                         plan: Arc::new(plan),
                         index,
                     };
-                    self.push_suspension_frame(move |session, outcome| {
-                        session.resume_suspended_package_after_form(state, outcome)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumePackageInstallSuspensionFrameL277C48 { state });
+                    crate::resume_or_suspend!(insert self, ContinuePackageInstallFrame);
                     return Err(EvalError::InputRequired { request });
                 }
-                Err(error) => return Ok(self.fail_package_install(plan, error)),
-            }
-        }
-    }
-
-    fn resume_suspended_package_after_form(
-        &mut self,
-        mut state: SuspendedPackageInstall,
-        outcome: Result<Expr, EvalError>,
-    ) -> Result<Expr, EvalError> {
-        match outcome {
-            Ok(_) => {
-                state.index += 1;
-                self.resume_suspended_package_install(state)
-            }
-            Err(error) => Ok(self.fail_package_install(
-                Arc::try_unwrap(state.plan)
-                    .unwrap_or_else(|_| panic!("failed package install state must be unique")),
-                error,
-            )),
-        }
-    }
-
-    fn resume_suspended_package_install(
-        &mut self,
-        mut state: SuspendedPackageInstall,
-    ) -> Result<Expr, EvalError> {
-        loop {
-            let Some(form) = state.plan.forms.get(state.index) else {
-                let plan = Arc::try_unwrap(state.plan)
-                    .unwrap_or_else(|_| panic!("completed package install state must be unique"));
-                return Ok(self.finish_package_install(plan));
-            };
-
-            match self.evaluate(form.clone()) {
-                Ok(_) => state.index += 1,
-                Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        session.resume_suspended_package_after_form(state, outcome)
-                    });
-                    return Err(EvalError::InputRequired { request });
-                }
-                Err(error) => {
-                    let plan = Arc::try_unwrap(state.plan)
-                        .unwrap_or_else(|_| panic!("failed package install state must be unique"));
-                    return Ok(self.fail_package_install(plan, error));
-                }
+                Err(error) => return Ok(self.fail_package_install(&plan, error)),
             }
         }
     }
@@ -348,7 +473,7 @@ impl Session {
         Expr::string(package_context)
     }
 
-    fn fail_package_install(&mut self, plan: PackageInstallPlan, error: EvalError) -> Expr {
+    fn fail_package_install(&mut self, plan: &PackageInstallPlan, error: EvalError) -> Expr {
         for symbol in &plan.minted_sealed {
             self.clear_symbol_state(symbol, true, true, true, true, true);
         }

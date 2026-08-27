@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -131,10 +134,17 @@ impl Session {
         }
 
         let result = self.evaluate(expr);
-        self.drive_evaluated_value(result, move |session, value: Expr| {
-            session.once_values.insert(cache_key, value.clone());
-            Ok(value)
-        })
+        crate::resume_or_suspend!(
+            self,
+            result,
+            ok(value_expr) => { let session = self; let value = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(value_expr); (|| {
+                    session.once_values.insert(cache_key, value.clone());
+                    Ok(value)
+                })() },
+            suspend => EvalOnceBuiltinSuspensionFrameL134C44 {
+                cache_key: std::sync::Arc::new(cache_key),
+            },
+        )
     }
 
     fn compile_declare_package_spec(

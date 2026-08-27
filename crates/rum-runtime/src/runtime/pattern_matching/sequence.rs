@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::{outcome::*, *};
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -53,6 +56,62 @@ impl SuspendedFlatSingleChoiceState {
             max_consume: self.max_consume,
             wrapped: self.wrapped,
         }
+    }
+}
+
+impl FlatSingleChoiceState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationFlatSingleChoiceState"),
+            vec![
+                self.flat_head,
+                self.one_identity.into_continuation_expr(),
+                matcher_node_into_continuation_expr(self.pattern),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                self.value_args.into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings),
+                usize_into_continuation_expr(self.consume),
+                usize_into_continuation_expr(self.max_consume),
+                self.wrapped.into_continuation_expr(),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let mut args = flat_single_state_payload(expr, "InternalContinuationFlatSingleChoiceState");
+        let state = Self {
+            flat_head: args.next().expect("flat-single choice stores its head"),
+            one_identity: bool::from_continuation_expr(
+                args.next()
+                    .expect("flat-single choice stores its OneIdentity flag"),
+            ),
+            pattern: matcher_node_from_continuation_expr(
+                args.next().expect("flat-single choice stores its matcher"),
+            ),
+            rest_patterns: matcher_args_from_continuation_expr(
+                args.next()
+                    .expect("flat-single choice stores its remaining patterns"),
+            ),
+            value_args: Vec::<Expr>::from_continuation_expr(
+                args.next().expect("flat-single choice stores its values"),
+            ),
+            bindings: binding_map_from_continuation_expr(
+                args.next().expect("flat-single choice stores its bindings"),
+            ),
+            consume: usize_from_continuation_expr(
+                args.next().expect("flat-single choice stores its cursor"),
+            ),
+            max_consume: usize_from_continuation_expr(
+                args.next()
+                    .expect("flat-single choice stores its maximum cursor"),
+            ),
+            wrapped: bool::from_continuation_expr(
+                args.next()
+                    .expect("flat-single choice stores its wrapped flag"),
+            ),
+        };
+        debug_assert!(args.next().is_none());
+        state
     }
 }
 
@@ -113,6 +172,83 @@ impl SuspendedFlatSingleCollectionState {
             collected: self.collected.into_vec(),
         }
     }
+}
+
+impl FlatSingleCollectionState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationFlatSingleCollectionState"),
+            vec![
+                self.flat_head,
+                self.one_identity.into_continuation_expr(),
+                matcher_node_into_continuation_expr(self.pattern),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                self.value_args.into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings),
+                usize_into_continuation_expr(self.consume),
+                usize_into_continuation_expr(self.max_consume),
+                self.wrapped.into_continuation_expr(),
+                self.collected.into_continuation_expr(),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let mut args =
+            flat_single_state_payload(expr, "InternalContinuationFlatSingleCollectionState");
+        let state = Self {
+            flat_head: args.next().expect("flat-single collection stores its head"),
+            one_identity: bool::from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its OneIdentity flag"),
+            ),
+            pattern: matcher_node_from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its matcher"),
+            ),
+            rest_patterns: matcher_args_from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its remaining patterns"),
+            ),
+            value_args: Vec::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its values"),
+            ),
+            bindings: binding_map_from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its bindings"),
+            ),
+            consume: usize_from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its cursor"),
+            ),
+            max_consume: usize_from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its maximum cursor"),
+            ),
+            wrapped: bool::from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its wrapped flag"),
+            ),
+            collected: Vec::<SymbolExprMap>::from_continuation_expr(
+                args.next()
+                    .expect("flat-single collection stores its results"),
+            ),
+        };
+        debug_assert!(args.next().is_none());
+        state
+    }
+}
+
+fn flat_single_state_payload(expr: Expr, tag: &'static str) -> std::vec::IntoIter<Expr> {
+    let Expr::Call { head, args } = expr else {
+        panic!("unexpected {tag} continuation payload")
+    };
+    assert!(
+        is_system_symbol_name(&head, tag),
+        "unexpected {tag} continuation tag: {head:?}"
+    );
+    args.into_iter()
 }
 
 mod entry;
@@ -181,19 +317,8 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let rest_patterns = FrozenMatcherSequence::freeze(rest_patterns);
                         let rest_values = SharedArgs::new(rest_values);
-                        self.push_suspension_frame(move |session, payload| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                            if !outcome.matched {
-                                return Ok(outcome.into_continuation_expr());
-                            }
-                            session
-                                .match_compiled_args_owned(
-                                    rest_patterns.into_vec(),
-                                    rest_values.into_vec(),
-                                    outcome.bindings,
-                                )
-                                .map(|outcome| outcome.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, MatchCompiledArgAndRestOwnedSuspensionFrameL184C52 { rest_patterns, rest_values });
+                        crate::resume_or_suspend!(insert self, ContinueMatchCompiledArgAndRestFrame);
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -323,16 +448,8 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleChoiceState::freeze(state);
                 let rest_values = SharedArgs::new(rest_values);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_flat_single_pattern(
-                            state.into_owned(),
-                            rest_values.into_vec(),
-                            outcome,
-                        )
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchFlatSingleChoiceSuspensionFrameL326C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, ContinueFlatSinglePatternFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -360,12 +477,8 @@ impl Session {
             Ok(outcome) => self.finish_flat_single_rest(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleChoiceState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_flat_single_rest(state.into_owned(), outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishFlatSinglePatternSuspensionFrameL363C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueFlatSingleRestFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -462,19 +575,8 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let rest_patterns = FrozenMatcherSequence::freeze(rest_patterns);
                         let rest_values = SharedArgs::new(rest_values);
-                        self.push_suspension_frame(move |session, payload| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                            if !outcome.matched {
-                                return Ok(Vec::<SymbolExprMap>::new().into_continuation_expr());
-                            }
-                            session
-                                .collect_compiled_args_matches_owned(
-                                    rest_patterns.into_vec(),
-                                    rest_values.into_vec(),
-                                    outcome.bindings,
-                                )
-                                .map(|matches| matches.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, CollectCompiledArgAndRestMatchesOwnedSuspensionFrameL465C52 { rest_patterns, rest_values });
+                        crate::resume_or_suspend!(insert self, ContinueCollectCompiledArgAndRestFrame);
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -614,16 +716,8 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleCollectionState::freeze(state);
                 let rest_values = SharedArgs::new(rest_values);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_flat_single_collection_pattern(
-                            state.into_owned(),
-                            rest_values.into_vec(),
-                            outcome,
-                        )
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectFlatSingleChoiceSuspensionFrameL617C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, ContinueFlatSingleCollectionPatternFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -650,12 +744,8 @@ impl Session {
             Ok(matches) => self.finish_flat_single_collection_rest(state, matches),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleCollectionState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let matches = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
-                    session
-                        .finish_flat_single_collection_rest(state.into_owned(), matches)
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishFlatSingleCollectionPatternSuspensionFrameL653C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueFlatSingleCollectionRestFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

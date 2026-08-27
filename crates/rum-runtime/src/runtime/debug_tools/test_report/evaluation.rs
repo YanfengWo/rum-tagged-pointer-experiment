@@ -1,5 +1,6 @@
 use super::model::{EvalCapturedOutcome, TestCaseSpec, TestReportOptions};
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl ContinuationValue for EvalCapturedOutcome {
     fn into_continuation_expr(self) -> Expr {
@@ -112,9 +113,14 @@ impl Session {
             .unwrap_or_else(|| system_expr("SameQ"));
         let applied = Expr::call(same_test, vec![actual, expected]);
         let resolved_result = self.evaluate(applied);
-        self.drive_evaluated_value::<Expr, bool, _>(resolved_result, |_, resolved| {
-            Ok(is_system_symbol_name(&resolved, "True"))
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(resolved_expr) => { let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
+                    Ok(is_system_symbol_name(&resolved, "True"))
+                })() },
+            suspend => TestCaseOutputMatchesPartsSuspensionFrameL115C70,
+        )
     }
 
     pub(in crate::runtime::debug_tools::test_report) fn normalize_expected_message_exprs(
@@ -187,9 +193,11 @@ impl Session {
         let wrapped = wrap_test_case_with_constraints(input, options);
         let started = Instant::now();
         let outcome_result = self.eval_expr_with_stream_capture(wrapped);
-        self.drive_internal_value::<EvalCapturedOutcome, EvalCapturedOutcome, _>(
+        crate::resume_or_suspend!(
+            self,
             outcome_result,
-            move |_, outcome| Ok(finish_test_case_input_outcome(started, outcome)),
+            ok(outcome) => { (|| { Ok(finish_test_case_input_outcome(started, outcome)) })() },
+            suspend => EvaluateTestCaseInputSuspensionFrameL192C13 { started },
         )
     }
 
@@ -255,17 +263,7 @@ impl Session {
 
         match result {
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| {
-                    let result = session.finalize_top_level_control_flow(outcome);
-                    let captured = session.finish_eval_expr_with_stream_capture(
-                        started,
-                        message_checkpoint,
-                        print_checkpoint,
-                        handled_error_checkpoint,
-                        result,
-                    )?;
-                    Ok(captured.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, EvalExprWithStreamCaptureSuspensionFrameL258C44 { started, message_checkpoint, print_checkpoint, handled_error_checkpoint });
                 Err(EvalError::InputRequired { request })
             }
             result => self.finish_eval_expr_with_stream_capture(
@@ -443,4 +441,93 @@ fn test_report_memory_constraint_sentinel() -> Expr {
         system_expr("HoldComplete"),
         vec![Expr::string("__RumTestReportMemoryConstraint__")],
     )
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct TestCaseOutputMatchesPartsSuspensionFrameL115C70;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for TestCaseOutputMatchesPartsSuspensionFrameL115C70
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<bool, EvalError> {
+            Ok(is_system_symbol_name(&resolved, "True"))
+        })()
+                    .map(|value| <bool as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvaluateTestCaseInputSuspensionFrameL192C13 {
+    pub(super) started: std::time::Instant,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvaluateTestCaseInputSuspensionFrameL192C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut started = self.started.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let outcome = <EvalCapturedOutcome as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<EvalCapturedOutcome, EvalError> { Ok(finish_test_case_input_outcome(started, outcome)) })()
+                    .map(|value| <EvalCapturedOutcome as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalExprWithStreamCaptureSuspensionFrameL258C44 {
+    pub(super) started: std::time::Instant,
+    pub(super) message_checkpoint: usize,
+    pub(super) print_checkpoint: usize,
+    pub(super) handled_error_checkpoint: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for EvalExprWithStreamCaptureSuspensionFrameL258C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut started = self.started.clone();
+        #[allow(unused_mut)]
+        let mut message_checkpoint = self.message_checkpoint.clone();
+        #[allow(unused_mut)]
+        let mut print_checkpoint = self.print_checkpoint.clone();
+        #[allow(unused_mut)]
+        let mut handled_error_checkpoint = self.handled_error_checkpoint.clone();
+        let resumed = (|| {
+            let result = session.finalize_top_level_control_flow(outcome);
+            let captured = session.finish_eval_expr_with_stream_capture(
+                started,
+                message_checkpoint,
+                print_checkpoint,
+                handled_error_checkpoint,
+                result,
+            )?;
+            Ok(captured.into_continuation_expr())
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

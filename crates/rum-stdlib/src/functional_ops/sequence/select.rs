@@ -1,8 +1,11 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum SelectLimit {
     All,
     Count(usize),
@@ -153,17 +156,15 @@ fn resume_select_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let source = SuspendedSelectSource::freeze(source);
-                        let selected = PersistentFunctionalSequence::freeze(selected);
-                        move |session, value| {
-                            resume_suspended_select_with_value(
-                                session, source, criterion, limit, index, selected, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let source = SuspendedSelectSource::freeze(source);
+                                        let selected = PersistentFunctionalSequence::freeze(selected);
+                ResumeSelectFromIndexSuspensionFrameL161C25 { source, criterion, limit, index, selected }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -199,15 +200,11 @@ fn resume_suspended_select_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_select_with_value(
-                                session, source, criterion, limit, index, selected, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedSelectFromIndexSuspensionFrameL205C25 { source, criterion, limit, index, selected },
                 );
             }
             Err(error) => return Err(error),
@@ -295,16 +292,14 @@ fn resume_select_first_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let source = SuspendedSelectSource::freeze(source);
-                        move |session, value| {
-                            resume_suspended_select_first_with_value(
-                                session, source, criterion, default, index, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let source = SuspendedSelectSource::freeze(source);
+                ResumeSelectFirstFromIndexSuspensionFrameL302C25 { source, criterion, default, index }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -341,15 +336,11 @@ fn resume_suspended_select_first_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_select_first_with_value(
-                                session, source, criterion, default, index, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedSelectFirstFromIndexSuspensionFrameL347C25 { source, criterion, default, index },
                 );
             }
             Err(error) => return Err(error),

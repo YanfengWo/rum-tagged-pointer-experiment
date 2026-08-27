@@ -89,8 +89,11 @@ pub use super::kernel_data::structure_data::{
 // tree_walkers
 pub use super::tree_walkers::collect_level_parts_owned;
 
-// suspension/core
-pub use super::suspension::ContinuationValue;
+// suspension/core (stdlib-only bridge)
+#[doc(hidden)]
+pub use super::suspension::{ContinuationValue, FrameAction, PureFrameFinalizer, SuspensionFrame};
+#[doc(hidden)]
+pub use crate::resume_or_suspend;
 
 // suspension/trace (stdlib-only bridge)
 #[doc(hidden)]

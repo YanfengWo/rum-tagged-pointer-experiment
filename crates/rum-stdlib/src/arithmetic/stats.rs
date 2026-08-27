@@ -4,6 +4,7 @@ use rum_runtime::kernel_api::{
     EvalError, Session, ToPrimitive, call_items_with_head, compare_expr_canonical,
     expr_as_exact_integer, expr_as_exact_rational, system_expr,
 };
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 use crate::structure_ops::stable_groups::StableCounts;
 
@@ -193,7 +194,12 @@ fn average_pair(session: &mut Session, lhs: Expr, rhs: Expr) -> Result<Expr, Eva
         vec![sum, Expr::integer(BigInt::from(2_u8))],
     );
     let evaluated = session.evaluate(half);
-    session.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))
+    rum_runtime::resume_or_suspend!(
+        session,
+        evaluated,
+        ok(value) => Ok(value),
+        suspend => AveragePairSuspensionFrameL196C51,
+    )
 }
 
 fn nearest_rank_index(q: &Rational, len: usize) -> usize {
@@ -217,5 +223,22 @@ fn ceiling_div_non_negative(numerator: &BigInt, denominator: &BigInt) -> BigInt 
         quotient
     } else {
         quotient + BigInt::from(1_u8)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct AveragePairSuspensionFrameL196C51;
+
+impl rum_runtime::kernel_api::SuspensionFrame for AveragePairSuspensionFrameL196C51 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
     }
 }

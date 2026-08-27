@@ -19,10 +19,7 @@ impl Session {
         let parent_budget = self.iteration_product_budget.get();
         match evaluate(self) {
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| {
-                    session.iteration_product_budget.set(parent_budget);
-                    outcome
-                });
+                crate::resume_or_suspend!(insert self, WithIterationProductScopeSuspensionFrameL22C44 { parent_budget });
                 Err(EvalError::InputRequired { request })
             }
             outcome => {
@@ -150,3 +147,26 @@ const _: fn() = || {
     assert_traces::<SuspendedDoSpec>();
     assert_traces::<PersistentExprAccumulator>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct WithIterationProductScopeSuspensionFrameL22C44 {
+    pub(super) parent_budget: (usize, u8),
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for WithIterationProductScopeSuspensionFrameL22C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut parent_budget = self.parent_budget.clone();
+        let resumed = (|| {
+            session.iteration_product_budget.set(parent_budget);
+            outcome
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

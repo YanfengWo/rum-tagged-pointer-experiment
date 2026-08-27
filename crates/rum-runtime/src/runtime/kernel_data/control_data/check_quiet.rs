@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
 
 impl Session {
@@ -23,19 +24,16 @@ impl Session {
         let message_checkpoint = self.messages.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let primary_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
-            let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
-            let fallback = fallback.clone();
-            move |session, outcome| {
-                session.resume_check_after_primary(
-                    selectors.as_deref(),
-                    fallback,
-                    message_checkpoint,
-                    handled_error_checkpoint,
-                    outcome,
-                )
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            primary_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
+                    let fallback = fallback.clone();
+        EvalCheckSuspensionFrameL29C13 { selectors, fallback, message_checkpoint, handled_error_checkpoint }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -69,17 +67,15 @@ impl Session {
         let message_checkpoint = self.messages.len();
         let handled_error_checkpoint = self.handled_non_loader_eval_errors.len();
         let primary_result = self.evaluate(args[0].clone());
-        let result = self.suspend_with_result_frame_lazy(primary_result, || {
-            let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
-            move |session, outcome| {
-                session.resume_quiet_after_primary(
-                    selectors.as_deref(),
-                    message_checkpoint,
-                    handled_error_checkpoint,
-                    outcome,
-                )
-            }
-        });
+        let result = crate::resume_or_suspend!(
+            self,
+            primary_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
+        EvalQuietSuspensionFrameL74C13 { selectors, message_checkpoint, handled_error_checkpoint }
+        },
+        );
 
         match result {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -160,5 +156,71 @@ impl Session {
         }
 
         outcome
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalCheckSuspensionFrameL29C13 {
+    pub(super) selectors: std::option::Option<std::sync::Arc<[crate::runtime::MessageSelector]>>,
+    pub(super) fallback: rum_core::Expr,
+    pub(super) message_checkpoint: usize,
+    pub(super) handled_error_checkpoint: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalCheckSuspensionFrameL29C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut selectors = self.selectors.clone();
+        #[allow(unused_mut)]
+        let mut fallback = self.fallback.clone();
+        #[allow(unused_mut)]
+        let mut message_checkpoint = self.message_checkpoint.clone();
+        #[allow(unused_mut)]
+        let mut handled_error_checkpoint = self.handled_error_checkpoint.clone();
+        let resumed = (|| {
+            session.resume_check_after_primary(
+                selectors.as_deref(),
+                fallback,
+                message_checkpoint,
+                handled_error_checkpoint,
+                outcome,
+            )
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalQuietSuspensionFrameL74C13 {
+    pub(super) selectors: std::option::Option<std::sync::Arc<[crate::runtime::MessageSelector]>>,
+    pub(super) message_checkpoint: usize,
+    pub(super) handled_error_checkpoint: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalQuietSuspensionFrameL74C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut selectors = self.selectors.clone();
+        #[allow(unused_mut)]
+        let mut message_checkpoint = self.message_checkpoint.clone();
+        #[allow(unused_mut)]
+        let mut handled_error_checkpoint = self.handled_error_checkpoint.clone();
+        let resumed = (|| {
+            session.resume_quiet_after_primary(
+                selectors.as_deref(),
+                message_checkpoint,
+                handled_error_checkpoint,
+                outcome,
+            )
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

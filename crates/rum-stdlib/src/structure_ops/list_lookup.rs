@@ -173,25 +173,19 @@ fn resume_select_positions_from_index(
         let value = match session.evaluate(Expr::call(state.criterion.clone(), vec![item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let suspended = SuspendedSelectPositionsState {
-                            items: FrozenStructureSequence::freeze(state.items),
-                            criterion: state.criterion,
-                            limit: state.limit,
-                        };
-                        let positions = PersistentStructureSequence::freeze(state.positions);
-                        move |session, value| {
-                            resume_suspended_select_positions_with_value(
-                                session,
-                                suspended,
-                                state.index,
-                                positions,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let suspended = SuspendedSelectPositionsState {
+                                            items: FrozenStructureSequence::freeze(state.items),
+                                            criterion: state.criterion,
+                                            limit: state.limit,
+                                        };
+                                        let positions = PersistentStructureSequence::freeze(state.positions);
+                ResumeSelectPositionsFromIndexSuspensionFrameL185C25 { suspended, state__index: state.index, positions }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -222,15 +216,11 @@ fn resume_suspended_select_positions_from_index(
         let value = match session.evaluate(Expr::call(state.criterion.clone(), vec![item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_select_positions_with_value(
-                                session, state, index, positions, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedSelectPositionsFromIndexSuspensionFrameL228C25 { state, index, positions },
                 );
             }
             Err(error) => return Err(error),
@@ -313,3 +303,75 @@ const _: fn() = || {
     assert_traces::<SelectPositionsState>();
     assert_traces::<SuspendedSelectPositionsState>();
 };
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSelectPositionsFromIndexSuspensionFrameL185C25 {
+    pub(super) suspended: crate::structure_ops::list_lookup::SuspendedSelectPositionsState,
+    pub(super) state__index: usize,
+    pub(super) positions:
+        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSelectPositionsFromIndexSuspensionFrameL185C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended = self.suspended.clone();
+        #[allow(unused_mut)]
+        let mut state__index = self.state__index.clone();
+        #[allow(unused_mut)]
+        let mut positions = self.positions.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_select_positions_with_value(
+                    session,
+                    suspended,
+                    state__index,
+                    positions,
+                    value,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedSelectPositionsFromIndexSuspensionFrameL228C25 {
+    pub(super) state: crate::structure_ops::list_lookup::SuspendedSelectPositionsState,
+    pub(super) index: usize,
+    pub(super) positions:
+        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedSelectPositionsFromIndexSuspensionFrameL228C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut positions = self.positions.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_select_positions_with_value(
+                    session, state, index, positions, value,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

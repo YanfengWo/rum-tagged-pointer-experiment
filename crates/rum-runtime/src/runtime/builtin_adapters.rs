@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 
 pub(in crate::runtime) fn builtin_identity(
@@ -932,7 +935,12 @@ pub(in crate::runtime) fn builtin_evaluate(
     let args = args.as_ref();
     Ok(if args.len() == 1 {
         let evaluated_result = session.evaluate(args[0].clone());
-        session.suspend_with_frame_lazy(evaluated_result, || |_, value| Ok(value))?
+        crate::resume_or_suspend!(
+            session,
+            evaluated_result,
+            ok(value) => Ok(value),
+            suspend => BuiltinEvaluateSuspensionFrameL935C62,
+        )?
     } else {
         Expr::call(head.clone(), args.to_vec())
     })

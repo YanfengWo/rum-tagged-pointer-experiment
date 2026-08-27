@@ -1,45 +1,74 @@
 use std::collections::VecDeque;
+use std::mem::{size_of, size_of_val};
+use std::sync::Arc;
 
+use super::trace::{FrameRootTrace, FrameRootVisitor};
 use super::*;
+
+type DynSuspensionFrame = dyn SuspensionFrame;
 
 pub(in crate::runtime) struct SuspendedEvaluation {
     pub(in crate::runtime) active_stack: Vec<EvaluationStackEntry>,
-    pub(in crate::runtime) frames: VecDeque<Box<dyn SuspensionFrame + Send>>,
+    frames: VecDeque<Arc<DynSuspensionFrame>>,
 }
 
-pub(in crate::runtime) trait SuspensionFrame {
+/// A traceable, immutable continuation frame installed at an input boundary.
+#[doc(hidden)]
+pub trait SuspensionFrame: FrameRootTrace + Send + Sync + 'static {
     fn resume(
-        self: Box<Self>,
+        self: Arc<Self>,
         session: &mut Session,
         outcome: Result<Expr, EvalError>,
-    ) -> Result<Expr, EvalError>;
+    ) -> FrameAction;
+}
+
+/// A Session-free completion step run after its originating frame is dropped.
+#[doc(hidden)]
+pub trait PureFrameFinalizer: Send + 'static {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError>;
+}
+
+/// The closed transition protocol between a named frame and the driver.
+#[doc(hidden)]
+pub enum FrameAction {
+    Complete(Result<Expr, EvalError>),
+    Evaluate {
+        expr: Expr,
+        next_frame: Arc<DynSuspensionFrame>,
+    },
+    Finalize(Box<dyn PureFrameFinalizer>),
+}
+
+impl FrameAction {
+    #[inline]
+    pub fn complete(outcome: Result<Expr, EvalError>) -> Self {
+        Self::Complete(outcome)
+    }
+
+    #[inline]
+    pub fn evaluate<F>(expr: Expr, next_frame: F) -> Self
+    where
+        F: SuspensionFrame,
+    {
+        Self::Evaluate {
+            expr,
+            next_frame: Arc::new(next_frame),
+        }
+    }
+
+    #[inline]
+    pub fn finalize<F>(finalizer: F) -> Self
+    where
+        F: PureFrameFinalizer,
+    {
+        Self::Finalize(Box::new(finalizer))
+    }
 }
 
 pub trait ContinuationValue: Sized {
     fn into_continuation_expr(self) -> Expr;
 
     fn from_continuation_expr(expr: Expr) -> Self;
-}
-
-struct ClosureFrame<F> {
-    resume: Option<F>,
-}
-
-impl<F> SuspensionFrame for ClosureFrame<F>
-where
-    F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError> + Send + 'static,
-{
-    fn resume(
-        mut self: Box<Self>,
-        session: &mut Session,
-        outcome: Result<Expr, EvalError>,
-    ) -> Result<Expr, EvalError> {
-        let resume = self
-            .resume
-            .take()
-            .expect("suspension frames are resumed at most once");
-        resume(session, outcome)
-    }
 }
 
 impl SuspendedEvaluation {
@@ -49,139 +78,50 @@ impl SuspendedEvaluation {
             frames: VecDeque::new(),
         }
     }
+
+    fn push_back(&mut self, frame: Arc<DynSuspensionFrame>) {
+        self.frames.push_back(frame);
+    }
+
+    fn push_front(&mut self, frame: Arc<DynSuspensionFrame>) {
+        self.frames.push_front(frame);
+    }
+
+    fn front(&self) -> Option<Arc<DynSuspensionFrame>> {
+        self.frames.front().cloned()
+    }
+
+    fn pop_front(&mut self) -> Arc<DynSuspensionFrame> {
+        self.frames
+            .pop_front()
+            .expect("the resumed suspension frame should remain queued")
+    }
+
+    fn append(&mut self, suffix: &mut Self) {
+        self.frames.append(&mut suffix.frames);
+    }
+
+    pub(in crate::runtime) fn trace_frame_roots(&self, visitor: &mut dyn FrameRootVisitor) {
+        for frame in &self.frames {
+            frame.trace_roots(visitor);
+        }
+    }
+
+    pub(in crate::runtime) fn frame_storage_memory_proxy_bytes(&self) -> usize {
+        let queue_storage = self
+            .frames
+            .capacity()
+            .saturating_mul(size_of::<Arc<DynSuspensionFrame>>());
+        let allocations = self.frames.iter().fold(0usize, |total, frame| {
+            total
+                .saturating_add(2usize.saturating_mul(size_of::<usize>()))
+                .saturating_add(size_of_val(frame.as_ref()))
+        });
+        queue_storage.saturating_add(allocations)
+    }
 }
 
 impl Session {
-    /// Drives a potentially suspended evaluated value through a continuation.
-    pub fn drive_evaluated_value<T, U, F>(
-        &mut self,
-        result: Result<Expr, EvalError>,
-        cont: F,
-    ) -> Result<U, EvalError>
-    where
-        T: ContinuationValue + 'static,
-        U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, T) -> Result<U, EvalError> + Send + 'static,
-    {
-        match result {
-            Ok(value) => cont(self, T::from_continuation_expr(value)),
-            Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| match outcome {
-                    Ok(value) => {
-                        let resumed = cont(session, T::from_continuation_expr(value))?;
-                        Ok(resumed.into_continuation_expr())
-                    }
-                    Err(error) => Err(error),
-                });
-                Err(EvalError::InputRequired { request })
-            }
-            Err(error) => Err(error),
-        }
-    }
-
-    /// Drives a potentially suspended internal value through a continuation.
-    pub fn drive_internal_value<T, U, F>(
-        &mut self,
-        result: Result<T, EvalError>,
-        cont: F,
-    ) -> Result<U, EvalError>
-    where
-        T: ContinuationValue + 'static,
-        U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, T) -> Result<U, EvalError> + Send + 'static,
-    {
-        match result {
-            Ok(value) => cont(self, value),
-            Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| match outcome {
-                    Ok(value) => {
-                        let resumed = cont(session, T::from_continuation_expr(value))?;
-                        Ok(resumed.into_continuation_expr())
-                    }
-                    Err(error) => Err(error),
-                });
-                Err(EvalError::InputRequired { request })
-            }
-            Err(error) => Err(error),
-        }
-    }
-
-    /// Adds a suspension frame that resumes with the evaluated expression value.
-    pub fn suspend_with_frame<F>(
-        &mut self,
-        result: Result<Expr, EvalError>,
-        frame: F,
-    ) -> Result<Expr, EvalError>
-    where
-        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + Send + 'static,
-    {
-        self.suspend_with_result_frame(result, move |session, outcome| match outcome {
-            Ok(value) => frame(session, value),
-            Err(error) => Err(error),
-        })
-    }
-
-    #[inline]
-    pub fn suspend_with_frame_lazy<M, F>(
-        &mut self,
-        result: Result<Expr, EvalError>,
-        make_frame: M,
-    ) -> Result<Expr, EvalError>
-    where
-        M: FnOnce() -> F,
-        F: FnOnce(&mut Session, Expr) -> Result<Expr, EvalError> + Send + 'static,
-    {
-        self.suspend_with_result_frame_lazy(result, move || {
-            let frame = make_frame();
-            move |session, outcome| match outcome {
-                Ok(value) => frame(session, value),
-                Err(error) => Err(error),
-            }
-        })
-    }
-
-    pub(in crate::runtime) fn suspend_with_result_frame<F>(
-        &mut self,
-        result: Result<Expr, EvalError>,
-        frame: F,
-    ) -> Result<Expr, EvalError>
-    where
-        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError>
-            + Send
-            + 'static,
-    {
-        match result {
-            Ok(value) => Ok(value),
-            Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(frame);
-                Err(EvalError::InputRequired { request })
-            }
-            Err(error) => Err(error),
-        }
-    }
-
-    #[inline]
-    pub(in crate::runtime) fn suspend_with_result_frame_lazy<M, F>(
-        &mut self,
-        result: Result<Expr, EvalError>,
-        make_frame: M,
-    ) -> Result<Expr, EvalError>
-    where
-        M: FnOnce() -> F,
-        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError>
-            + Send
-            + 'static,
-    {
-        match result {
-            Ok(value) => Ok(value),
-            Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(make_frame());
-                Err(EvalError::InputRequired { request })
-            }
-            Err(error) => Err(error),
-        }
-    }
-
     pub(in crate::runtime) fn begin_input_suspension(&mut self, request: RuntimeInputRequest) {
         // The current InputString call and its immediate caller are both
         // resumed from saved suspension frames rather than by restarting
@@ -201,24 +141,29 @@ impl Session {
         self.pending_suspension = Some(SuspendedEvaluation::new(active_stack));
     }
 
-    pub(in crate::runtime) fn push_suspension_frame<F>(&mut self, frame: F)
+    /// Inserts a named, traceable frame into the fresh pending suspension.
+    #[doc(hidden)]
+    #[cold]
+    #[inline(never)]
+    pub fn insert_suspension_frame<F>(&mut self, frame: F)
     where
-        F: FnOnce(&mut Session, Result<Expr, EvalError>) -> Result<Expr, EvalError>
-            + Send
-            + 'static,
+        F: SuspensionFrame,
     {
         let suspension = self
             .pending_suspension
             .as_mut()
             .expect("input suspension should be initialized before frames are pushed");
-        suspension.frames.push_back(Box::new(ClosureFrame {
-            resume: Some(frame),
-        }));
+        suspension.push_back(Arc::new(frame));
+    }
+
+    pub(in crate::runtime) fn clear_pending_suspension_state(&mut self) {
+        self.pending_input_request = None;
+        self.pending_suspension = None;
     }
 
     pub(in crate::runtime) fn clear_suspension_state(&mut self) {
-        self.pending_input_request = None;
-        self.pending_suspension = None;
+        self.clear_pending_suspension_state();
+        self.resuming_suspension = None;
     }
 
     pub(in crate::runtime) fn resume_suspended_evaluation(
@@ -227,39 +172,32 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let stack_marker = 0_u8;
         self.native_stack_base = (&stack_marker as *const u8) as usize;
-        let mut suspension = self
-            .pending_suspension
-            .take()
-            .expect("resume requires a pending suspended evaluation");
-        let saved_stack = std::mem::replace(&mut self.evaluation_stack, suspension.active_stack);
+        debug_assert!(
+            self.resuming_suspension.is_none(),
+            "a Session resumes only one suspended evaluation at a time"
+        );
+        self.resuming_suspension = Some(
+            self.pending_suspension
+                .take()
+                .expect("resume requires a pending suspended evaluation"),
+        );
+        let active_stack = std::mem::take(
+            &mut self
+                .resuming_suspension
+                .as_mut()
+                .expect("resuming suspension was just installed")
+                .active_stack,
+        );
+        let saved_stack = std::mem::replace(&mut self.evaluation_stack, active_stack);
         let saved_depth =
             std::mem::replace(&mut self.evaluation_depth, self.evaluation_stack.len());
         self.native_stack_next_check_depth = self
             .evaluation_depth
             .saturating_add(NATIVE_STACK_DEPTH_POLL_STRIDE);
         self.pending_input_request = None;
-        let mut outcome = Ok(Expr::string(input.into()));
+        let outcome = Ok(Expr::string(input.into()));
 
-        let result = (|| -> Result<Expr, EvalError> {
-            while let Some(frame) = suspension.frames.pop_front() {
-                outcome = frame.resume(self, outcome);
-
-                if let Err(EvalError::InputRequired { request }) = &outcome {
-                    let mut nested = self
-                        .pending_suspension
-                        .take()
-                        .expect("nested input request should establish a fresh suspension");
-                    nested.frames.append(&mut suspension.frames);
-                    self.pending_input_request = Some(request.clone());
-                    self.pending_suspension = Some(nested);
-                    return Err(EvalError::InputRequired {
-                        request: request.clone(),
-                    });
-                }
-            }
-
-            outcome
-        })();
+        let result = self.drive_resuming_frames(outcome);
 
         self.evaluation_stack = saved_stack;
         self.evaluation_depth = saved_depth;
@@ -267,13 +205,92 @@ impl Session {
         match result {
             Ok(value) => {
                 self.pending_input_request = None;
+                self.resuming_suspension = None;
                 Ok(value)
             }
-            Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
+            Err(EvalError::InputRequired { request }) => {
+                debug_assert!(self.resuming_suspension.is_none());
+                Err(EvalError::InputRequired { request })
+            }
             Err(error) => {
                 self.clear_suspension_state();
                 Err(error)
             }
         }
     }
+
+    fn drive_resuming_frames(
+        &mut self,
+        mut outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let Some(dispatch_frame) = self
+                .resuming_suspension
+                .as_ref()
+                .and_then(SuspendedEvaluation::front)
+            else {
+                return outcome;
+            };
+
+            let action = dispatch_frame.resume(self, outcome);
+            let completed_frame = self
+                .resuming_suspension
+                .as_mut()
+                .expect("the active resumption remains Session-rooted")
+                .pop_front();
+            drop(completed_frame);
+
+            outcome = match action {
+                FrameAction::Complete(outcome) => outcome,
+                FrameAction::Evaluate { expr, next_frame } => {
+                    self.resuming_suspension
+                        .as_mut()
+                        .expect("the active resumption remains Session-rooted")
+                        .push_front(next_frame);
+                    self.evaluate(expr)
+                }
+                FrameAction::Finalize(finalizer) => finalizer.finish(),
+            };
+
+            if let Err(EvalError::InputRequired { request }) = &outcome {
+                let mut nested = self
+                    .pending_suspension
+                    .take()
+                    .expect("nested input request should establish a fresh suspension");
+                let mut suffix = self
+                    .resuming_suspension
+                    .take()
+                    .expect("the still-rooted suffix should remain in Session");
+                nested.append(&mut suffix);
+                self.pending_input_request = Some(request.clone());
+                self.pending_suspension = Some(nested);
+                return Err(EvalError::InputRequired {
+                    request: request.clone(),
+                });
+            }
+        }
+    }
+}
+
+/// Matches a potentially suspended result without constructing frame state on
+/// the ordinary path. The macro accepts data expressions only, never closures.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! resume_or_suspend {
+    (
+        $session:expr,
+        $result:expr,
+        ok($value:pat) => $continue:expr,
+        suspend => $frame:expr $(,)?
+    ) => {{
+        match $result {
+            Ok($value) => $continue,
+            Err($crate::kernel_api::EvalError::InputRequired { request }) => {
+                $session.insert_suspension_frame($frame);
+                Err($crate::kernel_api::EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }};
+    (insert $session:expr, $frame:expr $(,)?) => {{ $session.insert_suspension_frame($frame) }};
 }

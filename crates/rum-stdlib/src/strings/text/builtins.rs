@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::diacritics::remove_diacritics_value;
 use super::values::{
     character_code_expr, character_counts_expr, expr_as_nested_string_list,
@@ -457,12 +460,22 @@ pub(crate) fn eval_to_expression(
     let syntax = parse_expr(source)?;
     let lowered = session.lower_syntax_expr(&syntax)?;
     let evaluated = session.evaluate(lowered);
-    let value = session.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))?;
+    let value = rum_runtime::resume_or_suspend!(
+        session,
+        evaluated,
+        ok(value) => Ok(value),
+        suspend => EvalToExpressionSuspensionFrameL460C63,
+    )?;
 
     if let Some(wrapper) = args.get(2) {
         let wrapped = Expr::call(wrapper.clone(), vec![value]);
         let wrapped_result = session.evaluate(wrapped);
-        return session.suspend_with_frame_lazy(wrapped_result, || |_, value| Ok(value));
+        return rum_runtime::resume_or_suspend!(
+            session,
+            wrapped_result,
+            ok(value) => Ok(value),
+            suspend => EvalToExpressionSuspensionFrameL465C67,
+        );
     }
 
     Ok(value)

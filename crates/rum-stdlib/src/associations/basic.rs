@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -47,23 +50,16 @@ fn resume_association_key_evaluation(
         let key = match session.evaluate(entry.key.clone()) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let entries = FrozenAssociationSequence::freeze(entries);
-                        let evaluated_entries =
-                            PersistentAssociationSequence::freeze(evaluated_entries);
-                        move |session, key| {
-                            resume_suspended_association_key_evaluation_with_key(
-                                session,
-                                entries,
-                                evaluated_entries,
-                                index,
-                                entry,
-                                key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let entries = FrozenAssociationSequence::freeze(entries);
+                                        let evaluated_entries =
+                                            PersistentAssociationSequence::freeze(evaluated_entries);
+                ResumeAssociationKeyEvaluationSuspensionFrameL56C25 { entries, evaluated_entries, index, entry }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -91,20 +87,11 @@ fn resume_suspended_association_key_evaluation(
         let key = match session.evaluate(entry.key.clone()) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, key| {
-                            resume_suspended_association_key_evaluation_with_key(
-                                session,
-                                entries,
-                                evaluated_entries,
-                                index,
-                                entry,
-                                key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedAssociationKeyEvaluationSuspensionFrameL97C25 { entries, evaluated_entries, index, entry },
                 );
             }
             Err(error) => return Err(error),
@@ -173,12 +160,17 @@ pub(crate) fn eval_lookup(
     };
 
     let expr_result = session.evaluate(expr.clone());
-    let expr = session.suspend_with_frame_lazy(expr_result, || {
-        let head = head.clone();
-        let key = key.clone();
-        let call_args = args.clone();
-        move |session, expr| eval_lookup_with_evaluated_data(session, head, expr, key, call_args)
-    })?;
+    let expr = rum_runtime::resume_or_suspend!(
+        session,
+        expr_result,
+        ok(value) => Ok(value),
+        suspend => {
+    let head = head.clone();
+            let key = key.clone();
+            let call_args = args.clone();
+    EvalLookupSuspensionFrameL180C9 { head, key, call_args }
+    },
+    )?;
 
     eval_lookup_with_evaluated_data(session, head.clone(), expr, key.clone(), args.clone())
 }
@@ -191,12 +183,17 @@ fn eval_lookup_with_evaluated_data(
     call_args: SharedArgs,
 ) -> Result<Expr, EvalError> {
     let key_result = session.evaluate(key);
-    let key = session.suspend_with_frame_lazy(key_result, || {
-        let head = head.clone();
-        let expr = expr.clone();
-        let call_args = call_args.clone();
-        move |session, key| finish_eval_lookup(session, head, expr, key, call_args)
-    })?;
+    let key = rum_runtime::resume_or_suspend!(
+        session,
+        key_result,
+        ok(value) => Ok(value),
+        suspend => {
+    let head = head.clone();
+            let expr = expr.clone();
+            let call_args = call_args.clone();
+    EvalLookupWithEvaluatedDataSuspensionFrameL198C9 { head, expr, call_args }
+    },
+    )?;
 
     finish_eval_lookup(session, head, expr, key, call_args)
 }
@@ -226,19 +223,14 @@ fn finish_eval_lookup(
             match session.evaluate(default) {
                 Ok(default) => Some(default),
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            let lookup = FrozenAssociationValue::freeze(lookup);
-                            move |session, default| {
-                                finish_suspended_prepared_lookup(
-                                    session,
-                                    lookup,
-                                    Some(default),
-                                    wrapper,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let lookup = FrozenAssociationValue::freeze(lookup);
+                    FinishEvalLookupSuspensionFrameL233C29 { lookup, wrapper }
+                    },
                     );
                 }
                 Err(error) => return Err(error),
@@ -264,17 +256,14 @@ fn finish_prepared_lookup(
             match session.evaluate(wrapper) {
                 Ok(wrapper) => Some(wrapper),
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            let lookup = FrozenAssociationValue::freeze(lookup);
-                            move |_, wrapper| {
-                                Ok(lookup
-                                    .as_ref()
-                                    .outcome
-                                    .to_expr(default.as_ref(), Some(&wrapper)))
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let lookup = FrozenAssociationValue::freeze(lookup);
+                    FinishPreparedLookupSuspensionFrameL271C29 { lookup, default }
+                    },
                     );
                 }
                 Err(error) => return Err(error),
@@ -300,16 +289,11 @@ fn finish_suspended_prepared_lookup(
             match session.evaluate(wrapper) {
                 Ok(wrapper) => Some(wrapper),
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            move |_, wrapper| {
-                                Ok(lookup
-                                    .as_ref()
-                                    .outcome
-                                    .to_expr(default.as_ref(), Some(&wrapper)))
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => FinishSuspendedPreparedLookupSuspensionFrameL306C29 { lookup, default },
                     );
                 }
                 Err(error) => return Err(error),

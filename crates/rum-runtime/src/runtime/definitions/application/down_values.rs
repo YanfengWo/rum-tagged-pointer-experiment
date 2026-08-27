@@ -1,7 +1,7 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedDownValueApplication {
     candidate: Expr,
     normalized_candidate: Expr,
@@ -312,16 +312,22 @@ impl Session {
         match match_result {
             Ok(outcome) => self.finish_suspended_down_value_application(application, scan, outcome),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, value| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                    session
-                        .finish_suspended_down_value_application(application, scan, outcome)
-                        .map(|result| result.into_continuation_expr())
-                });
-                Err(EvalError::InputRequired { request })
+                self.suspend_down_value_application(application, scan, request)
             }
             Err(error) => Err(error),
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_down_value_application<Scan: DownValueScan>(
+        &mut self,
+        application: SuspendedDownValueApplication,
+        scan: Scan,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        crate::resume_or_suspend!(insert self, TryApplyDownValuesFromSymbolSuspensionFrameL315C44 { application, scan });
+        Err(EvalError::InputRequired { request })
     }
 
     fn finish_suspended_down_value_application<Scan: DownValueScan>(
@@ -392,3 +398,35 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedDownValueApplication>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct TryApplyDownValuesFromSymbolSuspensionFrameL315C44<Scan> {
+    pub(super) application:
+        crate::runtime::definitions::application::down_values::SuspendedDownValueApplication,
+    pub(super) scan: Scan,
+}
+
+impl<Scan> crate::runtime::suspension::SuspensionFrame
+    for TryApplyDownValuesFromSymbolSuspensionFrameL315C44<Scan>
+where
+    Scan: DownValueScan,
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut application = self.application.clone();
+        #[allow(unused_mut)]
+        let mut scan = self.scan.clone();
+        let value = outcome;
+        let resumed = (|| {
+            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+            session
+                .finish_suspended_down_value_application(application, scan, outcome)
+                .map(|result| result.into_continuation_expr())
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

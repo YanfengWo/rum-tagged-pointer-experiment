@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
@@ -325,16 +328,14 @@ fn resume_map_at_from_index(
         let mapped = match session.evaluate(Expr::call(state.operator.clone(), vec![part])) {
             Ok(mapped) => mapped,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedMapAtEvalState::freeze(state);
-                        move |session, mapped| {
-                            resume_suspended_map_at_with_value(
-                                session, state, index, current, mapped,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedMapAtEvalState::freeze(state);
+                ResumeMapAtFromIndexSuspensionFrameL332C25 { state, index, current }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -364,15 +365,11 @@ fn resume_suspended_map_at_from_index(
         let mapped = match session.evaluate(Expr::call(state.operator.clone(), vec![part])) {
             Ok(mapped) => mapped,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, mapped| {
-                            resume_suspended_map_at_with_value(
-                                session, state, index, current, mapped,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedMapAtFromIndexSuspensionFrameL370C25 { state, index, current },
                 );
             }
             Err(error) => return Err(error),
@@ -420,7 +417,12 @@ fn finish_subset_map_from_mapped(
     }
 
     let evaluated_result = session.evaluate(current);
-    session.suspend_with_frame_lazy(evaluated_result, || |_, value| Ok(value))
+    rum_runtime::resume_or_suspend!(
+        session,
+        evaluated_result,
+        ok(value) => Ok(value),
+        suspend => FinishSubsetMapFromMappedSuspensionFrameL423C58,
+    )
 }
 
 fn finish_suspended_subset_map_from_mapped(
@@ -445,7 +447,12 @@ fn finish_suspended_subset_map_from_mapped(
     }
 
     let evaluated_result = session.evaluate(current);
-    session.suspend_with_frame_lazy(evaluated_result, || |_, value| Ok(value))
+    rum_runtime::resume_or_suspend!(
+        session,
+        evaluated_result,
+        ok(value) => Ok(value),
+        suspend => FinishSuspendedSubsetMapFromMappedSuspensionFrameL448C58,
+    )
 }
 
 fn map_thread_inputs(
@@ -672,12 +679,15 @@ fn apply_subset_map(
     match mapped_result {
         Ok(mapped) => finish_subset_map_from_mapped(session, state, mapped),
         Err(EvalError::InputRequired { request }) => {
-            session.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                let suspended_state = SuspendedSubsetMapEvalState::freeze(state);
-                move |session, mapped| {
-                    finish_suspended_subset_map_from_mapped(session, suspended_state, mapped)
-                }
-            })
+            rum_runtime::resume_or_suspend!(
+                session,
+                Err(EvalError::InputRequired { request }),
+                ok(value) => Ok(value),
+                suspend => {
+            let suspended_state = SuspendedSubsetMapEvalState::freeze(state);
+            ApplySubsetMapSuspensionFrameL677C17 { suspended_state }
+            },
+            )
         }
         Err(error) => Err(error),
     }

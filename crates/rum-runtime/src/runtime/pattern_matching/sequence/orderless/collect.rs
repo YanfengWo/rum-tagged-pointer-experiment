@@ -12,6 +12,92 @@ struct OrderlessChoiceCollectionState {
     collected: Vec<SymbolExprMap>,
 }
 
+impl OrderlessChoiceCollectionState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationOrderlessChoiceCollectionState"),
+            vec![
+                self.flat_head.into_continuation_expr(),
+                matcher_arg_into_continuation_expr(self.pattern),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                Expr::call(
+                    system_expr("InternalContinuationOrderlessChoices"),
+                    self.choices
+                        .into_iter()
+                        .map(OrderlessCandidateChoice::into_continuation_expr)
+                        .collect(),
+                ),
+                binding_map_into_continuation_expr(self.bindings),
+                usize_into_continuation_expr(self.index),
+                self.collected.into_continuation_expr(),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected orderless-choice-collection continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationOrderlessChoiceCollectionState"),
+            "unexpected orderless-choice-collection continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let flat_head = Option::<Expr>::from_continuation_expr(
+            args.next()
+                .expect("orderless choice collection stores its flat head"),
+        );
+        let pattern = matcher_arg_from_continuation_expr(
+            args.next()
+                .expect("orderless choice collection stores its pattern"),
+        );
+        let rest_patterns = matcher_args_from_continuation_expr(
+            args.next()
+                .expect("orderless choice collection stores remaining patterns"),
+        );
+        let choices_expr = args
+            .next()
+            .expect("orderless choice collection stores candidate choices");
+        let Expr::Call {
+            head: choices_head,
+            args: choices,
+        } = choices_expr
+        else {
+            panic!("unexpected orderless choices continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&choices_head, "InternalContinuationOrderlessChoices"),
+            "unexpected orderless choices continuation tag: {choices_head:?}"
+        );
+        let choices = choices
+            .into_iter()
+            .map(OrderlessCandidateChoice::from_continuation_expr)
+            .collect();
+        let bindings = binding_map_from_continuation_expr(
+            args.next()
+                .expect("orderless choice collection stores its bindings"),
+        );
+        let index = usize_from_continuation_expr(
+            args.next()
+                .expect("orderless choice collection stores its cursor"),
+        );
+        let collected = Vec::<SymbolExprMap>::from_continuation_expr(
+            args.next()
+                .expect("orderless choice collection stores collected bindings"),
+        );
+        debug_assert!(args.next().is_none());
+        Self {
+            flat_head,
+            pattern,
+            rest_patterns,
+            choices,
+            bindings,
+            index,
+            collected,
+        }
+    }
+}
+
 #[derive(Clone, FrameRootTrace)]
 struct SuspendedOrderlessChoiceCollection {
     flat_head: Option<Expr>,
@@ -124,16 +210,8 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessChoiceCollection::freeze(state);
                 let rest_values = SharedArgs::new(choice.rest_values);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_choice_collection(
-                            state.into_owned(),
-                            rest_values.into_vec(),
-                            outcome,
-                        )
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectOrderlessChoiceMatchesSuspensionFrameL127C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessChoiceCollectionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -169,12 +247,8 @@ impl Session {
             Ok(matches) => self.finish_orderless_choice_rest_collection(state, matches),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessChoiceCollection::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let matches = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_choice_rest_collection(state.into_owned(), matches)
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishOrderlessChoiceCollectionSuspensionFrameL172C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessChoiceCollectionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -197,3 +271,153 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedOrderlessChoiceCollection>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct CollectOrderlessChoiceMatchesSuspensionFrameL127C44 {
+    pub(super) state: crate::runtime::pattern_matching::sequence::orderless::collect::SuspendedOrderlessChoiceCollection,
+    pub(super) rest_values: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for CollectOrderlessChoiceMatchesSuspensionFrameL127C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareOrderlessChoiceCollectionFinalizer {
+                    state: self.state.clone(),
+                    rest_values: Some(self.rest_values.clone()),
+                    result,
+                    kind: OrderlessChoiceCollectionContinuationKind::Pattern,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct FinishOrderlessChoiceCollectionSuspensionFrameL172C44 {
+    pub(super) state: crate::runtime::pattern_matching::sequence::orderless::collect::SuspendedOrderlessChoiceCollection,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for FinishOrderlessChoiceCollectionSuspensionFrameL172C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareOrderlessChoiceCollectionFinalizer {
+                    state: self.state.clone(),
+                    rest_values: None,
+                    result,
+                    kind: OrderlessChoiceCollectionContinuationKind::Rest,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+enum OrderlessChoiceCollectionContinuationKind {
+    Pattern,
+    Rest,
+}
+
+struct PrepareOrderlessChoiceCollectionFinalizer {
+    state: SuspendedOrderlessChoiceCollection,
+    rest_values: Option<SharedArgs>,
+    result: Expr,
+    kind: OrderlessChoiceCollectionContinuationKind,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareOrderlessChoiceCollectionFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        let tag = match self.kind {
+            OrderlessChoiceCollectionContinuationKind::Pattern => {
+                "InternalContinuationOrderlessChoiceCollectionPattern"
+            }
+            OrderlessChoiceCollectionContinuationKind::Rest => {
+                "InternalContinuationOrderlessChoiceCollectionRest"
+            }
+        };
+        Ok(Expr::call(
+            system_expr(tag),
+            vec![
+                self.state.into_owned().into_continuation_expr(),
+                self.rest_values
+                    .map(SharedArgs::into_vec)
+                    .into_continuation_expr(),
+                self.result,
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueOrderlessChoiceCollectionFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueOrderlessChoiceCollectionFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected orderless-choice-collection continuation payload")
+            };
+            let is_pattern = is_system_symbol_name(
+                &head,
+                "InternalContinuationOrderlessChoiceCollectionPattern",
+            );
+            assert!(
+                is_pattern
+                    || is_system_symbol_name(
+                        &head,
+                        "InternalContinuationOrderlessChoiceCollectionRest"
+                    ),
+                "unexpected orderless-choice-collection continuation tag: {head:?}"
+            );
+            let mut args = args.into_iter();
+            let state = OrderlessChoiceCollectionState::from_continuation_expr(
+                args.next()
+                    .expect("orderless choice collection stores its state"),
+            );
+            let rest_values = Option::<Vec<Expr>>::from_continuation_expr(
+                args.next()
+                    .expect("orderless choice collection stores remaining values"),
+            );
+            let result = args
+                .next()
+                .expect("orderless choice collection stores its result");
+            debug_assert!(args.next().is_none());
+            if is_pattern {
+                session
+                    .finish_orderless_choice_collection(
+                        state,
+                        rest_values.expect("pattern result stores remaining values"),
+                        CompiledMatchOutcome::from_continuation_expr(result),
+                    )
+                    .map(Vec::<SymbolExprMap>::into_continuation_expr)
+            } else {
+                debug_assert!(rest_values.is_none());
+                session
+                    .finish_orderless_choice_rest_collection(
+                        state,
+                        Vec::<SymbolExprMap>::from_continuation_expr(result),
+                    )
+                    .map(Vec::<SymbolExprMap>::into_continuation_expr)
+            }
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

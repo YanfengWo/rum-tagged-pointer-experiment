@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_match_q(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -21,10 +22,15 @@ impl Session {
         }
 
         let value_result = self.evaluate(args[0].clone());
-        let value = self.suspend_with_frame_lazy(value_result, || {
-            let pattern_expr = args[1].clone();
-            move |session, value| session.resume_match_q_after_value(pattern_expr, value)
-        })?;
+        let value = crate::resume_or_suspend!(
+            self,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let pattern_expr = args[1].clone();
+        EvalMatchQSuspensionFrameL26C13 { pattern_expr }
+        },
+        )?;
 
         self.resume_match_q_after_value(args[1].clone(), value)
     }
@@ -84,10 +90,15 @@ impl Session {
         value: Expr,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(pattern_expr);
-        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
-            let value = value.clone();
-            move |session, resolved| session.finish_match_q_with_pattern(resolved, value)
-        })?;
+        let pattern = crate::resume_or_suspend!(
+            self,
+            pattern_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let value = value.clone();
+        ResumeMatchQAfterValueSuspensionFrameL89C13 { value }
+        },
+        )?;
 
         self.finish_match_q_with_pattern(pattern, value)
     }
@@ -102,9 +113,14 @@ impl Session {
         }
 
         let match_result = self.match_expr_owned(pattern, value, SymbolExprMap::default());
-        self.drive_internal_value(match_result, move |_, outcome| {
-            Ok(system_expr(if outcome.matched { "True" } else { "False" }))
-        })
+        crate::resume_or_suspend!(
+            self,
+            match_result,
+            ok(outcome) => { (|| {
+                    Ok(system_expr(if outcome.matched { "True" } else { "False" }))
+                })() },
+            suspend => FinishMatchQWithPatternSuspensionFrameL105C49,
+        )
     }
     fn fast_match_q_resolved_pattern(&self, pattern: &Expr, value: &Expr) -> Option<bool> {
         if let Some(head_constraint) = pattern_blank_head(pattern) {
@@ -192,4 +208,69 @@ fn matches_pattern_head(head: &Expr) -> bool {
         || is_system_symbol_name(head, "RepeatedNull")
         || is_system_symbol_name(head, "Shortest")
         || is_system_symbol_name(head, "Verbatim")
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalMatchQSuspensionFrameL26C13 {
+    pub(super) pattern_expr: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalMatchQSuspensionFrameL26C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut pattern_expr = self.pattern_expr.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| session.resume_match_q_after_value(pattern_expr, value))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeMatchQAfterValueSuspensionFrameL89C13 {
+    pub(super) value: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for ResumeMatchQAfterValueSuspensionFrameL89C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut value = self.value.clone();
+        let resumed = match outcome {
+            Ok(resolved) => (|| session.finish_match_q_with_pattern(resolved, value))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct FinishMatchQWithPatternSuspensionFrameL105C49;
+
+impl crate::runtime::suspension::SuspensionFrame for FinishMatchQWithPatternSuspensionFrameL105C49 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let outcome = <CompiledMatchOutcome as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+            Ok(system_expr(if outcome.matched { "True" } else { "False" }))
+        })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

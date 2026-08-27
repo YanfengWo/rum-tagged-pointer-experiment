@@ -10,7 +10,7 @@ pub enum DefinitionKind {
     SubValue,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub enum RuleApplicationSource {
     UpValue,
     DownValue,

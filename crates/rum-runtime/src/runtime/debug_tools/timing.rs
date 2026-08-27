@@ -55,10 +55,15 @@ impl Session {
 
         let started = Instant::now();
         let evaluated = self.evaluate(expr.clone());
-        let value = self.suspend_with_frame_lazy(evaluated, || {
-            let symbol = symbol.to_string();
-            move |session, value| session.finish_timing_like(&symbol, started, value)
-        })?;
+        let value = crate::resume_or_suspend!(
+            self,
+            evaluated,
+            ok(value) => Ok(value),
+            suspend => {
+        let symbol = std::sync::Arc::new(symbol.to_string());
+        EvalTimingLikeSuspensionFrameL60C13 { symbol, started }
+        },
+        )?;
 
         self.finish_timing_like(symbol, started, value)
     }
@@ -94,18 +99,15 @@ impl Session {
 
         let started = Instant::now();
         let value_result = self.evaluate(state.expr.clone());
-        let value = self.suspend_with_frame_lazy(value_result, || {
-            let suspended_state = state.clone();
-            move |session, value| {
-                session.resume_repeated_timing_with_value(
-                    suspended_state,
-                    sample,
-                    best_elapsed,
-                    started,
-                    value,
-                )
-            }
-        })?;
+        let value = crate::resume_or_suspend!(
+            self,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let suspended_state = state.clone();
+        ResumeRepeatedTimingFromSampleSuspensionFrameL99C13 { suspended_state, sample, best_elapsed, started }
+        },
+        )?;
 
         self.resume_repeated_timing_with_value(state, sample, best_elapsed, started, value)
     }
@@ -150,3 +152,67 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<RepeatedTimingEvalState>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalTimingLikeSuspensionFrameL60C13 {
+    pub(super) symbol: std::sync::Arc<std::string::String>,
+    pub(super) started: std::time::Instant,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalTimingLikeSuspensionFrameL60C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut symbol = self.symbol.clone();
+        #[allow(unused_mut)]
+        let mut started = self.started.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| session.finish_timing_like(symbol.as_str(), started, value))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeRepeatedTimingFromSampleSuspensionFrameL99C13 {
+    pub(super) suspended_state: crate::runtime::debug_tools::timing::RepeatedTimingEvalState,
+    pub(super) sample: usize,
+    pub(super) best_elapsed: std::option::Option<std::time::Duration>,
+    pub(super) started: std::time::Instant,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeRepeatedTimingFromSampleSuspensionFrameL99C13
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended_state = self.suspended_state.clone();
+        #[allow(unused_mut)]
+        let mut sample = self.sample.clone();
+        #[allow(unused_mut)]
+        let mut best_elapsed = self.best_elapsed.clone();
+        #[allow(unused_mut)]
+        let mut started = self.started.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                session.resume_repeated_timing_with_value(
+                    suspended_state,
+                    sample,
+                    best_elapsed,
+                    started,
+                    value,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

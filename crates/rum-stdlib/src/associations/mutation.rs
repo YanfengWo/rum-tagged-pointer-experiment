@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 
@@ -182,12 +185,17 @@ pub(crate) fn eval_associate_to(
     }
 
     let target_result = session.evaluate(target_expr.clone());
-    let expr = session.suspend_with_frame_lazy(target_result, || {
-        let args = args.clone();
-        let target_expr = target_expr.clone();
-        let spec = spec.clone();
-        move |session, expr| finish_associate_to_value(session, args, target_expr, expr, spec)
-    })?;
+    let expr = rum_runtime::resume_or_suspend!(
+        session,
+        target_result,
+        ok(value) => Ok(value),
+        suspend => {
+    let args = args.clone();
+            let target_expr = target_expr.clone();
+            let spec = spec.clone();
+    EvalAssociateToSuspensionFrameL189C9 { args, target_expr, spec }
+    },
+    )?;
 
     finish_associate_to_value(
         session,
@@ -313,12 +321,17 @@ pub(crate) fn eval_key_drop_from(
     }
 
     let target_result = session.evaluate(target_expr.clone());
-    let expr = session.suspend_with_frame_lazy(target_result, || {
-        let args = args.clone();
-        let target_expr = target_expr.clone();
-        let key_spec = key_spec.clone();
-        move |session, expr| finish_key_drop_from_value(session, args, target_expr, expr, key_spec)
-    })?;
+    let expr = rum_runtime::resume_or_suspend!(
+        session,
+        target_result,
+        ok(value) => Ok(value),
+        suspend => {
+    let args = args.clone();
+            let target_expr = target_expr.clone();
+            let key_spec = key_spec.clone();
+    EvalKeyDropFromSuspensionFrameL320C9 { args, target_expr, key_spec }
+    },
+    )?;
 
     finish_key_drop_from_value(
         session,

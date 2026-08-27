@@ -1,7 +1,7 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 pub(in crate::runtime) enum RewriteRuleExprContinuation {
     NormalizeRules {
         original: Expr,
@@ -113,7 +113,7 @@ impl RewriteRuleInfoContinuation {
     }
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 pub(in crate::runtime) enum CompiledRewriteRuleContinuation {
     ReplaceAll { target: Expr, rules_input: Expr },
     ReplaceAllUnheld { target: Expr, rules_input: Expr },
@@ -147,16 +147,21 @@ impl Session {
 
         if should_evaluate_single_rule_candidate(&candidate) {
             let resolved_result = self.evaluate(candidate);
-            return self.drive_evaluated_value(resolved_result, move |session, resolved| {
-                if session
-                    .compile_rewrite_rule_for_matching(&resolved)
-                    .is_some()
-                {
-                    Ok(resolved)
-                } else {
-                    Ok(session.normalize_match_expr(&resolved))
-                }
-            });
+            return crate::resume_or_suspend!(
+                self,
+                resolved_result,
+                ok(resolved_expr) => { let session = self; let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
+                            if session
+                                .compile_rewrite_rule_for_matching(&resolved)
+                                .is_some()
+                            {
+                                Ok(resolved)
+                            } else {
+                                Ok(session.normalize_match_expr(&resolved))
+                            }
+                        })() },
+                suspend => ResolveCasesSpecExprForMatchingOwnedSuspensionFrameL150C64,
+            );
         }
 
         self.resolve_matcher_pattern_expr_owned(candidate)
@@ -177,9 +182,14 @@ impl Session {
         expr: Expr,
     ) -> Result<Option<Vec<Expr>>, EvalError> {
         let resolved_result = self.evaluate(expr);
-        self.drive_evaluated_value(resolved_result, |session, resolved| {
-            Ok(session.normalize_rewrite_rule_exprs_from_resolved(&resolved))
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(resolved_expr) => { let session = self; let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
+                    Ok(session.normalize_rewrite_rule_exprs_from_resolved(&resolved))
+                })() },
+            suspend => ResolveRewriteRuleExprsOwnedSuspensionFrameL180C53,
+        )
     }
 
     pub(in crate::runtime) fn drive_rewrite_rule_exprs_owned(
@@ -188,9 +198,14 @@ impl Session {
         continuation: RewriteRuleExprContinuation,
     ) -> Result<Expr, EvalError> {
         let resolved_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
-        self.drive_internal_value(resolved_rule_exprs_result, move |session, rule_exprs| {
-            continuation.resume(session, rule_exprs)
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_rule_exprs_result,
+            ok(rule_exprs) => { let session = self; (|| {
+                    continuation.resume(session, rule_exprs)
+                })() },
+            suspend => DriveRewriteRuleExprsOwnedSuspensionFrameL191C63 { continuation },
+        )
     }
 
     pub(in crate::runtime) fn drive_rewrite_rule_infos_owned(
@@ -199,9 +214,14 @@ impl Session {
         continuation: RewriteRuleInfoContinuation,
     ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
         let resolved_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
-        self.drive_internal_value(resolved_rule_exprs_result, move |session, rule_exprs| {
-            continuation.resume(session, rule_exprs)
-        })
+        crate::resume_or_suspend!(
+            self,
+            resolved_rule_exprs_result,
+            ok(rule_exprs) => { let session = self; (|| {
+                    continuation.resume(session, rule_exprs)
+                })() },
+            suspend => DriveRewriteRuleInfosOwnedSuspensionFrameL202C63,
+        )
     }
 
     pub(in crate::runtime) fn drive_rewrite_rules_owned(
@@ -214,14 +234,7 @@ impl Session {
                 continuation.resume(self, self.compile_rewrite_rules_for_matching(&resolved))
             }
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| match outcome {
-                    Ok(resolved) => {
-                        let rules = session.compile_rewrite_rules_for_matching(&resolved);
-                        let resumed = continuation.resume(session, rules)?;
-                        Ok(resumed.into_continuation_expr())
-                    }
-                    Err(error) => Err(error),
-                });
+                crate::resume_or_suspend!(insert self, DriveRewriteRulesOwnedSuspensionFrameL217C44 { continuation });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -308,5 +321,142 @@ fn should_evaluate_single_rule_candidate(expr: &Expr) -> bool {
             is_system_symbol_name(head, "Rule") || is_system_symbol_name(head, "RuleDelayed")
         }
         _ => false,
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResolveCasesSpecExprForMatchingOwnedSuspensionFrameL150C64;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResolveCasesSpecExprForMatchingOwnedSuspensionFrameL150C64
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+                if session
+                    .compile_rewrite_rule_for_matching(&resolved)
+                    .is_some()
+                {
+                    Ok(resolved)
+                } else {
+                    Ok(session.normalize_match_expr(&resolved))
+                }
+            })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResolveRewriteRuleExprsOwnedSuspensionFrameL180C53;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResolveRewriteRuleExprsOwnedSuspensionFrameL180C53
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<Option<Vec<rum_core::Expr>>, EvalError> {
+            Ok(session.normalize_rewrite_rule_exprs_from_resolved(&resolved))
+        })()
+                    .map(|value| <Option<Vec<rum_core::Expr>> as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct DriveRewriteRuleExprsOwnedSuspensionFrameL191C63 {
+    pub(super) continuation:
+        crate::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for DriveRewriteRuleExprsOwnedSuspensionFrameL191C63
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut continuation = self.continuation.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let rule_exprs = <Option<Vec<rum_core::Expr>> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+            continuation.resume(session, rule_exprs)
+        })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct DriveRewriteRuleInfosOwnedSuspensionFrameL202C63;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for DriveRewriteRuleInfosOwnedSuspensionFrameL202C63
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let rule_exprs = <Option<Vec<rum_core::Expr>> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<Option<Vec<crate::runtime::RewriteRuleInfo>>, EvalError> {
+            RewriteRuleInfoContinuation::InspectRewriteRules.resume(session, rule_exprs)
+        })()
+                    .map(|value| <Option<Vec<crate::runtime::RewriteRuleInfo>> as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct DriveRewriteRulesOwnedSuspensionFrameL217C44 {
+    pub(super) continuation: crate::runtime::definitions::definition_catalog::rewrite_rules::CompiledRewriteRuleContinuation,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for DriveRewriteRulesOwnedSuspensionFrameL217C44 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut continuation = self.continuation.clone();
+        let resumed = (|| match outcome {
+            Ok(resolved) => {
+                let rules = session.compile_rewrite_rules_for_matching(&resolved);
+                let resumed = continuation.resume(session, rules)?;
+                Ok(resumed.into_continuation_expr())
+            }
+            Err(error) => Err(error),
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
@@ -535,16 +538,14 @@ fn resume_set_same_test(
                     match eval_binary_predicate(session, &state.same_test, candidate, existing) {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
-                            return session.suspend_with_frame_lazy(
+                            return rum_runtime::resume_or_suspend!(
+                                session,
                                 Err(EvalError::InputRequired { request }),
-                                || {
-                                    let state = SuspendedSetSameTestState::freeze(state);
-                                    move |session, value| {
-                                        resume_suspended_set_same_test_with_value(
-                                            session, state, value,
-                                        )
-                                    }
-                                },
+                                ok(value) => Ok(value),
+                                suspend => {
+                            let state = SuspendedSetSameTestState::freeze(state);
+                            ResumeSetSameTestSuspensionFrameL542C37 { state }
+                            },
                             );
                         }
                         Err(error) => return Err(error),
@@ -574,14 +575,14 @@ fn resume_set_same_test(
                 {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
-                        return session.suspend_with_frame_lazy(
+                        return rum_runtime::resume_or_suspend!(
+                            session,
                             Err(EvalError::InputRequired { request }),
-                            || {
-                                let state = SuspendedSetSameTestState::freeze(state);
-                                move |session, value| {
-                                    resume_suspended_set_same_test_with_value(session, state, value)
-                                }
-                            },
+                            ok(value) => Ok(value),
+                            suspend => {
+                        let state = SuspendedSetSameTestState::freeze(state);
+                        ResumeSetSameTestSuspensionFrameL581C33 { state }
+                        },
                         );
                     }
                     Err(error) => return Err(error),
@@ -604,14 +605,14 @@ fn resume_set_same_test(
                 {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
-                        return session.suspend_with_frame_lazy(
+                        return rum_runtime::resume_or_suspend!(
+                            session,
                             Err(EvalError::InputRequired { request }),
-                            || {
-                                let state = SuspendedSetSameTestState::freeze(state);
-                                move |session, value| {
-                                    resume_suspended_set_same_test_with_value(session, state, value)
-                                }
-                            },
+                            ok(value) => Ok(value),
+                            suspend => {
+                        let state = SuspendedSetSameTestState::freeze(state);
+                        ResumeSetSameTestSuspensionFrameL611C33 { state }
+                        },
                         );
                     }
                     Err(error) => return Err(error),
@@ -713,14 +714,17 @@ fn resume_sort_by_from_index(
         let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, key| {
-                            resume_sort_by_with_key(
-                                session, expr_head, function, items, index, decorated, item, key,
-                            )
-                        }
+                    ok(value) => Ok(value),
+                    suspend => ResumeSortByFromIndexSuspensionFrameL719C25 {
+                        expr_head,
+                        function,
+                        items: FrozenStructureSequence::freeze(items),
+                        index,
+                        decorated: PersistentStructureSequence::freeze(decorated),
+                        item,
                     },
                 );
             }
@@ -732,18 +736,63 @@ fn resume_sort_by_from_index(
     }
 }
 
-fn resume_sort_by_with_key(
+fn resume_suspended_sort_by_from_index(
     session: &mut Session,
     expr_head: Expr,
     function: Expr,
-    items: Vec<Expr>,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    mut decorated: PersistentStructureSequence<SortByEntry>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            let mut sorted = decorated.to_vec();
+            sorted.sort_by(|lhs, rhs| {
+                compare_structural_order(&lhs.key, &rhs.key).then(lhs.index.cmp(&rhs.index))
+            });
+            return Ok(Expr::call(
+                expr_head,
+                sorted.into_iter().map(|entry| entry.item).collect(),
+            ));
+        };
+
+        let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => ResumeSortByFromIndexSuspensionFrameL719C25 {
+                        expr_head,
+                        function,
+                        items,
+                        index,
+                        decorated,
+                        item,
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        decorated = decorated.appended(SortByEntry { item, key, index });
+        index += 1;
+    }
+}
+
+fn resume_suspended_sort_by_with_key(
+    session: &mut Session,
+    expr_head: Expr,
+    function: Expr,
+    items: FrozenStructureSequence<Expr>,
     index: usize,
-    mut decorated: Vec<SortByEntry>,
+    decorated: PersistentStructureSequence<SortByEntry>,
     item: Expr,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    decorated.push(SortByEntry { item, key, index });
-    resume_sort_by_from_index(session, expr_head, function, items, index + 1, decorated)
+    let decorated = decorated.appended(SortByEntry { item, key, index });
+    resume_suspended_sort_by_from_index(session, expr_head, function, items, index + 1, decorated)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -770,15 +819,18 @@ fn resume_sort_by_ordering_from_index(
         let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, key| {
-                            resume_sort_by_ordering_with_key(
-                                session, expr_head, function, ordering, items, index, decorated,
-                                item, key,
-                            )
-                        }
+                    ok(value) => Ok(value),
+                    suspend => ResumeSortByOrderingFromIndexSuspensionFrameL776C25 {
+                        expr_head,
+                        function,
+                        ordering,
+                        items: FrozenStructureSequence::freeze(items),
+                        index,
+                        decorated: PersistentStructureSequence::freeze(decorated),
+                        item,
                     },
                 );
             }
@@ -791,19 +843,66 @@ fn resume_sort_by_ordering_from_index(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn resume_sort_by_ordering_with_key(
+fn resume_suspended_sort_by_ordering_from_index(
     session: &mut Session,
     expr_head: Expr,
     function: Expr,
     ordering: Expr,
-    items: Vec<Expr>,
+    items: FrozenStructureSequence<Expr>,
+    mut index: usize,
+    mut decorated: PersistentStructureSequence<SortByEntry>,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(item) = items.get(index).cloned() else {
+            return sort_with_comparator(
+                session,
+                decorated.to_vec(),
+                ordering,
+                ComparatorResultPolicy::ExactTrue,
+                SortByCompletion { expr_head },
+            );
+        };
+
+        let key = match session.evaluate(sort_by_key_expression(&function, &item)) {
+            Ok(key) => key,
+            Err(EvalError::InputRequired { request }) => {
+                return rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => ResumeSortByOrderingFromIndexSuspensionFrameL776C25 {
+                        expr_head,
+                        function,
+                        ordering,
+                        items,
+                        index,
+                        decorated,
+                        item,
+                    },
+                );
+            }
+            Err(error) => return Err(error),
+        };
+
+        decorated = decorated.appended(SortByEntry { item, key, index });
+        index += 1;
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resume_suspended_sort_by_ordering_with_key(
+    session: &mut Session,
+    expr_head: Expr,
+    function: Expr,
+    ordering: Expr,
+    items: FrozenStructureSequence<Expr>,
     index: usize,
-    mut decorated: Vec<SortByEntry>,
+    decorated: PersistentStructureSequence<SortByEntry>,
     item: Expr,
     key: Expr,
 ) -> Result<Expr, EvalError> {
-    decorated.push(SortByEntry { item, key, index });
-    resume_sort_by_ordering_from_index(
+    let decorated = decorated.appended(SortByEntry { item, key, index });
+    resume_suspended_sort_by_ordering_from_index(
         session,
         expr_head,
         function,

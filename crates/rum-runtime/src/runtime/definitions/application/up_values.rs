@@ -212,23 +212,49 @@ impl Session {
             match match_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    let state = SuspendedUpValueScan {
+                    return self.suspend_up_value_scan_from_owned(
                         candidate,
                         normalized_candidate,
-                        up_values: Arc::from(up_values),
+                        up_values,
                         index,
-                    };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_up_value_scan(state, outcome)
-                            .map(|result| result.into_continuation_expr())
-                    });
-                    return Err(EvalError::InputRequired { request });
+                        request,
+                    );
                 }
                 Err(error) => return Err(error),
             }
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_up_value_scan_from_owned(
+        &mut self,
+        candidate: Expr,
+        normalized_candidate: Expr,
+        up_values: Vec<(Symbol, UpValue)>,
+        index: usize,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        self.suspend_up_value_scan(
+            SuspendedUpValueScan {
+                candidate,
+                normalized_candidate,
+                up_values: Arc::from(up_values),
+                index,
+            },
+            request,
+        )
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_up_value_scan(
+        &mut self,
+        state: SuspendedUpValueScan,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        crate::resume_or_suspend!(insert self, TryApplyUpValuesFromListSuspensionFrameL221C48 { state });
+        Err(EvalError::InputRequired { request })
     }
 
     fn resume_suspended_up_value_scan(
@@ -360,13 +386,7 @@ impl Session {
                         break;
                     }
                     Err(EvalError::InputRequired { request }) => {
-                        self.push_suspension_frame(move |session, value| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                            session
-                                .resume_suspended_up_value_scan(state, outcome)
-                                .map(|result| result.into_continuation_expr())
-                        });
-                        return Err(EvalError::InputRequired { request });
+                        return self.suspend_up_value_scan(state, request);
                     }
                     Err(error) => return Err(error),
                 }
@@ -380,3 +400,29 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedUpValueScan>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct TryApplyUpValuesFromListSuspensionFrameL221C48 {
+    pub(super) state: crate::runtime::definitions::application::up_values::SuspendedUpValueScan,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for TryApplyUpValuesFromListSuspensionFrameL221C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let value = outcome;
+        let resumed = (|| {
+            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+            session
+                .resume_suspended_up_value_scan(state, outcome)
+                .map(|result| result.into_continuation_expr())
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

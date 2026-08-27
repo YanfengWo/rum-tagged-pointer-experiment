@@ -22,8 +22,14 @@ impl<T: FrameRootTrace> FrozenAssociationSequence<T> {
     }
 }
 
-#[derive(Clone, FrameRootTrace)]
+#[derive(FrameRootTrace)]
 pub(super) struct FrozenAssociationValue<T: FrameRootTrace>(Arc<T>);
+
+impl<T: FrameRootTrace> Clone for FrozenAssociationValue<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
 
 impl<T: FrameRootTrace> FrozenAssociationValue<T> {
     pub(super) fn freeze(value: T) -> Self {

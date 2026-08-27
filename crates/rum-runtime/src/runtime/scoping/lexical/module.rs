@@ -125,9 +125,12 @@ impl Session {
                     runtime_profile_body,
                     runtime_profile_outcome_for_expr_result(&result),
                 );
-                let outcome = self.suspend_with_result_frame_lazy(result, || {
-                    move |session, outcome| session.finish_module_scope(activation_depth, outcome)
-                });
+                let outcome = crate::resume_or_suspend!(
+                    self,
+                    result,
+                    ok(value) => Ok(value),
+                    suspend => ResumeModuleInitializersSuspensionFrameL129C21 { activation_depth },
+                );
 
                 let result = match outcome {
                     Err(EvalError::InputRequired { request }) => {
@@ -166,9 +169,7 @@ impl Session {
                             activation_depth,
                             index,
                         };
-                        self.push_suspension_frame(move |session, outcome| {
-                            session.resume_suspended_module_initializers(state, Some(outcome))
-                        });
+                        crate::resume_or_suspend!(insert self, ResumeModuleInitializersSuspensionFrameL169C52 { state });
                         let result = Err(EvalError::InputRequired { request });
                         record_profile_runtime_path_timing(
                             runtime_profile_resume,
@@ -226,10 +227,15 @@ impl Session {
                     runtime_profile_body,
                     runtime_profile_outcome_for_expr_result(&result),
                 );
-                let outcome = self.suspend_with_result_frame_lazy(result, || {
-                    let activation_depth = state.activation_depth;
-                    move |session, outcome| session.finish_module_scope(activation_depth, outcome)
-                });
+                let outcome = crate::resume_or_suspend!(
+                    self,
+                    result,
+                    ok(value) => Ok(value),
+                    suspend => {
+                let activation_depth = state.activation_depth;
+                ResumeSuspendedModuleInitializersSuspensionFrameL231C21 { activation_depth }
+                },
+                );
 
                 let result = match outcome {
                     Err(EvalError::InputRequired { request }) => {
@@ -262,9 +268,7 @@ impl Session {
                 );
                 match init_result {
                     Err(EvalError::InputRequired { request }) => {
-                        self.push_suspension_frame(move |session, outcome| {
-                            session.resume_suspended_module_initializers(state, Some(outcome))
-                        });
+                        crate::resume_or_suspend!(insert self, ResumeSuspendedModuleInitializersSuspensionFrameL265C52 { state });
                         let result = Err(EvalError::InputRequired { request });
                         record_profile_runtime_path_timing(
                             runtime_profile_resume,
@@ -387,3 +391,83 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedModuleInitializers>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeModuleInitializersSuspensionFrameL129C21 {
+    pub(super) activation_depth: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeModuleInitializersSuspensionFrameL129C21
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut activation_depth = self.activation_depth.clone();
+        let resumed = (|| session.finish_module_scope(activation_depth, outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeModuleInitializersSuspensionFrameL169C52 {
+    pub(super) state: crate::runtime::scoping::lexical::module::SuspendedModuleInitializers,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeModuleInitializersSuspensionFrameL169C52
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let resumed = (|| session.resume_suspended_module_initializers(state, Some(outcome)))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeSuspendedModuleInitializersSuspensionFrameL231C21 {
+    pub(super) activation_depth: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedModuleInitializersSuspensionFrameL231C21
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut activation_depth = self.activation_depth.clone();
+        let resumed = (|| session.finish_module_scope(activation_depth, outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeSuspendedModuleInitializersSuspensionFrameL265C52 {
+    pub(super) state: crate::runtime::scoping::lexical::module::SuspendedModuleInitializers,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedModuleInitializersSuspensionFrameL265C52
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let resumed = (|| session.resume_suspended_module_initializers(state, Some(outcome)))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

@@ -1,5 +1,7 @@
 use super::*;
 
+mod suspension_frames;
+
 fn session_with_test_first() -> Session {
     let mut session = session_with_test_control_builtins();
     crate::runtime::test_builtins::register_test_first_builtin(&mut session);
@@ -509,7 +511,7 @@ fn suspended_computation_keeps_candidate_live_until_resume_finishes() {
     let response = session
         .resume_eval_request_with_input("ready")
         .expect("the suspended candidate-holding call should resume");
-    drop(response);
+    assert_eq!(response.value.to_string(), "List[7, List[\"ready\"]]");
     session.collect_and_sweep_dead_gensyms(&[]);
 
     assert_candidate_definition_count(&session, &[candidate], 0);

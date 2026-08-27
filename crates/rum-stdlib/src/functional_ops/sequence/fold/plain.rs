@@ -44,15 +44,15 @@ fn resume_fold_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedFoldEvalState::freeze(state);
-                        let history = PersistentFunctionalSequence::freeze(history);
-                        move |session, value| {
-                            resume_suspended_fold_with_value(session, state, index, history, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedFoldEvalState::freeze(state);
+                                        let history = PersistentFunctionalSequence::freeze(history);
+                ResumeFoldFromIndexSuspensionFrameL52C25 { state, index, history }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -96,13 +96,11 @@ fn resume_suspended_fold_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_fold_with_value(session, state, index, history, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedFoldFromIndexSuspensionFrameL102C25 { state, index, history },
                 );
             }
             Err(error) => return Err(error),
@@ -196,3 +194,65 @@ const _: fn() = || {
     assert_traces::<FoldEvalState>();
     assert_traces::<SuspendedFoldEvalState>();
 };
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeFoldFromIndexSuspensionFrameL52C25 {
+    pub(super) state: crate::functional_ops::sequence::fold::plain::SuspendedFoldEvalState,
+    pub(super) index: usize,
+    pub(super) history:
+        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldFromIndexSuspensionFrameL52C25 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut history = self.history.clone();
+        let resumed = match outcome {
+            Ok(value) => {
+                (|| resume_suspended_fold_with_value(session, state, index, history, value))()
+            }
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedFoldFromIndexSuspensionFrameL102C25 {
+    pub(super) state: crate::functional_ops::sequence::fold::plain::SuspendedFoldEvalState,
+    pub(super) index: usize,
+    pub(super) history:
+        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedFoldFromIndexSuspensionFrameL102C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut history = self.history.clone();
+        let resumed = match outcome {
+            Ok(value) => {
+                (|| resume_suspended_fold_with_value(session, state, index, history, value))()
+            }
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

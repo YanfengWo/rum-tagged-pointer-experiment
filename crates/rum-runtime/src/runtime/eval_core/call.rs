@@ -49,13 +49,7 @@ impl Session {
         let evaluated_head = match evaluated_head_result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                let args_for_resume = args;
-                let result =
-                    self.suspend_with_frame_lazy(Err(EvalError::InputRequired { request }), || {
-                        move |session, value| {
-                            session.resume_call_after_head(SharedExpr::new(value), args_for_resume)
-                        }
-                    });
+                let result = self.suspend_evaluate_call(args, request);
                 record_profile_runtime_path_timing(
                     runtime_profile_total,
                     runtime_profile_outcome_for_expr_result(&result),
@@ -77,6 +71,17 @@ impl Session {
             runtime_profile_outcome_for_expr_result(&result),
         );
         result
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_evaluate_call(
+        &mut self,
+        args_for_resume: SharedArgs,
+        request: RuntimeInputRequest,
+    ) -> Result<Expr, EvalError> {
+        crate::resume_or_suspend!(insert self, EvaluateCallSuspensionFrameL55C25 { args_for_resume });
+        Err(EvalError::InputRequired { request })
     }
 
     pub(super) fn resume_call_after_head(
@@ -187,19 +192,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let unevaluated_restore = unevaluated_restore
                     .map(|restore| SuspendedUnevaluatedRestorePlan::freeze(*restore));
-                self.push_suspension_frame(move |session, outcome| {
-                    let outcome = outcome.map(Option::<Expr>::from_continuation_expr)?;
-                    match outcome {
-                        Some(result) => Ok(result),
-                        None => session.resume_suspended_call_with_dispatch_plan(
-                            evaluated_head,
-                            plan,
-                            state,
-                            stage_index + 1,
-                            unevaluated_restore,
-                        ),
-                    }
-                });
+                crate::resume_or_suspend!(insert self, ResumeCallWithDispatchPlanSuspensionFrameL190C44 { evaluated_head, plan: plan.into_suspended(), state, stage_index, unevaluated_restore });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -209,7 +202,7 @@ impl Session {
     fn resume_suspended_call_with_dispatch_plan(
         &mut self,
         evaluated_head: SharedExpr,
-        plan: CallDispatchPlan,
+        plan: SuspendedCallDispatchPlan,
         mut state: CallDispatchState,
         stage_index: usize,
         unevaluated_restore: Option<SuspendedUnevaluatedRestorePlan>,
@@ -288,22 +281,59 @@ impl Session {
                 unevaluated_restore,
             ),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| {
-                    let outcome = outcome.map(Option::<Expr>::from_continuation_expr)?;
-                    match outcome {
-                        Some(result) => Ok(result),
-                        None => session.resume_suspended_call_with_dispatch_plan(
-                            evaluated_head,
-                            plan,
-                            state,
-                            stage_index + 1,
-                            unevaluated_restore,
-                        ),
-                    }
-                });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44 { evaluated_head, plan, state, stage_index, unevaluated_restore });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
+        }
+    }
+
+    fn resume_suspended_call_dispatch_frame(
+        &mut self,
+        evaluated_head: SharedExpr,
+        plan: SuspendedCallDispatchPlan,
+        mut state: CallDispatchState,
+        stage_index: usize,
+        unevaluated_restore: Option<SuspendedUnevaluatedRestorePlan>,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let value = outcome?;
+        if plan.stage(stage_index) == CallDispatchStage::PrepareArguments {
+            match prepared_call_arguments_from_continuation_expr(value) {
+                Ok(prepared) => {
+                    debug_assert!(unevaluated_restore.is_none());
+                    state.evaluated_args = Some(self.normalize_call_args_shared(
+                        evaluated_head.as_ref(),
+                        prepared.evaluated_args,
+                        plan.attributes,
+                    ));
+                    let unevaluated_restore = prepared
+                        .unevaluated_restore
+                        .map(|restore| SuspendedUnevaluatedRestorePlan::freeze(*restore));
+                    return self.resume_suspended_call_with_dispatch_plan(
+                        evaluated_head,
+                        plan,
+                        state,
+                        stage_index + 1,
+                        unevaluated_restore,
+                    );
+                }
+                Err(value) => {
+                    return Ok(Option::<Expr>::from_continuation_expr(value)
+                        .expect("a completed prepare stage returns its call result"));
+                }
+            }
+        }
+
+        match Option::<Expr>::from_continuation_expr(value) {
+            Some(result) => Ok(result),
+            None => self.resume_suspended_call_with_dispatch_plan(
+                evaluated_head,
+                plan,
+                state,
+                stage_index + 1,
+                unevaluated_restore,
+            ),
         }
     }
 }
@@ -324,5 +354,108 @@ fn call_dispatch_stage_profile_name(stage: CallDispatchStage) -> &'static str {
         CallDispatchStage::SubValues => "call.stage.sub_values",
         CallDispatchStage::OrdinaryBuiltin => "call.stage.ordinary_builtin",
         CallDispatchStage::Function => "call.stage.function",
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvaluateCallSuspensionFrameL55C25 {
+    pub(super) args_for_resume: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvaluateCallSuspensionFrameL55C25 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut args_for_resume = self.args_for_resume.clone();
+        let resumed = match outcome {
+            Ok(value) => {
+                (|| session.resume_call_after_head(SharedExpr::new(value), args_for_resume))()
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeCallWithDispatchPlanSuspensionFrameL190C44 {
+    pub(super) evaluated_head: rum_core::SharedExpr,
+    pub(super) plan: crate::runtime::session::session_state::SuspendedCallDispatchPlan,
+    pub(super) state: crate::runtime::session::session_state::CallDispatchState,
+    pub(super) stage_index: usize,
+    pub(super) unevaluated_restore:
+        std::option::Option<crate::runtime::eval_core::call::SuspendedUnevaluatedRestorePlan>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeCallWithDispatchPlanSuspensionFrameL190C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut evaluated_head = self.evaluated_head.clone();
+        #[allow(unused_mut)]
+        let mut plan = self.plan.clone();
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut stage_index = self.stage_index.clone();
+        #[allow(unused_mut)]
+        let mut unevaluated_restore = self.unevaluated_restore.clone();
+        let resumed = session.resume_suspended_call_dispatch_frame(
+            evaluated_head,
+            plan,
+            state,
+            stage_index,
+            unevaluated_restore,
+            outcome,
+        );
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44 {
+    pub(super) evaluated_head: rum_core::SharedExpr,
+    pub(super) plan: crate::runtime::session::session_state::SuspendedCallDispatchPlan,
+    pub(super) state: crate::runtime::session::session_state::CallDispatchState,
+    pub(super) stage_index: usize,
+    pub(super) unevaluated_restore:
+        std::option::Option<crate::runtime::eval_core::call::SuspendedUnevaluatedRestorePlan>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut evaluated_head = self.evaluated_head.clone();
+        #[allow(unused_mut)]
+        let mut plan = self.plan.clone();
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut stage_index = self.stage_index.clone();
+        #[allow(unused_mut)]
+        let mut unevaluated_restore = self.unevaluated_restore.clone();
+        let resumed = session.resume_suspended_call_dispatch_frame(
+            evaluated_head,
+            plan,
+            state,
+            stage_index,
+            unevaluated_restore,
+            outcome,
+        );
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

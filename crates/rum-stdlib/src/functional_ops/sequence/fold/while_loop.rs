@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -50,17 +53,15 @@ fn resume_fold_while_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedFoldWhileEvalState::freeze(state);
-                        let history = PersistentFunctionalSequence::freeze(history);
-                        move |session, value| {
-                            resume_suspended_fold_while_with_step_value(
-                                session, state, index, history, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedFoldWhileEvalState::freeze(state);
+                                        let history = PersistentFunctionalSequence::freeze(history);
+                ResumeFoldWhileFromIndexSuspensionFrameL58C25 { state, index, history }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -75,17 +76,15 @@ fn resume_fold_while_from_index(
         let test_value = match session.evaluate(call) {
             Ok(test_value) => test_value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedFoldWhileEvalState::freeze(state);
-                        let history = PersistentFunctionalSequence::freeze(history);
-                        move |session, test_value| {
-                            resume_suspended_fold_while_with_test_value(
-                                session, state, next_index, value, history, test_value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedFoldWhileEvalState::freeze(state);
+                                        let history = PersistentFunctionalSequence::freeze(history);
+                ResumeFoldWhileFromIndexSuspensionFrameL83C25 { state, next_index, value, history }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -127,15 +126,11 @@ fn resume_suspended_fold_while_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_fold_while_with_step_value(
-                                session, state, index, history, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedFoldWhileFromIndexSuspensionFrameL133C25 { state, index, history },
                 );
             }
             Err(error) => return Err(error),
@@ -150,15 +145,11 @@ fn resume_suspended_fold_while_from_index(
         let test_value = match session.evaluate(call) {
             Ok(test_value) => test_value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, test_value| {
-                            resume_suspended_fold_while_with_test_value(
-                                session, state, next_index, value, history, test_value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedFoldWhileFromIndexSuspensionFrameL156C25 { state, next_index, value, history },
                 );
             }
             Err(error) => return Err(error),
@@ -192,15 +183,11 @@ fn resume_suspended_fold_while_with_step_value(
     let test_value = match session.evaluate(call) {
         Ok(test_value) => test_value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame_lazy(
+            return rum_runtime::resume_or_suspend!(
+                session,
                 Err(EvalError::InputRequired { request }),
-                || {
-                    move |session, test_value| {
-                        resume_suspended_fold_while_with_test_value(
-                            session, state, next_index, value, history, test_value,
-                        )
-                    }
-                },
+                ok(value) => Ok(value),
+                suspend => ResumeSuspendedFoldWhileWithStepValueSuspensionFrameL198C21 { state, next_index, value, history },
             );
         }
         Err(error) => return Err(error),
@@ -274,17 +261,15 @@ fn resume_fold_while_tail_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedFoldWhileEvalState::freeze(state);
-                        let history = PersistentFunctionalSequence::freeze(history);
-                        move |session, value| {
-                            resume_suspended_fold_while_tail_with_value(
-                                session, state, index, history, remaining, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedFoldWhileEvalState::freeze(state);
+                                        let history = PersistentFunctionalSequence::freeze(history);
+                ResumeFoldWhileTailFromIndexSuspensionFrameL282C25 { state, index, history, remaining }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -354,15 +339,11 @@ fn resume_suspended_fold_while_tail_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_fold_while_tail_with_value(
-                                session, state, index, history, remaining, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedFoldWhileTailFromIndexSuspensionFrameL360C25 { state, index, history, remaining },
                 );
             }
             Err(error) => return Err(error),

@@ -49,12 +49,28 @@ impl MergeSortItem for KeySortByEntry {
     }
 }
 
-#[derive(FrameRootTrace)]
 struct KeySortByOrderingState {
     function: Expr,
     ordering: Expr,
     remaining: std::vec::IntoIter<AssociationEntryForm>,
     decorated: Vec<KeySortByEntry>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedKeySortByState {
+    function: Expr,
+    entries: FrozenAssociationSequence<AssociationEntryForm>,
+    index: usize,
+    decorated: PersistentAssociationSequence<(AssociationEntryForm, Expr)>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+struct SuspendedKeySortByOrderingState {
+    function: Expr,
+    ordering: Expr,
+    remaining: FrozenAssociationSequence<AssociationEntryForm>,
+    index: usize,
+    decorated: PersistentAssociationSequence<KeySortByEntry>,
 }
 
 pub(crate) fn eval_key_sort_by(
@@ -144,14 +160,18 @@ fn resume_key_sort_by_from_index(
         {
             Ok(sort_key) => sort_key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, sort_key| {
-                            resume_key_sort_by_with_value(
-                                session, function, entries, index, decorated, entry, sort_key,
-                            )
-                        }
+                    ok(value) => Ok(value),
+                    suspend => ResumeKeySortByFromIndexSuspensionFrameL150C25 {
+                        state: SuspendedKeySortByState {
+                            function,
+                            entries: FrozenAssociationSequence::freeze(entries),
+                            index,
+                            decorated: PersistentAssociationSequence::freeze(decorated),
+                        },
+                        entry,
                     },
                 );
             }
@@ -163,17 +183,45 @@ fn resume_key_sort_by_from_index(
     }
 }
 
-fn resume_key_sort_by_with_value(
+fn resume_suspended_key_sort_by_with_value(
     session: &mut Session,
-    function: Expr,
-    entries: Vec<AssociationEntryForm>,
-    index: usize,
-    mut decorated: Vec<(AssociationEntryForm, Expr)>,
+    mut state: SuspendedKeySortByState,
     entry: AssociationEntryForm,
     sort_key: Expr,
 ) -> Result<Expr, EvalError> {
-    decorated.push((entry, sort_key));
-    resume_key_sort_by_from_index(session, function, entries, index + 1, decorated)
+    state.decorated = state.decorated.appended((entry, sort_key));
+    state.index += 1;
+    resume_suspended_key_sort_by_from_index(session, state)
+}
+
+fn resume_suspended_key_sort_by_from_index(
+    session: &mut Session,
+    mut state: SuspendedKeySortByState,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(entry) = state.entries.get(state.index).cloned() else {
+            let mut decorated = state.decorated.to_vec();
+            decorated.sort_by(|lhs, rhs| compare_expr_canonical(&lhs.1, &rhs.1));
+            return Ok(render_association_entry_forms_preserving_heads(
+                decorated.into_iter().map(|(entry, _)| entry).collect(),
+            ));
+        };
+        let sort_key =
+            match session.evaluate(Expr::call(state.function.clone(), vec![entry.key.clone()])) {
+                Ok(sort_key) => sort_key,
+                Err(EvalError::InputRequired { request }) => {
+                    return rum_runtime::resume_or_suspend!(
+                        session,
+                        Err(EvalError::InputRequired { request }),
+                        ok(value) => Ok(value),
+                        suspend => ResumeKeySortByFromIndexSuspensionFrameL150C25 { state, entry },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+        state.decorated = state.decorated.appended((entry, sort_key));
+        state.index += 1;
+    }
 }
 
 fn resume_key_sort_by_ordering(
@@ -195,13 +243,25 @@ fn resume_key_sort_by_ordering(
             match session.evaluate(Expr::call(state.function.clone(), vec![entry.key.clone()])) {
                 Ok(sort_key) => sort_key,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            move |session, sort_key| {
-                                state.decorated.push(KeySortByEntry { entry, sort_key });
-                                resume_key_sort_by_ordering(session, state)
-                            }
+                        ok(value) => Ok(value),
+                        suspend => ResumeKeySortByOrderingSuspensionFrameL201C29 {
+                            state: SuspendedKeySortByOrderingState {
+                                function: state.function,
+                                ordering: state.ordering,
+                                remaining: FrozenAssociationSequence::freeze(
+                                    std::iter::once(entry.clone())
+                                        .chain(state.remaining)
+                                        .collect(),
+                                ),
+                                index: 0,
+                                decorated: PersistentAssociationSequence::freeze(
+                                    state.decorated,
+                                ),
+                            },
+                            entry,
                         },
                     );
                 }
@@ -209,6 +269,38 @@ fn resume_key_sort_by_ordering(
             };
 
         state.decorated.push(KeySortByEntry { entry, sort_key });
+    }
+}
+
+fn resume_suspended_key_sort_by_ordering(
+    session: &mut Session,
+    mut state: SuspendedKeySortByOrderingState,
+) -> Result<Expr, EvalError> {
+    loop {
+        let Some(entry) = state.remaining.get(state.index).cloned() else {
+            return sort_with_comparator(
+                session,
+                state.decorated.to_vec(),
+                state.ordering,
+                ComparatorResultPolicy::Custom(key_sort_ordering_precedes),
+                KeySortByCompletion,
+            );
+        };
+        let sort_key =
+            match session.evaluate(Expr::call(state.function.clone(), vec![entry.key.clone()])) {
+                Ok(sort_key) => sort_key,
+                Err(EvalError::InputRequired { request }) => {
+                    return rum_runtime::resume_or_suspend!(
+                        session,
+                        Err(EvalError::InputRequired { request }),
+                        ok(value) => Ok(value),
+                        suspend => ResumeKeySortByOrderingSuspensionFrameL201C29 { state, entry },
+                    );
+                }
+                Err(error) => return Err(error),
+            };
+        state.decorated = state.decorated.appended(KeySortByEntry { entry, sort_key });
+        state.index += 1;
     }
 }
 
@@ -238,6 +330,61 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<KeySortByCompletion>();
     assert_traces::<KeySortByEntry>();
-    assert_traces::<KeySortByOrderingState>();
+    assert_traces::<SuspendedKeySortByOrderingState>();
+    assert_traces::<SuspendedKeySortByState>();
     assert_traces::<KeySortCompletion>();
 };
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeKeySortByFromIndexSuspensionFrameL150C25 {
+    pub(super) state: crate::associations::resumable::key_sort::SuspendedKeySortByState,
+    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByFromIndexSuspensionFrameL150C25 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut entry = self.entry.clone();
+        let resumed = match outcome {
+            Ok(sort_key) => {
+                (|| resume_suspended_key_sort_by_with_value(session, state, entry, sort_key))()
+            }
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeKeySortByOrderingSuspensionFrameL201C29 {
+    pub(super) state: crate::associations::resumable::key_sort::SuspendedKeySortByOrderingState,
+    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByOrderingSuspensionFrameL201C29 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut entry = self.entry.clone();
+        let resumed = match outcome {
+            Ok(sort_key) => (|| {
+                state.decorated = state.decorated.appended(KeySortByEntry { entry, sort_key });
+                state.index += 1;
+                resume_suspended_key_sort_by_ordering(session, state)
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashSet;
@@ -11,7 +14,7 @@ struct OrderedQComparatorState {
     index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedOrderedQComparatorState {
     ordering: Expr,
     items: FrozenPredicateSequence<Expr>,
@@ -26,7 +29,7 @@ struct LexicographicListComparatorState {
     index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedLexicographicListComparatorState {
     ordering: Expr,
     lhs: FrozenPredicateSequence<Expr>,
@@ -34,7 +37,7 @@ struct SuspendedLexicographicListComparatorState {
     index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct LexicographicPairComparatorState {
     ordering: Expr,
     lhs: Expr,
@@ -138,18 +141,18 @@ fn resume_ordered_q_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedOrderedQComparatorState {
-                            ordering: state.ordering,
-                            items: FrozenPredicateSequence::freeze(state.items),
-                            index: state.index,
-                        };
-                        move |session, value| {
-                            resume_suspended_ordered_q_comparator_with_value(session, state, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedOrderedQComparatorState {
+                                            ordering: state.ordering,
+                                            items: FrozenPredicateSequence::freeze(state.items),
+                                            index: state.index,
+                                        };
+                ResumeOrderedQComparatorSuspensionFrameL149C25 { state }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -180,13 +183,11 @@ fn resume_suspended_ordered_q_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_ordered_q_comparator_with_value(session, state, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedOrderedQComparatorSuspensionFrameL186C25 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -271,21 +272,19 @@ fn resume_lexicographic_list_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedLexicographicListComparatorState {
-                            ordering: state.ordering,
-                            lhs: FrozenPredicateSequence::freeze(state.lhs),
-                            rhs: FrozenPredicateSequence::freeze(state.rhs),
-                            index: state.index,
-                        };
-                        move |session, value| {
-                            resume_suspended_lexicographic_list_comparator_with_forward_value(
-                                session, state, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedLexicographicListComparatorState {
+                                            ordering: state.ordering,
+                                            lhs: FrozenPredicateSequence::freeze(state.lhs),
+                                            rhs: FrozenPredicateSequence::freeze(state.rhs),
+                                            index: state.index,
+                                        };
+                ResumeLexicographicListComparatorSuspensionFrameL283C25 { state }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -303,21 +302,19 @@ fn resume_lexicographic_list_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedLexicographicListComparatorState {
-                            ordering: state.ordering,
-                            lhs: FrozenPredicateSequence::freeze(state.lhs),
-                            rhs: FrozenPredicateSequence::freeze(state.rhs),
-                            index: state.index,
-                        };
-                        move |session, value| {
-                            resume_suspended_lexicographic_list_comparator_with_reverse_value(
-                                session, state, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedLexicographicListComparatorState {
+                                            ordering: state.ordering,
+                                            lhs: FrozenPredicateSequence::freeze(state.lhs),
+                                            rhs: FrozenPredicateSequence::freeze(state.rhs),
+                                            index: state.index,
+                                        };
+                ResumeLexicographicListComparatorSuspensionFrameL315C25 { state }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -345,15 +342,11 @@ fn resume_suspended_lexicographic_list_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_lexicographic_list_comparator_with_forward_value(
-                                session, state, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedLexicographicListComparatorSuspensionFrameL351C25 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -369,15 +362,11 @@ fn resume_suspended_lexicographic_list_comparator(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_lexicographic_list_comparator_with_reverse_value(
-                                session, state, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedLexicographicListComparatorSuspensionFrameL375C25 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -406,15 +395,11 @@ fn resume_suspended_lexicographic_list_comparator_with_forward_value(
     ) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame_lazy(
+            return rum_runtime::resume_or_suspend!(
+                session,
                 Err(EvalError::InputRequired { request }),
-                || {
-                    move |session, value| {
-                        resume_suspended_lexicographic_list_comparator_with_reverse_value(
-                            session, state, value,
-                        )
-                    }
-                },
+                ok(value) => Ok(value),
+                suspend => ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrameL412C21 { state },
             );
         }
         Err(error) => return Err(error),
@@ -441,15 +426,11 @@ fn resume_lexicographic_pair_comparator(
     let value = match eval_binary_predicate(session, &state.ordering, &state.lhs, &state.rhs) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame_lazy(
+            return rum_runtime::resume_or_suspend!(
+                session,
                 Err(EvalError::InputRequired { request }),
-                || {
-                    move |session, value| {
-                        resume_lexicographic_pair_comparator_with_forward_value(
-                            session, state, value,
-                        )
-                    }
-                },
+                ok(value) => Ok(value),
+                suspend => ResumeLexicographicPairComparatorSuspensionFrameL447C21 { state },
             );
         }
         Err(error) => return Err(error),
@@ -470,15 +451,11 @@ fn resume_lexicographic_pair_comparator_with_forward_value(
     let value = match eval_binary_predicate(session, &state.ordering, &state.rhs, &state.lhs) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame_lazy(
+            return rum_runtime::resume_or_suspend!(
+                session,
                 Err(EvalError::InputRequired { request }),
-                || {
-                    move |session, value| {
-                        resume_lexicographic_pair_comparator_with_reverse_value(
-                            session, state, value,
-                        )
-                    }
-                },
+                ok(value) => Ok(value),
+                suspend => ResumeLexicographicPairComparatorWithForwardValueSuspensionFrameL476C21 { state },
             );
         }
         Err(error) => return Err(error),

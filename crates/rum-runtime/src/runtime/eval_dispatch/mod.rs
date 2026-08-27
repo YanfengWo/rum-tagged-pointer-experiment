@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(super) fn build_call_dispatch_plan(&mut self, head: &Expr) -> CallDispatchPlan {
@@ -69,14 +70,17 @@ impl Session {
         plan
     }
 
-    pub(super) fn run_call_dispatch_stage(
+    pub(super) fn run_call_dispatch_stage<S>(
         &mut self,
         stage: CallDispatchStage,
         head: &Expr,
         attributes: AttributeSet,
-        builtin_spec: Option<BuiltinSpec>,
+        builtin_spec: Option<S>,
         state: &mut CallDispatchState,
-    ) -> Result<Option<Expr>, EvalError> {
+    ) -> Result<Option<Expr>, EvalError>
+    where
+        S: CallBuiltinSpec,
+    {
         match stage {
             CallDispatchStage::SpecialForm => {
                 self.try_dispatch_builtin_call(builtin_spec, head, &state.raw_args)
@@ -94,8 +98,13 @@ impl Session {
                     ThreadingDispatch::NotApplicable => Ok(None),
                     ThreadingDispatch::Threaded(threaded) => {
                         let threaded_result = self.evaluate(threaded);
-                        self.suspend_with_frame_lazy(threaded_result, || |_, value| Ok(value))
-                            .map(Some)
+                        match threaded_result {
+                            Ok(value) => Ok(Some(value)),
+                            Err(EvalError::InputRequired { request }) => {
+                                self.suspend_threaded_call_dispatch(request)
+                            }
+                            Err(error) => Err(error),
+                        }
                     }
                     ThreadingDispatch::Mismatch => Ok(Some(Expr::call(
                         head.clone(),
@@ -119,23 +128,35 @@ impl Session {
         }
     }
 
-    pub(super) fn try_dispatch_builtin_call(
+    #[cold]
+    #[inline(never)]
+    fn suspend_threaded_call_dispatch(
         &mut self,
-        builtin_spec: Option<BuiltinSpec>,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        crate::resume_or_suspend!(insert self, RunCallDispatchStageSuspensionFrameL97C74);
+        Err(EvalError::InputRequired { request })
+    }
+
+    pub(super) fn try_dispatch_builtin_call<S>(
+        &mut self,
+        builtin_spec: Option<S>,
         head: &Expr,
         args: &SharedArgs,
-    ) -> Result<Option<Expr>, EvalError> {
+    ) -> Result<Option<Expr>, EvalError>
+    where
+        S: CallBuiltinSpec,
+    {
         let Some(spec) = builtin_spec else {
             return Ok(None);
         };
-        let Some(handler) = spec.handler else {
+        let Some(handler) = spec.handler() else {
             return Ok(None);
         };
+        let capability = spec.capability();
 
-        if !self.capability_policy.is_unrestricted()
-            && !self.capability_policy.allows(spec.capability)
-        {
-            if self.value_q_refuses_capability(spec.capability) {
+        if !self.capability_policy.is_unrestricted() && !self.capability_policy.allows(capability) {
+            if self.value_q_refuses_capability(capability) {
                 // `ValueQ` consumes every non-input error. Cancellation is a
                 // private terminal signal here and never reaches the host.
                 return Err(EvalError::Cancelled);
@@ -154,10 +175,10 @@ impl Session {
         result.map(Some)
     }
 
-    fn sandbox_denied_builtin(&mut self, head: &Expr, spec: BuiltinSpec) -> Expr {
+    fn sandbox_denied_builtin<S: CallBuiltinSpec>(&mut self, head: &Expr, spec: S) -> Expr {
         let name = expr_as_symbol(head)
             .map(|symbol| symbol.name().to_string())
-            .unwrap_or_else(|| spec.name.to_string());
+            .unwrap_or_else(|| spec.name().to_string());
         self.push_message(
             "General",
             "sandbox",
@@ -173,5 +194,56 @@ impl Session {
         args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         handler(self, head, args)
+    }
+}
+
+pub(super) trait CallBuiltinSpec: Copy {
+    fn name(self) -> &'static str;
+    fn handler(self) -> Option<BuiltinFn>;
+    fn capability(self) -> Capability;
+}
+
+impl CallBuiltinSpec for BuiltinSpec {
+    fn name(self) -> &'static str {
+        self.name
+    }
+
+    fn handler(self) -> Option<BuiltinFn> {
+        self.handler
+    }
+
+    fn capability(self) -> Capability {
+        self.capability
+    }
+}
+
+impl CallBuiltinSpec for SuspendedBuiltinSpec {
+    fn name(self) -> &'static str {
+        self.name
+    }
+
+    fn handler(self) -> Option<BuiltinFn> {
+        self.handler
+    }
+
+    fn capability(self) -> Capability {
+        self.capability.into_capability()
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct RunCallDispatchStageSuspensionFrameL97C74;
+
+impl crate::runtime::suspension::SuspensionFrame for RunCallDispatchStageSuspensionFrameL97C74 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

@@ -21,7 +21,7 @@ pub(in crate::runtime) struct ContextFrame {
     pub(in crate::runtime) opened_context: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum CallDispatchStage {
     SpecialForm,
     PrepareArguments,
@@ -79,9 +79,95 @@ impl CallDispatchPlan {
         self.stages[index]
     }
 
+    pub(in crate::runtime) fn into_suspended(self) -> SuspendedCallDispatchPlan {
+        SuspendedCallDispatchPlan {
+            attributes: self.attributes,
+            builtin_spec: self.builtin_spec.map(SuspendedBuiltinSpec::from),
+            stages: self.stages,
+            stage_count: self.stage_count,
+        }
+    }
+
     #[cfg(test)]
     pub(in crate::runtime) fn stages(&self) -> &[CallDispatchStage] {
         &self.stages[..self.stage_count]
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
+pub(in crate::runtime) enum SuspendedCapability {
+    Pure,
+    FileRead,
+    FileWrite,
+    Clock,
+    Random,
+    Diagnostic,
+    Process,
+    Interactive,
+}
+
+impl From<Capability> for SuspendedCapability {
+    fn from(capability: Capability) -> Self {
+        match capability {
+            Capability::Pure => Self::Pure,
+            Capability::FileRead => Self::FileRead,
+            Capability::FileWrite => Self::FileWrite,
+            Capability::Clock => Self::Clock,
+            Capability::Random => Self::Random,
+            Capability::Diagnostic => Self::Diagnostic,
+            Capability::Process => Self::Process,
+            Capability::Interactive => Self::Interactive,
+        }
+    }
+}
+
+impl SuspendedCapability {
+    pub(in crate::runtime) fn into_capability(self) -> Capability {
+        match self {
+            Self::Pure => Capability::Pure,
+            Self::FileRead => Capability::FileRead,
+            Self::FileWrite => Capability::FileWrite,
+            Self::Clock => Capability::Clock,
+            Self::Random => Capability::Random,
+            Self::Diagnostic => Capability::Diagnostic,
+            Self::Process => Capability::Process,
+            Self::Interactive => Capability::Interactive,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
+pub(in crate::runtime) struct SuspendedBuiltinSpec {
+    pub(in crate::runtime) name: &'static str,
+    pub(in crate::runtime) handler: Option<BuiltinFn>,
+    pub(in crate::runtime) capability: SuspendedCapability,
+}
+
+impl From<BuiltinSpec> for SuspendedBuiltinSpec {
+    fn from(spec: BuiltinSpec) -> Self {
+        Self {
+            name: spec.name,
+            handler: spec.handler,
+            capability: spec.capability.into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
+pub(in crate::runtime) struct SuspendedCallDispatchPlan {
+    pub(in crate::runtime) attributes: AttributeSet,
+    pub(in crate::runtime) builtin_spec: Option<SuspendedBuiltinSpec>,
+    stages: [CallDispatchStage; MAX_CALL_DISPATCH_STAGES],
+    stage_count: usize,
+}
+
+impl SuspendedCallDispatchPlan {
+    pub(in crate::runtime) fn len(&self) -> usize {
+        self.stage_count
+    }
+
+    pub(in crate::runtime) fn stage(&self, index: usize) -> CallDispatchStage {
+        self.stages[index]
     }
 }
 
@@ -325,7 +411,7 @@ pub(in crate::runtime) enum MessageCatalogQuery {
     Key(MessageNameKey),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum AttributeUpdate {
     Insert,
     Remove,
@@ -508,6 +594,7 @@ impl Session {
             pending_input_request: None,
             pending_eval_request: None,
             pending_suspension: None,
+            resuming_suspension: None,
             interrupt_flag: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             eval_timeout: None,
             eval_deadline: None,

@@ -7,6 +7,41 @@ pub(super) struct OrderlessCandidateChoice {
     pub(super) rest_values: Vec<Expr>,
 }
 
+impl OrderlessCandidateChoice {
+    pub(super) fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationOrderlessCandidateChoice"),
+            vec![
+                self.selected_values.into_continuation_expr(),
+                self.rest_values.into_continuation_expr(),
+            ],
+        )
+    }
+
+    pub(super) fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected orderless-candidate continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationOrderlessCandidateChoice"),
+            "unexpected orderless-candidate continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let selected_values = Vec::<Expr>::from_continuation_expr(
+            args.next()
+                .expect("orderless candidate stores selected values"),
+        );
+        let rest_values = Vec::<Expr>::from_continuation_expr(
+            args.next().expect("orderless candidate stores rest values"),
+        );
+        debug_assert!(args.next().is_none());
+        Self {
+            selected_values,
+            rest_values,
+        }
+    }
+}
+
 pub(super) fn orderless_candidate_choices(
     pattern: &MatcherArg,
     rest_patterns: &[MatcherArg],

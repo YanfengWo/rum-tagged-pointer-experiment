@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -284,17 +287,15 @@ pub(super) fn resume_tensor_callback_from_index(
         let value = match session.evaluate(Expr::call(state.operator.clone(), vec![operator_arg])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedTensorCallbackEvalState::freeze(state);
-                        let outputs = PersistentFunctionalSequence::freeze(outputs);
-                        move |session, value| {
-                            resume_suspended_tensor_callback_with_value(
-                                session, state, index, outputs, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedTensorCallbackEvalState::freeze(state);
+                                        let outputs = PersistentFunctionalSequence::freeze(outputs);
+                ResumeTensorCallbackFromIndexSuspensionFrameL292C25 { state, index, outputs }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -323,15 +324,11 @@ fn resume_suspended_tensor_callback_from_index(
         let value = match session.evaluate(Expr::call(state.operator.clone(), vec![operator_arg])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_tensor_callback_with_value(
-                                session, state, index, outputs, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedTensorCallbackFromIndexSuspensionFrameL329C25 { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -416,25 +413,17 @@ fn resume_inner_from_indices(
             )) {
                 Ok(term) => term,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            let state = SuspendedInnerEvalState::freeze(state);
-                            let terms = PersistentFunctionalSequence::freeze(terms);
-                            let output_scalars =
-                                PersistentFunctionalSequence::freeze(output_scalars);
-                            move |session, term| {
-                                resume_suspended_inner_term_with_value(
-                                    session,
-                                    state,
-                                    output_index,
-                                    contract_index,
-                                    terms,
-                                    output_scalars,
-                                    term,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let state = SuspendedInnerEvalState::freeze(state);
+                                                let terms = PersistentFunctionalSequence::freeze(terms);
+                                                let output_scalars =
+                                                    PersistentFunctionalSequence::freeze(output_scalars);
+                    ResumeInnerFromIndicesSuspensionFrameL426C29 { state, output_index, contract_index, terms, output_scalars }
+                    },
                     );
                 }
                 Err(error) => return Err(error),
@@ -447,21 +436,15 @@ fn resume_inner_from_indices(
         let reduced = match session.evaluate(Expr::call(state.g.clone(), terms)) {
             Ok(reduced) => reduced,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedInnerEvalState::freeze(state);
-                        let output_scalars = PersistentFunctionalSequence::freeze(output_scalars);
-                        move |session, reduced| {
-                            resume_suspended_inner_reduced_with_value(
-                                session,
-                                state,
-                                output_index,
-                                output_scalars,
-                                reduced,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedInnerEvalState::freeze(state);
+                                        let output_scalars = PersistentFunctionalSequence::freeze(output_scalars);
+                ResumeInnerFromIndicesSuspensionFrameL455C25 { state, output_index, output_scalars }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -534,21 +517,11 @@ fn resume_suspended_inner_from_indices(
             )) {
                 Ok(term) => term,
                 Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
+                    return rum_runtime::resume_or_suspend!(
+                        session,
                         Err(EvalError::InputRequired { request }),
-                        || {
-                            move |session, term| {
-                                resume_suspended_inner_term_with_value(
-                                    session,
-                                    state,
-                                    output_index,
-                                    contract_index,
-                                    terms,
-                                    output_scalars,
-                                    term,
-                                )
-                            }
-                        },
+                        ok(value) => Ok(value),
+                        suspend => ResumeSuspendedInnerFromIndicesSuspensionFrameL540C29 { state, output_index, contract_index, terms, output_scalars },
                     );
                 }
                 Err(error) => return Err(error),
@@ -561,19 +534,11 @@ fn resume_suspended_inner_from_indices(
         let reduced = match session.evaluate(Expr::call(state.g.clone(), terms.to_vec())) {
             Ok(reduced) => reduced,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, reduced| {
-                            resume_suspended_inner_reduced_with_value(
-                                session,
-                                state,
-                                output_index,
-                                output_scalars,
-                                reduced,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedInnerFromIndicesSuspensionFrameL567C25 { state, output_index, output_scalars },
                 );
             }
             Err(error) => return Err(error),

@@ -1,4 +1,7 @@
 use super::super::*;
+use std::sync::Arc;
+mod resume_frames;
+use resume_frames::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::runtime) enum MessageQueryTarget {
@@ -111,26 +114,31 @@ impl Session {
         named_args: &[(String, Expr)],
     ) -> Result<String, EvalError> {
         let template = self.message_definitions.get(key).cloned();
-        let finish_rendered = {
-            let key = key.clone();
-            let args = args.to_vec();
-            let named_args = named_args.to_vec();
-            move |session: &mut Session, rendered: Expr| {
-                Ok(session.finish_render_message_text(rendered, &key, &args, &named_args))
-            }
-        };
-
         match template {
             Some(MessageDefinition {
                 immediate: Some(expr),
                 ..
-            }) => finish_rendered(self, expr),
+            }) => Ok(self.finish_render_message_text(expr, key, args, named_args)),
             Some(MessageDefinition {
                 delayed: Some(expr),
                 ..
             }) => {
                 let delayed_result = self.evaluate(expr);
-                self.drive_evaluated_value::<Expr, String, _>(delayed_result, finish_rendered)
+                crate::resume_or_suspend!(
+                    self,
+                    delayed_result,
+                    ok(rendered) => Ok(self.finish_render_message_text(
+                        rendered,
+                        key,
+                        args,
+                        named_args,
+                    )),
+                    suspend => RenderDelayedMessageTextFrame {
+                        key: key.clone(),
+                        args: Arc::from(args),
+                        named_args: Arc::from(named_args),
+                    },
+                )
             }
             _ => {
                 if args.is_empty() {

@@ -39,6 +39,10 @@ impl<T: FrameRootTrace> FrozenMatcherSequence<T> {
         Arc::try_unwrap(self.0)
             .unwrap_or_else(|_| panic!("completed matcher sequence must be uniquely owned"))
     }
+
+    pub(in crate::runtime) fn as_slice(&self) -> &[T] {
+        self.0.as_ref()
+    }
 }
 
 /// A recursively owned matcher value moved behind an immutable handle at a
@@ -84,21 +88,6 @@ impl PersistentMatchResults {
             prefix: Arc::new(values),
             tail: None,
             len,
-        }
-    }
-
-    pub(in crate::runtime) fn appended_values(&self, values: Vec<SymbolExprMap>) -> Self {
-        if values.is_empty() {
-            return self.clone();
-        }
-        let added = values.len();
-        Self {
-            prefix: self.prefix.clone(),
-            tail: Some(Arc::new(PersistentMatchResultsNode {
-                previous: self.tail.clone(),
-                values: Arc::new(values),
-            })),
-            len: self.len + added,
         }
     }
 

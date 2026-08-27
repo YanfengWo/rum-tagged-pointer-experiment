@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -7,6 +10,54 @@ struct OrderlessOptionalState {
     rest_patterns: Vec<MatcherArg>,
     value_args: Vec<Expr>,
     bindings: SymbolExprMap,
+}
+
+impl OrderlessOptionalState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationOrderlessOptionalState"),
+            vec![
+                self.flat_head.into_continuation_expr(),
+                optional_pattern_into_continuation_expr(self.spec),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                self.value_args.into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected orderless-optional continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationOrderlessOptionalState"),
+            "unexpected orderless-optional continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let state = Self {
+            flat_head: Option::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("orderless optional stores its flat head"),
+            ),
+            spec: optional_pattern_from_continuation_expr(
+                args.next()
+                    .expect("orderless optional stores its specification"),
+            ),
+            rest_patterns: matcher_args_from_continuation_expr(
+                args.next()
+                    .expect("orderless optional stores remaining patterns"),
+            ),
+            value_args: Vec::<Expr>::from_continuation_expr(
+                args.next().expect("orderless optional stores its values"),
+            ),
+            bindings: binding_map_from_continuation_expr(
+                args.next().expect("orderless optional stores its bindings"),
+            ),
+        };
+        debug_assert!(args.next().is_none());
+        state
+    }
 }
 
 #[derive(Clone, FrameRootTrace)]
@@ -102,12 +153,8 @@ impl Session {
             Ok(outcome) => self.finish_orderless_optional_present(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_optional_present(state.into_owned(), outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchOrderlessOptionalChoicesSuspensionFrameL105C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -135,12 +182,8 @@ impl Session {
             Ok(default_expr) => self.finish_orderless_optional_default(state, default_expr),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let default_expr = Option::<Expr>::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_optional_default(state.into_owned(), default_expr)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchOrderlessOptionalOmissionSuspensionFrameL138C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -174,12 +217,8 @@ impl Session {
             Ok(outcome) => self.finish_orderless_optional_default_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_optional_default_match(state.into_owned(), outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalDefaultSuspensionFrameL177C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -270,12 +309,8 @@ impl Session {
             Ok(present) => self.finish_orderless_optional_present_collection(state, present),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let present = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_optional_present_collection(state.into_owned(), present)
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectOrderlessOptionalMatchesSuspensionFrameL273C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -292,10 +327,7 @@ impl Session {
             Ok(omitted) => Ok(append_match_results(present, omitted)),
             Err(EvalError::InputRequired { request }) => {
                 let present = PersistentMatchResults::freeze(present);
-                self.push_suspension_frame(move |_, payload| {
-                    let omitted = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
-                    Ok(append_match_results(present.into_vec(), omitted).into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalPresentCollectionSuspensionFrameL295C44 { present });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -313,15 +345,8 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let default_expr = Option::<Expr>::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_optional_collection_default(
-                            state.into_owned(),
-                            default_expr,
-                        )
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectOrderlessOptionalOmissionSuspensionFrameL316C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -355,12 +380,8 @@ impl Session {
             Ok(outcome) => self.finish_orderless_optional_collection_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_orderless_optional_collection_match(state.into_owned(), outcome)
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalCollectionDefaultSuspensionFrameL358C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

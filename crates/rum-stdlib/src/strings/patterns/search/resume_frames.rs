@@ -1,0 +1,71 @@
+use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalStringReplaceSuspensionFrameL233C72;
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalStringReplaceSuspensionFrameL233C72 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let rendered = <std::string::String as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+            Ok(Expr::string(rendered))
+        })()
+                    .map(|value| <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalStringCasesSuspensionFrameL296C80;
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrameL296C80 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let items = <Vec<rum_core::Expr> as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+                        Ok(list_expr(items))
+                    })()
+                    .map(|value| <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalStringCasesSuspensionFrameL316C76;
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrameL316C76 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let items = <Vec<rum_core::Expr> as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+                    Ok(list_expr(items))
+                })()
+                    .map(|value| <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

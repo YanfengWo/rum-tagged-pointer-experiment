@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::guarded_plan::{
     activate_guarded_replace_part_pattern_target, append_guarded_replace_part_exact_targets,
     append_guarded_replace_part_pattern_candidates, build_guarded_replace_plan_from_targets,
@@ -9,7 +12,7 @@ use super::plan::{
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedGuardedReplacePartPlanning {
     expr: Expr,
     rules: FrozenReplaceSequence<ReplacePartRule>,
@@ -18,7 +21,7 @@ struct SuspendedGuardedReplacePartPlanning {
     position_spec_index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedGuardedReplacePartPatternMatch {
     planning: SuspendedGuardedReplacePartPlanning,
     pattern: Expr,
@@ -26,7 +29,7 @@ struct SuspendedGuardedReplacePartPatternMatch {
     index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedGuardedReplacePartSelection {
     expr: Expr,
     rules: FrozenReplaceSequence<ReplacePartRule>,
@@ -98,11 +101,7 @@ impl Session {
                                 rule_index,
                                 position_spec_index,
                             };
-                            self.push_suspension_frame(move |session, value| {
-                                session.plan_guarded_replace_part_pattern_targets_suspended(
-                                    state, value?,
-                                )
-                            });
+                            crate::resume_or_suspend!(insert self, PlanGuardedReplacePartTargetsOwnedSuspensionFrameL101C56 { state });
                             Err(EvalError::InputRequired { request })
                         }
                         Err(error) => Err(error),
@@ -202,13 +201,7 @@ impl Session {
                         range_end,
                         index,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session.match_guarded_replace_part_pattern_targets_suspended(
-                            state,
-                            Some(outcome),
-                        )
-                    });
+                    crate::resume_or_suspend!(insert self, MatchGuardedReplacePartPatternTargetsOwnedSuspensionFrameL205C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -275,24 +268,33 @@ impl Session {
             match guard_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    let state = SuspendedGuardedReplacePartSelection {
-                        expr,
-                        rules: FrozenReplaceSequence::freeze(rules),
-                        targets: SuspendedGuardedTargetList::freeze(targets),
-                        remaining,
-                    };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session.select_guarded_replace_part_targets_suspended(
-                            state,
-                            Some(outcome.matched),
-                        )
-                    });
-                    return Err(EvalError::InputRequired { request });
+                    return self.suspend_guarded_replace_part_selection_owned(
+                        expr, rules, targets, remaining, request,
+                    );
                 }
                 Err(error) => return Err(error),
             }
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_guarded_replace_part_selection_owned(
+        &mut self,
+        expr: Expr,
+        rules: Vec<ReplacePartRule>,
+        targets: Vec<GuardedReplacePartTarget>,
+        remaining: usize,
+        request: RuntimeInputRequest,
+    ) -> Result<Expr, EvalError> {
+        let state = SuspendedGuardedReplacePartSelection {
+            expr,
+            rules: FrozenReplaceSequence::freeze(rules),
+            targets: SuspendedGuardedTargetList::freeze(targets),
+            remaining,
+        };
+        crate::resume_or_suspend!(insert self, SelectGuardedReplacePartTargetsOwnedSuspensionFrameL284C48 { state });
+        Err(EvalError::InputRequired { request })
     }
 
     fn plan_guarded_replace_part_targets_suspended(
@@ -339,11 +341,7 @@ impl Session {
                             self.plan_guarded_replace_part_pattern_targets_suspended(state, pattern)
                         }
                         Err(EvalError::InputRequired { request }) => {
-                            self.push_suspension_frame(move |session, value| {
-                                session.plan_guarded_replace_part_pattern_targets_suspended(
-                                    state, value?,
-                                )
-                            });
+                            crate::resume_or_suspend!(insert self, PlanGuardedReplacePartTargetsSuspendedSuspensionFrameL342C56 { state });
                             Err(EvalError::InputRequired { request })
                         }
                         Err(error) => Err(error),
@@ -417,13 +415,7 @@ impl Session {
             match match_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session.match_guarded_replace_part_pattern_targets_suspended(
-                            state,
-                            Some(outcome),
-                        )
-                    });
+                    crate::resume_or_suspend!(insert self, MatchGuardedReplacePartPatternTargetsSuspendedSuspensionFrameL420C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -489,10 +481,7 @@ impl Session {
             match guard_result {
                 Ok(matched) => pending = Some(matched),
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let matched = bool::from_continuation_expr(value?);
-                        session.select_guarded_replace_part_targets_suspended(state, Some(matched))
-                    });
+                    crate::resume_or_suspend!(insert self, SelectGuardedReplacePartTargetsSuspendedSuspensionFrameL492C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

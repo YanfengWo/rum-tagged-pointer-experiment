@@ -1,7 +1,7 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedSubValueApplication {
     candidate: Expr,
     normalized_candidate: Expr,
@@ -276,17 +276,22 @@ impl Session {
                     return self.finish_suspended_sub_value_application(application, outcome);
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .finish_suspended_sub_value_application(application, outcome)
-                            .map(|result| result.into_continuation_expr())
-                    });
-                    return Err(EvalError::InputRequired { request });
+                    return self.suspend_sub_value_application(application, request);
                 }
                 Err(error) => return Err(error),
             }
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_sub_value_application(
+        &mut self,
+        application: SuspendedSubValueApplication,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        crate::resume_or_suspend!(insert self, TryApplySubValuesFromSymbolSuspensionFrameL279C48 { application });
+        Err(EvalError::InputRequired { request })
     }
 
     fn finish_suspended_sub_value_application(
@@ -357,3 +362,30 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedSubValueApplication>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct TryApplySubValuesFromSymbolSuspensionFrameL279C48 {
+    pub(super) application:
+        crate::runtime::definitions::application::sub_values::SuspendedSubValueApplication,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for TryApplySubValuesFromSymbolSuspensionFrameL279C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut application = self.application.clone();
+        let value = outcome;
+        let resumed = (|| {
+            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+            session
+                .finish_suspended_sub_value_application(application, outcome)
+                .map(|result| result.into_continuation_expr())
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

@@ -126,6 +126,63 @@ impl SymbolOptions {
     pub(super) fn expr(&self) -> Expr {
         Expr::call(system_expr("List"), self.rule_exprs())
     }
+
+    pub(super) fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationBlockSymbolOptions"),
+            self.entries
+                .into_iter()
+                .map(|entry| {
+                    Expr::call(
+                        system_expr("InternalContinuationBlockSymbolOption"),
+                        vec![
+                            Expr::Atom(Atom::Symbol(entry.name)),
+                            entry.value,
+                            entry.delayed.into_continuation_expr(),
+                        ],
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    pub(super) fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected Block options continuation payload")
+        };
+        assert!(is_system_symbol_name(
+            &head,
+            "InternalContinuationBlockSymbolOptions"
+        ));
+        Self::from_entries(
+            args.into_iter()
+                .map(|entry| {
+                    let Expr::Call { head, args } = entry else {
+                        panic!("unexpected Block option continuation payload")
+                    };
+                    assert!(is_system_symbol_name(
+                        &head,
+                        "InternalContinuationBlockSymbolOption"
+                    ));
+                    let mut args = args.into_iter();
+                    let name_expr = args.next().expect("Block option stores its name");
+                    let Expr::Atom(Atom::Symbol(name)) = name_expr else {
+                        panic!("Block option name should be a symbol: {name_expr:?}")
+                    };
+                    let value = args.next().expect("Block option stores its value");
+                    let delayed = bool::from_continuation_expr(
+                        args.next().expect("Block option stores its delayed flag"),
+                    );
+                    debug_assert!(args.next().is_none());
+                    SymbolOptionEntry {
+                        name,
+                        value,
+                        delayed,
+                    }
+                })
+                .collect(),
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
@@ -141,6 +198,40 @@ impl OptionValueScope {
 
     pub(super) fn explicit(&self) -> &SymbolOptions {
         &self.explicit
+    }
+
+    pub(super) fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationOptionValueScope"),
+            vec![
+                Expr::Atom(Atom::Symbol(self.target)),
+                self.explicit.into_continuation_expr(),
+            ],
+        )
+    }
+
+    pub(super) fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected option-value-scope continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationOptionValueScope"),
+            "unexpected option-value-scope continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let target = match args
+            .next()
+            .expect("option-value scope stores its target symbol")
+        {
+            Expr::Atom(Atom::Symbol(symbol)) => symbol,
+            other => panic!("option-value-scope target should be a symbol: {other:?}"),
+        };
+        let explicit = SymbolOptions::from_continuation_expr(
+            args.next()
+                .expect("option-value scope stores its explicit options"),
+        );
+        debug_assert!(args.next().is_none());
+        Self { target, explicit }
     }
 }
 

@@ -68,9 +68,12 @@ impl Session {
         });
 
         let body_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            move |session, outcome| session.resume_reap_after_body(outcome)
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => EvalReapSuspensionFrameL72C13,
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -90,10 +93,15 @@ impl Session {
         match outcome {
             Ok(value) => {
                 let rendered_result = self.render_reap_scope(scope);
-                let rendered = self.suspend_with_frame_lazy(rendered_result, || {
-                    let suspended_value = value.clone();
-                    move |_, rendered| Ok(finish_reap_result(suspended_value, rendered))
-                })?;
+                let rendered = crate::resume_or_suspend!(
+                    self,
+                    rendered_result,
+                    ok(value) => Ok(value),
+                    suspend => {
+                let suspended_value = value.clone();
+                ResumeReapAfterBodySuspensionFrameL95C21 { suspended_value }
+                },
+                )?;
                 Ok(finish_reap_result(value, rendered))
             }
             Err(error) => Err(error),
@@ -147,10 +155,7 @@ impl Session {
                 Err(EvalError::InputRequired { request }) => {
                     let suspended =
                         SuspendedReapScopeRender::freeze(state, group_index, rendered_groups);
-                    self.push_suspension_frame(move |session, outcome| {
-                        let group = outcome?;
-                        session.resume_suspended_reap_scope_group_with_value(suspended, group)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeReapScopeGroupsFromIndexSuspensionFrameL150C48 { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -162,7 +167,7 @@ impl Session {
         &mut self,
         mut state: SuspendedReapScopeRender,
         group: Expr,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<SuspendedReapScopeCompletion, EvalError> {
         state.rendered = state.rendered.appended(group);
         state.group_index += 1;
         self.resume_suspended_reap_scope_groups(state)
@@ -171,36 +176,30 @@ impl Session {
     fn resume_suspended_reap_scope_groups(
         &mut self,
         mut state: SuspendedReapScopeRender,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<SuspendedReapScopeCompletion, EvalError> {
         loop {
             let Some(group) = state.groups.get(state.group_index) else {
-                let rendered_groups = state.rendered.into_vec();
-                return Ok(if state.pattern_list_form {
-                    Expr::call(system_expr("List"), rendered_groups)
-                } else {
-                    rendered_groups
-                        .into_iter()
-                        .next()
-                        .unwrap_or_else(|| Expr::call(system_expr("List"), Vec::new()))
+                return Ok(SuspendedReapScopeCompletion {
+                    rendered: state.rendered,
+                    pattern_list_form: state.pattern_list_form,
                 });
             };
 
-            let group_result = self.resume_suspended_reap_buckets(SuspendedReapBucketRender {
+            let group_result = self.collect_suspended_reap_buckets(SuspendedReapBucketRender {
                 handler: state.handler.clone(),
                 buckets: group.buckets.clone(),
                 bucket_index: 0,
                 rendered: ReapRenderAccumulator::freeze(Vec::new()),
             });
             match group_result {
-                Ok(group) => {
-                    state.rendered = state.rendered.appended(group);
+                Ok(rendered) => {
+                    state.rendered = state
+                        .rendered
+                        .appended(Expr::call(system_expr("List"), rendered.into_vec()));
                     state.group_index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        let group = outcome?;
-                        session.resume_suspended_reap_scope_group_with_value(state, group)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReapScopeGroupsSuspensionFrameL200C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -240,10 +239,7 @@ impl Session {
                 Err(EvalError::InputRequired { request }) => {
                     let suspended =
                         SuspendedReapBucketRender::freeze(state, bucket_index, rendered);
-                    self.push_suspension_frame(move |session, outcome| {
-                        let group = outcome?;
-                        session.resume_suspended_reap_bucket_with_value(suspended, group)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeReapBucketsFromIndexSuspensionFrameL243C48 { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -255,19 +251,19 @@ impl Session {
         &mut self,
         mut state: SuspendedReapBucketRender,
         group: Expr,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<ReapRenderAccumulator, EvalError> {
         state.rendered = state.rendered.appended(group);
         state.bucket_index += 1;
-        self.resume_suspended_reap_buckets(state)
+        self.collect_suspended_reap_buckets(state)
     }
 
-    fn resume_suspended_reap_buckets(
+    fn collect_suspended_reap_buckets(
         &mut self,
         mut state: SuspendedReapBucketRender,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<ReapRenderAccumulator, EvalError> {
         loop {
             let Some(bucket) = state.buckets.get(state.bucket_index) else {
-                return Ok(Expr::call(system_expr("List"), state.rendered.into_vec()));
+                return Ok(state.rendered);
             };
 
             let values_expr = Expr::call(system_expr("List"), bucket.values.clone());
@@ -284,15 +280,44 @@ impl Session {
                     state.bucket_index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        let group = outcome?;
-                        session.resume_suspended_reap_bucket_with_value(state, group)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReapBucketsSuspensionFrameL287C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
             }
         }
+    }
+}
+
+struct SuspendedReapScopeCompletion {
+    rendered: ReapRenderAccumulator,
+    pattern_list_form: bool,
+}
+
+struct FinishReapScopeFinalizer {
+    completion: SuspendedReapScopeCompletion,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for FinishReapScopeFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        let mut rendered = self.completion.rendered.into_vec();
+        Ok(if self.completion.pattern_list_form {
+            Expr::call(system_expr("List"), rendered)
+        } else {
+            rendered
+                .pop()
+                .unwrap_or_else(|| Expr::call(system_expr("List"), Vec::new()))
+        })
+    }
+}
+
+struct FinishReapBucketsFinalizer {
+    rendered: ReapRenderAccumulator,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for FinishReapBucketsFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        Ok(Expr::call(system_expr("List"), self.rendered.into_vec()))
     }
 }
 
@@ -355,3 +380,158 @@ const _: fn() = || {
     assert_traces::<ReapBucketRenderState>();
     assert_traces::<ReapScopeRenderState>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalReapSuspensionFrameL72C13;
+
+impl crate::runtime::suspension::SuspensionFrame for EvalReapSuspensionFrameL72C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = (|| session.resume_reap_after_body(outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReapAfterBodySuspensionFrameL95C21 {
+    pub(super) suspended_value: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for ResumeReapAfterBodySuspensionFrameL95C21 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended_value = self.suspended_value.clone();
+        let resumed = match outcome {
+            Ok(rendered) => (|| Ok(finish_reap_result(suspended_value, rendered)))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReapScopeGroupsFromIndexSuspensionFrameL150C48 {
+    pub(super) suspended: crate::runtime::debug_tools::reap_state::SuspendedReapScopeRender,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReapScopeGroupsFromIndexSuspensionFrameL150C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended = self.suspended.clone();
+        let group = match outcome {
+            Ok(group) => group,
+            Err(error) => return crate::runtime::suspension::FrameAction::complete(Err(error)),
+        };
+        finish_reap_scope_action(
+            session.resume_suspended_reap_scope_group_with_value(suspended, group),
+        )
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeSuspendedReapScopeGroupsSuspensionFrameL200C48 {
+    pub(super) state: crate::runtime::debug_tools::reap_state::SuspendedReapScopeRender,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedReapScopeGroupsSuspensionFrameL200C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let group = match outcome {
+            Ok(group) => group,
+            Err(error) => return crate::runtime::suspension::FrameAction::complete(Err(error)),
+        };
+        finish_reap_scope_action(session.resume_suspended_reap_scope_group_with_value(state, group))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReapBucketsFromIndexSuspensionFrameL243C48 {
+    pub(super) suspended: crate::runtime::debug_tools::reap_state::SuspendedReapBucketRender,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReapBucketsFromIndexSuspensionFrameL243C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended = self.suspended.clone();
+        let group = match outcome {
+            Ok(group) => group,
+            Err(error) => return crate::runtime::suspension::FrameAction::complete(Err(error)),
+        };
+        finish_reap_bucket_action(session.resume_suspended_reap_bucket_with_value(suspended, group))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeSuspendedReapBucketsSuspensionFrameL287C48 {
+    pub(super) state: crate::runtime::debug_tools::reap_state::SuspendedReapBucketRender,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedReapBucketsSuspensionFrameL287C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let group = match outcome {
+            Ok(group) => group,
+            Err(error) => return crate::runtime::suspension::FrameAction::complete(Err(error)),
+        };
+        finish_reap_bucket_action(session.resume_suspended_reap_bucket_with_value(state, group))
+    }
+}
+
+fn finish_reap_scope_action(
+    result: Result<SuspendedReapScopeCompletion, EvalError>,
+) -> crate::runtime::suspension::FrameAction {
+    match result {
+        Ok(completion) => {
+            crate::runtime::suspension::FrameAction::finalize(FinishReapScopeFinalizer {
+                completion,
+            })
+        }
+        Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+    }
+}
+
+fn finish_reap_bucket_action(
+    result: Result<ReapRenderAccumulator, EvalError>,
+) -> crate::runtime::suspension::FrameAction {
+    match result {
+        Ok(rendered) => {
+            crate::runtime::suspension::FrameAction::finalize(FinishReapBucketsFinalizer {
+                rendered,
+            })
+        }
+        Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+    }
+}

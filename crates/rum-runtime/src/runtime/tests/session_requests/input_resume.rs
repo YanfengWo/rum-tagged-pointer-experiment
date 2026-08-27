@@ -349,3 +349,42 @@ fn resume_eval_request_with_input_continues_replace_all_without_restarting_targe
 
     assert_eq!(response.value.to_string(), "List[\"Alice\", \"Alice\"]");
 }
+
+#[test]
+fn nested_input_suspension_precedes_the_old_suffix_without_reordering_effects() {
+    let mut session = session_with_test_control_builtins();
+
+    let first = session
+        .eval_request(
+            r#"order = {};
+               AppendTo[order, "A"];
+               List[
+                 List[
+                   Input["A: "],
+                   AppendTo[order, "C"]; "C-value"
+                 ],
+                 order
+               ]"#,
+        )
+        .expect_err("A should suspend before the old C suffix");
+    match &first.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "A: "),
+        other => panic!("expected the A input request, got {other:?}"),
+    }
+
+    let nested = session
+        .resume_eval_request_with_input(r#"AppendTo[order, "B"]; InputString["B: "]"#)
+        .expect_err("A's resumed expression should create nested B");
+    match &nested.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "B: "),
+        other => panic!("expected the nested B input request, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("B-value")
+        .expect("nested B should finish before the old C suffix");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[\"B-value\", \"C-value\"], List[\"A\", \"B\", \"C\"]]"
+    );
+}

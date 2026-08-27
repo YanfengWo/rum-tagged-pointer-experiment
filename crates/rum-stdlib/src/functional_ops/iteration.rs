@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -266,12 +269,15 @@ fn resume_nest_from_iteration(
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
     match value_result {
         Ok(value) => resume_nest_with_value(session, state, iteration, items, value),
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            let items = PersistentFunctionalSequence::freeze(items);
-            move |session, value| {
-                resume_suspended_nest_with_value(session, state, iteration, items, value)
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => {
+        let items = PersistentFunctionalSequence::freeze(items);
+        ResumeNestFromIterationSuspensionFrameL271C13 { state, iteration, items }
+        },
+        ),
     }
 }
 
@@ -298,11 +304,12 @@ fn resume_suspended_nest_from_iteration(
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
     match value_result {
         Ok(value) => resume_suspended_nest_with_value(session, state, iteration, items, value),
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            move |session, value| {
-                resume_suspended_nest_with_value(session, state, iteration, items, value)
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => ResumeSuspendedNestFromIterationSuspensionFrameL302C13 { state, iteration, items },
+        ),
     }
 }
 
@@ -351,15 +358,16 @@ fn resume_fixed_point_from_iteration(
         Ok(value) => {
             resume_fixed_point_with_value(session, state, iteration, current, seen, items, value)
         }
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            let seen = PersistentFunctionalSequence::freeze(seen);
-            let items = PersistentFunctionalSequence::freeze(items);
-            move |session, value| {
-                resume_suspended_fixed_point_with_value(
-                    session, state, iteration, current, seen, items, value,
-                )
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => {
+        let seen = PersistentFunctionalSequence::freeze(seen);
+                    let items = PersistentFunctionalSequence::freeze(items);
+        ResumeFixedPointFromIterationSuspensionFrameL357C13 { state, iteration, current, seen, items }
+        },
+        ),
     }
 }
 
@@ -380,13 +388,12 @@ fn resume_suspended_fixed_point_from_iteration(
         Ok(value) => resume_suspended_fixed_point_with_value(
             session, state, iteration, current, seen, items, value,
         ),
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            move |session, value| {
-                resume_suspended_fixed_point_with_value(
-                    session, state, iteration, current, seen, items, value,
-                )
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => ResumeSuspendedFixedPointFromIterationSuspensionFrameL384C13 { state, iteration, current, seen, items },
+        ),
     }
 }
 
@@ -475,14 +482,15 @@ fn resume_nest_while_test_from_iteration(
         Ok(test_value) => {
             resume_nest_while_with_test_value(session, state, iteration, history, test_value)
         }
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            let history = PersistentFunctionalSequence::freeze(history);
-            move |session, test_value| {
-                resume_suspended_nest_while_with_test_value(
-                    session, state, iteration, history, test_value,
-                )
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => {
+        let history = PersistentFunctionalSequence::freeze(history);
+        ResumeNestWhileTestFromIterationSuspensionFrameL480C13 { state, iteration, history }
+        },
+        ),
     }
 }
 
@@ -498,13 +506,12 @@ fn resume_suspended_nest_while_test_from_iteration(
         Ok(test_value) => resume_suspended_nest_while_with_test_value(
             session, state, iteration, history, test_value,
         ),
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            move |session, test_value| {
-                resume_suspended_nest_while_with_test_value(
-                    session, state, iteration, history, test_value,
-                )
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => ResumeSuspendedNestWhileTestFromIterationSuspensionFrameL502C13 { state, iteration, history },
+        ),
     }
 }
 
@@ -534,14 +541,15 @@ fn resume_nest_while_with_test_value(
     let value_result = session.evaluate(Expr::call(state.operator.clone(), vec![current]));
     match value_result {
         Ok(value) => resume_nest_while_with_step_value(session, state, iteration, history, value),
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            let history = PersistentFunctionalSequence::freeze(history);
-            move |session, value| {
-                resume_suspended_nest_while_with_step_value(
-                    session, state, iteration, history, value,
-                )
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => {
+        let history = PersistentFunctionalSequence::freeze(history);
+        ResumeNestWhileWithTestValueSuspensionFrameL539C13 { state, iteration, history }
+        },
+        ),
     }
 }
 
@@ -579,13 +587,12 @@ fn resume_suspended_nest_while_with_test_value(
         Ok(value) => {
             resume_suspended_nest_while_with_step_value(session, state, iteration, history, value)
         }
-        Err(error) => session.suspend_with_frame_lazy(Err(error), || {
-            move |session, value| {
-                resume_suspended_nest_while_with_step_value(
-                    session, state, iteration, history, value,
-                )
-            }
-        }),
+        Err(error) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(error),
+            ok(value) => Ok(value),
+            suspend => ResumeSuspendedNestWhileWithTestValueSuspensionFrameL583C13 { state, iteration, history },
+        ),
     }
 }
 

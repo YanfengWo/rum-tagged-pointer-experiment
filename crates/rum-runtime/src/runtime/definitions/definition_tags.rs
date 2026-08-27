@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_up_set(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -8,10 +9,15 @@ impl Session {
 
         let lhs = args[0].clone();
         let rhs_result = self.evaluate(args[1].clone());
-        let rhs = self.suspend_with_frame_lazy(rhs_result, || {
-            let lhs = lhs.clone();
-            move |session, rhs| session.finish_up_set_assignment("UpSet", lhs, rhs, false)
-        })?;
+        let rhs = crate::resume_or_suspend!(
+            self,
+            rhs_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let lhs = lhs.clone();
+        EvalUpSetSuspensionFrameL13C13 { lhs }
+        },
+        )?;
 
         self.finish_up_set_assignment("UpSet", lhs, rhs, false)
     }
@@ -47,14 +53,17 @@ impl Session {
 
         let lhs = args_slice[1].clone();
         let rhs_result = self.evaluate(args_slice[2].clone());
-        let rhs = self.suspend_with_frame_lazy(rhs_result, || {
-            let tag = tag.clone();
-            let lhs = lhs.clone();
-            let args = args.clone();
-            move |session, rhs| {
-                session.store_tagged_definition("TagSet", args.as_ref(), tag, lhs, rhs, false)
-            }
-        })?;
+        let rhs = crate::resume_or_suspend!(
+            self,
+            rhs_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let tag = tag.clone();
+                    let lhs = lhs.clone();
+                    let args = args.clone();
+        EvalTagSetSuspensionFrameL54C13 { args, tag, lhs }
+        },
+        )?;
         self.store_tagged_definition("TagSet", args_slice, tag, lhs, rhs, false)
     }
 
@@ -483,5 +492,56 @@ fn replace_or_append_default_value(entries: &mut Vec<DownValue>, lhs: &Expr, new
         entries[index] = new_entry;
     } else {
         entries.push(new_entry);
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalUpSetSuspensionFrameL13C13 {
+    pub(super) lhs: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalUpSetSuspensionFrameL13C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut lhs = self.lhs.clone();
+        let resumed = match outcome {
+            Ok(rhs) => (|| session.finish_up_set_assignment("UpSet", lhs, rhs, false))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalTagSetSuspensionFrameL54C13 {
+    pub(super) args: rum_core::SharedArgs,
+    pub(super) tag: rum_core::Symbol,
+    pub(super) lhs: rum_core::Expr,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalTagSetSuspensionFrameL54C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        #[allow(unused_mut)]
+        let mut tag = self.tag.clone();
+        #[allow(unused_mut)]
+        let mut lhs = self.lhs.clone();
+        let resumed = match outcome {
+            Ok(rhs) => {
+                (|| session.store_tagged_definition("TagSet", args.as_ref(), tag, lhs, rhs, false))(
+                )
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

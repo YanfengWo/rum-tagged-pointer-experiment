@@ -151,24 +151,52 @@ impl Session {
             match guard_result {
                 Ok(outcome) => pending = Some((index, outcome)),
                 Err(EvalError::InputRequired { request }) => {
-                    let state = SuspendedExactDefaultValueScan {
-                        down_values: Arc::from(down_values),
-                        lookup_order: SharedArgs::new(lookup_order),
+                    return self.suspend_exact_default_value_scan_from_owned(
+                        down_values,
+                        lookup_order,
                         lookup_index,
                         candidate_index,
-                        matched_index: index,
-                    };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_exact_default_value_scan(state, outcome)
-                            .map(|result| result.into_continuation_expr())
-                    });
-                    return Err(EvalError::InputRequired { request });
+                        index,
+                        request,
+                    );
                 }
                 Err(error) => return Err(error),
             }
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_exact_default_value_scan_from_owned(
+        &mut self,
+        down_values: Vec<DownValue>,
+        lookup_order: Vec<Expr>,
+        lookup_index: usize,
+        candidate_index: usize,
+        matched_index: usize,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        self.suspend_exact_default_value_scan(
+            SuspendedExactDefaultValueScan {
+                down_values: Arc::from(down_values),
+                lookup_order: SharedArgs::new(lookup_order),
+                lookup_index,
+                candidate_index,
+                matched_index,
+            },
+            request,
+        )
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_exact_default_value_scan(
+        &mut self,
+        state: SuspendedExactDefaultValueScan,
+        request: RuntimeInputRequest,
+    ) -> Result<Option<Expr>, EvalError> {
+        crate::resume_or_suspend!(insert self, EvaluateFirstExactDefaultValueFromCursorSuspensionFrameL161C48 { state });
+        Err(EvalError::InputRequired { request })
     }
 
     fn resume_suspended_exact_default_value_scan(
@@ -214,13 +242,7 @@ impl Session {
                         break;
                     }
                     Err(EvalError::InputRequired { request }) => {
-                        self.push_suspension_frame(move |session, value| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                            session
-                                .resume_suspended_exact_default_value_scan(state, outcome)
-                                .map(|result| result.into_continuation_expr())
-                        });
-                        return Err(EvalError::InputRequired { request });
+                        return self.suspend_exact_default_value_scan(state, request);
                     }
                     Err(error) => return Err(error),
                 }
@@ -244,3 +266,30 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedExactDefaultValueScan>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct EvaluateFirstExactDefaultValueFromCursorSuspensionFrameL161C48 {
+    pub(super) state:
+        crate::runtime::definitions::application::default_values::SuspendedExactDefaultValueScan,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for EvaluateFirstExactDefaultValueFromCursorSuspensionFrameL161C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let value = outcome;
+        let resumed = (|| {
+            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
+            session
+                .resume_suspended_exact_default_value_scan(state, outcome)
+                .map(|result| result.into_continuation_expr())
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

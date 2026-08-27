@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum OptionsPatternTarget {
@@ -24,10 +25,7 @@ impl Session {
                 Ok(value)
             }
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(|session, outcome| {
-                    let _ = session.option_value_scopes.pop();
-                    outcome
-                });
+                crate::resume_or_suspend!(insert self, EvaluateWithOptionValueScopeSuspensionFrameL27C44);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => {
@@ -164,4 +162,23 @@ fn automatic_options_pattern_target(candidate: &Expr) -> Option<Symbol> {
     base_head_symbol_of_nested_call(head)
         .cloned()
         .or_else(|| expr_as_symbol(head).cloned())
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvaluateWithOptionValueScopeSuspensionFrameL27C44;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for EvaluateWithOptionValueScopeSuspensionFrameL27C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = (|| {
+            let _ = session.option_value_scopes.pop();
+            outcome
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

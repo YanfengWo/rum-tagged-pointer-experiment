@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 use std::error::Error;
 use std::fmt;
@@ -7,7 +8,7 @@ use std::sync::Arc;
 const SPLITMIX64_INCREMENT: u64 = 0x9e37_79b9_7f4a_7c15;
 const NEGATIVE_SEED_TAG: u64 = 0xd1b5_4a32_d192_ed03;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct PrngState {
     state: [u64; 4],
 }

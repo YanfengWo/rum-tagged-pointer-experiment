@@ -1,5 +1,6 @@
 use super::memory::expr_memory_proxy_bytes;
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 /// Full proxy walks occur every 64 armed per-expression checks. Projected-byte
 /// prechecks remain unstrided for single large allocations; between sampled
@@ -22,19 +23,17 @@ impl Session {
         };
 
         let resolved_result = self.evaluate(limit_expr.clone());
-        let resolved_limit = self.suspend_with_frame_lazy(resolved_result, || {
-            let args = args.clone();
-            let suspended_body = body.clone();
-            let suspended_fallback = fallback.clone();
-            move |session, resolved| {
-                session.resume_time_constrained_with_limit(
-                    suspended_body,
-                    suspended_fallback,
-                    args.as_ref(),
-                    resolved,
-                )
-            }
-        })?;
+        let resolved_limit = crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+                    let suspended_body = body.clone();
+                    let suspended_fallback = fallback.clone();
+        EvalTimeConstrainedSuspensionFrameL29C13 { suspended_body, suspended_fallback, args }
+        },
+        )?;
         self.resume_time_constrained_with_limit(body, fallback, args_slice, resolved_limit)
     }
 
@@ -58,12 +57,15 @@ impl Session {
         self.current_time_deadline = Some(next_deadline);
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let fallback = fallback.clone();
-            move |session, outcome| {
-                session.finish_time_constrained(outcome, prior_deadline, fallback)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let fallback = fallback.clone();
+        ResumeTimeConstrainedWithLimitSuspensionFrameL63C13 { prior_deadline, fallback }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -85,19 +87,17 @@ impl Session {
         };
 
         let resolved_result = self.evaluate(limit_expr.clone());
-        let resolved_limit = self.suspend_with_frame_lazy(resolved_result, || {
-            let args = args.clone();
-            let suspended_body = body.clone();
-            let suspended_fallback = fallback.clone();
-            move |session, resolved| {
-                session.resume_memory_constrained_with_limit(
-                    suspended_body,
-                    suspended_fallback,
-                    args.as_ref(),
-                    resolved,
-                )
-            }
-        })?;
+        let resolved_limit = crate::resume_or_suspend!(
+            self,
+            resolved_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+                    let suspended_body = body.clone();
+                    let suspended_fallback = fallback.clone();
+        EvalMemoryConstrainedSuspensionFrameL92C13 { suspended_body, suspended_fallback, args }
+        },
+        )?;
         self.resume_memory_constrained_with_limit(body, fallback, args_slice, resolved_limit)
     }
 
@@ -120,12 +120,15 @@ impl Session {
         self.current_memory_limit = Some(prior_limit.map_or(limit, |current| current.min(limit)));
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let fallback = fallback.clone();
-            move |session, outcome| {
-                session.finish_memory_constrained(outcome, prior_limit, fallback)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let fallback = fallback.clone();
+        ResumeMemoryConstrainedWithLimitSuspensionFrameL125C13 { prior_limit, fallback }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -232,7 +235,12 @@ impl Session {
             Err(EvalError::TimeConstraintExceeded) => match fallback {
                 Some(expr) => {
                     let fallback_result = self.evaluate(expr);
-                    self.suspend_with_frame_lazy(fallback_result, || |_, value| Ok(value))
+                    crate::resume_or_suspend!(
+                        self,
+                        fallback_result,
+                        ok(value) => Ok(value),
+                        suspend => FinishTimeConstrainedSuspensionFrameL235C70,
+                    )
                 }
                 None => Ok(system_expr("$Aborted")),
             },
@@ -253,7 +261,12 @@ impl Session {
             Err(EvalError::MemoryConstraintExceeded { .. }) => match fallback {
                 Some(expr) => {
                     let fallback_result = self.evaluate(expr);
-                    self.suspend_with_frame_lazy(fallback_result, || |_, value| Ok(value))
+                    crate::resume_or_suspend!(
+                        self,
+                        fallback_result,
+                        ok(value) => Ok(value),
+                        suspend => FinishMemoryConstrainedSuspensionFrameL256C70,
+                    )
                 }
                 None => Ok(system_expr("$Aborted")),
             },
@@ -283,4 +296,152 @@ fn combine_time_deadlines(prior: Option<Instant>, limit: Duration) -> Instant {
         .checked_add(limit)
         .unwrap_or_else(Instant::now);
     prior.map_or(candidate, |current| current.min(candidate))
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalTimeConstrainedSuspensionFrameL29C13 {
+    pub(super) suspended_body: rum_core::Expr,
+    pub(super) suspended_fallback: std::option::Option<rum_core::Expr>,
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalTimeConstrainedSuspensionFrameL29C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended_body = self.suspended_body.clone();
+        #[allow(unused_mut)]
+        let mut suspended_fallback = self.suspended_fallback.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(resolved) => (|| {
+                session.resume_time_constrained_with_limit(
+                    suspended_body,
+                    suspended_fallback,
+                    args.as_ref(),
+                    resolved,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeTimeConstrainedWithLimitSuspensionFrameL63C13 {
+    pub(super) prior_deadline: std::option::Option<std::time::Instant>,
+    pub(super) fallback: std::option::Option<rum_core::Expr>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeTimeConstrainedWithLimitSuspensionFrameL63C13
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut prior_deadline = self.prior_deadline.clone();
+        #[allow(unused_mut)]
+        let mut fallback = self.fallback.clone();
+        let resumed = (|| session.finish_time_constrained(outcome, prior_deadline, fallback))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalMemoryConstrainedSuspensionFrameL92C13 {
+    pub(super) suspended_body: rum_core::Expr,
+    pub(super) suspended_fallback: std::option::Option<rum_core::Expr>,
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalMemoryConstrainedSuspensionFrameL92C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut suspended_body = self.suspended_body.clone();
+        #[allow(unused_mut)]
+        let mut suspended_fallback = self.suspended_fallback.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(resolved) => (|| {
+                session.resume_memory_constrained_with_limit(
+                    suspended_body,
+                    suspended_fallback,
+                    args.as_ref(),
+                    resolved,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeMemoryConstrainedWithLimitSuspensionFrameL125C13 {
+    pub(super) prior_limit: std::option::Option<usize>,
+    pub(super) fallback: std::option::Option<rum_core::Expr>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeMemoryConstrainedWithLimitSuspensionFrameL125C13
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut prior_limit = self.prior_limit.clone();
+        #[allow(unused_mut)]
+        let mut fallback = self.fallback.clone();
+        let resumed = (|| session.finish_memory_constrained(outcome, prior_limit, fallback))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct FinishTimeConstrainedSuspensionFrameL235C70;
+
+impl crate::runtime::suspension::SuspensionFrame for FinishTimeConstrainedSuspensionFrameL235C70 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct FinishMemoryConstrainedSuspensionFrameL256C70;
+
+impl crate::runtime::suspension::SuspensionFrame for FinishMemoryConstrainedSuspensionFrameL256C70 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use rum_core::SharedArgs;
 use std::collections::HashMap;
 
@@ -152,26 +155,24 @@ fn resume_key_group_by_from_index(
             return finish_key_group_by_grouped(session, reducer, grouped.into_entries());
         };
 
-        let group_key =
-            match session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()])) {
-                Ok(group_key) => group_key,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
-                        Err(EvalError::InputRequired { request }),
-                        || {
-                            let entries = FrozenAssociationSequence::freeze(entries);
-                            let grouped = PersistentAssociationGroups::freeze(grouped);
-                            move |session, group_key| {
-                                resume_suspended_key_group_by_with_key(
-                                    session, function, reducer, entries, index, grouped, entry,
-                                    group_key,
-                                )
-                            }
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
+        let group_key = match session
+            .evaluate(Expr::call(function.clone(), vec![entry.key.clone()]))
+        {
+            Ok(group_key) => group_key,
+            Err(EvalError::InputRequired { request }) => {
+                return rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => {
+                let entries = FrozenAssociationSequence::freeze(entries);
+                                            let grouped = PersistentAssociationGroups::freeze(grouped);
+                ResumeKeyGroupByFromIndexSuspensionFrameL164C29 { function, reducer, entries, index, grouped, entry }
+                },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
         grouped.push(group_key, entry);
         index += 1;
@@ -191,24 +192,20 @@ fn resume_suspended_key_group_by_from_index(
             return finish_key_group_by_grouped(session, reducer, grouped.to_entries());
         };
 
-        let group_key =
-            match session.evaluate(Expr::call(function.clone(), vec![entry.key.clone()])) {
-                Ok(group_key) => group_key,
-                Err(EvalError::InputRequired { request }) => {
-                    return session.suspend_with_frame_lazy(
-                        Err(EvalError::InputRequired { request }),
-                        || {
-                            move |session, group_key| {
-                                resume_suspended_key_group_by_with_key(
-                                    session, function, reducer, entries, index, grouped, entry,
-                                    group_key,
-                                )
-                            }
-                        },
-                    );
-                }
-                Err(error) => return Err(error),
-            };
+        let group_key = match session
+            .evaluate(Expr::call(function.clone(), vec![entry.key.clone()]))
+        {
+            Ok(group_key) => group_key,
+            Err(EvalError::InputRequired { request }) => {
+                return rum_runtime::resume_or_suspend!(
+                    session,
+                    Err(EvalError::InputRequired { request }),
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedKeyGroupByFromIndexSuspensionFrameL201C29 { function, reducer, entries, index, grouped, entry },
+                );
+            }
+            Err(error) => return Err(error),
+        };
 
         grouped = grouped.appended(group_key, entry);
         index += 1;
@@ -265,17 +262,15 @@ fn resume_key_group_by_reduce_from_index(
         let value = match session.evaluate(Expr::call(reducer.clone(), vec![group])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let grouped = FrozenAssociationSequence::freeze(grouped);
-                        let reduced = PersistentAssociationSequence::freeze(reduced);
-                        move |session, value| {
-                            resume_suspended_key_group_by_reduce_with_value(
-                                session, reducer, grouped, index, reduced, group_key, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let grouped = FrozenAssociationSequence::freeze(grouped);
+                                        let reduced = PersistentAssociationSequence::freeze(reduced);
+                ResumeKeyGroupByReduceFromIndexSuspensionFrameL273C25 { reducer, grouped, index, reduced, group_key }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -302,15 +297,11 @@ fn resume_suspended_key_group_by_reduce_from_index(
         let value = match session.evaluate(Expr::call(reducer.clone(), vec![group])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_key_group_by_reduce_with_value(
-                                session, reducer, grouped, index, reduced, group_key, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedKeyGroupByReduceFromIndexSuspensionFrameL308C25 { reducer, grouped, index, reduced, group_key },
                 );
             }
             Err(error) => return Err(error),

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -31,7 +34,7 @@ impl SuspendedSequenceLikeExpr {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FrameRootTrace)]
 enum WhileSequenceMode {
     Take,
     Length,
@@ -223,16 +226,14 @@ fn resume_while_sequence_from_index(
         let value = match session.evaluate(Expr::call(criterion.clone(), vec![item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
-                        move |session, value| {
-                            resume_suspended_while_sequence_with_value(
-                                session, sequence, criterion, index, mode, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
+                ResumeWhileSequenceFromIndexSuspensionFrameL230C25 { sequence, criterion, index, mode }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -263,15 +264,11 @@ fn resume_suspended_while_sequence_from_index(
         let value = match session.evaluate(Expr::call(criterion.clone(), vec![item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_while_sequence_with_value(
-                                session, sequence, criterion, index, mode, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedWhileSequenceFromIndexSuspensionFrameL269C25 { sequence, criterion, index, mode },
                 );
             }
             Err(error) => return Err(error),
@@ -317,21 +314,15 @@ fn resume_accumulate_from_index(
         let value = match session.evaluate(Expr::call(system_expr("Plus"), vec![current, item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
-                        let accumulated = PersistentFunctionalSequence::freeze(accumulated);
-                        move |session, value| {
-                            resume_suspended_accumulate_with_value(
-                                session,
-                                sequence,
-                                index,
-                                accumulated,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
+                                        let accumulated = PersistentFunctionalSequence::freeze(accumulated);
+                ResumeAccumulateFromIndexSuspensionFrameL325C25 { sequence, index, accumulated }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -361,19 +352,11 @@ fn resume_suspended_accumulate_from_index(
         let value = match session.evaluate(Expr::call(system_expr("Plus"), vec![current, item])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_accumulate_with_value(
-                                session,
-                                sequence,
-                                index,
-                                accumulated,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedAccumulateFromIndexSuspensionFrameL367C25 { sequence, index, accumulated },
                 );
             }
             Err(error) => return Err(error),
@@ -414,17 +397,15 @@ fn resume_block_map_from_index(
         let value = match session.evaluate(Expr::call(state.operator.clone(), vec![block])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedBlockMapEvalState::freeze(state);
-                        let results = PersistentFunctionalSequence::freeze(results);
-                        move |session, value| {
-                            resume_suspended_block_map_with_value(
-                                session, state, index, results, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedBlockMapEvalState::freeze(state);
+                                        let results = PersistentFunctionalSequence::freeze(results);
+                ResumeBlockMapFromIndexSuspensionFrameL422C25 { state, index, results }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -453,15 +434,11 @@ fn resume_suspended_block_map_from_index(
         let value = match session.evaluate(Expr::call(state.operator.clone(), vec![block])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_block_map_with_value(
-                                session, state, index, results, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedBlockMapFromIndexSuspensionFrameL459C25 { state, index, results },
                 );
             }
             Err(error) => return Err(error),

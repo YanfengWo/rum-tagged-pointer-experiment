@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::grouping::IndexedGroups;
 use super::*;
 use rum_core::SharedArgs;
@@ -131,17 +134,15 @@ fn resume_merge_nested_from_index(
         let value = match evaluate_merge_nested_group(session, combiner.clone(), values) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let grouped = FrozenAssociationSequence::freeze(grouped);
-                        let merged = PersistentAssociationSequence::freeze(merged);
-                        move |session, value| {
-                            resume_suspended_merge_nested_with_value(
-                                session, combiner, grouped, index, merged, key, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let grouped = FrozenAssociationSequence::freeze(grouped);
+                                        let merged = PersistentAssociationSequence::freeze(merged);
+                ResumeMergeNestedFromIndexSuspensionFrameL139C25 { combiner, grouped, index, merged, key }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -167,15 +168,11 @@ fn resume_suspended_merge_nested_from_index(
         let value = match evaluate_merge_nested_group(session, combiner.clone(), values) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_merge_nested_with_value(
-                                session, combiner, grouped, index, merged, key, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedMergeNestedFromIndexSuspensionFrameL173C25 { combiner, grouped, index, merged, key },
                 );
             }
             Err(error) => return Err(error),
@@ -242,17 +239,15 @@ fn resume_merge_from_index(
         )) {
             Ok(combined) => combined,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let grouped = FrozenAssociationSequence::freeze(grouped);
-                        let merged = PersistentAssociationSequence::freeze(merged);
-                        move |session, combined| {
-                            resume_suspended_merge_with_value(
-                                session, combiner, grouped, index, merged, key, combined,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let grouped = FrozenAssociationSequence::freeze(grouped);
+                                        let merged = PersistentAssociationSequence::freeze(merged);
+                ResumeMergeFromIndexSuspensionFrameL250C25 { combiner, grouped, index, merged, key }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -293,15 +288,11 @@ fn resume_suspended_merge_from_index(
         )) {
             Ok(combined) => combined,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, combined| {
-                            resume_suspended_merge_with_value(
-                                session, combiner, grouped, index, merged, key, combined,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedMergeFromIndexSuspensionFrameL299C25 { combiner, grouped, index, merged, key },
                 );
             }
             Err(error) => return Err(error),
@@ -346,17 +337,15 @@ fn resume_counts_by_from_index(
         let key = match session.evaluate(Expr::call(function.clone(), vec![item])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let items = FrozenAssociationSequence::freeze(items);
-                        let counts = PersistentAssociationGroups::freeze(counts);
-                        move |session, key| {
-                            resume_suspended_counts_by_with_value(
-                                session, function, items, index, counts, key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let items = FrozenAssociationSequence::freeze(items);
+                                        let counts = PersistentAssociationGroups::freeze(counts);
+                ResumeCountsByFromIndexSuspensionFrameL354C25 { function, items, index, counts }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -389,15 +378,11 @@ fn resume_suspended_counts_by_from_index(
         let key = match session.evaluate(Expr::call(function.clone(), vec![item])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, key| {
-                            resume_suspended_counts_by_with_value(
-                                session, function, items, index, counts, key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedCountsByFromIndexSuspensionFrameL395C25 { function, items, index, counts },
                 );
             }
             Err(error) => return Err(error),

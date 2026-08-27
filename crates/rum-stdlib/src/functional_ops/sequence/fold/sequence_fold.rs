@@ -67,17 +67,15 @@ fn resume_sequence_fold_from_offset(
         let value = match session.evaluate(Expr::call(state.operator.clone(), call_args)) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedSequenceFoldEvalState::freeze(state);
-                        let history = PersistentFunctionalSequence::freeze(history);
-                        move |session, value| {
-                            resume_suspended_sequence_fold_with_value(
-                                session, state, offset, history, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedSequenceFoldEvalState::freeze(state);
+                                        let history = PersistentFunctionalSequence::freeze(history);
+                ResumeSequenceFoldFromOffsetSuspensionFrameL75C25 { state, offset, history }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -113,15 +111,11 @@ fn resume_suspended_sequence_fold_from_offset(
         let value = match session.evaluate(Expr::call(state.operator.clone(), call_args)) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_sequence_fold_with_value(
-                                session, state, offset, history, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedSequenceFoldFromOffsetSuspensionFrameL119C25 { state, offset, history },
                 );
             }
             Err(error) => return Err(error),
@@ -231,3 +225,69 @@ const _: fn() = || {
     assert_traces::<SequenceFoldEvalState>();
     assert_traces::<SuspendedSequenceFoldEvalState>();
 };
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSequenceFoldFromOffsetSuspensionFrameL75C25 {
+    pub(super) state:
+        crate::functional_ops::sequence::fold::sequence_fold::SuspendedSequenceFoldEvalState,
+    pub(super) offset: usize,
+    pub(super) history:
+        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSequenceFoldFromOffsetSuspensionFrameL75C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut offset = self.offset.clone();
+        #[allow(unused_mut)]
+        let mut history = self.history.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_sequence_fold_with_value(session, state, offset, history, value)
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedSequenceFoldFromOffsetSuspensionFrameL119C25 {
+    pub(super) state:
+        crate::functional_ops::sequence::fold::sequence_fold::SuspendedSequenceFoldEvalState,
+    pub(super) offset: usize,
+    pub(super) history:
+        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedSequenceFoldFromOffsetSuspensionFrameL119C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut offset = self.offset.clone();
+        #[allow(unused_mut)]
+        let mut history = self.history.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_sequence_fold_with_value(session, state, offset, history, value)
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

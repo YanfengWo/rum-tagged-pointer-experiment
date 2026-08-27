@@ -1,7 +1,10 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplaceListCallMatch {
     matcher_args: FrozenMatcherSequence<MatcherArg>,
     value_args: SharedArgs,
@@ -10,15 +13,30 @@ struct SuspendedReplaceListCallMatch {
     flat: bool,
 }
 
-#[derive(FrameRootTrace)]
+impl SuspendedReplaceListCallMatch {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationReplaceListCallMatch"),
+            vec![
+                matcher_args_into_continuation_expr(self.matcher_args.into_vec()),
+                self.value_args.into_vec().into_continuation_expr(),
+                self.flat_head,
+                self.orderless.into_continuation_expr(),
+                self.flat.into_continuation_expr(),
+            ],
+        )
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplaceListGuardFilter {
     guards: SharedArgs,
     bindings: PersistentRewriteQueue<SymbolExprMap>,
-    option_scope: Option<OptionValueScope>,
+    option_scope: Option<FrozenRewriteValue<OptionValueScope>>,
     accepted: PersistentMatchResults,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplaceListRuleResults {
     scan: SuspendedReplaceListScan,
     bindings: PersistentRewriteQueue<SymbolExprMap>,
@@ -36,16 +54,24 @@ impl Session {
                 let option_scope = self.option_value_scope_for_definition(&lhs, &normalized_target);
                 let bindings_result =
                     self.collect_replace_list_rule_bindings_owned(inner, normalized_target);
-                self.drive_internal_value(bindings_result, move |session, bindings| {
-                    session.filter_replace_list_guard_bindings_owned(
+                match bindings_result {
+                    Ok(bindings) => self.filter_replace_list_guard_bindings_owned(
                         guards,
                         bindings,
                         option_scope,
                         Vec::new(),
                         0,
                         None,
-                    )
-                })
+                    ),
+                    Err(EvalError::InputRequired { request }) => {
+                        let guards = SharedArgs::new(guards.into_vec());
+                        let option_scope = option_scope.map(FrozenRewriteValue::freeze);
+                        crate::resume_or_suspend!(insert self, CollectReplaceListRuleBindingsOwnedSuspensionFrameL39C60 { guards, option_scope });
+                        crate::resume_or_suspend!(insert self, ContinueReplaceListInitialGuardFilterFrame);
+                        Err(EvalError::InputRequired { request })
+                    }
+                    Err(error) => Err(error),
+                }
             }
             MatcherNode::Call { head, args } => {
                 let one_identity = matcher_head_has_attribute(&head, self, Attribute::OneIdentity);
@@ -74,15 +100,8 @@ impl Session {
                                     orderless,
                                     flat,
                                 };
-                                self.push_suspension_frame(move |session, value| {
-                                    let outcome =
-                                        CompiledMatchOutcome::from_continuation_expr(value?);
-                                    session
-                                        .finish_suspended_replace_list_call_head_match(
-                                            state, outcome,
-                                        )
-                                        .map(|bindings| bindings.into_continuation_expr())
-                                });
+                                crate::resume_or_suspend!(insert self, CollectReplaceListRuleBindingsOwnedSuspensionFrameL77C60 { state });
+                                crate::resume_or_suspend!(insert self, ContinueReplaceListCallMatchFrame);
                                 Err(EvalError::InputRequired { request })
                             }
                             Err(error) => Err(error),
@@ -109,30 +128,20 @@ impl Session {
             other => {
                 let match_result =
                     self.match_compiled_owned(other, normalized_target, SymbolExprMap::default());
-                self.drive_internal_value(match_result, move |_, outcome| {
-                    Ok(if outcome.matched {
-                        vec![outcome.bindings]
-                    } else {
-                        Vec::new()
-                    })
-                })
+                crate::resume_or_suspend!(
+                    self,
+                    match_result,
+                    ok(outcome) => { (|| {
+                                    Ok(if outcome.matched {
+                                        vec![outcome.bindings]
+                                    } else {
+                                        Vec::new()
+                                    })
+                                })() },
+                    suspend => CollectReplaceListRuleBindingsOwnedSuspensionFrameL112C57,
+                )
             }
         }
-    }
-
-    fn finish_suspended_replace_list_call_head_match(
-        &mut self,
-        state: SuspendedReplaceListCallMatch,
-        outcome: CompiledMatchOutcome,
-    ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        self.finish_replace_list_call_head_match(
-            state.matcher_args.into_vec(),
-            state.value_args.into_vec(),
-            state.flat_head,
-            state.orderless,
-            state.flat,
-            outcome,
-        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -211,50 +220,11 @@ impl Session {
                     let state = SuspendedReplaceListGuardFilter {
                         guards: SharedArgs::new(guards.into_vec()),
                         bindings: PersistentRewriteQueue::freeze(remaining),
-                        option_scope,
+                        option_scope: option_scope.map(FrozenRewriteValue::freeze),
                         accepted: PersistentMatchResults::freeze(accepted),
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_replace_list_guard_filter(state, outcome)
-                            .map(|bindings| bindings.into_continuation_expr())
-                    });
-                    return Err(EvalError::InputRequired { request });
-                }
-                Err(error) => return Err(error),
-            }
-        }
-    }
-
-    fn resume_suspended_replace_list_guard_filter(
-        &mut self,
-        mut state: SuspendedReplaceListGuardFilter,
-        mut outcome: CompiledMatchOutcome,
-    ) -> Result<Vec<SymbolExprMap>, EvalError> {
-        loop {
-            if outcome.matched {
-                state.accepted = state.accepted.appended_values(vec![outcome.bindings]);
-            }
-
-            let Some((current, remaining)) = state.bindings.pop_front() else {
-                return Ok(state.accepted.into_vec());
-            };
-            state.bindings = remaining;
-            let guard_result = self.evaluate_guard_sequence_same_bindings_suspended(
-                state.guards.clone(),
-                current,
-                state.option_scope.clone(),
-            );
-            match guard_result {
-                Ok(next_outcome) => outcome = next_outcome,
-                Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_replace_list_guard_filter(state, outcome)
-                            .map(|bindings| bindings.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, FilterReplaceListGuardBindingsOwnedSuspensionFrameL217C48 { state });
+                    crate::resume_or_suspend!(insert self, ContinueReplaceListGuardFilterFrame);
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -330,92 +300,18 @@ impl Session {
                     },
                     bindings: PersistentRewriteQueue::freeze(remaining_bindings),
                 };
-                self.push_suspension_frame(move |session, value| {
-                    session
-                        .resume_suspended_replace_list_rule_results(state, value?)
-                        .map(|results| results.into_continuation_expr())
-                });
+                let next = ContinueReplaceListRuleResultsFrame {
+                    target: state.scan.target.clone(),
+                    normalized_target: state.scan.normalized_target.clone(),
+                    rules: state.scan.rules.clone(),
+                    max_results: state.scan.max_results,
+                    rule_index: state.scan.index,
+                };
+                crate::resume_or_suspend!(insert self, CollectReplaceListRuleResultsOwnedSuspensionFrameL333C44 { state });
+                crate::resume_or_suspend!(insert self, next);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
-        }
-    }
-
-    pub(super) fn collect_replace_list_rule_results_suspended(
-        &mut self,
-        scan: SuspendedReplaceListScan,
-        bindings: Vec<SymbolExprMap>,
-        binding_index: usize,
-    ) -> Result<Vec<Expr>, EvalError> {
-        let remaining = bindings.into_iter().skip(binding_index).collect();
-        self.drive_suspended_replace_list_rule_results(
-            SuspendedReplaceListRuleResults {
-                scan,
-                bindings: PersistentRewriteQueue::freeze(remaining),
-            },
-            None,
-        )
-    }
-
-    fn resume_suspended_replace_list_rule_results(
-        &mut self,
-        state: SuspendedReplaceListRuleResults,
-        value: Expr,
-    ) -> Result<Vec<Expr>, EvalError> {
-        self.drive_suspended_replace_list_rule_results(state, Some(value))
-    }
-
-    fn drive_suspended_replace_list_rule_results(
-        &mut self,
-        mut state: SuspendedReplaceListRuleResults,
-        mut pending: Option<Expr>,
-    ) -> Result<Vec<Expr>, EvalError> {
-        loop {
-            if let Some(value) = pending.take() {
-                state.scan.collected = state.scan.collected.appended(value);
-            }
-            if state
-                .scan
-                .max_results
-                .is_some_and(|limit| state.scan.collected.len() >= limit)
-            {
-                return Ok(state.scan.collected.into_vec());
-            }
-
-            let Some((current_bindings, remaining)) = state.bindings.pop_front() else {
-                state.scan.index += 1;
-                return self.collect_replace_list_results_suspended(state.scan, None);
-            };
-            state.bindings = remaining;
-            let rule = state
-                .scan
-                .rules
-                .get(state.scan.index)
-                .expect("ReplaceList rule remains in its suspended plan");
-            let replaced = substitute_rule_bindings_for_rhs(
-                &rule.rhs,
-                &current_bindings,
-                rule.rhs_may_splice_without_bindings,
-            );
-            self.push_rule_applied_trace(
-                RuleApplicationSource::ReplaceList,
-                &state.scan.target,
-                &rule.lhs,
-                &replaced,
-            );
-            let replaced_result = self.evaluate(replaced);
-            match replaced_result {
-                Ok(value) => pending = Some(value),
-                Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        session
-                            .resume_suspended_replace_list_rule_results(state, value?)
-                            .map(|results| results.into_continuation_expr())
-                    });
-                    return Err(EvalError::InputRequired { request });
-                }
-                Err(error) => return Err(error),
-            }
         }
     }
 }

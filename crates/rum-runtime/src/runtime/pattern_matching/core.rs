@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::{outcome::*, *};
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -36,10 +39,7 @@ impl Session {
             Ok(outcome) => Ok(finish_compiled_match(snapshot, outcome)),
             Err(EvalError::InputRequired { request }) => {
                 let snapshot = snapshot.freeze();
-                self.push_suspension_frame(move |_, value| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                    Ok(finish_suspended_compiled_match(snapshot, outcome).into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchCompiledOwnedSuspensionFrameL39C44 { snapshot });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -63,15 +63,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let bindings_for_true = FrozenMatchBindings::freeze(bindings_for_true);
                 let bindings_for_false = FrozenMatchBindings::freeze(bindings_for_false);
-                self.push_suspension_frame(move |_, outcome| {
-                    let result = outcome?;
-                    Ok(if is_system_symbol_name(&result, "True") {
-                        match_outcome(true, bindings_for_true.into_owned())
-                    } else {
-                        match_outcome(false, bindings_for_false.into_owned())
-                    }
-                    .into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, EvaluatePatternTestOwnedSuspensionFrameL66C44 { bindings_for_true, bindings_for_false });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -101,17 +93,8 @@ impl Session {
             ),
             Err(EvalError::InputRequired { request }) => {
                 let alternatives = FrozenMatcherSequence::freeze(alternatives_for_retry);
-                self.push_suspension_frame(move |session, value| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                    session
-                        .finish_compiled_alternative(
-                            alternatives.into_vec(),
-                            value_for_retry,
-                            index,
-                            outcome,
-                        )
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchCompiledAlternativesOwnedSuspensionFrameL104C44 { alternatives, value_for_retry, index });
+                crate::resume_or_suspend!(insert self, ContinueCompiledAlternativeFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -140,17 +123,35 @@ impl Session {
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
-        self.drive_internal_value(inner_result, move |_, outcome| {
-            if !outcome.matched {
-                return Ok(outcome);
-            }
+        match inner_result {
+            Ok(outcome) => {
+                if !outcome.matched {
+                    return Ok(outcome);
+                }
 
-            let mut bindings = outcome.bindings;
-            Ok(match_outcome(
-                bind_pattern_name(&name, value.clone(), &mut bindings),
-                bindings,
-            ))
-        })
+                let mut bindings = outcome.bindings;
+                Ok(match_outcome(
+                    bind_pattern_name(&name, value.clone(), &mut bindings),
+                    bindings,
+                ))
+            }
+            Err(EvalError::InputRequired { request }) => {
+                self.suspend_compiled_named_match(name, value, request)
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn suspend_compiled_named_match(
+        &mut self,
+        name: Symbol,
+        value: Expr,
+        request: RuntimeInputRequest,
+    ) -> Result<CompiledMatchOutcome, EvalError> {
+        crate::resume_or_suspend!(insert self, MatchCompiledNamedOwnedSuspensionFrameL143C49 { name, value });
+        Err(EvalError::InputRequired { request })
     }
 
     fn match_compiled_condition_owned(
@@ -161,15 +162,20 @@ impl Session {
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value, bindings);
-        self.drive_internal_value(inner_result, move |session, outcome| {
-            if !outcome.matched {
-                return Ok(outcome);
-            }
+        crate::resume_or_suspend!(
+            self,
+            inner_result,
+            ok(outcome) => { let session = self; (|| {
+                    if !outcome.matched {
+                        return Ok(outcome);
+                    }
 
-            let snapshot = outcome.bindings.clone();
-            let bindings = outcome.bindings;
-            session.evaluate_guard_owned(condition, bindings, snapshot, None)
-        })
+                    let snapshot = outcome.bindings.clone();
+                    let bindings = outcome.bindings;
+                    session.evaluate_guard_owned(condition, bindings, snapshot, None)
+                })() },
+            suspend => MatchCompiledConditionOwnedSuspensionFrameL164C49 { condition },
+        )
     }
 
     fn match_compiled_pattern_test_owned(
@@ -180,19 +186,24 @@ impl Session {
         bindings: SymbolExprMap,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let inner_result = self.match_compiled_owned(inner, value.clone(), bindings);
-        self.drive_internal_value(inner_result, move |session, outcome| {
-            if !outcome.matched {
-                return Ok(outcome);
-            }
+        crate::resume_or_suspend!(
+            self,
+            inner_result,
+            ok(outcome) => { let session = self; (|| {
+                    if !outcome.matched {
+                        return Ok(outcome);
+                    }
 
-            let false_bindings = outcome.bindings.clone();
-            session.evaluate_pattern_test_owned(
-                test,
-                value.clone(),
-                outcome.bindings,
-                false_bindings,
-            )
-        })
+                    let false_bindings = outcome.bindings.clone();
+                    session.evaluate_pattern_test_owned(
+                        test,
+                        value.clone(),
+                        outcome.bindings,
+                        false_bindings,
+                    )
+                })() },
+            suspend => MatchCompiledPatternTestOwnedSuspensionFrameL183C49 { test, value },
+        )
     }
 
     fn match_compiled_except_owned(
@@ -207,12 +218,8 @@ impl Session {
             Ok(outcome) => self.finish_compiled_except_inner(excluded, value, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let excluded = FrozenMatcherValue::freeze(excluded);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_compiled_except_inner(excluded.into_inner(), value, outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchCompiledExceptOwnedSuspensionFrameL210C44 { excluded, value });
+                crate::resume_or_suspend!(insert self, ContinueCompiledExceptFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -236,13 +243,7 @@ impl Session {
                 excluded_outcome.bindings,
             )),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |_, payload| {
-                    let excluded_outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    Ok(
-                        match_outcome(!excluded_outcome.matched, excluded_outcome.bindings)
-                            .into_continuation_expr(),
-                    )
-                });
+                crate::resume_or_suspend!(insert self, FinishCompiledExceptInnerSuspensionFrameL239C44);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -291,20 +292,8 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let args = FrozenMatcherSequence::freeze(args);
                         let value_args = SharedArgs::new(value_args);
-                        self.push_suspension_frame(move |session, payload| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                            session
-                                .finish_compiled_call_head(
-                                    args.into_vec(),
-                                    value_args.into_vec(),
-                                    flat_head,
-                                    one_identity_head,
-                                    orderless,
-                                    flat,
-                                    outcome,
-                                )
-                                .map(|outcome| outcome.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, MatchCompiledCallOwnedSuspensionFrameL294C52 { args, value_args, flat_head, one_identity_head, orderless, flat });
+                        crate::resume_or_suspend!(insert self, ContinueCompiledCallFrame);
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -475,12 +464,8 @@ impl Session {
             Ok(outcome) => self.finish_key_value_key_match(state, candidate_value, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedKeyValueChoice::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_key_value_key_match(state.into_owned(), candidate_value, outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchCompiledKeyValuePatternChoiceOwnedSuspensionFrameL478C44 { state, candidate_value });
+                crate::resume_or_suspend!(insert self, ContinueKeyValueKeyMatchFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -514,12 +499,8 @@ impl Session {
             Ok(outcome) => self.finish_key_value_value_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedKeyValueChoice::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_key_value_value_match(state.into_owned(), outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishKeyValueKeyMatchSuspensionFrameL517C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueKeyValueValueMatchFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -581,18 +562,7 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let checks = FrozenMatcherSequence::freeze(checks_for_next);
                         let snapshot = FrozenMatchBindings::freeze(snapshot_for_next);
-                        self.push_suspension_frame(move |session, payload| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                            session
-                                .finish_sequence_condition_check(
-                                    checks.into_vec(),
-                                    sequence_for_next,
-                                    snapshot.into_owned(),
-                                    index,
-                                    outcome,
-                                )
-                                .map(|outcome| outcome.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, EvaluateSequencePatternChecksOwnedSuspensionFrameL584C52 { checks, sequence_for_next, snapshot, index });
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -619,19 +589,7 @@ impl Session {
                         let checks = FrozenMatcherSequence::freeze(checks_for_next);
                         let bindings = FrozenMatchBindings::freeze(bindings_for_true);
                         let snapshot = FrozenMatchBindings::freeze(snapshot_for_false);
-                        self.push_suspension_frame(move |session, payload| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                            session
-                                .finish_sequence_pattern_test_check(
-                                    checks.into_vec(),
-                                    sequence_for_next,
-                                    bindings.into_owned(),
-                                    snapshot.into_owned(),
-                                    index,
-                                    outcome,
-                                )
-                                .map(|outcome| outcome.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, EvaluateSequencePatternChecksOwnedSuspensionFrameL622C52 { checks, sequence_for_next, bindings, snapshot, index });
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -731,6 +689,169 @@ struct KeyValueChoiceState {
     remaining_entries: Vec<(MatcherNode, MatcherNode, bool)>,
     candidates: Vec<AssociationEntryForm>,
     candidate_index: usize,
+}
+
+impl KeyValueChoiceState {
+    fn into_continuation_expr(self) -> Expr {
+        let remaining_entries = self
+            .remaining_entries
+            .into_iter()
+            .map(|(key, value, optional)| {
+                Expr::call(
+                    system_expr("InternalContinuationKeyValuePatternEntry"),
+                    vec![
+                        matcher_node_into_continuation_expr(key),
+                        matcher_node_into_continuation_expr(value),
+                        optional.into_continuation_expr(),
+                    ],
+                )
+            })
+            .collect();
+        let candidates = self
+            .candidates
+            .into_iter()
+            .map(|candidate| {
+                Expr::call(
+                    system_expr("InternalContinuationKeyValueCandidate"),
+                    vec![
+                        candidate.key,
+                        candidate.value,
+                        candidate.delayed.into_continuation_expr(),
+                    ],
+                )
+            })
+            .collect();
+        Expr::call(
+            system_expr("InternalContinuationKeyValueChoiceState"),
+            vec![
+                matcher_node_into_continuation_expr(self.key_pattern),
+                matcher_node_into_continuation_expr(self.value_pattern),
+                self.delayed.into_continuation_expr(),
+                Expr::call(
+                    system_expr("InternalContinuationKeyValuePatternEntries"),
+                    remaining_entries,
+                ),
+                Expr::call(
+                    system_expr("InternalContinuationKeyValueCandidates"),
+                    candidates,
+                ),
+                usize_into_continuation_expr(self.candidate_index),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected key-value-choice continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationKeyValueChoiceState"),
+            "unexpected key-value-choice continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let key_pattern = matcher_node_from_continuation_expr(
+            args.next()
+                .expect("key-value choice stores its key pattern"),
+        );
+        let value_pattern = matcher_node_from_continuation_expr(
+            args.next()
+                .expect("key-value choice stores its value pattern"),
+        );
+        let delayed = bool::from_continuation_expr(
+            args.next()
+                .expect("key-value choice stores its delayed flag"),
+        );
+        let entries_expr = args
+            .next()
+            .expect("key-value choice stores its remaining entries");
+        let Expr::Call {
+            head: entries_head,
+            args: entries,
+        } = entries_expr
+        else {
+            panic!("unexpected key-value-pattern entries continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&entries_head, "InternalContinuationKeyValuePatternEntries"),
+            "unexpected key-value-pattern entries tag: {entries_head:?}"
+        );
+        let remaining_entries = entries
+            .into_iter()
+            .map(|entry| {
+                let Expr::Call { head, args } = entry else {
+                    panic!("unexpected key-value-pattern entry continuation payload")
+                };
+                assert!(
+                    is_system_symbol_name(&head, "InternalContinuationKeyValuePatternEntry"),
+                    "unexpected key-value-pattern entry tag: {head:?}"
+                );
+                let mut args = args.into_iter();
+                let key = matcher_node_from_continuation_expr(
+                    args.next().expect("key-value entry stores its key pattern"),
+                );
+                let value = matcher_node_from_continuation_expr(
+                    args.next()
+                        .expect("key-value entry stores its value pattern"),
+                );
+                let optional = bool::from_continuation_expr(
+                    args.next()
+                        .expect("key-value entry stores its optional flag"),
+                );
+                debug_assert!(args.next().is_none());
+                (key, value, optional)
+            })
+            .collect();
+        let candidates_expr = args
+            .next()
+            .expect("key-value choice stores its candidate entries");
+        let Expr::Call {
+            head: candidates_head,
+            args: candidates,
+        } = candidates_expr
+        else {
+            panic!("unexpected key-value candidates continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&candidates_head, "InternalContinuationKeyValueCandidates"),
+            "unexpected key-value candidates tag: {candidates_head:?}"
+        );
+        let candidates = candidates
+            .into_iter()
+            .map(|candidate| {
+                let Expr::Call { head, args } = candidate else {
+                    panic!("unexpected key-value candidate continuation payload")
+                };
+                assert!(
+                    is_system_symbol_name(&head, "InternalContinuationKeyValueCandidate"),
+                    "unexpected key-value candidate tag: {head:?}"
+                );
+                let mut args = args.into_iter();
+                let key = args.next().expect("key-value candidate stores its key");
+                let value = args.next().expect("key-value candidate stores its value");
+                let delayed = bool::from_continuation_expr(
+                    args.next()
+                        .expect("key-value candidate stores its delayed flag"),
+                );
+                debug_assert!(args.next().is_none());
+                AssociationEntryForm {
+                    key,
+                    value,
+                    delayed,
+                }
+            })
+            .collect();
+        let candidate_index =
+            usize_from_continuation_expr(args.next().expect("key-value choice stores its cursor"));
+        debug_assert!(args.next().is_none());
+        Self {
+            key_pattern,
+            value_pattern,
+            delayed,
+            remaining_entries,
+            candidates,
+            candidate_index,
+        }
+    }
 }
 
 #[derive(Clone, FrameRootTrace)]

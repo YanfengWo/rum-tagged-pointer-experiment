@@ -1,5 +1,6 @@
 use super::*;
 use rum_core::SharedArgs;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 pub(crate) fn eval_key_select(
     session: &mut Session,
@@ -49,17 +50,15 @@ fn resume_key_select_from_index(
         let criterion_result = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let entries = FrozenAssociationSequence::freeze(entries);
-                        let selected = PersistentAssociationSequence::freeze(selected);
-                        move |session, outcome| {
-                            resume_suspended_key_select_with_value(
-                                session, entries, criterion, index, selected, entry, outcome,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let entries = FrozenAssociationSequence::freeze(entries);
+                                        let selected = PersistentAssociationSequence::freeze(selected);
+                ResumeKeySelectFromIndexSuspensionFrameL57C25 { entries, criterion, index, selected, entry }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -90,15 +89,11 @@ fn resume_suspended_key_select_from_index(
         let criterion_result = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, outcome| {
-                            resume_suspended_key_select_with_value(
-                                session, entries, criterion, index, selected, entry, outcome,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedKeySelectFromIndexSuspensionFrameL96C25 { entries, criterion, index, selected, entry },
                 );
             }
             Err(error) => return Err(error),
@@ -127,4 +122,88 @@ fn resume_suspended_key_select_with_value(
     };
 
     resume_suspended_key_select_from_index(session, entries, criterion, index + 1, selected)
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeKeySelectFromIndexSuspensionFrameL57C25 {
+    pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
+        rum_runtime::kernel_api::AssociationEntryForm,
+    >,
+    pub(super) criterion: rum_core::Expr,
+    pub(super) index: usize,
+    pub(super) selected: crate::associations::suspended_state::PersistentAssociationSequence<
+        rum_runtime::kernel_api::AssociationEntryForm,
+    >,
+    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySelectFromIndexSuspensionFrameL57C25 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut entries = self.entries.clone();
+        #[allow(unused_mut)]
+        let mut criterion = self.criterion.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut selected = self.selected.clone();
+        #[allow(unused_mut)]
+        let mut entry = self.entry.clone();
+        let resumed = match outcome {
+            Ok(outcome) => (|| {
+                resume_suspended_key_select_with_value(
+                    session, entries, criterion, index, selected, entry, outcome,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedKeySelectFromIndexSuspensionFrameL96C25 {
+    pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
+        rum_runtime::kernel_api::AssociationEntryForm,
+    >,
+    pub(super) criterion: rum_core::Expr,
+    pub(super) index: usize,
+    pub(super) selected: crate::associations::suspended_state::PersistentAssociationSequence<
+        rum_runtime::kernel_api::AssociationEntryForm,
+    >,
+    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedKeySelectFromIndexSuspensionFrameL96C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut entries = self.entries.clone();
+        #[allow(unused_mut)]
+        let mut criterion = self.criterion.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut selected = self.selected.clone();
+        #[allow(unused_mut)]
+        let mut entry = self.entry.clone();
+        let resumed = match outcome {
+            Ok(outcome) => (|| {
+                resume_suspended_key_select_with_value(
+                    session, entries, criterion, index, selected, entry, outcome,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
 }

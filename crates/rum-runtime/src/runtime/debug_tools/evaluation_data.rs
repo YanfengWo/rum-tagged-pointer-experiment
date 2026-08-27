@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_evaluation_data(
@@ -19,20 +20,22 @@ impl Session {
         let input_expr = expr.clone();
 
         let body_result = self.evaluate(expr.clone());
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let input_string = input_string.clone();
-            let input_expr = input_expr.clone();
-            move |session, outcome| {
-                session.finish_evaluation_data_capture(
-                    checkpoint,
-                    prior_tracing,
-                    started,
-                    &input_expr,
-                    &input_string,
-                    outcome,
-                )
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let input_string = input_string.clone();
+                    let input_expr = input_expr.clone();
+        EvalEvaluationDataSuspensionFrameL25C13 {
+            checkpoint,
+            prior_tracing,
+            started,
+            input_expr,
+            input_string: std::sync::Arc::new(input_string),
+        }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -179,7 +182,7 @@ impl Session {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, rum_derive::FrameRootTrace)]
 struct DebugCaptureCheckpoint {
     message_checkpoint: usize,
     print_checkpoint: usize,
@@ -195,5 +198,44 @@ impl DebugCaptureCheckpoint {
             trace_checkpoint: session.trace_events.len(),
             handled_error_checkpoint: session.handled_non_loader_eval_errors.len(),
         }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct EvalEvaluationDataSuspensionFrameL25C13 {
+    pub(super) checkpoint: crate::runtime::debug_tools::evaluation_data::DebugCaptureCheckpoint,
+    pub(super) prior_tracing: bool,
+    pub(super) started: std::time::Instant,
+    pub(super) input_expr: rum_core::Expr,
+    pub(super) input_string: std::sync::Arc<std::string::String>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalEvaluationDataSuspensionFrameL25C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut checkpoint = self.checkpoint.clone();
+        #[allow(unused_mut)]
+        let mut prior_tracing = self.prior_tracing.clone();
+        #[allow(unused_mut)]
+        let mut started = self.started.clone();
+        #[allow(unused_mut)]
+        let mut input_expr = self.input_expr.clone();
+        #[allow(unused_mut)]
+        let mut input_string = self.input_string.clone();
+        let resumed = (|| {
+            session.finish_evaluation_data_capture(
+                checkpoint,
+                prior_tracing,
+                started,
+                &input_expr,
+                input_string.as_str(),
+                outcome,
+            )
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

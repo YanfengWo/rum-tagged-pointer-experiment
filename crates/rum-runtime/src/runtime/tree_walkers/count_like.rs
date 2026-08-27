@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -43,10 +46,15 @@ impl Session {
         }
 
         let target_result = self.evaluate(args_slice[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let args = args.clone();
-            move |session, target| session.resume_count_after_target(target, &args)
-        })?;
+        let target = crate::resume_or_suspend!(
+            self,
+            target_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalCountSuspensionFrameL48C13 { args }
+        },
+        )?;
 
         self.resume_count_after_target(target, args)
     }
@@ -64,10 +72,15 @@ impl Session {
         }
 
         let target_result = self.evaluate(args_slice[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let args = args.clone();
-            move |session, target| session.resume_member_q_after_target(target, &args)
-        })?;
+        let target = crate::resume_or_suspend!(
+            self,
+            target_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalMemberQSuspensionFrameL69C13 { args }
+        },
+        )?;
 
         self.resume_member_q_after_target(target, args)
     }
@@ -82,10 +95,15 @@ impl Session {
         }
 
         let target_result = self.evaluate(args_slice[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let args = args.clone();
-            move |session, target| session.resume_free_q_after_target(target, &args)
-        })?;
+        let target = crate::resume_or_suspend!(
+            self,
+            target_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalFreeQSuspensionFrameL87C13 { args }
+        },
+        )?;
 
         self.resume_free_q_after_target(target, args)
     }
@@ -96,11 +114,16 @@ impl Session {
         args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
-        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
-            let target = target.clone();
-            let args = args.clone();
-            move |session, pattern| session.resume_count_after_pattern(target, pattern, &args)
-        })?;
+        let pattern = crate::resume_or_suspend!(
+            self,
+            pattern_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let target = target.clone();
+                    let args = args.clone();
+        ResumeCountAfterTargetSuspensionFrameL102C13 { target, args }
+        },
+        )?;
 
         self.resume_count_after_pattern(target, pattern, args)
     }
@@ -131,11 +154,16 @@ impl Session {
         args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
-        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
-            let target = target.clone();
-            let args = args.clone();
-            move |session, pattern| session.resume_member_q_after_pattern(target, pattern, &args)
-        })?;
+        let pattern = crate::resume_or_suspend!(
+            self,
+            pattern_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let target = target.clone();
+                    let args = args.clone();
+        ResumeMemberQAfterTargetSuspensionFrameL137C13 { target, args }
+        },
+        )?;
 
         self.resume_member_q_after_pattern(target, pattern, args)
     }
@@ -166,11 +194,16 @@ impl Session {
         args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
-        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
-            let target = target.clone();
-            let args = args.clone();
-            move |session, pattern| session.resume_free_q_after_pattern(target, pattern, &args)
-        })?;
+        let pattern = crate::resume_or_suspend!(
+            self,
+            pattern_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let target = target.clone();
+                    let args = args.clone();
+        ResumeFreeQAfterTargetSuspensionFrameL172C13 { target, args }
+        },
+        )?;
 
         self.resume_free_q_after_pattern(target, pattern, args)
     }
@@ -217,18 +250,7 @@ impl Session {
             ),
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                self.push_suspension_frame(move |session, outcome| {
-                    let traversal =
-                        TraversalWithoutLimitResolution::from_continuation_expr(outcome?);
-                    session.finish_count_like_after_traversal(
-                        builtin_name,
-                        target,
-                        pattern,
-                        &args,
-                        finish,
-                        traversal,
-                    )
-                });
+                crate::resume_or_suspend!(insert self, FinishCountLikeAfterPatternSuspensionFrameL220C44 { builtin_name, target, pattern, args, finish });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -256,9 +278,14 @@ impl Session {
         };
 
         let outcome_result = self.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
-        self.drive_internal_value(outcome_result, move |_, outcome| {
-            Ok(finish.finish(outcome.count))
-        })
+        crate::resume_or_suspend!(
+            self,
+            outcome_result,
+            ok(outcome) => { (|| {
+                    Ok(finish.finish(outcome.count))
+                })() },
+            suspend => FinishCountLikeAfterTraversalSuspensionFrameL259C51 { finish },
+        )
     }
 
     fn count_pattern_matches_owned(
@@ -383,11 +410,16 @@ impl Session {
             })
         };
 
-        self.drive_internal_value(match_result, move |_, outcome| {
-            let next_count = count + usize::from(outcome.matched);
-            let exhausted = traversal.limit_reached(seen_before + next_count);
-            Ok(TraversalCountOutcome::new(next_count, depth, exhausted))
-        })
+        crate::resume_or_suspend!(
+            self,
+            match_result,
+            ok(outcome) => { (|| {
+                    let next_count = count + usize::from(outcome.matched);
+                    let exhausted = traversal.limit_reached(seen_before + next_count);
+                    Ok(TraversalCountOutcome::new(next_count, depth, exhausted))
+                })() },
+            suspend => FinishCountAtCurrentNodeSuspensionFrameL386C49 { count, traversal, seen_before, depth },
+        )
     }
 
     /// Walks the children one per loop iteration, keeping the running count in
@@ -460,12 +492,7 @@ impl Session {
                         count,
                         max_child_depth,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = TraversalCountOutcome::from_continuation_expr(value?);
-                        session
-                            .count_pattern_children_suspended(state, Some(outcome))
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, CountPatternChildrenSuspensionFrameL463C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -525,12 +552,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = TraversalCountOutcome::from_continuation_expr(value?);
-                        session
-                            .count_pattern_children_suspended(state, Some(outcome))
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, CountPatternChildrenSuspendedSuspensionFrameL528C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

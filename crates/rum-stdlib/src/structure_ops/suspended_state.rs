@@ -3,6 +3,8 @@ use std::{collections::HashSet, hash::Hash};
 
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+const PERSISTENT_SEQUENCE_CHUNK_CAPACITY: usize = 32;
+
 #[derive(Clone, FrameRootTrace)]
 pub(super) struct FrozenStructureSequence<T: FrameRootTrace>(Arc<[T]>);
 
@@ -24,8 +26,14 @@ impl<T: FrameRootTrace> FrozenStructureSequence<T> {
     }
 }
 
-#[derive(Clone, FrameRootTrace)]
+#[derive(FrameRootTrace)]
 pub(super) struct FrozenStructureValue<T: FrameRootTrace>(Arc<T>);
+
+impl<T: FrameRootTrace> Clone for FrozenStructureValue<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
 
 impl<T: FrameRootTrace> FrozenStructureValue<T> {
     pub(super) fn freeze(value: T) -> Self {
@@ -47,7 +55,7 @@ pub(super) struct PersistentStructureSequence<T: FrameRootTrace> {
 #[derive(FrameRootTrace)]
 struct PersistentStructureSequenceNode<T: FrameRootTrace> {
     previous: Option<Arc<PersistentStructureSequenceNode<T>>>,
-    value: T,
+    values: Vec<T>,
 }
 
 impl<T: FrameRootTrace> PersistentStructureSequence<T> {
@@ -60,15 +68,27 @@ impl<T: FrameRootTrace> PersistentStructureSequence<T> {
         }
     }
 
-    pub(super) fn appended(&self, value: T) -> Self {
-        Self {
-            prefix: self.prefix.clone(),
-            tail: Some(Arc::new(PersistentStructureSequenceNode {
-                previous: self.tail.clone(),
-                value,
-            })),
-            len: self.len + 1,
+    pub(super) fn push(&mut self, value: T) {
+        if let Some(tail) = self.tail.as_mut().and_then(Arc::get_mut) {
+            if tail.values.len() < PERSISTENT_SEQUENCE_CHUNK_CAPACITY {
+                tail.values.push(value);
+                self.len += 1;
+                return;
+            }
         }
+
+        let mut values = Vec::with_capacity(PERSISTENT_SEQUENCE_CHUNK_CAPACITY);
+        values.push(value);
+        self.tail = Some(Arc::new(PersistentStructureSequenceNode {
+            previous: self.tail.take(),
+            values,
+        }));
+        self.len += 1;
+    }
+
+    pub(super) fn appended(mut self, value: T) -> Self {
+        self.push(value);
+        self
     }
 
     pub(super) fn len(&self) -> usize {
@@ -84,27 +104,31 @@ impl<T: FrameRootTrace> PersistentStructureSequence<T> {
         }
         let mut remaining = self.len - index - 1;
         let mut node = self.tail.as_deref();
-        while remaining > 0 {
-            node = node?.previous.as_deref();
-            remaining -= 1;
+        while let Some(current) = node {
+            if remaining < current.values.len() {
+                return current.values.get(current.values.len() - remaining - 1);
+            }
+            remaining -= current.values.len();
+            node = current.previous.as_deref();
         }
-        node.map(|node| &node.value)
+        None
     }
 }
 
 impl<T: Clone + FrameRootTrace> PersistentStructureSequence<T> {
     pub(super) fn to_vec(&self) -> Vec<T> {
-        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut chunks = Vec::new();
         let mut node = self.tail.as_deref();
         while let Some(current) = node {
-            suffix.push(current.value.clone());
+            chunks.push(current.values.as_slice());
             node = current.previous.as_deref();
         }
-        suffix.reverse();
 
         let mut values = Vec::with_capacity(self.len);
         values.extend(self.prefix.iter().cloned());
-        values.extend(suffix);
+        for chunk in chunks.into_iter().rev() {
+            values.extend(chunk.iter().cloned());
+        }
         values
     }
 }

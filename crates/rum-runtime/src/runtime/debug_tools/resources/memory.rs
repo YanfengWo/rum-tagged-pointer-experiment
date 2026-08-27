@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::FrameRootVisitor;
 use rum_core::IntValue;
 
 impl Session {
@@ -247,11 +248,21 @@ impl Session {
                 .as_ref()
                 .map_or(0, render_suspended_evaluation_memory_proxy_bytes),
         );
+        total = total.saturating_add(
+            self.resuming_suspension
+                .as_ref()
+                .map_or(0, render_suspended_evaluation_memory_proxy_bytes),
+        );
         total = total.saturating_add(std::mem::size_of::<ResourceLimits>());
 
         let peak = self.peak_memory_proxy_bytes.get().max(total);
         self.peak_memory_proxy_bytes.set(peak);
         total
+    }
+
+    #[cfg(test)]
+    pub(in crate::runtime) fn current_memory_proxy_bytes_for_test(&self) -> usize {
+        self.current_memory_proxy_bytes()
     }
 }
 
@@ -570,6 +581,9 @@ fn render_input_request_memory_proxy_bytes(request: &RuntimeInputRequest) -> usi
 }
 
 fn render_suspended_evaluation_memory_proxy_bytes(suspended: &SuspendedEvaluation) -> usize {
+    let mut roots = SuspensionMemoryRootVisitor::default();
+    suspended.trace_frame_roots(&mut roots);
+
     std::mem::size_of::<SuspendedEvaluation>()
         .saturating_add(
             suspended
@@ -578,7 +592,25 @@ fn render_suspended_evaluation_memory_proxy_bytes(suspended: &SuspendedEvaluatio
                 .map(render_evaluation_stack_entry_memory_proxy_bytes)
                 .sum::<usize>(),
         )
-        .saturating_add(suspended.frames.len().saturating_mul(16))
+        .saturating_add(suspended.frame_storage_memory_proxy_bytes())
+        .saturating_add(roots.bytes)
+}
+
+#[derive(Default)]
+struct SuspensionMemoryRootVisitor {
+    bytes: usize,
+}
+
+impl FrameRootVisitor for SuspensionMemoryRootVisitor {
+    fn visit_expr(&mut self, expr: &Expr) {
+        self.bytes = self.bytes.saturating_add(expr_memory_proxy_bytes(expr));
+    }
+
+    fn visit_symbol(&mut self, symbol: &Symbol) {
+        self.bytes = self
+            .bytes
+            .saturating_add(render_symbol_memory_proxy_bytes(symbol));
+    }
 }
 
 fn render_evaluation_stack_entry_memory_proxy_bytes(entry: &EvaluationStackEntry) -> usize {

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -27,6 +30,18 @@ struct SuspendedCasesRuleMatch {
     spec: FrozenRewriteValue<CasesSpec>,
 }
 
+struct SuspendedCasesCollectionOutcome {
+    matches: PersistentRewriteExprs,
+    depth: usize,
+    exhausted: bool,
+}
+
+impl SuspendedCasesCollectionOutcome {
+    fn into_owned(self) -> CasesCollectionOutcome {
+        CasesCollectionOutcome::new(self.matches.into_vec(), self.depth, self.exhausted)
+    }
+}
+
 impl Session {
     pub(in crate::runtime) fn eval_cases(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         let args_slice = args.as_ref();
@@ -38,17 +53,16 @@ impl Session {
         }
 
         let target_result = self.evaluate(args_slice[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let args = args.clone();
-            move |session, target| {
-                session.resume_cases_after_target(
-                    target,
-                    args[1].clone(),
-                    args[2..].to_vec(),
-                    args.as_ref().to_vec(),
-                )
+        let target = match target_result {
+            Ok(value) => value,
+            Err(EvalError::InputRequired { request }) => {
+                let args = args.clone();
+                crate::resume_or_suspend!(insert self, EvalCasesSuspensionFrameL43C13 { args });
+                crate::resume_or_suspend!(insert self, ContinueCasesFrame);
+                return Err(EvalError::InputRequired { request });
             }
-        })?;
+            Err(error) => return Err(error),
+        };
 
         self.resume_cases_after_target(
             target,
@@ -74,16 +88,56 @@ impl Session {
                 call_args,
             ),
             Err(EvalError::InputRequired { request }) => {
-                let option_exprs = SharedArgs::new(option_exprs);
                 let call_args = SharedArgs::new(call_args);
-                self.push_suspension_frame(move |session, value| {
-                    session.resume_cases_after_resolved_spec(
-                        target,
-                        value?,
-                        option_exprs.into_vec(),
-                        call_args.into_vec(),
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterTargetSuspensionFrameL79C44 { target, call_args });
+                crate::resume_or_suspend!(insert self, ContinueCasesFrame);
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_cases_after_target_suspended(
+        &mut self,
+        target: Expr,
+        call_args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let spec_expr = call_args
+            .get(1)
+            .expect("Cases suspended call stores its specification")
+            .clone();
+        let spec_result = self.resolve_cases_spec_expr_for_matching_owned(spec_expr);
+        match spec_result {
+            Ok(resolved_spec) => {
+                self.resume_cases_after_resolved_spec_suspended(target, resolved_spec, call_args)
+            }
+            Err(EvalError::InputRequired { request }) => {
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterTargetSuspensionFrameL79C44 { target, call_args });
+                crate::resume_or_suspend!(insert self, ContinueCasesFrame);
+                Err(EvalError::InputRequired { request })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn resume_cases_after_resolved_spec_suspended(
+        &mut self,
+        target: Expr,
+        resolved_spec: Expr,
+        call_args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let spec =
+            FrozenRewriteValue::freeze(self.compile_cases_spec_from_resolved_expr(resolved_spec));
+        let mut defaults = CasesTraversalConfig::default_cases();
+        defaults.include_heads = self.system_option_bool("Cases", "Heads", false)?;
+        let traversal_result =
+            self.resolve_cases_traversal_shared_from(call_args.clone(), 2, defaults);
+        match traversal_result {
+            Ok(traversal) => self.finish_cases_after_resolved_traversal_suspended(
+                target, spec, traversal, call_args,
+            ),
+            Err(EvalError::InputRequired { request }) => {
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterResolvedSpecSuspensionFrameL111C44 { target, spec, call_args });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -108,15 +162,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let spec = FrozenRewriteValue::freeze(spec);
                 let call_args = SharedArgs::new(call_args);
-                self.push_suspension_frame(move |session, value| {
-                    let traversal = CasesTraversalResolution::from_continuation_expr(value?);
-                    session.finish_cases_after_resolved_traversal(
-                        target,
-                        spec.into_inner(),
-                        traversal,
-                        call_args.into_vec(),
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterResolvedSpecSuspensionFrameL111C44 { target, spec, call_args });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -140,6 +186,35 @@ impl Session {
         self.finish_cases_with_traversal(target, spec, traversal)
     }
 
+    fn finish_cases_after_resolved_traversal_suspended(
+        &mut self,
+        target: Expr,
+        spec: FrozenRewriteValue<CasesSpec>,
+        traversal: CasesTraversalResolution,
+        call_args: SharedArgs,
+    ) -> Result<Expr, EvalError> {
+        let traversal = match traversal {
+            CasesTraversalResolution::Valid(traversal) => traversal,
+            CasesTraversalResolution::Invalid(error) => {
+                return Ok(self.invalid_cases_traversal_call("Cases", call_args.as_ref(), error));
+            }
+        };
+        if traversal.limit_reached(0) {
+            return Ok(Expr::call(system_expr("List"), Vec::new()));
+        }
+
+        let matches_result = self.collect_cases_with_suspended_spec(target, spec, traversal, 0, 0);
+        crate::resume_or_suspend!(
+            self,
+            matches_result,
+            ok(outcome) => {
+                let outcome = outcome.into_owned();
+                Ok(Expr::call(system_expr("List"), outcome.matches))
+            },
+            suspend => FinishCasesWithTraversalSuspensionFrameL154C51,
+        )
+    }
+
     fn finish_cases_with_traversal(
         &mut self,
         target: Expr,
@@ -151,9 +226,14 @@ impl Session {
         }
 
         let matches_result = self.collect_cases_owned(target, spec, traversal, 0, 0);
-        self.drive_internal_value(matches_result, move |_, outcome| {
-            Ok(Expr::call(system_expr("List"), outcome.matches))
-        })
+        crate::resume_or_suspend!(
+            self,
+            matches_result,
+            ok(outcome) => { (|| {
+                    Ok(Expr::call(system_expr("List"), outcome.matches))
+                })() },
+            suspend => FinishCasesWithTraversalSuspensionFrameL154C51,
+        )
     }
 
     fn collect_cases_owned(
@@ -279,10 +359,7 @@ impl Session {
                     depth,
                     seen_before,
                 };
-                self.push_suspension_frame(move |_, value| {
-                    let case = Option::<Expr>::from_continuation_expr(value?);
-                    Ok(finish_suspended_cases_node(state, case).into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishCasesAtCurrentNodeSuspensionFrameL282C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -363,12 +440,7 @@ impl Session {
                         matches: PersistentRewriteExprs::freeze(matches),
                         max_child_depth,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CasesCollectionOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_cases_children(state, outcome)
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, CollectCasesChildrenSuspensionFrameL366C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -380,7 +452,7 @@ impl Session {
         &mut self,
         state: SuspendedCasesChildren,
         outcome: CasesCollectionOutcome,
-    ) -> Result<CasesCollectionOutcome, EvalError> {
+    ) -> Result<SuspendedCasesCollectionOutcome, EvalError> {
         self.collect_cases_children_suspended(state, Some(outcome))
     }
 
@@ -388,7 +460,7 @@ impl Session {
         &mut self,
         mut state: SuspendedCasesChildren,
         mut pending: Option<CasesCollectionOutcome>,
-    ) -> Result<CasesCollectionOutcome, EvalError> {
+    ) -> Result<SuspendedCasesCollectionOutcome, EvalError> {
         loop {
             if let Some(child_outcome) = pending.take() {
                 state.matches = state.matches.appended_values(child_outcome.matches);
@@ -402,11 +474,11 @@ impl Session {
                 }
 
                 if child_outcome.exhausted {
-                    return Ok(CasesCollectionOutcome::new(
-                        state.matches.into_vec(),
-                        state.max_child_depth + 1,
-                        true,
-                    ));
+                    return Ok(SuspendedCasesCollectionOutcome {
+                        matches: state.matches,
+                        depth: state.max_child_depth + 1,
+                        exhausted: true,
+                    });
                 }
                 state.child_index += 1;
             }
@@ -432,14 +504,9 @@ impl Session {
                 state.seen_before + state.matches.len(),
             );
             match child_result {
-                Ok(outcome) => pending = Some(outcome),
+                Ok(outcome) => pending = Some(outcome.into_owned()),
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CasesCollectionOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_cases_children(state, outcome)
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, CollectCasesChildrenSuspendedSuspensionFrameL437C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -454,7 +521,7 @@ impl Session {
         traversal: CasesTraversalConfig,
         level: usize,
         seen_before: usize,
-    ) -> Result<CasesCollectionOutcome, EvalError> {
+    ) -> Result<SuspendedCasesCollectionOutcome, EvalError> {
         match expr.clone() {
             Expr::Atom(_) => self.finish_cases_at_current_node_suspended(
                 expr,
@@ -513,7 +580,7 @@ impl Session {
         traversal: CasesTraversalConfig,
         level: usize,
         seen_before: usize,
-    ) -> Result<CasesCollectionOutcome, EvalError> {
+    ) -> Result<SuspendedCasesCollectionOutcome, EvalError> {
         match expr.clone() {
             Expr::Atom(_) => self.finish_cases_at_current_node_suspended(
                 expr,
@@ -558,9 +625,13 @@ impl Session {
         depth: usize,
         seen_before: usize,
         matches: PersistentRewriteExprs,
-    ) -> Result<CasesCollectionOutcome, EvalError> {
+    ) -> Result<SuspendedCasesCollectionOutcome, EvalError> {
         if traversal.limit_reached(seen_before + matches.len()) {
-            return Ok(CasesCollectionOutcome::new(matches.into_vec(), depth, true));
+            return Ok(SuspendedCasesCollectionOutcome {
+                matches,
+                depth,
+                exhausted: true,
+            });
         }
 
         let case_result = if traversal.levels.matches(level, depth) {
@@ -585,10 +656,7 @@ impl Session {
                     depth,
                     seen_before,
                 };
-                self.push_suspension_frame(move |_, value| {
-                    let case = Option::<Expr>::from_continuation_expr(value?);
-                    Ok(finish_suspended_cases_node(state, case).into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishCasesAtCurrentNodeSuspendedSuspensionFrameL588C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -620,12 +688,7 @@ impl Session {
                         let state = SuspendedCasesRuleMatch {
                             spec: FrozenRewriteValue::freeze(CasesSpec::Rule(rule)),
                         };
-                        self.push_suspension_frame(move |session, value| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                            session
-                                .finish_suspended_cases_rule_match(state, outcome)
-                                .map(|result| result.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, TryCollectCaseOwnedSuspensionFrameL623C52 { state });
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -656,12 +719,7 @@ impl Session {
                     Ok(outcome) => self.finish_cases_rule_match(rule, outcome),
                     Err(EvalError::InputRequired { request }) => {
                         let state = SuspendedCasesRuleMatch { spec };
-                        self.push_suspension_frame(move |session, value| {
-                            let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                            session
-                                .finish_suspended_cases_rule_match(state, outcome)
-                                .map(|result| result.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, TryCollectCaseSuspendedSuspensionFrameL659C52 { state });
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -678,10 +736,7 @@ impl Session {
         match match_result {
             Ok(outcome) => Ok(outcome.matched.then_some(expr)),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |_, value| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                    Ok(outcome.matched.then_some(expr).into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishCasesPatternMatchSuspensionFrameL681C44 { expr });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -714,8 +769,13 @@ impl Session {
             rule.rhs_may_splice_without_bindings,
         );
         let transformed_result = self.evaluate(transformed);
-        self.suspend_with_frame_lazy(transformed_result, || |_, value| Ok(value))
-            .map(Some)
+        crate::resume_or_suspend!(
+            self,
+            transformed_result,
+            ok(value) => Ok(value),
+            suspend => FinishCasesRuleMatchSuspensionFrameL717C61,
+        )
+        .map(Some)
     }
 }
 
@@ -736,14 +796,18 @@ fn finish_cases_node(
 fn finish_suspended_cases_node(
     mut state: SuspendedCasesNodeFinish,
     case: Option<Expr>,
-) -> CasesCollectionOutcome {
+) -> SuspendedCasesCollectionOutcome {
     if let Some(case) = case {
         state.matches = state.matches.appended(case);
     }
     let exhausted = state
         .traversal
         .limit_reached(state.seen_before + state.matches.len());
-    CasesCollectionOutcome::new(state.matches.into_vec(), state.depth, exhausted)
+    SuspendedCasesCollectionOutcome {
+        matches: state.matches,
+        depth: state.depth,
+        exhausted,
+    }
 }
 
 #[cfg(test)]

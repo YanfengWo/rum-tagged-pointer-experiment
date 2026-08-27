@@ -3,6 +3,7 @@ use rum_core::{BigInt, Expr};
 use rum_runtime::kernel_api::{
     ArithmeticDataBuiltin, EvalError, Session, call_items_with_head, system_expr,
 };
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod stats;
 
@@ -179,7 +180,12 @@ pub(crate) fn eval_mean(
     let length = Expr::integer(BigInt::from(items.len()));
     let quotient = Expr::call(system_expr("Divide"), vec![total, length]);
     let evaluated = session.evaluate(quotient);
-    session.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))
+    rum_runtime::resume_or_suspend!(
+        session,
+        evaluated,
+        ok(value) => Ok(value),
+        suspend => EvalMeanSuspensionFrameL182C51,
+    )
 }
 
 pub(crate) fn eval_denominator(
@@ -260,4 +266,21 @@ pub(crate) fn eval_min_max(
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
     dispatch(session, ArithmeticDataBuiltin::MinMax, head, args)
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalMeanSuspensionFrameL182C51;
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalMeanSuspensionFrameL182C51 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
 }

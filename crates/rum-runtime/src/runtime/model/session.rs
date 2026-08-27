@@ -108,6 +108,7 @@ pub struct Session {
     pub(in crate::runtime) pending_input_request: Option<RuntimeInputRequest>,
     pub(in crate::runtime) pending_eval_request: Option<PendingEvalRequest>,
     pub(in crate::runtime) pending_suspension: Option<SuspendedEvaluation>,
+    pub(in crate::runtime) resuming_suspension: Option<SuspendedEvaluation>,
     pub(in crate::runtime) interrupt_flag: Arc<AtomicBool>,
     pub(in crate::runtime) eval_timeout: Option<Duration>,
     pub(in crate::runtime) eval_deadline: Option<Instant>,

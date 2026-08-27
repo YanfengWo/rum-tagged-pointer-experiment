@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::matcher::{
     collect_string_cases, split_string_value, string_contains_q, string_count_matches,
     string_delete_matches, string_ends_q, string_free_q, string_match_q, string_position_expr,
@@ -230,9 +233,14 @@ pub(crate) fn eval_string_replace(
                 )
             }
         };
-        return session.drive_internal_value::<String, Expr, _>(result, |_, rendered| {
-            Ok(Expr::string(rendered))
-        });
+        return rum_runtime::resume_or_suspend!(
+            session,
+            result,
+            ok(rendered) => { (|| {
+                    Ok(Expr::string(rendered))
+                })() },
+            suspend => EvalStringReplaceSuspensionFrameL233C72,
+        );
     }
 
     if let Some(values) = expr_as_string_list(&args[0]) {
@@ -293,9 +301,14 @@ pub(crate) fn eval_string_cases(
                         max_matches,
                         config,
                     );
-                    session.drive_internal_value::<Vec<Expr>, Expr, _>(result, |_, items| {
-                        Ok(list_expr(items))
-                    })
+                    rum_runtime::resume_or_suspend!(
+                        session,
+                        result,
+                        ok(items) => { (|| {
+                                            Ok(list_expr(items))
+                                        })() },
+                        suspend => EvalStringCasesSuspensionFrameL296C80,
+                    )
                 } else {
                     Ok(list_expr(collect_string_cases(
                         value,
@@ -313,9 +326,14 @@ pub(crate) fn eval_string_cases(
                     max_matches,
                     config,
                 );
-                session.drive_internal_value::<Vec<Expr>, Expr, _>(result, |_, items| {
-                    Ok(list_expr(items))
-                })
+                rum_runtime::resume_or_suspend!(
+                    session,
+                    result,
+                    ok(items) => { (|| {
+                                    Ok(list_expr(items))
+                                })() },
+                    suspend => EvalStringCasesSuspensionFrameL316C76,
+                )
             }
         };
     }

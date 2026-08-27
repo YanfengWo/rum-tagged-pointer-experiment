@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn try_apply_function(
@@ -61,9 +62,12 @@ impl Session {
             runtime_profile_evaluate,
             runtime_profile_outcome_for_expr_result(&applied_result),
         );
-        let outcome = self.suspend_with_result_frame_lazy(applied_result, || {
-            |session, outcome| session.finish_function_application(outcome)
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            applied_result,
+            ok(value) => Ok(value),
+            suspend => TryApplyFunctionSuspensionFrameL65C13,
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -131,5 +135,19 @@ fn runtime_profile_outcome_for_expr_result(
         }
         Err(EvalError::InputRequired { .. }) => RuntimeProfileOutcome::InputRequired,
         Err(_) => RuntimeProfileOutcome::Error,
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct TryApplyFunctionSuspensionFrameL65C13;
+
+impl crate::runtime::suspension::SuspensionFrame for TryApplyFunctionSuspensionFrameL65C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = (|| session.finish_function_application(outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

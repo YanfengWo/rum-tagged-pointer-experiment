@@ -9,7 +9,7 @@ struct ArrayLeafTestState {
     index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedArrayLeafTestState {
     leaves: FrozenPredicateSequence<Expr>,
     test: Expr,
@@ -98,14 +98,14 @@ pub(crate) fn eval_array_q(
     let rank_value = match rank_pattern_match_result(session, shape.len(), args[1].clone()) {
         Ok(value) => value,
         Err(EvalError::InputRequired { request }) => {
-            return session.suspend_with_frame_lazy(
+            return rum_runtime::resume_or_suspend!(
+                session,
                 Err(EvalError::InputRequired { request }),
-                || {
-                    let leaf_test = leaf_test.map(SuspendedArrayLeafTestState::freeze);
-                    move |session, value| {
-                        finish_suspended_array_q_with_rank_value(session, leaf_test, value)
-                    }
-                },
+                ok(value) => Ok(value),
+                suspend => {
+            let leaf_test = leaf_test.map(SuspendedArrayLeafTestState::freeze);
+            EvalArrayQSuspensionFrameL105C21 { leaf_test }
+            },
             );
         }
         Err(error) => return Err(error),
@@ -178,14 +178,14 @@ fn resume_array_leaf_test_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedArrayLeafTestState::freeze(state);
-                        move |session, value| {
-                            resume_suspended_array_leaf_test_with_value(session, state, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedArrayLeafTestState::freeze(state);
+                ResumeArrayLeafTestFromIndexSuspensionFrameL185C25 { state }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -214,13 +214,11 @@ fn resume_suspended_array_leaf_test_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_array_leaf_test_with_value(session, state, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedArrayLeafTestFromIndexSuspensionFrameL220C25 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -261,3 +259,71 @@ const _: fn() = || {
     assert_traces::<ArrayLeafTestState>();
     assert_traces::<SuspendedArrayLeafTestState>();
 };
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct EvalArrayQSuspensionFrameL105C21 {
+    pub(super) leaf_test:
+        std::option::Option<crate::predicates::arrays::SuspendedArrayLeafTestState>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for EvalArrayQSuspensionFrameL105C21 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut leaf_test = self.leaf_test.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| finish_suspended_array_q_with_rank_value(session, leaf_test, value))(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeArrayLeafTestFromIndexSuspensionFrameL185C25 {
+    pub(super) state: crate::predicates::arrays::SuspendedArrayLeafTestState,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeArrayLeafTestFromIndexSuspensionFrameL185C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| resume_suspended_array_leaf_test_with_value(session, state, value))(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedArrayLeafTestFromIndexSuspensionFrameL220C25 {
+    pub(super) state: crate::predicates::arrays::SuspendedArrayLeafTestState,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedArrayLeafTestFromIndexSuspensionFrameL220C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| resume_suspended_array_leaf_test_with_value(session, state, value))(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

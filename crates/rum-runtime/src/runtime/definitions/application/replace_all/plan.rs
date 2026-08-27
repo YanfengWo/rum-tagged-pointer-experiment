@@ -19,7 +19,7 @@ struct RewriteRuleExactIndex {
     non_exact_rule_indices: Vec<usize>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, FrameRootTrace)]
 pub(super) enum RewriteRuleScanCursor {
     Linear {
         next_rule_index: usize,

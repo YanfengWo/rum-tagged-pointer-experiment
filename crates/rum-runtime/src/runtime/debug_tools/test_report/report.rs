@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::model::{EvalCapturedOutcome, TestCaseSpec, TestReportOptions};
 use super::parsing::{parse_test_case, parse_test_case_exprs, parse_test_report_objects};
 use super::*;
@@ -263,10 +266,7 @@ impl Session {
             Ok(evaluation) => self.resume_test_report_after_evaluation(case_state, evaluation),
             Err(EvalError::InputRequired { request }) => {
                 let case_state = SuspendedTestReportCase::freeze(case_state);
-                self.push_suspension_frame(move |session, outcome| {
-                    let evaluation = outcome.map(EvalCapturedOutcome::from_continuation_expr)?;
-                    session.resume_suspended_test_report_after_evaluation(case_state, evaluation)
-                });
+                crate::resume_or_suspend!(insert self, ResumeTestReportFromIndexSuspensionFrameL266C44 { case_state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -309,11 +309,7 @@ impl Session {
                     evaluation: SuspendedEvalCapturedOutcome::freeze(evaluation),
                     messages_match,
                 };
-                self.push_suspension_frame(move |session, outcome| {
-                    let output_match = outcome.map(bool::from_continuation_expr)?;
-                    session
-                        .resume_suspended_test_report_after_output_match(output_state, output_match)
-                });
+                crate::resume_or_suspend!(insert self, ResumeTestReportAfterEvaluationSuspensionFrameL312C44 { output_state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -389,10 +385,7 @@ impl Session {
                     evaluation: SuspendedEvalCapturedOutcome::freeze(evaluation),
                     messages_match,
                 };
-                self.push_suspension_frame(move |session, outcome| {
-                    let output_match = outcome.map(bool::from_continuation_expr)?;
-                    session.resume_suspended_test_report_after_output_match(output, output_match)
-                });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedTestReportAfterEvaluationSuspensionFrameL392C44 { output });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -481,10 +474,7 @@ impl Session {
         match evaluation_result {
             Ok(evaluation) => self.resume_suspended_test_report_after_evaluation(state, evaluation),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| {
-                    let evaluation = outcome.map(EvalCapturedOutcome::from_continuation_expr)?;
-                    session.resume_suspended_test_report_after_evaluation(state, evaluation)
-                });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedTestReportFromIndexSuspensionFrameL484C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

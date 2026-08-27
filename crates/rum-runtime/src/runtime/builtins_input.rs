@@ -1,3 +1,4 @@
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 use std::thread;
 use std::time::Duration;
 
@@ -61,9 +62,12 @@ impl Session {
         };
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            |session, outcome| session.finish_dialog_body(outcome)
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => EvalDialogSuspensionFrameL65C13,
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -87,9 +91,12 @@ impl Session {
         };
 
         let text_result = self.drive_input_request(request);
-        let text = self.suspend_with_frame_lazy(text_result, || {
-            |session, text| session.resume_input_after_text(text)
-        })?;
+        let text = crate::resume_or_suspend!(
+            self,
+            text_result,
+            ok(value) => Ok(value),
+            suspend => EvalInputSuspensionFrameL91C13,
+        )?;
 
         self.resume_input_after_text(text)
     }
@@ -223,7 +230,7 @@ impl Session {
 
     fn drive_input_request(&mut self, request: RuntimeInputRequest) -> Result<Expr, EvalError> {
         if let Some(value) = self.queued_input_responses.pop_front() {
-            self.clear_suspension_state();
+            self.clear_pending_suspension_state();
             return Ok(Expr::string(value));
         }
 
@@ -293,7 +300,12 @@ impl Session {
         let syntax = parse_expr(&source)?;
         let expr = self.lower_syntax_expr(&syntax)?;
         let evaluated = self.evaluate(expr);
-        self.suspend_with_frame_lazy(evaluated, || |_, value| Ok(value))
+        crate::resume_or_suspend!(
+            self,
+            evaluated,
+            ok(value) => Ok(value),
+            suspend => ResumeInputAfterTextSuspensionFrameL296C52,
+        )
     }
 }
 
@@ -428,4 +440,52 @@ fn expr_as_nonnegative_duration(expr: &Expr) -> Option<Duration> {
     };
 
     Duration::try_from_secs_f64(seconds).ok()
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalDialogSuspensionFrameL65C13;
+
+impl crate::runtime::suspension::SuspensionFrame for EvalDialogSuspensionFrameL65C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = (|| session.finish_dialog_body(outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalInputSuspensionFrameL91C13;
+
+impl crate::runtime::suspension::SuspensionFrame for EvalInputSuspensionFrameL91C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(text) => (|| session.resume_input_after_text(text))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeInputAfterTextSuspensionFrameL296C52;
+
+impl crate::runtime::suspension::SuspensionFrame for ResumeInputAfterTextSuspensionFrameL296C52 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(value) => Ok(value),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -40,6 +43,53 @@ impl SuspendedOptionalChoiceState {
     }
 }
 
+impl OptionalChoiceState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationOptionalChoiceState"),
+            vec![
+                self.flat_head.into_continuation_expr(),
+                optional_pattern_into_continuation_expr(self.spec),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                self.value_args.into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected optional-choice continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationOptionalChoiceState"),
+            "unexpected optional-choice continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let state = Self {
+            flat_head: Option::<Expr>::from_continuation_expr(
+                args.next().expect("optional choice stores its flat head"),
+            ),
+            spec: optional_pattern_from_continuation_expr(
+                args.next()
+                    .expect("optional choice stores its specification"),
+            ),
+            rest_patterns: matcher_args_from_continuation_expr(
+                args.next()
+                    .expect("optional choice stores its remaining patterns"),
+            ),
+            value_args: Vec::<Expr>::from_continuation_expr(
+                args.next().expect("optional choice stores its values"),
+            ),
+            bindings: binding_map_from_continuation_expr(
+                args.next().expect("optional choice stores its bindings"),
+            ),
+        };
+        debug_assert!(args.next().is_none());
+        state
+    }
+}
+
 struct OptionalOmissionState {
     flat_head: Option<Expr>,
     inner: MatcherArg,
@@ -76,6 +126,53 @@ impl SuspendedOptionalOmissionState {
             value_args: self.value_args.into_vec(),
             bindings: self.bindings.into_owned(),
         }
+    }
+}
+
+impl OptionalOmissionState {
+    fn into_continuation_expr(self) -> Expr {
+        Expr::call(
+            system_expr("InternalContinuationOptionalOmissionState"),
+            vec![
+                self.flat_head.into_continuation_expr(),
+                matcher_arg_into_continuation_expr(self.inner),
+                matcher_args_into_continuation_expr(self.rest_patterns),
+                self.value_args.into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings),
+            ],
+        )
+    }
+
+    fn from_continuation_expr(expr: Expr) -> Self {
+        let Expr::Call { head, args } = expr else {
+            panic!("unexpected optional-omission continuation payload")
+        };
+        assert!(
+            is_system_symbol_name(&head, "InternalContinuationOptionalOmissionState"),
+            "unexpected optional-omission continuation tag: {head:?}"
+        );
+        let mut args = args.into_iter();
+        let state = Self {
+            flat_head: Option::<Expr>::from_continuation_expr(
+                args.next().expect("optional omission stores its flat head"),
+            ),
+            inner: matcher_arg_from_continuation_expr(
+                args.next()
+                    .expect("optional omission stores its inner matcher"),
+            ),
+            rest_patterns: matcher_args_from_continuation_expr(
+                args.next()
+                    .expect("optional omission stores its remaining patterns"),
+            ),
+            value_args: Vec::<Expr>::from_continuation_expr(
+                args.next().expect("optional omission stores its values"),
+            ),
+            bindings: binding_map_from_continuation_expr(
+                args.next().expect("optional omission stores its bindings"),
+            ),
+        };
+        debug_assert!(args.next().is_none());
+        state
     }
 }
 
@@ -146,12 +243,8 @@ impl Session {
             Ok(outcome) => self.finish_optional_present(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalChoiceState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_optional_present(state.into_owned(), outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchOptionalChoicesSuspensionFrameL149C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOptionalPresentFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -251,12 +344,8 @@ impl Session {
             Ok(present) => self.finish_optional_present_collection(state, present),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalChoiceState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let present = Vec::<SymbolExprMap>::from_continuation_expr(payload?);
-                    session
-                        .finish_optional_present_collection(state.into_owned(), present)
-                        .map(|matches| matches.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, CollectOptionalMatchesSuspensionFrameL254C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOptionalPresentCollectionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -290,13 +379,12 @@ impl Session {
                 let state = SuspendedOptionalCollection {
                     present: PersistentMatchResults::freeze(present),
                 };
-                self.push_suspension_frame(move |_, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    Ok(
-                        finish_optional_collection(state.present.into_vec(), outcome)
-                            .into_continuation_expr(),
-                    )
-                });
+                crate::resume_or_suspend!(
+                    insert self,
+                    FinishOptionalPresentCollectionSuspensionFrameL293C44 {
+                        present: state.present,
+                    },
+                );
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -367,12 +455,8 @@ impl Session {
             Ok(default_expr) => self.finish_optional_default(state, default_expr),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalOmissionState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let default_expr = Option::<Expr>::from_continuation_expr(payload?);
-                    session
-                        .finish_optional_default(state.into_owned(), default_expr)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, ResolveOptionalOmissionSuspensionFrameL370C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOptionalDefaultFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -408,12 +492,8 @@ impl Session {
             Ok(outcome) => self.finish_optional_default_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalOmissionState::freeze(state);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_optional_default_match(state.into_owned(), outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishOptionalDefaultSuspensionFrameL411C44 { state });
+                crate::resume_or_suspend!(insert self, ContinueOptionalDefaultMatchFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

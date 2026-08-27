@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_message(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -22,10 +23,18 @@ impl Session {
         let symbol_name = key.symbol.to_string();
         let tag = key.tag.clone();
 
-        self.drive_internal_value::<String, Expr, _>(rendered_text, move |session, text| {
-            session.push_message_unchecked(&symbol_name, &tag, text);
-            Ok(system_expr("Null"))
-        })
+        crate::resume_or_suspend!(
+            self,
+            rendered_text,
+            ok(text) => { let session = self; (|| {
+                    session.push_message_unchecked(&symbol_name, &tag, text);
+                    Ok(system_expr("Null"))
+                })() },
+            suspend => EvalMessageSuspensionFrameL25C69 {
+                symbol_name: std::sync::Arc::new(symbol_name),
+                tag: std::sync::Arc::new(tag),
+            },
+        )
     }
 
     pub(in crate::runtime) fn eval_message_name(
@@ -125,5 +134,36 @@ impl Session {
                 format!("expected 0 or 1 argument(s), got {}", args.len()),
             )),
         }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalMessageSuspensionFrameL25C69 {
+    pub(super) symbol_name: std::sync::Arc<std::string::String>,
+    pub(super) tag: std::sync::Arc<std::string::String>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalMessageSuspensionFrameL25C69 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut symbol_name = self.symbol_name.clone();
+        #[allow(unused_mut)]
+        let mut tag = self.tag.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let text = <std::string::String as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+            session.push_message_unchecked(symbol_name.as_str(), tag.as_str(), text);
+            Ok(system_expr("Null"))
+        })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

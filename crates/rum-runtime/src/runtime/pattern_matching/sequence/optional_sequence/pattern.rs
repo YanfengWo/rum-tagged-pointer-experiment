@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime::pattern_matching::sequence) fn match_compiled_sequence_items_owned(
@@ -28,18 +29,8 @@ impl Session {
                 let matcher = FrozenMatcherValue::freeze(matcher_for_next);
                 let values = SharedArgs::new(values_for_next);
                 let bindings = FrozenMatchBindings::freeze(bindings_for_next);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_compiled_sequence_item(
-                            matcher.into_inner(),
-                            values.into_vec(),
-                            bindings.into_owned(),
-                            index,
-                            outcome,
-                        )
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchCompiledSequenceItemsOwnedSuspensionFrameL31C44 { matcher, values, bindings, index });
+                crate::resume_or_suspend!(insert self, ContinueCompiledSequenceItemsFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -89,17 +80,8 @@ impl Session {
                 let spec = FrozenMatcherValue::freeze(spec);
                 let values = SharedArgs::new(values);
                 let snapshot = FrozenMatchBindings::freeze(snapshot);
-                self.push_suspension_frame(move |session, payload| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(payload?);
-                    session
-                        .finish_compiled_sequence_pattern(
-                            spec.into_inner(),
-                            values.into_vec(),
-                            snapshot.into_owned(),
-                            outcome,
-                        )
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, MatchCompiledSequencePatternOwnedSuspensionFrameL92C44 { spec, values, snapshot });
+                crate::resume_or_suspend!(insert self, ContinueCompiledSequencePatternFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -137,5 +119,197 @@ impl Session {
         }
 
         Ok(match_outcome(true, bindings))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct MatchCompiledSequenceItemsOwnedSuspensionFrameL31C44 {
+    pub(super) matcher: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
+        crate::runtime::session::session_state::MatcherNode,
+    >,
+    pub(super) values: rum_core::SharedArgs,
+    pub(super) bindings: crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
+    pub(super) index: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for MatchCompiledSequenceItemsOwnedSuspensionFrameL31C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(payload) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareCompiledSequenceItemsFinalizer {
+                    matcher: self.matcher.clone(),
+                    values: self.values.clone(),
+                    bindings: self.bindings.clone(),
+                    index: self.index,
+                    outcome: CompiledMatchOutcome::from_continuation_expr(payload),
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+struct PrepareCompiledSequenceItemsFinalizer {
+    matcher: FrozenMatcherValue<MatcherNode>,
+    values: SharedArgs,
+    bindings: FrozenMatchBindings,
+    index: usize,
+    outcome: CompiledMatchOutcome,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareCompiledSequenceItemsFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        Ok(Expr::call(
+            system_expr("InternalContinuationCompiledSequenceItems"),
+            vec![
+                matcher_node_into_continuation_expr(self.matcher.into_inner()),
+                self.values.into_vec().into_continuation_expr(),
+                binding_map_into_continuation_expr(self.bindings.into_owned()),
+                usize_into_continuation_expr(self.index),
+                self.outcome.into_continuation_expr(),
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueCompiledSequenceItemsFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueCompiledSequenceItemsFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected compiled-sequence-items continuation payload")
+            };
+            assert!(
+                is_system_symbol_name(&head, "InternalContinuationCompiledSequenceItems"),
+                "unexpected compiled-sequence-items continuation tag: {head:?}"
+            );
+            let mut args = args.into_iter();
+            let matcher = matcher_node_from_continuation_expr(
+                args.next().expect("sequence items store their matcher"),
+            );
+            let values = Vec::<Expr>::from_continuation_expr(
+                args.next().expect("sequence items store their values"),
+            );
+            let bindings = binding_map_from_continuation_expr(
+                args.next().expect("sequence items store their bindings"),
+            );
+            let index = usize_from_continuation_expr(
+                args.next().expect("sequence items store their cursor"),
+            );
+            let match_outcome = CompiledMatchOutcome::from_continuation_expr(
+                args.next()
+                    .expect("sequence items store their match outcome"),
+            );
+            debug_assert!(args.next().is_none());
+            session
+                .finish_compiled_sequence_item(matcher, values, bindings, index, match_outcome)
+                .map(CompiledMatchOutcome::into_continuation_expr)
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct MatchCompiledSequencePatternOwnedSuspensionFrameL92C44 {
+    pub(super) spec: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
+        crate::runtime::session::session_state::CompiledSequencePattern,
+    >,
+    pub(super) values: rum_core::SharedArgs,
+    pub(super) snapshot: crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for MatchCompiledSequencePatternOwnedSuspensionFrameL92C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(payload) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareCompiledSequencePatternFinalizer {
+                    spec: self.spec.clone(),
+                    values: self.values.clone(),
+                    snapshot: self.snapshot.clone(),
+                    outcome: CompiledMatchOutcome::from_continuation_expr(payload),
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+struct PrepareCompiledSequencePatternFinalizer {
+    spec: FrozenMatcherValue<CompiledSequencePattern>,
+    values: SharedArgs,
+    snapshot: FrozenMatchBindings,
+    outcome: CompiledMatchOutcome,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareCompiledSequencePatternFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        Ok(Expr::call(
+            system_expr("InternalContinuationCompiledSequencePattern"),
+            vec![
+                sequence_pattern_into_continuation_expr(self.spec.into_inner()),
+                self.values.into_vec().into_continuation_expr(),
+                binding_map_into_continuation_expr(self.snapshot.into_owned()),
+                self.outcome.into_continuation_expr(),
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueCompiledSequencePatternFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueCompiledSequencePatternFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected compiled-sequence-pattern continuation payload")
+            };
+            assert!(
+                is_system_symbol_name(&head, "InternalContinuationCompiledSequencePattern"),
+                "unexpected compiled-sequence-pattern continuation tag: {head:?}"
+            );
+            let mut args = args.into_iter();
+            let spec = sequence_pattern_from_continuation_expr(
+                args.next()
+                    .expect("sequence pattern stores its specification"),
+            );
+            let values = Vec::<Expr>::from_continuation_expr(
+                args.next().expect("sequence pattern stores its values"),
+            );
+            let snapshot = binding_map_from_continuation_expr(
+                args.next().expect("sequence pattern stores its snapshot"),
+            );
+            let match_outcome = CompiledMatchOutcome::from_continuation_expr(
+                args.next()
+                    .expect("sequence pattern stores its match outcome"),
+            );
+            debug_assert!(args.next().is_none());
+            session
+                .finish_compiled_sequence_pattern(spec, values, snapshot, match_outcome)
+                .map(CompiledMatchOutcome::into_continuation_expr)
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

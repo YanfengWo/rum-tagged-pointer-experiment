@@ -23,17 +23,16 @@ impl Session {
             [rules_expr] => Ok(replace_list_operator_form(rules_expr.clone())),
             [target_expr, rules_expr] | [target_expr, rules_expr, _] => {
                 let target_result = self.evaluate(target_expr.clone());
-                let target = self.suspend_with_frame_lazy(target_result, || {
-                    let args = args.clone();
-                    move |session, target| {
-                        session.resume_replace_list_after_target(
-                            target,
-                            args[1].clone(),
-                            args.get(2).cloned(),
-                            args.as_ref().to_vec(),
-                        )
+                let target = match target_result {
+                    Ok(value) => value,
+                    Err(EvalError::InputRequired { request }) => {
+                        let args = args.clone();
+                        crate::resume_or_suspend!(insert self, EvalReplaceListSuspensionFrameL28C21 { args });
+                        crate::resume_or_suspend!(insert self, ContinueReplaceListSetupFrame);
+                        return Err(EvalError::InputRequired { request });
                     }
-                })?;
+                    Err(error) => return Err(error),
+                };
 
                 self.resume_replace_list_after_target(
                     target,
@@ -64,14 +63,8 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let call_args = SharedArgs::new(call_args);
-                self.push_suspension_frame(move |session, value| {
-                    session.finish_replace_list_limit(
-                        target,
-                        rules_expr,
-                        value?,
-                        call_args.into_vec(),
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeReplaceListAfterTargetSuspensionFrameL67C44 { target, rules_expr, call_args });
+                crate::resume_or_suspend!(insert self, ContinueReplaceListSetupFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -141,9 +134,14 @@ impl Session {
             Vec::new(),
             0,
         );
-        self.drive_internal_value(results_result, |_, results| {
-            Ok(Expr::call(system_expr("List"), results))
-        })
+        crate::resume_or_suspend!(
+            self,
+            results_result,
+            ok(results) => { (|| {
+                    Ok(Expr::call(system_expr("List"), results))
+                })() },
+            suspend => ResumeReplaceListAfterRuleExprsSuspensionFrameL144C51,
+        )
     }
 
     fn collect_replace_list_results_owned(
@@ -208,12 +206,15 @@ impl Session {
                             collected: PersistentRewriteExprs::freeze(collected),
                             index,
                         };
-                        self.push_suspension_frame(move |session, outcome| {
-                            let bindings = Vec::<SymbolExprMap>::from_continuation_expr(outcome?);
-                            session
-                                .collect_replace_list_results_suspended(state, Some(bindings))
-                                .map(|results| results.into_continuation_expr())
-                        });
+                        let next = ContinueReplaceListResultsWithPendingFrame {
+                            target: state.target.clone(),
+                            normalized_target: state.normalized_target.clone(),
+                            rules: state.rules.clone(),
+                            max_results: state.max_results,
+                            index: state.index,
+                        };
+                        crate::resume_or_suspend!(insert self, CollectReplaceListResultsWithPendingSuspensionFrameL211C52 { state });
+                        crate::resume_or_suspend!(insert self, next);
                         return Err(EvalError::InputRequired { request });
                     }
                     Err(error) => return Err(error),
@@ -234,52 +235,6 @@ impl Session {
                 index,
                 bindings,
             );
-        }
-    }
-
-    pub(super) fn collect_replace_list_results_suspended(
-        &mut self,
-        mut state: SuspendedReplaceListScan,
-        mut pending: Option<Vec<SymbolExprMap>>,
-    ) -> Result<Vec<Expr>, EvalError> {
-        loop {
-            if state
-                .max_results
-                .is_some_and(|limit| state.collected.len() >= limit)
-            {
-                return Ok(state.collected.into_vec());
-            }
-
-            let Some(rule) = state.rules.get(state.index) else {
-                return Ok(state.collected.into_vec());
-            };
-            let bindings = if let Some(bindings) = pending.take() {
-                bindings
-            } else {
-                let bindings_result = self.collect_replace_list_rule_bindings_owned(
-                    rule.matcher.clone(),
-                    state.normalized_target.clone(),
-                );
-                match bindings_result {
-                    Ok(bindings) => bindings,
-                    Err(EvalError::InputRequired { request }) => {
-                        self.push_suspension_frame(move |session, outcome| {
-                            let bindings = Vec::<SymbolExprMap>::from_continuation_expr(outcome?);
-                            session
-                                .collect_replace_list_results_suspended(state, Some(bindings))
-                                .map(|results| results.into_continuation_expr())
-                        });
-                        return Err(EvalError::InputRequired { request });
-                    }
-                    Err(error) => return Err(error),
-                }
-            };
-
-            if bindings.is_empty() {
-                state.index += 1;
-                continue;
-            }
-            return self.collect_replace_list_rule_results_suspended(state, bindings, 0);
         }
     }
 }
@@ -308,3 +263,273 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedReplaceListScan>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalReplaceListSuspensionFrameL28C21 {
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceListSuspensionFrameL28C21 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareReplaceListSetupFinalizer {
+                    result,
+                    target: None,
+                    rules_expr: None,
+                    args: Some(self.args.clone()),
+                    call_args: None,
+                    kind: ReplaceListSetupContinuationKind::Target,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceListAfterTargetSuspensionFrameL67C44 {
+    pub(super) target: rum_core::Expr,
+    pub(super) rules_expr: rum_core::Expr,
+    pub(super) call_args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceListAfterTargetSuspensionFrameL67C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareReplaceListSetupFinalizer {
+                    result,
+                    target: Some(self.target.clone()),
+                    rules_expr: Some(self.rules_expr.clone()),
+                    args: None,
+                    call_args: Some(self.call_args.clone()),
+                    kind: ReplaceListSetupContinuationKind::Limit,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ReplaceListSetupContinuationKind {
+    Target,
+    Limit,
+}
+
+struct PrepareReplaceListSetupFinalizer {
+    result: Expr,
+    target: Option<Expr>,
+    rules_expr: Option<Expr>,
+    args: Option<SharedArgs>,
+    call_args: Option<SharedArgs>,
+    kind: ReplaceListSetupContinuationKind,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareReplaceListSetupFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        let tag = match self.kind {
+            ReplaceListSetupContinuationKind::Target => "InternalContinuationReplaceListTarget",
+            ReplaceListSetupContinuationKind::Limit => "InternalContinuationReplaceListLimit",
+        };
+        Ok(Expr::call(
+            system_expr(tag),
+            vec![
+                self.result,
+                self.target.into_continuation_expr(),
+                self.rules_expr.into_continuation_expr(),
+                self.args.map(SharedArgs::into_vec).into_continuation_expr(),
+                self.call_args
+                    .map(SharedArgs::into_vec)
+                    .into_continuation_expr(),
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueReplaceListSetupFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceListSetupFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected ReplaceList setup continuation payload")
+            };
+            let mut args = args.into_iter();
+            let result = args
+                .next()
+                .expect("ReplaceList setup continuation stores its result");
+            let target = Option::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceList setup continuation stores target"),
+            );
+            let rules_expr = Option::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceList setup continuation stores rule expression"),
+            );
+            let original_args = Option::<Vec<Expr>>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceList setup continuation stores original arguments"),
+            );
+            let call_args = Option::<Vec<Expr>>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceList setup continuation stores call arguments"),
+            );
+            debug_assert!(args.next().is_none());
+            if is_system_symbol_name(&head, "InternalContinuationReplaceListTarget") {
+                let original_args =
+                    original_args.expect("ReplaceList target continuation stores arguments");
+                session.resume_replace_list_after_target(
+                    result,
+                    original_args[1].clone(),
+                    original_args.get(2).cloned(),
+                    original_args,
+                )
+            } else if is_system_symbol_name(&head, "InternalContinuationReplaceListLimit") {
+                session.finish_replace_list_limit(
+                    target.expect("ReplaceList limit continuation stores target"),
+                    rules_expr.expect("ReplaceList limit continuation stores rule expression"),
+                    result,
+                    call_args.expect("ReplaceList limit continuation stores call arguments"),
+                )
+            } else {
+                panic!("unexpected ReplaceList setup continuation tag: {head:?}")
+            }
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceListAfterRuleExprsSuspensionFrameL144C51;
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceListAfterRuleExprsSuspensionFrameL144C51
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let results = <Vec<rum_core::Expr> as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+            Ok(Expr::call(system_expr("List"), results))
+        })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct CollectReplaceListResultsWithPendingSuspensionFrameL211C52 {
+    pub(super) state:
+        crate::runtime::kernel_data::rewrite_data::replace::list::SuspendedReplaceListScan,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for CollectReplaceListResultsWithPendingSuspensionFrameL211C52
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(bindings) => crate::runtime::suspension::FrameAction::finalize(
+                PrepareReplaceListResultsWithPendingFinalizer {
+                    state: self.state.clone(),
+                    bindings,
+                },
+            ),
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+struct PrepareReplaceListResultsWithPendingFinalizer {
+    state: SuspendedReplaceListScan,
+    bindings: Expr,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer
+    for PrepareReplaceListResultsWithPendingFinalizer
+{
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        Ok(Expr::call(
+            system_expr("InternalContinuationReplaceListScan"),
+            vec![
+                self.state.collected.into_vec().into_continuation_expr(),
+                self.bindings,
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueReplaceListResultsWithPendingFrame {
+    target: Expr,
+    normalized_target: Expr,
+    rules: RewriteRulePlan,
+    max_results: Option<usize>,
+    index: usize,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceListResultsWithPendingFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected ReplaceList scan continuation payload")
+            };
+            assert!(
+                is_system_symbol_name(&head, "InternalContinuationReplaceListScan"),
+                "unexpected ReplaceList scan continuation tag: {head:?}"
+            );
+            let mut args = args.into_iter();
+            let collected = Vec::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceList scan stores collected values"),
+            );
+            let bindings = Vec::<SymbolExprMap>::from_continuation_expr(
+                args.next().expect("ReplaceList scan stores rule bindings"),
+            );
+            debug_assert!(args.next().is_none());
+            session
+                .collect_replace_list_results_with_pending(
+                    self.target.clone(),
+                    self.normalized_target.clone(),
+                    self.rules.clone(),
+                    self.max_results,
+                    collected,
+                    self.index,
+                    Some(bindings),
+                )
+                .map(Vec::<Expr>::into_continuation_expr)
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

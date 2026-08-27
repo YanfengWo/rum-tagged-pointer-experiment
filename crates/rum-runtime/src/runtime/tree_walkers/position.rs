@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -108,10 +111,15 @@ impl Session {
         }
 
         let target_result = self.evaluate(args_slice[0].clone());
-        let target = self.suspend_with_frame_lazy(target_result, || {
-            let args = args.clone();
-            move |session, target| session.resume_position_after_target(target, &args)
-        })?;
+        let target = crate::resume_or_suspend!(
+            self,
+            target_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalPositionSuspensionFrameL113C13 { args }
+        },
+        )?;
 
         self.resume_position_after_target(target, args)
     }
@@ -122,11 +130,16 @@ impl Session {
         args: &SharedArgs,
     ) -> Result<Expr, EvalError> {
         let pattern_result = self.resolve_matcher_pattern_expr_owned(args[1].clone());
-        let pattern = self.suspend_with_frame_lazy(pattern_result, || {
-            let target = target.clone();
-            let args = args.clone();
-            move |session, pattern| session.resume_position_after_pattern(target, pattern, &args)
-        })?;
+        let pattern = crate::resume_or_suspend!(
+            self,
+            pattern_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let target = target.clone();
+                    let args = args.clone();
+        ResumePositionAfterTargetSuspensionFrameL128C13 { target, args }
+        },
+        )?;
 
         self.resume_position_after_pattern(target, pattern, args)
     }
@@ -146,11 +159,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                self.push_suspension_frame(move |session, outcome| {
-                    let traversal = CasesTraversalResolution::from_continuation_expr(outcome?);
-                    session
-                        .finish_position_after_resolved_traversal(target, pattern, traversal, &args)
-                });
+                crate::resume_or_suspend!(insert self, ResumePositionAfterPatternSuspensionFrameL149C44 { target, pattern, args });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -177,9 +186,14 @@ impl Session {
 
         let positions_result =
             self.collect_positions_owned(target, pattern, traversal, 0, Vec::new(), 0);
-        self.drive_internal_value(positions_result, move |_, outcome| {
-            Ok(Expr::call(system_expr("List"), outcome.positions))
-        })
+        crate::resume_or_suspend!(
+            self,
+            positions_result,
+            ok(outcome) => { (|| {
+                    Ok(Expr::call(system_expr("List"), outcome.positions))
+                })() },
+            suspend => FinishPositionAfterResolvedTraversalSuspensionFrameL180C53,
+        )
     }
 
     fn collect_positions_owned(
@@ -341,11 +355,7 @@ impl Session {
                     seen_before,
                     positions: PersistentPositionAccumulator::freeze(positions),
                 };
-                self.push_suspension_frame(move |session, outcome| {
-                    session
-                        .finish_suspended_position_node(state, outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishPositionsAtCurrentNodeSuspensionFrameL344C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -458,12 +468,7 @@ impl Session {
                         positions: PersistentPositionAccumulator::freeze(positions),
                         max_child_depth,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = PositionCollectionOutcome::from_continuation_expr(value?);
-                        session
-                            .collect_position_children_suspended(state, Some(outcome))
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, CollectPositionChildrenSuspensionFrameL461C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -529,12 +534,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = PositionCollectionOutcome::from_continuation_expr(value?);
-                        session
-                            .collect_position_children_suspended(state, Some(outcome))
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, CollectPositionChildrenSuspendedSuspensionFrameL532C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -571,11 +571,7 @@ impl Session {
         match match_result {
             Ok(outcome) => self.finish_suspended_position_node_outcome(state, outcome),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(move |session, outcome| {
-                    session
-                        .finish_suspended_position_node(state, outcome)
-                        .map(|outcome| outcome.into_continuation_expr())
-                });
+                crate::resume_or_suspend!(insert self, FinishPositionsAtCurrentNodeSuspendedSuspensionFrameL574C44 { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

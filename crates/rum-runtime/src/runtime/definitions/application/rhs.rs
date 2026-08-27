@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn evaluate_definition_rhs(
@@ -19,9 +20,13 @@ impl Session {
                 runtime_profile_evaluate,
                 runtime_profile_outcome_for_expr_result(&rhs_result),
             );
-            let outcome = self.suspend_with_result_frame_lazy(rhs_result, || {
-                |session, outcome| session.finish_definition_rhs_evaluation(outcome)
-            });
+            let outcome = match rhs_result {
+                Ok(value) => Ok(value),
+                Err(EvalError::InputRequired { request }) => {
+                    self.suspend_definition_rhs_evaluation(request)
+                }
+                Err(error) => Err(error),
+            };
 
             match outcome {
                 Err(EvalError::InputRequired { request }) => {
@@ -39,6 +44,16 @@ impl Session {
         result
     }
 
+    #[cold]
+    #[inline(never)]
+    fn suspend_definition_rhs_evaluation(
+        &mut self,
+        request: RuntimeInputRequest,
+    ) -> Result<Expr, EvalError> {
+        crate::resume_or_suspend!(insert self, EvaluateDefinitionRhsSuspensionFrameL23C17);
+        Err(EvalError::InputRequired { request })
+    }
+
     fn finish_definition_rhs_evaluation(
         &mut self,
         outcome: Result<Expr, EvalError>,
@@ -52,5 +67,19 @@ impl Session {
         };
         record_profile_runtime_path_timing(runtime_profile_finish, profile_outcome);
         result
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvaluateDefinitionRhsSuspensionFrameL23C17;
+
+impl crate::runtime::suspension::SuspensionFrame for EvaluateDefinitionRhsSuspensionFrameL23C17 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = (|| session.finish_definition_rhs_evaluation(outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
     }
 }

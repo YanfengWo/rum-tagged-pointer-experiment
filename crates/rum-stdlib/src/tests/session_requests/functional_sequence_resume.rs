@@ -123,6 +123,36 @@ fn every_custom_sort_comparison_resumes_with_the_uninterrupted_trace() {
                ];
                {result, trace}"#,
         ),
+        (
+            r#"trace = {}; calls = 0;
+               result = KeySort[
+                 Association[4 -> d, 1 -> a, 3 -> c, 2 -> b, 5 -> e],
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; Less[a, b]]
+               ];
+               {result, trace}"#,
+            r#"trace = {}; calls = 0;
+               result = KeySort[
+                 Association[4 -> d, 1 -> a, 3 -> c, 2 -> b, 5 -> e],
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; InputString["sort-compare: "]; Less[a, b]]
+               ];
+               {result, trace}"#,
+        ),
+        (
+            r#"trace = {}; calls = 0;
+               result = KeySortBy[
+                 Association[4 -> d, 1 -> a, 3 -> c, 2 -> b, 5 -> e],
+                 Identity,
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; Less[a, b]]
+               ];
+               {result, trace}"#,
+            r#"trace = {}; calls = 0;
+               result = KeySortBy[
+                 Association[4 -> d, 1 -> a, 3 -> c, 2 -> b, 5 -> e],
+                 Identity,
+                 Function[{a, b}, calls = calls + 1; trace = Append[trace, {a, b}]; InputString["sort-compare: "]; Less[a, b]]
+               ];
+               {result, trace}"#,
+        ),
     ] {
         let mut uninterrupted_session = core_session();
         let uninterrupted = uninterrupted_session

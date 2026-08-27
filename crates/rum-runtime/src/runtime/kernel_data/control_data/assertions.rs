@@ -1,15 +1,21 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(in crate::runtime) fn eval_assert(&mut self, args: &SharedArgs) -> Result<Expr, EvalError> {
         let test = args.first().cloned();
 
         let function_result = self.evaluate(system_expr("$AssertFunction"));
-        let function = self.suspend_with_frame_lazy(function_result, || {
-            let test = test.clone();
-            let args = args.clone();
-            move |session, function| session.resume_assert_after_function(test, &args, function)
-        })?;
+        let function = crate::resume_or_suspend!(
+            self,
+            function_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let test = test.clone();
+                    let args = args.clone();
+        EvalAssertSuspensionFrameL11C13 { test, args }
+        },
+        )?;
 
         self.resume_assert_after_function(test, args, function)
     }
@@ -76,14 +82,17 @@ impl Session {
         };
 
         let test_result = self.evaluate(test.clone());
-        let outcome = self.suspend_with_result_frame_lazy(test_result, || {
-            let test = test.clone();
-            let assert_args = assert_args.clone();
-            let assert_function = assert_function.clone();
-            move |session, outcome| {
-                session.resume_assert_after_test(test, &assert_args, assert_function, outcome)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            test_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let test = test.clone();
+                    let assert_args = assert_args.clone();
+                    let assert_function = assert_function.clone();
+        ResumeAssertAfterFunctionSuspensionFrameL83C13 { test, assert_args, assert_function }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -104,7 +113,12 @@ impl Session {
             )],
         );
         let result = self.evaluate(Expr::call(assert_function, vec![payload]));
-        self.drive_internal_value(result, |_, _| Ok(system_expr("Null")))
+        crate::resume_or_suspend!(
+            self,
+            result,
+            ok(_) => { (|| { Ok(system_expr("Null")) })() },
+            suspend => FinishAssertFunctionSuspensionFrameL107C43,
+        )
     }
 }
 
@@ -137,4 +151,76 @@ fn assert_failure_messages(test: &Expr, assert_args: &[Expr]) -> Vec<(&'static s
             ),
         ),
     }]
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalAssertSuspensionFrameL11C13 {
+    pub(super) test: std::option::Option<rum_core::Expr>,
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalAssertSuspensionFrameL11C13 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut test = self.test.clone();
+        #[allow(unused_mut)]
+        let mut args = self.args.clone();
+        let resumed = match outcome {
+            Ok(function) => (|| session.resume_assert_after_function(test, &args, function))(),
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeAssertAfterFunctionSuspensionFrameL83C13 {
+    pub(super) test: rum_core::Expr,
+    pub(super) assert_args: rum_core::SharedArgs,
+    pub(super) assert_function: std::option::Option<rum_core::Expr>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeAssertAfterFunctionSuspensionFrameL83C13
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut test = self.test.clone();
+        #[allow(unused_mut)]
+        let mut assert_args = self.assert_args.clone();
+        #[allow(unused_mut)]
+        let mut assert_function = self.assert_function.clone();
+        let resumed =
+            (|| session.resume_assert_after_test(test, &assert_args, assert_function, outcome))();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct FinishAssertFunctionSuspensionFrameL107C43;
+
+impl crate::runtime::suspension::SuspensionFrame for FinishAssertFunctionSuspensionFrameL107C43 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let _ = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> { Ok(system_expr("Null")) })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

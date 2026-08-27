@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
@@ -119,17 +122,15 @@ impl Session {
         self.tracing_enabled = true;
 
         let value_result = self.evaluate(state.original.clone());
-        let outcome = self.suspend_with_result_frame_lazy(value_result, || {
-            let suspended_state = state.clone();
-            move |session, outcome| {
-                session.finish_structured_trace_capture_expr(
-                    suspended_state,
-                    trace_checkpoint,
-                    prior_enabled,
-                    outcome,
-                )
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let suspended_state = state.clone();
+        EvalStructuredTraceCaptureExprSuspensionFrameL124C13 { suspended_state, trace_checkpoint, prior_enabled }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),

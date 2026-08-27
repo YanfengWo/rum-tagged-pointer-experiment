@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 enum OwnValueRead {
     Unguarded(Expr),
@@ -102,13 +103,18 @@ impl Session {
                     SymbolExprMap::default(),
                     option_scope,
                 );
-                self.drive_internal_value(guard_result, move |session, outcome| {
-                    if outcome.matched {
-                        session.evaluate_accepted_own_value(&symbol, body, delayed)
-                    } else {
-                        session.evaluate_symbol_after_stored_own_value(symbol)
-                    }
-                })
+                crate::resume_or_suspend!(
+                    self,
+                    guard_result,
+                    ok(outcome) => { let session = self; (|| {
+                                    if outcome.matched {
+                                        session.evaluate_accepted_own_value(&symbol, body, delayed)
+                                    } else {
+                                        session.evaluate_symbol_after_stored_own_value(symbol)
+                                    }
+                                })() },
+                    suspend => EvaluateStoredOwnValueSuspensionFrameL105C57 { symbol, body, delayed },
+                )
             }
         }
     }
@@ -261,4 +267,41 @@ fn own_value_read(value: &Option<Expr>, guards: &Option<Box<[Expr]>>) -> Option<
         },
         None => OwnValueRead::Unguarded(value.clone()),
     })
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvaluateStoredOwnValueSuspensionFrameL105C57 {
+    pub(super) symbol: rum_core::Symbol,
+    pub(super) body: rum_core::Expr,
+    pub(super) delayed: bool,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvaluateStoredOwnValueSuspensionFrameL105C57 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut symbol = self.symbol.clone();
+        #[allow(unused_mut)]
+        let mut body = self.body.clone();
+        #[allow(unused_mut)]
+        let mut delayed = self.delayed.clone();
+        let resumed = match outcome {
+            Ok(resumed_value) => {
+                let outcome = <CompiledMatchOutcome as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resumed_value);
+                (|| -> Result<rum_core::Expr, EvalError> {
+                    if outcome.matched {
+                        session.evaluate_accepted_own_value(&symbol, body, delayed)
+                    } else {
+                        session.evaluate_symbol_after_stored_own_value(symbol)
+                    }
+                })()
+                    .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
+            }
+            Err(error) => Err(error),
+        };
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
 }

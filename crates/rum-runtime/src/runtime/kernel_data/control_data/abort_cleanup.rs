@@ -1,6 +1,10 @@
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, rum_derive::FrameRootTrace)]
 enum PropagateAbortsMode {
     Automatic,
     False,
@@ -116,15 +120,15 @@ impl Session {
         };
         if source.evaluate_rhs {
             let value_result = self.evaluate(source.value.clone());
-            let value = self.suspend_with_frame_lazy(value_result, || {
-                let args = args.clone();
-                move |session, value| {
-                    session.resume_check_abort_with_propagation(
-                        &args,
-                        check_abort_propagation_from_value(value),
-                    )
-                }
-            })?;
+            let value = crate::resume_or_suspend!(
+                self,
+                value_result,
+                ok(value) => Ok(value),
+                suspend => {
+            let args = args.clone();
+            EvalCheckAbortSuspensionFrameL121C17 { args }
+            },
+            )?;
 
             return self.resume_check_abort_with_propagation(
                 args,
@@ -156,17 +160,15 @@ impl Session {
         let pending_checkpoint = self.abort_protect_pending;
 
         let primary_result = self.evaluate(args[0].clone());
-        let outcome = self.suspend_with_result_frame_lazy(primary_result, || {
-            let args = args.clone();
-            move |session, outcome| {
-                session.resume_check_abort_after_primary(
-                    &args,
-                    propagate,
-                    pending_checkpoint,
-                    outcome,
-                )
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            primary_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        ResumeCheckAbortWithPropagationSuspensionFrameL161C13 { args, propagate, pending_checkpoint }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -187,11 +189,12 @@ impl Session {
         let pending_checkpoint = self.abort_protect_pending;
         self.abort_protect_depth += 1;
         let body_result = self.evaluate(body.clone());
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            move |session, outcome| {
-                session.resume_abort_protect_after_body(pending_checkpoint, outcome)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => EvalAbortProtectSuspensionFrameL191C13 { pending_checkpoint },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -209,16 +212,12 @@ impl Session {
         match outcome {
             Ok(_value) if self.abort_protect_pending > pending_checkpoint => {
                 let fallback_result = self.evaluate(args[1].clone());
-                let outcome = self.suspend_with_result_frame_lazy(fallback_result, || {
-                    move |session, outcome| {
-                        session.resume_check_abort_after_fallback(
-                            propagate,
-                            true,
-                            pending_checkpoint,
-                            outcome,
-                        )
-                    }
-                });
+                let outcome = crate::resume_or_suspend!(
+                    self,
+                    fallback_result,
+                    ok(value) => Ok(value),
+                    suspend => ResumeCheckAbortAfterPrimarySuspensionFrameL213C21 { propagate, pending_checkpoint },
+                );
 
                 match outcome {
                     Err(EvalError::InputRequired { request }) => {
@@ -236,16 +235,12 @@ impl Session {
             Err(error @ (EvalError::Abort | EvalError::ProtectedAbort)) => {
                 let protected = matches!(error, EvalError::ProtectedAbort);
                 let fallback_result = self.evaluate(args[1].clone());
-                let outcome = self.suspend_with_result_frame_lazy(fallback_result, || {
-                    move |session, outcome| {
-                        session.resume_check_abort_after_fallback(
-                            propagate,
-                            protected,
-                            pending_checkpoint,
-                            outcome,
-                        )
-                    }
-                });
+                let outcome = crate::resume_or_suspend!(
+                    self,
+                    fallback_result,
+                    ok(value) => Ok(value),
+                    suspend => ResumeCheckAbortAfterPrimarySuspensionFrameL240C21 { propagate, protected, pending_checkpoint },
+                );
 
                 match outcome {
                     Err(EvalError::InputRequired { request }) => {

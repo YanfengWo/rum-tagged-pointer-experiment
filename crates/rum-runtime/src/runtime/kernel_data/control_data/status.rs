@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 
 impl Session {
@@ -198,10 +201,7 @@ impl Session {
             Ok(Some(message)) => Ok(Some(styled_message_expr(message))),
             Ok(None) => Ok(None),
             Err(EvalError::InputRequired { request }) => {
-                self.push_suspension_frame(|_, outcome| match outcome {
-                    Ok(message) => Ok(styled_message_expr(message)),
-                    Err(error) => Err(error),
-                });
+                crate::resume_or_suspend!(insert self, FailureVirtualStyledMessageValueSuspensionFrameL201C44);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -226,14 +226,16 @@ impl Session {
         if delayed {
             let status = status.clone();
             let param_result = self.evaluate(param_value);
-            let param_value = self.suspend_with_frame_lazy(param_result, || {
-                let status = status.clone();
-                let template = template.clone();
-                move |session, param_value| {
-                    let params = failure_message_template_parameters_from_expr(&param_value);
-                    session.finish_failure_message_from_template(status, template, params)
-                }
-            })?;
+            let param_value = crate::resume_or_suspend!(
+                self,
+                param_result,
+                ok(value) => Ok(value),
+                suspend => {
+            let status = status.clone();
+                            let template = template.clone();
+            FailureMessageFromTemplateSuspensionFrameL232C17 { status, template }
+            },
+            )?;
             let params = failure_message_template_parameters_from_expr(&param_value);
             return self
                 .finish_failure_message_from_template(status, template, params)
@@ -267,7 +269,12 @@ impl Session {
             return Ok(template);
         };
         let rendered = self.render_message_text_with_named(&key, &params.positional, &params.named);
-        self.drive_internal_value::<String, Expr, _>(rendered, |_, text| Ok(Expr::string(text)))
+        crate::resume_or_suspend!(
+            self,
+            rendered,
+            ok(text) => { (|| { Ok(Expr::string(text)) })() },
+            suspend => FinishFailureMessageFromTemplateSuspensionFrameL270C64,
+        )
     }
 }
 

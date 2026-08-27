@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::suspension::trace::FrameRootVisitor;
 use std::sync::OnceLock;
 
 const GENSYM_GC_THRESHOLD_ENV: &str = "RUM_GENSYM_GC_THRESHOLD";
@@ -33,6 +34,26 @@ impl Session {
         self.for_each_root_expr(&mut |root| {
             seed_live_gensyms_from_expr(root, &self.gc_candidate_gensyms, &mut live, &mut worklist);
         });
+
+        {
+            let mut visitor = GensymSuspensionRootVisitor {
+                candidates: &self.gc_candidate_gensyms,
+                live: &mut live,
+                worklist: &mut worklist,
+            };
+            for suspension in [
+                self.pending_suspension.as_ref(),
+                self.resuming_suspension.as_ref(),
+            ]
+            .into_iter()
+            .flatten()
+            {
+                for entry in &suspension.active_stack {
+                    visitor.visit_expr(&entry.expr);
+                }
+                suspension.trace_frame_roots(&mut visitor);
+            }
+        }
 
         while let Some(gensym) = worklist.pop() {
             let Some(definition) = self.definitions.get(&gensym) else {
@@ -184,14 +205,26 @@ impl Session {
             }
         }
 
-        if let Some(suspension) = &self.pending_suspension {
-            for entry in &suspension.active_stack {
-                visit(&entry.expr);
-            }
-        }
-
         // `pending_eval_request` currently stores request checkpoints only; it
         // does not carry an `Expr`.
+    }
+}
+
+struct GensymSuspensionRootVisitor<'a> {
+    candidates: &'a std::collections::HashSet<Symbol>,
+    live: &'a mut std::collections::HashSet<Symbol>,
+    worklist: &'a mut Vec<Symbol>,
+}
+
+impl FrameRootVisitor for GensymSuspensionRootVisitor<'_> {
+    fn visit_expr(&mut self, expr: &Expr) {
+        seed_live_gensyms_from_expr(expr, self.candidates, self.live, self.worklist);
+    }
+
+    fn visit_symbol(&mut self, symbol: &Symbol) {
+        if self.candidates.contains(symbol) && self.live.insert(*symbol) {
+            self.worklist.push(*symbol);
+        }
     }
 }
 

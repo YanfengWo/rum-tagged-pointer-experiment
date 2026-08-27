@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::matcher::{
     best_pattern_match_at_with_bindings, best_pattern_match_state, linear_literal_match_ranges,
     pattern_match_text,
@@ -302,18 +305,23 @@ fn suspend_replace_string_output(
     let literal_match_index = state.literal_match_index;
     let state = FrozenStringValue::freeze(state);
     let output = PersistentStringText::freeze(output);
-    session.drive_evaluated_value::<Expr, String, _>(Err(error), move |session, rendered_expr| {
-        resume_suspended_replace_string_value_with_output(
-            session,
-            state,
-            index,
-            end,
-            replacements,
-            literal_match_index,
-            output,
-            rendered_expr,
-        )
-    })
+    rum_runtime::resume_or_suspend!(
+        session,
+        Err(error),
+        ok(rendered_expr_expr) => { let rendered_expr = <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(rendered_expr_expr); (|| {
+            resume_suspended_replace_string_value_with_output(
+                session,
+                state,
+                index,
+                end,
+                replacements,
+                literal_match_index,
+                output,
+                rendered_expr,
+            )
+        })() },
+        suspend => SuspendReplaceStringOutputSuspensionFrameL305C66 { state, index, end, replacements, literal_match_index, output },
+    )
 }
 
 fn resume_suspended_replace_string_value_from_index(
@@ -435,22 +443,23 @@ fn drive_suspended_replace_string_output_result(
             output,
             rendered_expr,
         ),
-        Err(EvalError::InputRequired { request }) => session
-            .drive_evaluated_value::<Expr, String, _>(
-                Err(EvalError::InputRequired { request }),
-                move |session, rendered_expr| {
-                    resume_suspended_replace_string_value_with_output(
-                        session,
-                        state,
-                        index,
-                        end,
-                        replacements,
-                        literal_match_index,
-                        output,
-                        rendered_expr,
-                    )
-                },
-            ),
+        Err(EvalError::InputRequired { request }) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(EvalError::InputRequired { request }),
+            ok(rendered_expr_expr) => { let rendered_expr = <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(rendered_expr_expr); (|| {
+                            resume_suspended_replace_string_value_with_output(
+                                session,
+                                state,
+                                index,
+                                end,
+                                replacements,
+                                literal_match_index,
+                                output,
+                                rendered_expr,
+                            )
+                        })() },
+            suspend => DriveSuspendedReplaceStringOutputResultSuspensionFrameL441C17 { state, index, end, replacements, literal_match_index, output },
+        ),
         Err(error) => Err(error),
     }
 }
@@ -549,13 +558,15 @@ fn resume_replace_string_values_from_index(
             Err(EvalError::InputRequired { request }) => {
                 let state = FrozenStringValue::freeze(state);
                 let rendered = PersistentStringSequence::freeze(rendered);
-                return session.drive_internal_value::<String, Expr, _>(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_suspended_replace_string_values_with_value(
-                            session, state, index, rendered, value,
-                        )
-                    },
+                    ok(value) => { (|| {
+                                        resume_suspended_replace_string_values_with_value(
+                                            session, state, index, rendered, value,
+                                        )
+                                    })() },
+                    suspend => ResumeReplaceStringValuesFromIndexSuspensionFrameL554C21 { state, index, rendered },
                 );
             }
             Err(error) => return Err(error),
@@ -588,13 +599,15 @@ fn resume_suspended_replace_string_values_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
-                return session.drive_internal_value::<String, Expr, _>(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    move |session, value| {
-                        resume_suspended_replace_string_values_with_value(
-                            session, state, index, rendered, value,
-                        )
-                    },
+                    ok(value) => { (|| {
+                                        resume_suspended_replace_string_values_with_value(
+                                            session, state, index, rendered, value,
+                                        )
+                                    })() },
+                    suspend => ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrameL593C21 { state, index, rendered },
                 );
             }
             Err(error) => return Err(error),
@@ -745,19 +758,21 @@ fn drive_string_cases_output_result(
             let literal_match_index = state.literal_match_index;
             let state = FrozenStringValue::freeze(state);
             let matches = PersistentStringSequence::freeze(matches);
-            session.drive_evaluated_value::<Expr, Vec<Expr>, _>(
+            rum_runtime::resume_or_suspend!(
+                session,
                 Err(EvalError::InputRequired { request }),
-                move |session, output| {
-                    resume_suspended_collect_string_cases_with_output(
-                        session,
-                        state,
-                        index,
-                        end,
-                        literal_match_index,
-                        matches,
-                        output,
-                    )
-                },
+                ok(output_expr) => { let output = <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(output_expr); (|| {
+                                resume_suspended_collect_string_cases_with_output(
+                                    session,
+                                    state,
+                                    index,
+                                    end,
+                                    literal_match_index,
+                                    matches,
+                                    output,
+                                )
+                            })() },
+                suspend => DriveStringCasesOutputResultSuspensionFrameL750C17 { state, index, end, literal_match_index, matches },
             )
         }
         Err(error) => Err(error),
@@ -901,21 +916,22 @@ fn drive_suspended_string_cases_output_result(
             matches,
             output,
         ),
-        Err(EvalError::InputRequired { request }) => session
-            .drive_evaluated_value::<Expr, Vec<Expr>, _>(
-                Err(EvalError::InputRequired { request }),
-                move |session, output| {
-                    resume_suspended_collect_string_cases_with_output(
-                        session,
-                        state,
-                        index,
-                        end,
-                        literal_match_index,
-                        matches,
-                        output,
-                    )
-                },
-            ),
+        Err(EvalError::InputRequired { request }) => rum_runtime::resume_or_suspend!(
+            session,
+            Err(EvalError::InputRequired { request }),
+            ok(output_expr) => { let output = <rum_core::Expr as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(output_expr); (|| {
+                            resume_suspended_collect_string_cases_with_output(
+                                session,
+                                state,
+                                index,
+                                end,
+                                literal_match_index,
+                                matches,
+                                output,
+                            )
+                        })() },
+            suspend => DriveSuspendedStringCasesOutputResultSuspensionFrameL907C17 { state, index, end, literal_match_index, matches },
+        ),
         Err(error) => Err(error),
     }
 }
@@ -996,13 +1012,15 @@ fn resume_collect_string_cases_values_from_index(
             Err(EvalError::InputRequired { request }) => {
                 let state = FrozenStringValue::freeze(state);
                 let outputs = PersistentStringSequence::freeze(outputs);
-                return session.drive_internal_value::<Vec<Expr>, Expr, _>(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    move |session, items| {
-                        resume_suspended_collect_string_cases_values_with_value(
-                            session, state, index, outputs, items,
-                        )
-                    },
+                    ok(items) => { (|| {
+                                        resume_suspended_collect_string_cases_values_with_value(
+                                            session, state, index, outputs, items,
+                                        )
+                                    })() },
+                    suspend => ResumeCollectStringCasesValuesFromIndexSuspensionFrameL1001C21 { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -1035,13 +1053,15 @@ fn resume_suspended_collect_string_cases_values_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
-                return session.drive_internal_value::<Vec<Expr>, Expr, _>(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    move |session, items| {
-                        resume_suspended_collect_string_cases_values_with_value(
-                            session, state, index, outputs, items,
-                        )
-                    },
+                    ok(items) => { (|| {
+                                        resume_suspended_collect_string_cases_values_with_value(
+                                            session, state, index, outputs, items,
+                                        )
+                                    })() },
+                    suspend => ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrameL1040C21 { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),

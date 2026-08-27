@@ -90,40 +90,48 @@ struct GuardedTargetChunk {
     values: Arc<[GuardedReplacePartTarget]>,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct GuardedTargetUpdate {
     state: GuardedReplacePartTargetState,
     bindings: Option<FrozenMatchBindings>,
     option_scope: Option<OptionValueScope>,
 }
 
+#[derive(FrameRootTrace)]
+struct GuardedTargetUpdateNode {
+    previous: Option<Arc<GuardedTargetUpdateNode>>,
+    index: usize,
+    update: GuardedTargetUpdate,
+}
+
 /// Immutable target storage plus an owned delta table for the suspended-only
 /// guarded ReplacePart path. Ordinary selection still reads and writes its
 /// Vec directly; this overlay therefore adds no probes to the normal path.
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 pub(super) struct SuspendedGuardedTargetList {
     prefix: Arc<[GuardedReplacePartTarget]>,
     tail: Option<Arc<GuardedTargetChunk>>,
     len: usize,
-    updates: HashMap<usize, GuardedTargetUpdate>,
+    updates: Option<Arc<GuardedTargetUpdateNode>>,
 }
 
 impl SuspendedGuardedTargetList {
     pub(super) fn freeze(mut values: Vec<GuardedReplacePartTarget>) -> Self {
         let len = values.len();
-        let mut updates = HashMap::new();
+        let mut updates = None;
         for (index, target) in values.iter_mut().enumerate() {
             if !target.bindings.is_empty() {
-                updates.insert(
+                updates = Some(Arc::new(GuardedTargetUpdateNode {
+                    previous: updates,
                     index,
-                    GuardedTargetUpdate {
+                    update: GuardedTargetUpdate {
                         state: target.state,
                         bindings: Some(FrozenMatchBindings::freeze(std::mem::take(
                             &mut target.bindings,
                         ))),
                         option_scope: target.option_scope.take(),
                     },
-                );
+                }));
             }
         }
         Self {
@@ -161,15 +169,13 @@ impl SuspendedGuardedTargetList {
     }
 
     pub(super) fn state(&self, index: usize) -> GuardedReplacePartTargetState {
-        self.updates
-            .get(&index)
+        self.update(index)
             .map(|update| update.state)
             .unwrap_or_else(|| self.base(index).state)
     }
 
     pub(super) fn bindings(&self, index: usize) -> &SymbolExprMap {
-        self.updates
-            .get(&index)
+        self.update(index)
             .and_then(|update| update.bindings.as_ref())
             .map(FrozenMatchBindings::as_map)
             .unwrap_or(&self.base(index).bindings)
@@ -177,8 +183,7 @@ impl SuspendedGuardedTargetList {
 
     pub(super) fn frozen_bindings(&self, index: usize) -> FrozenMatchBindings {
         if let Some(bindings) = self
-            .updates
-            .get(&index)
+            .update(index)
             .and_then(|update| update.bindings.as_ref())
         {
             return bindings.clone();
@@ -188,22 +193,21 @@ impl SuspendedGuardedTargetList {
     }
 
     pub(super) fn option_scope(&self, index: usize) -> Option<OptionValueScope> {
-        self.updates
-            .get(&index)
+        self.update(index)
             .and_then(|update| update.option_scope.clone())
             .or_else(|| self.base(index).option_scope.clone())
     }
 
     pub(super) fn set_state(&mut self, index: usize, state: GuardedReplacePartTargetState) {
-        let base_state = self.base(index).state;
-        self.updates
-            .entry(index)
-            .or_insert_with(|| GuardedTargetUpdate {
-                state: base_state,
-                bindings: None,
-                option_scope: None,
-            })
-            .state = state;
+        let prior = self.update(index).cloned();
+        self.push_update(
+            index,
+            GuardedTargetUpdate {
+                state,
+                bindings: prior.as_ref().and_then(|update| update.bindings.clone()),
+                option_scope: prior.and_then(|update| update.option_scope),
+            },
+        );
     }
 
     pub(super) fn activate_pattern_target(
@@ -221,7 +225,7 @@ impl SuspendedGuardedTargetList {
         }) {
             self.set_state(previous, GuardedReplacePartTargetState::Inactive);
         }
-        self.updates.insert(
+        self.push_update(
             index,
             GuardedTargetUpdate {
                 state: GuardedReplacePartTargetState::PendingGuard,
@@ -229,6 +233,25 @@ impl SuspendedGuardedTargetList {
                 option_scope,
             },
         );
+    }
+
+    fn update(&self, index: usize) -> Option<&GuardedTargetUpdate> {
+        let mut node = self.updates.as_deref();
+        while let Some(current) = node {
+            if current.index == index {
+                return Some(&current.update);
+            }
+            node = current.previous.as_deref();
+        }
+        None
+    }
+
+    fn push_update(&mut self, index: usize, update: GuardedTargetUpdate) {
+        self.updates = Some(Arc::new(GuardedTargetUpdateNode {
+            previous: self.updates.clone(),
+            index,
+            update,
+        }));
     }
 
     pub(super) fn append_exact_targets(&mut self, mut values: Vec<GuardedReplacePartTarget>) {
@@ -314,6 +337,7 @@ const _: fn() = || {
     assert_traces::<FrozenReplaceSequence<Expr>>();
     assert_traces::<GuardedTargetChunk>();
     assert_traces::<GuardedTargetUpdate>();
+    assert_traces::<GuardedTargetUpdateNode>();
     assert_traces::<SuspendedGuardedTargetList>();
     assert_traces::<PersistentReplacePartTargetNode>();
     assert_traces::<PersistentReplacePartTargets>();

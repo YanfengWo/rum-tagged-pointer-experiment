@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
@@ -151,23 +154,15 @@ fn resume_tally_test_from_count(
         let value = match result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let items = FrozenStructureSequence::freeze(state.items);
-                        let counts = PersistentStructureCounts::freeze(state.counts);
-                        move |session, value| {
-                            resume_suspended_tally_test_with_value(
-                                session,
-                                state.test,
-                                items,
-                                state.index,
-                                counts,
-                                count_index,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let items = FrozenStructureSequence::freeze(state.items);
+                                        let counts = PersistentStructureCounts::freeze(state.counts);
+                ResumeTallyTestFromCountSuspensionFrameL159C25 { state__test: state.test, state__index: state.index, items, counts, count_index }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -211,21 +206,11 @@ fn resume_suspended_tally_test_from_count(
         let value = match result {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_tally_test_with_value(
-                                session,
-                                test,
-                                items,
-                                index,
-                                counts,
-                                count_index,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedTallyTestFromCountSuspensionFrameL217C25 { test, items, index, counts, count_index },
                 );
             }
             Err(error) => return Err(error),
@@ -503,27 +488,19 @@ fn resume_gather_by_function_list_from_position(
         let key = match session.evaluate(Expr::call(function, vec![item])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let item_index = state.item_index;
-                        let function_index = state.function_index;
-                        let items = FrozenStructureSequence::freeze(state.items);
-                        let functions = FrozenStructureSequence::freeze(state.functions);
-                        let keys =
-                            PersistentStructureSequence::freeze(flatten_gather_keys(state.keys));
-                        move |session, key| {
-                            resume_suspended_gather_by_function_list_with_key(
-                                session,
-                                items,
-                                functions,
-                                item_index,
-                                function_index,
-                                keys,
-                                key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let item_index = state.item_index;
+                                        let function_index = state.function_index;
+                                        let items = FrozenStructureSequence::freeze(state.items);
+                                        let functions = FrozenStructureSequence::freeze(state.functions);
+                                        let keys =
+                                            PersistentStructureSequence::freeze(flatten_gather_keys(state.keys));
+                ResumeGatherByFunctionListFromPositionSuspensionFrameL515C25 { items, functions, item_index, function_index, keys }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -583,21 +560,11 @@ fn resume_suspended_gather_by_function_list_from_position(
         let key = match session.evaluate(Expr::call(function, vec![item])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, key| {
-                            resume_suspended_gather_by_function_list_with_key(
-                                session,
-                                items,
-                                functions,
-                                item_index,
-                                function_index,
-                                keys,
-                                key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrameL589C25 { items, functions, item_index, function_index, keys },
                 );
             }
             Err(error) => return Err(error),
@@ -785,17 +752,15 @@ fn resume_decorate_by_from_index(
         let key = match session.evaluate(Expr::call(state.function.clone(), vec![item.clone()])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedDecorateByState::freeze(state);
-                        let decorated = PersistentStructureSequence::freeze(decorated);
-                        move |session, key| {
-                            resume_suspended_decorate_by_with_key(
-                                session, state, index, decorated, item, key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedDecorateByState::freeze(state);
+                                        let decorated = PersistentStructureSequence::freeze(decorated);
+                ResumeDecorateByFromIndexSuspensionFrameL793C25 { state, index, decorated, item }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -819,15 +784,11 @@ fn resume_suspended_decorate_by_from_index(
         let key = match session.evaluate(Expr::call(state.function.clone(), vec![item.clone()])) {
             Ok(key) => key,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, key| {
-                            resume_suspended_decorate_by_with_key(
-                                session, state, index, decorated, item, key,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedDecorateByFromIndexSuspensionFrameL825C25 { state, index, decorated, item },
                 );
             }
             Err(error) => return Err(error),

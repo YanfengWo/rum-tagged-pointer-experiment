@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::*;
 
 impl Session {
@@ -31,10 +34,15 @@ impl Session {
                 runtime_profile_outcome_for_expr_result(&rhs_result),
             );
             let runtime_profile_suspend = runtime_path_timing_start("set.rhs.suspend");
-            let rhs_result = self.suspend_with_frame_lazy(rhs_result, || {
-                let lhs = lhs.clone();
-                move |session, rhs| session.resume_set_with_rhs(lhs, rhs)
-            });
+            let rhs_result = crate::resume_or_suspend!(
+                self,
+                rhs_result,
+                ok(value) => Ok(value),
+                suspend => {
+            let lhs = lhs.clone();
+            EvalSetSuspensionFrameL36C17 { lhs }
+            },
+            );
             record_profile_runtime_path_timing(
                 runtime_profile_suspend,
                 runtime_profile_outcome_for_expr_result(&rhs_result),
@@ -71,10 +79,15 @@ impl Session {
 
         let lhs = self.evaluate_rule_lhs(args[0].clone())?;
         let rhs_result = self.evaluate(args[1].clone());
-        let rhs = self.suspend_with_frame_lazy(rhs_result, || {
-            let lhs = lhs.clone();
-            move |session, rhs| session.resume_rule_with_rhs(lhs, rhs)
-        })?;
+        let rhs = crate::resume_or_suspend!(
+            self,
+            rhs_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let lhs = lhs.clone();
+        EvalRuleSuspensionFrameL76C13 { lhs }
+        },
+        )?;
 
         self.resume_rule_with_rhs(lhs, rhs)
     }

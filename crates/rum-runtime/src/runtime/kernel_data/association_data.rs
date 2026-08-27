@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
@@ -780,10 +783,7 @@ impl Session {
                         index,
                         evaluated_selectors,
                     );
-                    self.push_suspension_frame(move |session, outcome| {
-                        let selector = outcome?;
-                        session.resume_suspended_association_set_lvalue(suspended, selector)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrameL783C48 { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -816,10 +816,7 @@ impl Session {
                     state.cursor += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, outcome| {
-                        let selector = outcome?;
-                        session.resume_suspended_association_set_lvalue(state, selector)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedAssociationSetLvalueSuspensionFrameL819C48 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

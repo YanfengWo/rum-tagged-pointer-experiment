@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -127,7 +130,12 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let outcome_result =
             self.apply_replace_all_owned(expr, RewriteRulePlan::from_slice(rules), source);
-        self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
+        crate::resume_or_suspend!(
+            self,
+            outcome_result,
+            ok(outcome) => { (|| { Ok(outcome.expr) })() },
+            suspend => ApplyReplaceAllSuspensionFrameL130C51,
+        )
     }
 
     pub(in crate::runtime) fn apply_replace_all_with_plan(
@@ -137,7 +145,12 @@ impl Session {
         source: RuleApplicationSource,
     ) -> Result<Expr, EvalError> {
         let outcome_result = self.apply_replace_all_owned(expr, rules, source);
-        self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
+        crate::resume_or_suspend!(
+            self,
+            outcome_result,
+            ok(outcome) => { (|| { Ok(outcome.expr) })() },
+            suspend => ApplyReplaceAllWithPlanSuspensionFrameL140C51,
+        )
     }
 
     pub(in crate::runtime) fn shared_rewrite_rule_plan(rules: Vec<RewriteRule>) -> RewriteRulePlan {
@@ -181,13 +194,18 @@ impl Session {
             cursor,
         );
 
-        self.drive_internal_value(replace_result, move |session, outcome| match outcome {
-            Some(replaced) => Ok(ReplaceAllTraversalOutcome {
-                expr: replaced,
-                changed: true,
-            }),
-            None => session.apply_replace_all_after_miss(expr, rules, source),
-        })
+        crate::resume_or_suspend!(
+            self,
+            replace_result,
+            ok(outcome) => { let session = self; (|| { match outcome {
+                    Some(replaced) => Ok(ReplaceAllTraversalOutcome {
+                        expr: replaced,
+                        changed: true,
+                    }),
+                    None => session.apply_replace_all_after_miss(expr, rules, source),
+                } })() },
+            suspend => ApplyReplaceAllOwnedSuspensionFrameL184C51 { expr, rules, source },
+        )
     }
 
     fn apply_replace_all_after_miss(
@@ -210,20 +228,25 @@ impl Session {
                 let remaining_args = args;
                 let head_result =
                     self.apply_replace_all_owned(head.into_owned(), rules.clone(), source);
-                self.drive_internal_value(head_result, move |session, head_outcome| {
-                    let rewritten_args = Vec::with_capacity(remaining_args.len());
-                    session.apply_replace_all_args(
-                        head_outcome.expr,
-                        rewritten_args,
-                        remaining_args,
-                        rules,
-                        source,
-                        head_outcome.changed,
-                        hold_attribute,
-                        0,
-                        None,
-                    )
-                })
+                crate::resume_or_suspend!(
+                    self,
+                    head_result,
+                    ok(head_outcome) => { let session = self; (|| {
+                                    let rewritten_args = Vec::with_capacity(remaining_args.len());
+                                    session.apply_replace_all_args(
+                                        head_outcome.expr,
+                                        rewritten_args,
+                                        remaining_args,
+                                        rules,
+                                        source,
+                                        head_outcome.changed,
+                                        hold_attribute,
+                                        0,
+                                        None,
+                                    )
+                                })() },
+                    suspend => ApplyReplaceAllAfterMissSuspensionFrameL213C56 { remaining_args, rules, source, hold_attribute },
+                )
             }
         }
     }
@@ -303,17 +326,7 @@ impl Session {
                         changed,
                         argument_index,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = ReplaceAllTraversalOutcome::from_continuation_expr(value?);
-                        session
-                            .resume_suspended_replace_all_args(
-                                state,
-                                source,
-                                hold_attribute,
-                                outcome,
-                            )
-                            .map(|outcome| outcome.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, ApplyReplaceAllArgsSuspensionFrameL306C48 { state, source, hold_attribute });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -362,18 +375,7 @@ impl Session {
                         break;
                     }
                     Err(EvalError::InputRequired { request }) => {
-                        self.push_suspension_frame(move |session, value| {
-                            let outcome =
-                                ReplaceAllTraversalOutcome::from_continuation_expr(value?);
-                            session
-                                .resume_suspended_replace_all_args(
-                                    state,
-                                    source,
-                                    hold_attribute,
-                                    outcome,
-                                )
-                                .map(|outcome| outcome.into_continuation_expr())
-                        });
+                        crate::resume_or_suspend!(insert self, ResumeSuspendedReplaceAllArgsSuspensionFrameL365C52 { state, source, hold_attribute });
                         return Err(EvalError::InputRequired { request });
                     }
                     Err(error) => return Err(error),
@@ -466,19 +468,7 @@ impl Session {
                         normalized_expr,
                         rules,
                     };
-                    self.push_suspension_frame(move |session, value| {
-                        let outcome = CompiledMatchOutcome::from_continuation_expr(value?);
-                        session
-                            .finish_suspended_rewrite_rule_match(
-                                state,
-                                source,
-                                cursor,
-                                index,
-                                would_reject,
-                                outcome,
-                            )
-                            .map(|result| result.into_continuation_expr())
-                    });
+                    crate::resume_or_suspend!(insert self, ApplyRulesOnceFromListSuspensionFrameL469C48 { state, source, cursor, index, would_reject });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

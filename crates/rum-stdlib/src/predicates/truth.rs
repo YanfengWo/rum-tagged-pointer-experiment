@@ -1,7 +1,8 @@
 use super::*;
 use rum_core::SharedArgs;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum TruthAggregateKind {
     All,
     Any,
@@ -136,24 +137,14 @@ fn resume_truth_aggregate_from_index(
         let value = match session.evaluate(call) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let parts = FrozenPredicateSequence::freeze(parts);
-                        move |session, value| {
-                            resume_suspended_truth_aggregate_with_value(
-                                session,
-                                kind,
-                                head,
-                                call_args,
-                                parts,
-                                criterion,
-                                index,
-                                saw_unknown,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let parts = FrozenPredicateSequence::freeze(parts);
+                ResumeTruthAggregateFromIndexSuspensionFrameL143C25 { kind, head, call_args, parts, criterion, index, saw_unknown }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -192,23 +183,11 @@ fn resume_suspended_truth_aggregate_from_index(
         let value = match session.evaluate(Expr::call(criterion.clone(), vec![part])) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_truth_aggregate_with_value(
-                                session,
-                                kind,
-                                head,
-                                call_args,
-                                parts,
-                                criterion,
-                                index,
-                                saw_unknown,
-                                value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedTruthAggregateFromIndexSuspensionFrameL198C25 { kind, head, call_args, parts, criterion, index, saw_unknown },
                 );
             }
             Err(error) => return Err(error),
@@ -308,5 +287,111 @@ fn finalize_truth_aggregate(
             }
             TruthAggregateKind::Any => system_expr(heads::structure::FALSE),
         }
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeTruthAggregateFromIndexSuspensionFrameL143C25 {
+    pub(super) kind: crate::predicates::truth::TruthAggregateKind,
+    pub(super) head: rum_core::Expr,
+    pub(super) call_args: rum_core::SharedArgs,
+    pub(super) parts: crate::predicates::suspended_state::FrozenPredicateSequence<rum_core::Expr>,
+    pub(super) criterion: rum_core::Expr,
+    pub(super) index: usize,
+    pub(super) saw_unknown: bool,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeTruthAggregateFromIndexSuspensionFrameL143C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut kind = self.kind.clone();
+        #[allow(unused_mut)]
+        let mut head = self.head.clone();
+        #[allow(unused_mut)]
+        let mut call_args = self.call_args.clone();
+        #[allow(unused_mut)]
+        let mut parts = self.parts.clone();
+        #[allow(unused_mut)]
+        let mut criterion = self.criterion.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut saw_unknown = self.saw_unknown.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_truth_aggregate_with_value(
+                    session,
+                    kind,
+                    head,
+                    call_args,
+                    parts,
+                    criterion,
+                    index,
+                    saw_unknown,
+                    value,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedTruthAggregateFromIndexSuspensionFrameL198C25 {
+    pub(super) kind: crate::predicates::truth::TruthAggregateKind,
+    pub(super) head: rum_core::Expr,
+    pub(super) call_args: rum_core::SharedArgs,
+    pub(super) parts: crate::predicates::suspended_state::FrozenPredicateSequence<rum_core::Expr>,
+    pub(super) criterion: rum_core::Expr,
+    pub(super) index: usize,
+    pub(super) saw_unknown: bool,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedTruthAggregateFromIndexSuspensionFrameL198C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut kind = self.kind.clone();
+        #[allow(unused_mut)]
+        let mut head = self.head.clone();
+        #[allow(unused_mut)]
+        let mut call_args = self.call_args.clone();
+        #[allow(unused_mut)]
+        let mut parts = self.parts.clone();
+        #[allow(unused_mut)]
+        let mut criterion = self.criterion.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut saw_unknown = self.saw_unknown.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_truth_aggregate_with_value(
+                    session,
+                    kind,
+                    head,
+                    call_args,
+                    parts,
+                    criterion,
+                    index,
+                    saw_unknown,
+                    value,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
     }
 }

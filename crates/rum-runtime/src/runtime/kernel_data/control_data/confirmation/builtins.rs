@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 
 impl Session {
@@ -19,14 +22,17 @@ impl Session {
         );
 
         let body_result = self.evaluate(body);
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let handler = handler.clone();
-            let form = form.clone();
-            let lexical_tag = lexical_tag.clone();
-            move |session, outcome| {
-                session.resume_enclose_after_body(handler, form, lexical_tag, outcome)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let handler = handler.clone();
+                    let form = form.clone();
+                    let lexical_tag = lexical_tag.clone();
+        EvalEncloseSuspensionFrameL26C13 { handler, form, lexical_tag }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -44,10 +50,15 @@ impl Session {
         }
 
         let value_result = self.evaluate(args_slice[0].clone());
-        let value = self.suspend_with_frame_lazy(value_result, || {
-            let args = args.clone();
-            move |session, value| session.resume_confirm_after_value(&args, value)
-        })?;
+        let value = crate::resume_or_suspend!(
+            self,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalConfirmSuspensionFrameL49C13 { args }
+        },
+        )?;
 
         self.resume_confirm_after_value(args, value)
     }
@@ -62,10 +73,15 @@ impl Session {
         }
 
         let value_result = self.evaluate(args_slice[0].clone());
-        let value = self.suspend_with_frame_lazy(value_result, || {
-            let args = args.clone();
-            move |session, value| session.resume_confirm_by_after_value(&args, value)
-        })?;
+        let value = crate::resume_or_suspend!(
+            self,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalConfirmBySuspensionFrameL67C13 { args }
+        },
+        )?;
 
         self.resume_confirm_by_after_value(args, value)
     }
@@ -80,10 +96,15 @@ impl Session {
         }
 
         let value_result = self.evaluate(args_slice[0].clone());
-        let value = self.suspend_with_frame_lazy(value_result, || {
-            let args = args.clone();
-            move |session, value| session.resume_confirm_match_after_value(&args, value)
-        })?;
+        let value = crate::resume_or_suspend!(
+            self,
+            value_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalConfirmMatchSuspensionFrameL85C13 { args }
+        },
+        )?;
 
         self.resume_confirm_match_after_value(args, value)
     }
@@ -110,22 +131,20 @@ impl Session {
 
         let message_checkpoint = self.messages.len();
         let body_result = self.evaluate(args_slice[0].clone());
-        let outcome = self.suspend_with_result_frame_lazy(body_result, || {
-            let args = args.clone();
-            let selectors = SuspendedConfirmQuietSelectors::freeze(
-                selectors
-                    .take()
-                    .expect("confirm selectors are frozen only after input suspension"),
-            );
-            move |session, outcome| {
-                session.resume_suspended_confirm_quiet_after_body(
-                    &args,
-                    &selectors,
-                    message_checkpoint,
-                    outcome,
-                )
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            body_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+                    let selectors = SuspendedConfirmQuietSelectors::freeze(
+                        selectors
+                            .take()
+                            .expect("confirm selectors are frozen only after input suspension"),
+                    );
+        EvalConfirmQuietSuspensionFrameL120C13 { args, selectors, message_checkpoint }
+        },
+        );
 
         match outcome {
             Err(EvalError::InputRequired { request }) => Err(EvalError::InputRequired { request }),
@@ -151,10 +170,15 @@ impl Session {
         }
 
         let test_result = self.evaluate(args_slice[0].clone());
-        let test = self.suspend_with_frame_lazy(test_result, || {
-            let args = args.clone();
-            move |session, test| session.resume_confirm_assert_after_test(&args, test)
-        })?;
+        let test = crate::resume_or_suspend!(
+            self,
+            test_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalConfirmAssertSuspensionFrameL156C13 { args }
+        },
+        )?;
 
         self.resume_confirm_assert_after_test(args, test)
     }
@@ -214,17 +238,22 @@ impl Session {
         };
 
         let match_result = self.match_expr_owned(form, tag.clone(), SymbolExprMap::default());
-        self.drive_internal_value(match_result, move |session, outcome| {
-            if outcome.matched {
-                session.finish_enclose_handler(handler, value)
-            } else {
-                Err(EvalError::Thrown {
-                    value,
-                    tag,
-                    explicit_tag,
-                })
-            }
-        })
+        crate::resume_or_suspend!(
+            self,
+            match_result,
+            ok(outcome) => { let session = self; (|| {
+                    if outcome.matched {
+                        session.finish_enclose_handler(handler, value)
+                    } else {
+                        Err(EvalError::Thrown {
+                            value,
+                            tag,
+                            explicit_tag,
+                        })
+                    }
+                })() },
+            suspend => ResumeEncloseForFailureSuspensionFrameL217C49 { handler, value, tag, explicit_tag },
+        )
     }
 
     fn finish_enclose_handler(
@@ -253,9 +282,14 @@ impl Session {
         let raw_expr = args[0].clone();
         let tag = confirmation_tag_from_args(args.as_ref(), 2);
         let info_result = evaluate_optional_confirmation_info(self, args.get(1).cloned());
-        self.drive_internal_value(info_result, move |session, info| {
-            session.finish_confirm_failure(raw_expr, value, info, tag)
-        })
+        crate::resume_or_suspend!(
+            self,
+            info_result,
+            ok(info) => { let session = self; (|| {
+                    session.finish_confirm_failure(raw_expr, value, info, tag)
+                })() },
+            suspend => ResumeConfirmAfterValueSuspensionFrameL256C48 { raw_expr, value, tag },
+        )
     }
 
     fn finish_confirm_failure(
@@ -267,13 +301,18 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         if is_failure_expr(&value) {
             let message_result = self.failure_property_value(&value, "Message");
-            return self.drive_internal_value(message_result, move |_, message| {
-                Err(EvalError::Thrown {
-                    value: build_confirm_failure_from_failure(raw_expr, message, info),
-                    tag,
-                    explicit_tag: true,
-                })
-            });
+            return crate::resume_or_suspend!(
+                self,
+                message_result,
+                ok(message) => { (|| {
+                            Err(EvalError::Thrown {
+                                value: build_confirm_failure_from_failure(raw_expr, message, info),
+                                tag,
+                                explicit_tag: true,
+                            })
+                        })() },
+                suspend => FinishConfirmFailureSuspensionFrameL270C62 { raw_expr, info, tag },
+            );
         }
 
         Err(EvalError::Thrown {
@@ -290,11 +329,16 @@ impl Session {
     ) -> Result<Expr, EvalError> {
         let test_call = Expr::call(args[1].clone(), vec![value.clone()]);
         let test_result = self.evaluate(test_call);
-        let test = self.suspend_with_frame_lazy(test_result, || {
-            let args = args.clone();
-            let value = value.clone();
-            move |session, test| session.resume_confirm_by_after_test(&args, value, test)
-        })?;
+        let test = crate::resume_or_suspend!(
+            self,
+            test_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+                    let value = value.clone();
+        ResumeConfirmByAfterValueSuspensionFrameL296C13 { args, value }
+        },
+        )?;
 
         self.resume_confirm_by_after_test(args, value, test)
     }
@@ -313,9 +357,14 @@ impl Session {
         let raw_function = args[1].clone();
         let tag = confirmation_tag_from_args(args.as_ref(), 3);
         let info_result = evaluate_optional_confirmation_info(self, args.get(2).cloned());
-        self.drive_internal_value(info_result, move |session, info| {
-            session.finish_confirm_by_failure(raw_expr, raw_function, info, tag)
-        })
+        crate::resume_or_suspend!(
+            self,
+            info_result,
+            ok(info) => { let session = self; (|| {
+                    session.finish_confirm_by_failure(raw_expr, raw_function, info, tag)
+                })() },
+            suspend => ResumeConfirmByAfterTestSuspensionFrameL316C48 { raw_expr, raw_function, tag },
+        )
     }
 
     fn finish_confirm_by_failure(
@@ -346,16 +395,26 @@ impl Session {
         let match_result =
             self.match_expr_owned(raw_pattern.clone(), value.clone(), SymbolExprMap::default());
 
-        self.drive_internal_value(match_result, move |session, outcome| {
-            if outcome.matched {
-                Ok(value)
-            } else {
-                let info_result = evaluate_optional_confirmation_info(session, info_expr);
-                session.drive_internal_value(info_result, move |session, info| {
-                    session.finish_confirm_match_failure(raw_expr, raw_pattern, info, tag)
-                })
-            }
-        })
+        crate::resume_or_suspend!(
+            self,
+            match_result,
+            ok(outcome) => { let session = self; (|| {
+                    if outcome.matched {
+                        Ok(value)
+                    } else {
+                        let info_result = evaluate_optional_confirmation_info(session, info_expr);
+                        crate::resume_or_suspend!(
+            session,
+            info_result,
+            ok(info) => { (|| {
+                            session.finish_confirm_match_failure(raw_expr, raw_pattern, info, tag)
+                        })() },
+            suspend => ResumeConfirmMatchAfterValueSuspensionFrameL354C59 { raw_expr, raw_pattern, tag },
+        )
+                    }
+                })() },
+            suspend => ResumeConfirmMatchAfterValueSuspensionFrameL349C49 { value, info_expr, raw_expr, raw_pattern, tag },
+        )
     }
 
     fn finish_confirm_match_failure(
@@ -393,9 +452,14 @@ impl Session {
         let raw_expr = args[0].clone();
         let tag = confirmation_tag_from_args(args.as_ref(), 3);
         let info_result = evaluate_optional_confirmation_info(self, args.get(2).cloned());
-        self.drive_internal_value(info_result, move |session, info| {
-            session.finish_confirm_quiet_failure(raw_expr, info, tag, message)
-        })
+        crate::resume_or_suspend!(
+            self,
+            info_result,
+            ok(info) => { let session = self; (|| {
+                    session.finish_confirm_quiet_failure(raw_expr, info, tag, message)
+                })() },
+            suspend => ResumeConfirmQuietAfterBodySuspensionFrameL396C48 { raw_expr, tag, message },
+        )
     }
 
     fn resume_suspended_confirm_quiet_after_body(
@@ -436,9 +500,14 @@ impl Session {
         let raw_test = args[0].clone();
         let tag = confirmation_tag_from_args(args.as_ref(), 2);
         let info_result = evaluate_optional_confirmation_info(self, args.get(1).cloned());
-        self.drive_internal_value(info_result, move |session, info| {
-            session.finish_confirm_assert_failure(raw_test, info, tag)
-        })
+        crate::resume_or_suspend!(
+            self,
+            info_result,
+            ok(info) => { let session = self; (|| {
+                    session.finish_confirm_assert_failure(raw_test, info, tag)
+                })() },
+            suspend => ResumeConfirmAssertAfterTestSuspensionFrameL439C48 { raw_test, tag },
+        )
     }
 
     fn finish_confirm_assert_failure(

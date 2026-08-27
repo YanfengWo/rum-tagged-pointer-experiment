@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 use rum_core::SharedArgs;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
@@ -24,7 +27,7 @@ struct DuplicateFreeSameTestState {
     rhs_index: usize,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedDuplicateFreeSameTestState {
     same_test: Expr,
     items: FrozenPredicateSequence<Expr>,
@@ -43,7 +46,7 @@ struct SameTestMatrixState {
     kind: SameTestRelationKind,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedSameTestMatrixState {
     same_test: Expr,
     lhs: FrozenPredicateSequence<Expr>,
@@ -400,21 +403,19 @@ fn resume_duplicate_free_same_test(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedDuplicateFreeSameTestState {
-                            same_test: state.same_test,
-                            items: FrozenPredicateSequence::freeze(state.items),
-                            lhs_index: state.lhs_index,
-                            rhs_index: state.rhs_index,
-                        };
-                        move |session, value| {
-                            resume_suspended_duplicate_free_same_test_with_value(
-                                session, state, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedDuplicateFreeSameTestState {
+                                            same_test: state.same_test,
+                                            items: FrozenPredicateSequence::freeze(state.items),
+                                            lhs_index: state.lhs_index,
+                                            rhs_index: state.rhs_index,
+                                        };
+                ResumeDuplicateFreeSameTestSuspensionFrameL412C25 { state }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -450,15 +451,11 @@ fn resume_suspended_duplicate_free_same_test(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_duplicate_free_same_test_with_value(
-                                session, state, value,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedDuplicateFreeSameTestSuspensionFrameL456C25 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -532,22 +529,22 @@ fn resume_same_test_matrix(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedSameTestMatrixState {
-                            same_test: state.same_test,
-                            lhs: FrozenPredicateSequence::freeze(state.lhs),
-                            rhs: FrozenPredicateSequence::freeze(state.rhs),
-                            lhs_index: state.lhs_index,
-                            rhs_index: state.rhs_index,
-                            matches: PersistentPredicateMatches::freeze(state.matches),
-                            kind: state.kind,
-                        };
-                        move |session, value| {
-                            resume_suspended_same_test_matrix_with_value(session, state, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedSameTestMatrixState {
+                                            same_test: state.same_test,
+                                            lhs: FrozenPredicateSequence::freeze(state.lhs),
+                                            rhs: FrozenPredicateSequence::freeze(state.rhs),
+                                            lhs_index: state.lhs_index,
+                                            rhs_index: state.rhs_index,
+                                            matches: PersistentPredicateMatches::freeze(state.matches),
+                                            kind: state.kind,
+                                        };
+                ResumeSameTestMatrixSuspensionFrameL547C25 { state }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -589,13 +586,11 @@ fn resume_suspended_same_test_matrix(
         ) {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, value| {
-                            resume_suspended_same_test_matrix_with_value(session, state, value)
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedSameTestMatrixSuspensionFrameL595C25 { state },
                 );
             }
             Err(error) => return Err(error),

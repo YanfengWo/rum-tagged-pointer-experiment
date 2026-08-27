@@ -1,7 +1,7 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedReplaceAtPaths {
     expr: Expr,
     paths: FrozenReplaceSequence<Vec<isize>>,
@@ -22,17 +22,16 @@ impl Session {
             )),
             [target_expr, rules_expr, position_spec] => {
                 let target_result = self.evaluate(target_expr.clone());
-                let target = self.suspend_with_frame_lazy(target_result, || {
-                    let args = args.clone();
-                    move |session, target| {
-                        session.resume_replace_at_after_target(
-                            target,
-                            args[1].clone(),
-                            args[2].clone(),
-                            args.as_ref().to_vec(),
-                        )
+                let target = match target_result {
+                    Ok(value) => value,
+                    Err(EvalError::InputRequired { request }) => {
+                        let args = args.clone();
+                        crate::resume_or_suspend!(insert self, EvalReplaceAtSuspensionFrameL27C21 { args });
+                        crate::resume_or_suspend!(insert self, ContinueReplaceAtSetupFrame);
+                        return Err(EvalError::InputRequired { request });
                     }
-                })?;
+                    Err(error) => return Err(error),
+                };
 
                 self.resume_replace_at_after_target(
                     target,
@@ -58,14 +57,8 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let call_args = SharedArgs::new(call_args);
-                self.push_suspension_frame(move |session, value| {
-                    session.finish_replace_at_positions(
-                        target,
-                        rules_expr,
-                        call_args.into_vec(),
-                        value?,
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeReplaceAtAfterTargetSuspensionFrameL61C44 { target, rules_expr, call_args });
+                crate::resume_or_suspend!(insert self, ContinueReplaceAtSetupFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -164,9 +157,9 @@ impl Session {
                     rule_plan,
                     index,
                 };
-                self.push_suspension_frame(move |session, value| {
-                    let replaced = Option::<Expr>::from_continuation_expr(value?);
-                    session.resume_suspended_replace_at_paths(state, path, replaced)
+                crate::resume_or_suspend!(insert self, ReplaceAtPathsOwnedSuspensionFrameL167C44 {
+                    state,
+                    path: std::sync::Arc::from(path),
                 });
                 Err(EvalError::InputRequired { request })
             }
@@ -177,11 +170,11 @@ impl Session {
     fn resume_suspended_replace_at_paths(
         &mut self,
         mut state: SuspendedReplaceAtPaths,
-        path: Vec<isize>,
+        path: std::sync::Arc<[isize]>,
         replaced: Option<Expr>,
     ) -> Result<Expr, EvalError> {
         if let Some(replaced) = replaced {
-            state.expr = replace_exact_path(state.expr, &path, replaced);
+            state.expr = replace_exact_path(state.expr, path.as_ref(), replaced);
         }
         state.index += 1;
         loop {
@@ -204,9 +197,9 @@ impl Session {
                 }
                 Ok(None) => state.index += 1,
                 Err(EvalError::InputRequired { request }) => {
-                    self.push_suspension_frame(move |session, value| {
-                        let replaced = Option::<Expr>::from_continuation_expr(value?);
-                        session.resume_suspended_replace_at_paths(state, path, replaced)
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplaceAtPathsSuspensionFrameL207C48 {
+                        state,
+                        path: std::sync::Arc::from(path),
                     });
                     return Err(EvalError::InputRequired { request });
                 }
@@ -235,3 +228,209 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<SuspendedReplaceAtPaths>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct EvalReplaceAtSuspensionFrameL27C21 {
+    pub(super) args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAtSuspensionFrameL27C21 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => {
+                crate::runtime::suspension::FrameAction::finalize(PrepareReplaceAtSetupFinalizer {
+                    result,
+                    target: None,
+                    rules_expr: None,
+                    args: Some(self.args.clone()),
+                    call_args: None,
+                    kind: ReplaceAtSetupContinuationKind::Target,
+                })
+            }
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+pub(super) struct ResumeReplaceAtAfterTargetSuspensionFrameL61C44 {
+    pub(super) target: rum_core::Expr,
+    pub(super) rules_expr: rum_core::Expr,
+    pub(super) call_args: rum_core::SharedArgs,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeReplaceAtAfterTargetSuspensionFrameL61C44
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        _session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        match outcome {
+            Ok(result) => {
+                crate::runtime::suspension::FrameAction::finalize(PrepareReplaceAtSetupFinalizer {
+                    result,
+                    target: Some(self.target.clone()),
+                    rules_expr: Some(self.rules_expr.clone()),
+                    args: None,
+                    call_args: Some(self.call_args.clone()),
+                    kind: ReplaceAtSetupContinuationKind::Positions,
+                })
+            }
+            Err(error) => crate::runtime::suspension::FrameAction::complete(Err(error)),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ReplaceAtSetupContinuationKind {
+    Target,
+    Positions,
+}
+
+struct PrepareReplaceAtSetupFinalizer {
+    result: Expr,
+    target: Option<Expr>,
+    rules_expr: Option<Expr>,
+    args: Option<SharedArgs>,
+    call_args: Option<SharedArgs>,
+    kind: ReplaceAtSetupContinuationKind,
+}
+
+impl crate::runtime::suspension::PureFrameFinalizer for PrepareReplaceAtSetupFinalizer {
+    fn finish(self: Box<Self>) -> Result<Expr, EvalError> {
+        let tag = match self.kind {
+            ReplaceAtSetupContinuationKind::Target => "InternalContinuationReplaceAtTarget",
+            ReplaceAtSetupContinuationKind::Positions => "InternalContinuationReplaceAtPositions",
+        };
+        Ok(Expr::call(
+            system_expr(tag),
+            vec![
+                self.result,
+                self.target.into_continuation_expr(),
+                self.rules_expr.into_continuation_expr(),
+                self.args.map(SharedArgs::into_vec).into_continuation_expr(),
+                self.call_args
+                    .map(SharedArgs::into_vec)
+                    .into_continuation_expr(),
+            ],
+        ))
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ContinueReplaceAtSetupFrame;
+
+impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceAtSetupFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        let resumed = outcome.and_then(|payload| {
+            let Expr::Call { head, args } = payload else {
+                panic!("unexpected ReplaceAt setup continuation payload")
+            };
+            let mut args = args.into_iter();
+            let result = args
+                .next()
+                .expect("ReplaceAt setup continuation stores its result");
+            let target = Option::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceAt setup continuation stores target"),
+            );
+            let rules_expr = Option::<Expr>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceAt setup continuation stores rules"),
+            );
+            let original_args = Option::<Vec<Expr>>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceAt setup continuation stores original arguments"),
+            );
+            let call_args = Option::<Vec<Expr>>::from_continuation_expr(
+                args.next()
+                    .expect("ReplaceAt setup continuation stores call arguments"),
+            );
+            debug_assert!(args.next().is_none());
+            if is_system_symbol_name(&head, "InternalContinuationReplaceAtTarget") {
+                let original_args =
+                    original_args.expect("ReplaceAt target continuation stores arguments");
+                session.resume_replace_at_after_target(
+                    result,
+                    original_args[1].clone(),
+                    original_args[2].clone(),
+                    original_args,
+                )
+            } else if is_system_symbol_name(&head, "InternalContinuationReplaceAtPositions") {
+                session.finish_replace_at_positions(
+                    target.expect("ReplaceAt positions continuation stores target"),
+                    rules_expr.expect("ReplaceAt positions continuation stores rules"),
+                    call_args.expect("ReplaceAt positions continuation stores call arguments"),
+                    result,
+                )
+            } else {
+                panic!("unexpected ReplaceAt setup continuation tag: {head:?}")
+            }
+        });
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ReplaceAtPathsOwnedSuspensionFrameL167C44 {
+    pub(super) state:
+        crate::runtime::kernel_data::structure_data::replace::replace_at::SuspendedReplaceAtPaths,
+    pub(super) path: std::sync::Arc<[isize]>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for ReplaceAtPathsOwnedSuspensionFrameL167C44 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut path = self.path.clone();
+        let value = outcome;
+        let resumed = (|| {
+            let replaced = Option::<Expr>::from_continuation_expr(value?);
+            session.resume_suspended_replace_at_paths(state, path, replaced)
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeSuspendedReplaceAtPathsSuspensionFrameL207C48 {
+    pub(super) state:
+        crate::runtime::kernel_data::structure_data::replace::replace_at::SuspendedReplaceAtPaths,
+    pub(super) path: std::sync::Arc<[isize]>,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedReplaceAtPathsSuspensionFrameL207C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut path = self.path.clone();
+        let value = outcome;
+        let resumed = (|| {
+            let replaced = Option::<Expr>::from_continuation_expr(value?);
+            session.resume_suspended_replace_at_paths(state, path, replaced)
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

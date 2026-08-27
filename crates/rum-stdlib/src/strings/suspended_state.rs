@@ -15,8 +15,14 @@ impl<T: FrameRootTrace> FrozenStringSequence<T> {
     }
 }
 
-#[derive(Clone, FrameRootTrace)]
+#[derive(FrameRootTrace)]
 pub(super) struct FrozenStringValue<T: FrameRootTrace>(Arc<T>);
+
+impl<T: FrameRootTrace> Clone for FrozenStringValue<T> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
 
 impl<T: FrameRootTrace> FrozenStringValue<T> {
     pub(super) fn freeze(value: T) -> Self {

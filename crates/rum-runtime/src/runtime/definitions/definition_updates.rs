@@ -1,3 +1,6 @@
+mod resume_frames;
+use resume_frames::*;
+
 use super::super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -440,10 +443,7 @@ impl Session {
             Ok(updated) => self.store_held_update(operator, target, updated, return_value),
             Err(EvalError::InputRequired { request }) => {
                 let target = SuspendedHeldUpdateTarget::freeze(target);
-                self.push_suspension_frame(move |session, outcome| {
-                    let updated = outcome?;
-                    session.store_suspended_held_update(operator, target, updated, return_value)
-                });
+                crate::resume_or_suspend!(insert self, FinishHeldUpdateSuspensionFrameL443C44 { operator, target, return_value });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

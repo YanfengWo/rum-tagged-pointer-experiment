@@ -120,10 +120,7 @@ impl Session {
                         bindings: PersistentWithBindings::freeze(bindings),
                         cursor: index + 1,
                     };
-                    self.push_suspension_frame(move |session, outcome| {
-                        let value = outcome?;
-                        session.resume_suspended_with_binding(state, symbol, value)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeWithBindingsSuspensionFrameL123C48 { state, symbol });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -156,10 +153,7 @@ impl Session {
                 }
                 Err(EvalError::InputRequired { request }) => {
                     state.cursor += 1;
-                    self.push_suspension_frame(move |session, outcome| {
-                        let value = outcome?;
-                        session.resume_suspended_with_binding(state, symbol, value)
-                    });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedWithBindingSuspensionFrameL159C48 { state, symbol });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -174,3 +168,53 @@ const _: fn() = || {
     assert_traces::<PersistentWithBindings>();
     assert_traces::<SuspendedWithBindings>();
 };
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeWithBindingsSuspensionFrameL123C48 {
+    pub(super) state: crate::runtime::scoping::lexical::with::SuspendedWithBindings,
+    pub(super) symbol: rum_core::Symbol,
+}
+
+impl crate::runtime::suspension::SuspensionFrame for ResumeWithBindingsSuspensionFrameL123C48 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut symbol = self.symbol.clone();
+        let resumed = (|| {
+            let value = outcome?;
+            session.resume_suspended_with_binding(state, symbol, value)
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_derive::FrameRootTrace)]
+struct ResumeSuspendedWithBindingSuspensionFrameL159C48 {
+    pub(super) state: crate::runtime::scoping::lexical::with::SuspendedWithBindings,
+    pub(super) symbol: rum_core::Symbol,
+}
+
+impl crate::runtime::suspension::SuspensionFrame
+    for ResumeSuspendedWithBindingSuspensionFrameL159C48
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> crate::runtime::suspension::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut symbol = self.symbol.clone();
+        let resumed = (|| {
+            let value = outcome?;
+            session.resume_suspended_with_binding(state, symbol, value)
+        })();
+        crate::runtime::suspension::FrameAction::complete(resumed)
+    }
+}

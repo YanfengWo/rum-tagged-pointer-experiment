@@ -151,7 +151,7 @@ struct StringApplyEvalState {
     list_output: bool,
 }
 
-#[derive(FrameRootTrace)]
+#[derive(Clone, FrameRootTrace)]
 struct SuspendedStringApplyEvalState {
     head: Expr,
     operator: Expr,
@@ -227,17 +227,15 @@ fn resume_string_apply_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        let state = SuspendedStringApplyEvalState::freeze(state);
-                        let outputs = PersistentStringSequence::freeze(outputs);
-                        move |session, evaluated| {
-                            resume_suspended_string_apply_with_value(
-                                session, state, index, outputs, evaluated,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => {
+                let state = SuspendedStringApplyEvalState::freeze(state);
+                                        let outputs = PersistentStringSequence::freeze(outputs);
+                ResumeStringApplyFromIndexSuspensionFrameL235C25 { state, index, outputs }
+                },
                 );
             }
             Err(error) => return Err(error),
@@ -298,15 +296,11 @@ fn resume_suspended_string_apply_from_index(
                 index += 1;
             }
             Err(EvalError::InputRequired { request }) => {
-                return session.suspend_with_frame_lazy(
+                return rum_runtime::resume_or_suspend!(
+                    session,
                     Err(EvalError::InputRequired { request }),
-                    || {
-                        move |session, evaluated| {
-                            resume_suspended_string_apply_with_value(
-                                session, state, index, outputs, evaluated,
-                            )
-                        }
-                    },
+                    ok(value) => Ok(value),
+                    suspend => ResumeSuspendedStringApplyFromIndexSuspensionFrameL304C25 { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -409,3 +403,63 @@ const _: fn() = || {
     assert_traces::<StringApplyEvalState>();
     assert_traces::<SuspendedStringApplyEvalState>();
 };
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeStringApplyFromIndexSuspensionFrameL235C25 {
+    pub(super) state: crate::strings::SuspendedStringApplyEvalState,
+    pub(super) index: usize,
+    pub(super) outputs: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeStringApplyFromIndexSuspensionFrameL235C25 {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut outputs = self.outputs.clone();
+        let resumed = match outcome {
+            Ok(evaluated) => (|| {
+                resume_suspended_string_apply_with_value(session, state, index, outputs, evaluated)
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedStringApplyFromIndexSuspensionFrameL304C25 {
+    pub(super) state: crate::strings::SuspendedStringApplyEvalState,
+    pub(super) index: usize,
+    pub(super) outputs: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for ResumeSuspendedStringApplyFromIndexSuspensionFrameL304C25
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut outputs = self.outputs.clone();
+        let resumed = match outcome {
+            Ok(evaluated) => (|| {
+                resume_suspended_string_apply_with_value(session, state, index, outputs, evaluated)
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}

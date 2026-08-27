@@ -1,3 +1,7 @@
+use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
+mod resume_frames;
+use resume_frames::*;
+
 use super::*;
 
 mod iteration;
@@ -9,13 +13,13 @@ enum WhilePhase {
     Body,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, rum_derive::FrameRootTrace)]
 enum UntilPhase {
     Body,
     Test,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, rum_derive::FrameRootTrace)]
 enum ForPhase {
     Start,
     Test,
@@ -45,10 +49,15 @@ impl Session {
         }
 
         let condition_result = self.evaluate(args_slice[0].clone());
-        let condition = self.suspend_with_frame_lazy(condition_result, || {
-            let args = args.clone();
-            move |session, condition| session.resume_if_after_condition(&args, condition)
-        })?;
+        let condition = crate::resume_or_suspend!(
+            self,
+            condition_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalIfSuspensionFrameL50C13 { args }
+        },
+        )?;
 
         self.resume_if_after_condition(args, condition)
     }
@@ -76,10 +85,15 @@ impl Session {
         }
 
         let subject_result = self.evaluate(args_slice[0].clone());
-        let subject = self.suspend_with_frame_lazy(subject_result, || {
-            let args = args.clone();
-            move |session, subject| session.resume_switch_after_subject(&args, subject)
-        })?;
+        let subject = crate::resume_or_suspend!(
+            self,
+            subject_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        EvalSwitchSuspensionFrameL81C13 { args }
+        },
+        )?;
 
         self.resume_switch_after_subject(args, subject)
     }
@@ -145,12 +159,15 @@ impl Session {
                         runtime_profile_outcome_for_expr_result(&result),
                     );
                     let runtime_profile_suspend = runtime_path_timing_start("while.test.suspend");
-                    let outcome = self.suspend_with_result_frame_lazy(result, || {
-                        let args = args.clone();
-                        move |session, outcome| {
-                            session.resume_while_loop(&args, WhilePhase::Test, Some(outcome))
-                        }
-                    });
+                    let outcome = crate::resume_or_suspend!(
+                        self,
+                        result,
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let args = args.clone();
+                    ResumeWhileLoopSuspensionFrameL150C25 { args }
+                    },
+                    );
                     record_profile_runtime_path_timing(
                         runtime_profile_suspend,
                         runtime_profile_outcome_for_expr_result(&outcome),
@@ -166,12 +183,15 @@ impl Session {
                         runtime_profile_outcome_for_expr_result(&result),
                     );
                     let runtime_profile_suspend = runtime_path_timing_start("while.body.suspend");
-                    let outcome = self.suspend_with_result_frame_lazy(result, || {
-                        let args = args.clone();
-                        move |session, outcome| {
-                            session.resume_while_loop(&args, WhilePhase::Body, Some(outcome))
-                        }
-                    });
+                    let outcome = crate::resume_or_suspend!(
+                        self,
+                        result,
+                        ok(value) => Ok(value),
+                        suspend => {
+                    let args = args.clone();
+                    ResumeWhileLoopSuspensionFrameL171C25 { args }
+                    },
+                    );
                     record_profile_runtime_path_timing(
                         runtime_profile_suspend,
                         runtime_profile_outcome_for_expr_result(&outcome),
@@ -222,10 +242,15 @@ impl Session {
                 UntilPhase::Test => args[0].clone(),
             };
             let result = self.evaluate(current);
-            let outcome = self.suspend_with_result_frame_lazy(result, || {
-                let args = args.clone();
-                move |session, outcome| session.resume_until_loop(&args, phase, Some(outcome))
-            });
+            let outcome = crate::resume_or_suspend!(
+                self,
+                result,
+                ok(value) => Ok(value),
+                suspend => {
+            let args = args.clone();
+            ResumeUntilLoopSuspensionFrameL227C17 { args, phase }
+            },
+            );
 
             match outcome {
                 Err(EvalError::InputRequired { request }) => {
@@ -279,10 +304,15 @@ impl Session {
                 ForPhase::Increment => args[2].clone(),
             };
             let result = self.evaluate(current);
-            let outcome = self.suspend_with_result_frame_lazy(result, || {
-                let args = args.clone();
-                move |session, outcome| session.resume_for_loop(&args, phase, Some(outcome))
-            });
+            let outcome = crate::resume_or_suspend!(
+                self,
+                result,
+                ok(value) => Ok(value),
+                suspend => {
+            let args = args.clone();
+            ResumeForLoopSuspensionFrameL284C17 { args, phase }
+            },
+            );
 
             match outcome {
                 Err(EvalError::InputRequired { request }) => {
@@ -332,12 +362,15 @@ impl Session {
             runtime_profile_outcome_for_expr_result(&current_result),
         );
         let runtime_profile_suspend = runtime_path_timing_start("compound.item.suspend");
-        let outcome = self.suspend_with_result_frame_lazy(current_result, || {
-            let args = args.clone();
-            move |session, outcome| {
-                session.resume_compound_expression_after_item(&args, index, outcome)
-            }
-        });
+        let outcome = crate::resume_or_suspend!(
+            self,
+            current_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        ResumeCompoundExpressionFromIndexSuspensionFrameL337C13 { args, index }
+        },
+        );
         record_profile_runtime_path_timing(
             runtime_profile_suspend,
             runtime_profile_outcome_for_expr_result(&outcome),
@@ -372,10 +405,15 @@ impl Session {
         }
 
         let condition_result = self.evaluate(args[index].clone());
-        let condition = self.suspend_with_frame_lazy(condition_result, || {
-            let args = args.clone();
-            move |session, condition| session.resume_which_after_condition(&args, index, condition)
-        })?;
+        let condition = crate::resume_or_suspend!(
+            self,
+            condition_result,
+            ok(value) => Ok(value),
+            suspend => {
+        let args = args.clone();
+        ResumeWhichFromIndexSuspensionFrameL377C13 { args, index }
+        },
+        )?;
 
         self.resume_which_after_condition(args, index, condition)
     }
@@ -428,16 +466,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                self.push_suspension_frame(move |session, outcome| {
-                    let outcome = CompiledMatchOutcome::from_continuation_expr(outcome?);
-                    session.resume_switch_after_match(
-                        &args,
-                        subject,
-                        index,
-                        branch,
-                        outcome.matched,
-                    )
-                });
+                crate::resume_or_suspend!(insert self, ResumeSwitchFromIndexSuspensionFrameL431C44 { args, subject, index, branch });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
