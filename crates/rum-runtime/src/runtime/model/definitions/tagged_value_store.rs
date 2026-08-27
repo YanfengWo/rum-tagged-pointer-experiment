@@ -2,10 +2,12 @@ use super::*;
 use std::collections::hash_map::RandomState;
 use std::hash::BuildHasher;
 
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
 const TAGGED_VALUE_STORE_INDEX_THRESHOLD: usize = 32;
 const NO_TAGGED_VALUE_INDEX: usize = usize::MAX;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, FrameRootTrace)]
 pub(super) struct TaggedValueStoreMetadata {
     up_value_index: Option<Box<TaggedValueStoreIndex>>,
     sub_value_index: Option<Box<TaggedValueStoreIndex>>,
@@ -27,7 +29,7 @@ impl PartialEq for TaggedValueStoreMetadata {
 
 impl Eq for TaggedValueStoreMetadata {}
 
-#[derive(Debug)]
+#[derive(Debug, FrameRootTrace)]
 struct TaggedValueStoreIndex {
     hash_builder: RandomState,
     first_rule_by_equivalence_hash: HashMap<u64, usize>,
@@ -301,3 +303,9 @@ fn tagged_value_store_index_memory_proxy_bytes(index: Option<&TaggedValueStoreIn
         std::mem::size_of::<TaggedValueStoreIndex>().saturating_add(index.memory_proxy_bytes())
     })
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<TaggedValueStoreIndex>();
+    assert_traces::<TaggedValueStoreMetadata>();
+};

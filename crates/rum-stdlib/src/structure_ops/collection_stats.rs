@@ -1,3 +1,4 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 
 use super::ordering_sets::compare_structural_order;
@@ -5,7 +6,7 @@ use super::resumable_merge_sort::{ComparatorResultPolicy, sort_with_comparator};
 use super::stable_groups::{StableCounts, StableGroups};
 use super::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 struct KeyedEntry {
     item: Expr,
     key: Expr,
@@ -18,7 +19,7 @@ struct GatherPathEntry {
     keys: Vec<Expr>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct DecorateByState {
     expr_head: Expr,
     function: Expr,
@@ -26,6 +27,7 @@ struct DecorateByState {
     operation: DecoratedOperation,
 }
 
+#[derive(FrameRootTrace)]
 struct TallyTestState {
     test: Expr,
     items: Vec<Expr>,
@@ -33,7 +35,7 @@ struct TallyTestState {
     counts: Vec<(Expr, usize)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct GatherByFunctionListState {
     items: Vec<Expr>,
     functions: Vec<Expr>,
@@ -42,7 +44,7 @@ struct GatherByFunctionListState {
     keys: Vec<Vec<Expr>>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FrameRootTrace)]
 enum DecoratedOperation {
     MaxBy { select_max: bool },
     ExtremalElementsBy { select_max: bool },
@@ -811,3 +813,12 @@ fn signed_position_in_range(position: isize, start: isize, end: isize, step: isi
         position <= start && position >= end && (start - position) % step == 0
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<DecorateByState>();
+    assert_traces::<DecoratedOperation>();
+    assert_traces::<GatherByFunctionListState>();
+    assert_traces::<KeyedEntry>();
+    assert_traces::<TallyTestState>();
+};

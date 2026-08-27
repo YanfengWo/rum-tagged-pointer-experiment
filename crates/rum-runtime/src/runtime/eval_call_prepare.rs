@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CallArgumentPlan {
@@ -19,6 +20,7 @@ pub(super) struct PreparedCallArguments {
     pub(super) unevaluated_restore: Option<Box<UnevaluatedRestorePlan>>,
 }
 
+#[derive(FrameRootTrace)]
 pub(super) struct UnevaluatedRestorePlan {
     pub(super) prepared_args: SharedArgs,
     pub(super) wrappers: Vec<(usize, Expr)>,
@@ -714,3 +716,8 @@ mod tests {
         );
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<UnevaluatedRestorePlan>();
+};

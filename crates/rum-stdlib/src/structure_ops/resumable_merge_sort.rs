@@ -1,9 +1,9 @@
 use rum_core::Expr;
-use rum_runtime::kernel_api::{EvalError, Session};
+use rum_runtime::kernel_api::{EvalError, FrameRootTrace, FrameRootVisitor, Session};
 
 use super::is_true_expr;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FrameRootTrace)]
 pub(crate) enum ComparatorResultPolicy {
     ExactTrue,
     Custom(fn(&Expr) -> bool),
@@ -28,6 +28,7 @@ impl MergeSortItem for Expr {
     }
 }
 
+#[derive(FrameRootTrace)]
 struct Run<T> {
     items: Vec<Option<T>>,
     cursor: usize,
@@ -64,6 +65,7 @@ impl<T> Run<T> {
     }
 }
 
+#[derive(FrameRootTrace)]
 struct MergeSortState<T, C> {
     ordering: Expr,
     result_policy: ComparatorResultPolicy,
@@ -205,3 +207,10 @@ where
         self.pair_index += 2;
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<ComparatorResultPolicy>();
+    assert_traces::<MergeSortState<Expr, Expr>>();
+    assert_traces::<Run<Expr>>();
+};

@@ -1,15 +1,16 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
 use super::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum SelectPositionsLimit {
     All,
     Count(usize),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct SelectPositionsState {
     items: Vec<Expr>,
     criterion: Expr,
@@ -224,3 +225,9 @@ fn binary_search_position(items: &[Expr], value: &Expr) -> Option<usize> {
 fn missing_not_found_expr() -> Expr {
     Expr::call(system_expr("Missing"), vec![Expr::string("NotFound")])
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SelectPositionsLimit>();
+    assert_traces::<SelectPositionsState>();
+};

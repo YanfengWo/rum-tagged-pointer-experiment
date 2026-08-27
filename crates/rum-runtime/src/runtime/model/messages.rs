@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DefinitionKind {
@@ -41,20 +42,20 @@ pub enum TraceEvent {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct RuntimeMessage {
     pub symbol: String,
     pub tag: String,
     pub text: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub enum RuntimeInputKind {
     InputString,
     Input,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct RuntimeInputRequest {
     pub kind: RuntimeInputKind,
     pub prompt: String,
@@ -92,13 +93,13 @@ pub(in crate::runtime) struct MessageSelector {
     pub(in crate::runtime) tag: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, FrameRootTrace)]
 pub(in crate::runtime) struct MessageNameKey {
     pub(in crate::runtime) symbol: Symbol,
     pub(in crate::runtime) tag: String,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct MessageDefinition {
     pub(in crate::runtime) immediate: Option<Expr>,
     pub(in crate::runtime) delayed: Option<Expr>,
@@ -136,3 +137,12 @@ impl MessageSelector {
             })
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<MessageDefinition>();
+    assert_traces::<MessageNameKey>();
+    assert_traces::<RuntimeInputKind>();
+    assert_traces::<RuntimeInputRequest>();
+    assert_traces::<RuntimeMessage>();
+};

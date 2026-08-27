@@ -1,4 +1,5 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod pair;
 mod plain;
@@ -10,7 +11,7 @@ use plain::apply_fold;
 use sequence_fold::apply_sequence_fold;
 use while_loop::apply_fold_while;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct FoldWhileConfig {
     pub(super) test_arity: NestWhileTestArity,
     pub(super) tail_adjustment: isize,
@@ -213,3 +214,8 @@ pub(super) fn parse_fold_while_config(
         tail_adjustment,
     })
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<FoldWhileConfig>();
+};

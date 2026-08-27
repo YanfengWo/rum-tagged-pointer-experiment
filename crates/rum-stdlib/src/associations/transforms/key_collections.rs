@@ -1,4 +1,5 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::{HashMap, HashSet};
 
 const KEY_COLLECTION_INDEX_THRESHOLD: usize = 16;
@@ -32,6 +33,7 @@ fn key_collection_entry<'a>(
     entries.iter().find(|entry| entry.key == *key)
 }
 
+#[derive(FrameRootTrace)]
 struct KeyUnionPlan {
     collections: Vec<Vec<AssociationEntryForm>>,
     indices: Option<Vec<HashMap<Expr, usize>>>,
@@ -499,3 +501,8 @@ fn non_option_syntax_message(
 fn unknown_option_message(option_name: &Symbol, held_input: &Expr) -> String {
     format!("Unknown option {option_name} in {held_input}.")
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<KeyUnionPlan>();
+};

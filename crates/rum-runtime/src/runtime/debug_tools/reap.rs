@@ -1,11 +1,14 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct ReapScopeRenderState {
     handler: Option<Expr>,
     pattern_list_form: bool,
     groups: Vec<ReapBucketGroup>,
 }
 
+#[derive(FrameRootTrace)]
 struct ReapBucketRenderState {
     handler: Option<Expr>,
     buckets: Vec<ReapBucket>,
@@ -276,3 +279,9 @@ fn reap_tag_positions(buckets: &[ReapBucket]) -> std::collections::HashMap<Expr,
 fn finish_reap_result(value: Expr, harvested: Expr) -> Expr {
     Expr::call(system_expr("List"), vec![value, harvested])
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<ReapBucketRenderState>();
+    assert_traces::<ReapScopeRenderState>();
+};

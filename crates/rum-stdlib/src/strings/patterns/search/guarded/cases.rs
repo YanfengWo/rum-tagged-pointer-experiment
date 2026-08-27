@@ -1,7 +1,9 @@
 use super::super::super::matcher::best_pattern_match_state;
 use super::super::rules::evaluate_string_rule_output_expr_result;
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct GuardedStringCasesRuleEvalState {
     chars: Vec<char>,
     rules: Vec<GuardedExactStringCaseRule>,
@@ -9,6 +11,7 @@ struct GuardedStringCasesRuleEvalState {
     config: StringCasesConfig,
 }
 
+#[derive(FrameRootTrace)]
 struct GuardedStringCasesValuesEvalState {
     values: Vec<String>,
     rules: Vec<GuardedExactStringCaseRule>,
@@ -242,3 +245,9 @@ fn resume_collect_string_cases_values_with_value(
     outputs.push(list_expr(items));
     resume_collect_string_cases_values_from_index(session, state, index + 1, outputs)
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<GuardedStringCasesRuleEvalState>();
+    assert_traces::<GuardedStringCasesValuesEvalState>();
+};

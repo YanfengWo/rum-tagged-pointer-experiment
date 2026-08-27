@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[doc(hidden)]
 #[inline]
@@ -180,6 +181,7 @@ impl Session {
     }
 }
 
+#[derive(FrameRootTrace)]
 enum OwnedGuards {
     One(Expr),
     Many(Box<[Expr]>),
@@ -215,3 +217,8 @@ pub fn evaluate_definition_rhs_guards_for_match(
     );
     session.drive_internal_value(guard_result, |_, outcome| Ok(outcome.matched))
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<OwnedGuards>();
+};

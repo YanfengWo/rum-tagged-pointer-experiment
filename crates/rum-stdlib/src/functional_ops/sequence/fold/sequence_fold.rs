@@ -1,5 +1,7 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct SequenceFoldEvalState {
     head: Expr,
     operator: Expr,
@@ -144,3 +146,8 @@ fn finish_sequence_fold_result(state: SequenceFoldEvalState, history: Vec<Expr>)
             .unwrap_or_else(|| Expr::call(state.head, state.raw_args))
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SequenceFoldEvalState>();
+};

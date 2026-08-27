@@ -1,6 +1,7 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 struct ExceptionHandler {
     pattern: Expr,
     rhs: Expr,
@@ -371,3 +372,8 @@ fn list_expr(items: Vec<Expr>) -> Expr {
 fn is_association_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Call { head, .. } if is_system_symbol_name(head, "Association"))
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<ExceptionHandler>();
+};

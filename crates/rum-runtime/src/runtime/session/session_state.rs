@@ -1,4 +1,5 @@
 use super::super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use crate::runtime::scoping::packages::SourceUnit;
 use std::hash::BuildHasherDefault;
 use thiserror::Error;
@@ -84,7 +85,7 @@ impl CallDispatchPlan {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct CallDispatchState {
     pub(in crate::runtime) raw_args: SharedArgs,
     pub(in crate::runtime) evaluated_args: Option<SharedArgs>,
@@ -120,7 +121,7 @@ pub enum ThreadingDispatch {
     Mismatch,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct BlockSymbolState {
     pub(in crate::runtime) definition: Option<SymbolDefinition>,
     pub(in crate::runtime) attributes: Option<AttributeSet>,
@@ -167,13 +168,13 @@ pub(in crate::runtime) struct LoaderSnapshot {
     pub(in crate::runtime) last_message_list: Vec<RuntimeMessage>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct ReapBucket {
     pub(in crate::runtime) tag: Expr,
     pub(in crate::runtime) values: Vec<Expr>,
 }
 
-#[derive(Default)]
+#[derive(Default, FrameRootTrace)]
 pub(in crate::runtime) struct ReapBucketGroup {
     pub(in crate::runtime) buckets: Vec<ReapBucket>,
     /// Lookup mirror for `buckets`; logical state remains entirely in the
@@ -235,7 +236,7 @@ pub(in crate::runtime) struct MonitorScope {
     pub(in crate::runtime) last_display: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum MatcherNode {
     Exact(Expr),
     Blank {
@@ -266,14 +267,14 @@ pub(in crate::runtime) enum MatcherNode {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct DefinitionConditionMatcher {
     pub(in crate::runtime) inner: MatcherNode,
     pub(in crate::runtime) lhs: Expr,
     pub(in crate::runtime) guards: Box<[Expr]>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum MatcherArg {
     Single(MatcherNode),
     Sequence(CompiledSequencePattern),
@@ -282,7 +283,7 @@ pub(in crate::runtime) enum MatcherArg {
     OrderlessPatternSequenceGroup(Vec<MatcherArg>),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct CompiledSequencePattern {
     pub(in crate::runtime) min_len: usize,
     pub(in crate::runtime) max_len: Option<usize>,
@@ -292,25 +293,25 @@ pub(in crate::runtime) struct CompiledSequencePattern {
     pub(in crate::runtime) greediness: SequenceGreediness,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum SequencePatternCheck {
     Condition(Expr),
     PatternTest(Expr),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum SequenceGreediness {
     Shortest,
     Longest,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct CompiledOptionalPattern {
     pub(in crate::runtime) inner: Box<MatcherArg>,
     pub(in crate::runtime) default: CompiledOptionalDefault,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum CompiledOptionalDefault {
     Explicit(Expr),
     Implicit { head: Expr, position: usize },
@@ -344,7 +345,7 @@ pub enum ThreadArgSpec {
     },
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, FrameRootTrace)]
 pub enum EvalError {
     #[error(transparent)]
     Syntax(#[from] SyntaxError),
@@ -537,3 +538,20 @@ impl Drop for Session {
         print_lexical_profile_summary_once();
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<BlockSymbolState>();
+    assert_traces::<CallDispatchState>();
+    assert_traces::<CompiledOptionalDefault>();
+    assert_traces::<CompiledOptionalPattern>();
+    assert_traces::<CompiledSequencePattern>();
+    assert_traces::<DefinitionConditionMatcher>();
+    assert_traces::<EvalError>();
+    assert_traces::<MatcherArg>();
+    assert_traces::<MatcherNode>();
+    assert_traces::<ReapBucket>();
+    assert_traces::<ReapBucketGroup>();
+    assert_traces::<SequenceGreediness>();
+    assert_traces::<SequencePatternCheck>();
+};

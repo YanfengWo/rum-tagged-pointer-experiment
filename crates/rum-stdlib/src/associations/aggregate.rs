@@ -1,8 +1,9 @@
 use super::grouping::IndexedGroups;
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum CatenateStep {
     Append(Vec<Expr>),
     AssociationValue { value: Expr, delayed: bool },
@@ -510,3 +511,8 @@ fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> 
 fn one_or_two_argument_count_message(symbol: &str, count: usize) -> String {
     format!("{symbol} called with {count} arguments; 1 or 2 arguments are expected.")
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<CatenateStep>();
+};

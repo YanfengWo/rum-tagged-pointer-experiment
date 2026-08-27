@@ -1,7 +1,8 @@
 use super::*;
 use rum_runtime::kernel_api::RewriteDataBuiltin;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, FrameRootTrace)]
 struct ArrayLeafTestState {
     leaves: Vec<Expr>,
     test: Expr,
@@ -183,3 +184,8 @@ fn collect_array_leaves(expr: &Expr, leaves: &mut Vec<Expr>) {
         None => leaves.push(expr.clone()),
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<ArrayLeafTestState>();
+};

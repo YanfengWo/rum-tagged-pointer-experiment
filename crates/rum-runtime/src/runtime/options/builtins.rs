@@ -1,6 +1,7 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum OptionValueQuery {
     Single { original: Expr, name: Symbol },
     Many(Vec<(Expr, Symbol)>),
@@ -397,3 +398,8 @@ impl Session {
         }
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<OptionValueQuery>();
+};

@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 pub(in crate::runtime) const SEALED_IDENTITY_MARKER: u64 = 1 << 62;
 
@@ -29,7 +30,7 @@ pub(in crate::runtime) fn sealed_symbols_in_expr(expr: &Expr) -> BTreeSet<Symbol
     sealed
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct SourceUnit {
     pub(in crate::runtime) package_context: String,
     pub(in crate::runtime) held_wrapper: Expr,
@@ -39,7 +40,7 @@ pub(in crate::runtime) struct SourceUnit {
     pub(in crate::runtime) private_index: BTreeMap<String, Symbol>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct PackageInstallPlan {
     forms: Vec<Expr>,
     source_unit: SourceUnit,
@@ -546,3 +547,9 @@ fn insert_package_local(bound: &mut BTreeSet<Symbol>, symbol: Symbol, current_co
         bound.insert(symbol);
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<PackageInstallPlan>();
+    assert_traces::<SourceUnit>();
+};

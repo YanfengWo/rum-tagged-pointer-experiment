@@ -1,5 +1,6 @@
 use super::*;
 use crate::structure_ops::{ComparatorResultPolicy, MergeSortItem, sort_with_comparator};
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum KeySortOrderingDecision {
@@ -7,7 +8,7 @@ enum KeySortOrderingDecision {
     KeepScanning,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct KeySortByEntry {
     entry: AssociationEntryForm,
     sort_key: Expr,
@@ -25,6 +26,7 @@ impl MergeSortItem for KeySortByEntry {
     }
 }
 
+#[derive(FrameRootTrace)]
 struct KeySortByOrderingState {
     function: Expr,
     ordering: Expr,
@@ -207,3 +209,9 @@ fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {
         },
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<KeySortByEntry>();
+    assert_traces::<KeySortByOrderingState>();
+};

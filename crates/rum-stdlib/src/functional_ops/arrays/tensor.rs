@@ -1,5 +1,7 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 pub(super) struct TensorCallbackEvalState {
     pub(super) operator: Expr,
     pub(super) output_head: Expr,
@@ -7,6 +9,7 @@ pub(super) struct TensorCallbackEvalState {
     pub(super) operator_args: Vec<Expr>,
 }
 
+#[derive(FrameRootTrace)]
 struct InnerEvalState {
     f: Expr,
     g: Expr,
@@ -545,3 +548,9 @@ pub(super) fn rebuild_tensor_expr_from_offset(
         .collect();
     Expr::call(head.clone(), items)
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<InnerEvalState>();
+    assert_traces::<TensorCallbackEvalState>();
+};

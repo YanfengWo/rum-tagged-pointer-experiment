@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod driver;
 mod spec;
@@ -31,7 +32,7 @@ impl Session {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) enum DoSpec {
     Count(usize),
     Iterator { symbol: Symbol, values: Vec<Expr> },
@@ -69,3 +70,8 @@ impl IterationConsumer {
         matches!(self, Self::Do | Self::Table)
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<DoSpec>();
+};

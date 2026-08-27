@@ -1,6 +1,7 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct OrderlessCandidateChoice {
     pub(super) selected_values: Vec<Expr>,
     pub(super) rest_values: Vec<Expr>,
@@ -160,3 +161,8 @@ fn build_orderless_partition(value_args: &[Expr], indices: &[usize]) -> Orderles
         rest_values,
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<OrderlessCandidateChoice>();
+};

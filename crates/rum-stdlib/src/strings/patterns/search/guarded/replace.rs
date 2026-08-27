@@ -1,7 +1,9 @@
 use super::super::super::matcher::best_pattern_match_state;
 use super::super::rules::evaluate_string_rule_output_expr_result;
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct GuardedStringReplaceRuleEvalState {
     chars: Vec<char>,
     rules: Vec<GuardedExactStringReplacementRule>,
@@ -9,6 +11,7 @@ struct GuardedStringReplaceRuleEvalState {
     config: StringPatternMatchConfig,
 }
 
+#[derive(FrameRootTrace)]
 struct GuardedStringReplaceValuesEvalState {
     values: Vec<String>,
     rules: Vec<GuardedExactStringReplacementRule>,
@@ -300,3 +303,9 @@ fn resume_replace_string_values_with_value(
     rendered.push(value);
     resume_replace_string_values_from_index(session, state, index + 1, rendered)
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<GuardedStringReplaceRuleEvalState>();
+    assert_traces::<GuardedStringReplaceValuesEvalState>();
+};

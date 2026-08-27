@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 pub(super) const DEFAULT_REPLACE_REPEATED_LIMIT: usize = 256;
 pub(super) const DEFAULT_RECURSION_LIMIT: usize = 1024;
@@ -129,7 +130,7 @@ impl Attribute {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub struct AttributeSet {
     bits: u16,
 }
@@ -472,3 +473,8 @@ impl BuiltinSpec {
         self
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<AttributeSet>();
+};

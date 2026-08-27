@@ -1,6 +1,7 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime::debug_tools::test_report) struct TestCaseSpec {
     pub(in crate::runtime::debug_tools::test_report) input: Expr,
     pub(in crate::runtime::debug_tools::test_report) expected: Expr,
@@ -9,7 +10,7 @@ pub(in crate::runtime::debug_tools::test_report) struct TestCaseSpec {
     pub(in crate::runtime::debug_tools::test_report) same_test: Option<Expr>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime::debug_tools::test_report) struct TestReportOptions {
     pub(in crate::runtime::debug_tools::test_report) same_test: Option<Expr>,
     pub(in crate::runtime::debug_tools::test_report) time_constraint: Option<Expr>,
@@ -24,7 +25,7 @@ pub(in crate::runtime::debug_tools::test_report) struct ParsedTestReportObject {
     pub(in crate::runtime::debug_tools::test_report) test_results: Vec<Expr>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime::debug_tools::test_report) struct EvalCapturedOutcome {
     pub(in crate::runtime::debug_tools::test_report) value: Expr,
     pub(in crate::runtime::debug_tools::test_report) failure_type: Option<&'static str>,
@@ -32,3 +33,10 @@ pub(in crate::runtime::debug_tools::test_report) struct EvalCapturedOutcome {
     pub(in crate::runtime::debug_tools::test_report) prints: Vec<String>,
     pub(in crate::runtime::debug_tools::test_report) timing: Expr,
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<EvalCapturedOutcome>();
+    assert_traces::<TestCaseSpec>();
+    assert_traces::<TestReportOptions>();
+};

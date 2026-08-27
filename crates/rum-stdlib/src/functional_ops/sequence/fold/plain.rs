@@ -1,5 +1,7 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct FoldEvalState {
     operator: Expr,
     items: Vec<Expr>,
@@ -117,3 +119,8 @@ fn finish_fold_result(collect_all: bool, current: Expr, history: Vec<Expr>) -> E
         current
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<FoldEvalState>();
+};

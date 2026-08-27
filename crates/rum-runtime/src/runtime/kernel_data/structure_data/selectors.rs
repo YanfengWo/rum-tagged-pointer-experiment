@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod apply;
 mod diagnostics;
@@ -23,28 +24,28 @@ use parse::{
     parse_part_selector_for_part,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) enum AtomicPartSpec {
     Index(isize),
     All,
     Span(PartSpanSpec),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct PartSpanSpec {
     pub(super) start: SpanEndpoint,
     pub(super) end: SpanEndpoint,
     pub(super) step: isize,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) enum SpanEndpoint {
     Index(isize),
     UpTo(Option<isize>),
     All,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) enum PartSelector {
     Single(AtomicPartSpec),
     Key(Expr),
@@ -391,3 +392,11 @@ fn fast_exact_integer_part_path(args: &[Expr]) -> Option<Expr> {
     }
     selected
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<AtomicPartSpec>();
+    assert_traces::<PartSelector>();
+    assert_traces::<PartSpanSpec>();
+    assert_traces::<SpanEndpoint>();
+};

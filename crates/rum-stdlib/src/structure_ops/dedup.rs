@@ -1,8 +1,10 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashSet;
 
 const DEDUP_INDEX_THRESHOLD: usize = 16;
 
+#[derive(FrameRootTrace)]
 struct AdaptiveExprSet {
     linear: Vec<Expr>,
     indexed: Option<HashSet<Expr>>,
@@ -32,6 +34,7 @@ impl AdaptiveExprSet {
     }
 }
 
+#[derive(FrameRootTrace)]
 struct DeleteDuplicatesTestState {
     expr_head: Expr,
     test: Expr,
@@ -306,3 +309,9 @@ fn stable_unique_exprs_indexed<'a>(
     }
     kept
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<AdaptiveExprSet>();
+    assert_traces::<DeleteDuplicatesTestState>();
+};

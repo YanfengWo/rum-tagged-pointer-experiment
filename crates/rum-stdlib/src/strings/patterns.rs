@@ -1,4 +1,5 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 mod matcher;
 mod parts;
 mod regex;
@@ -11,7 +12,7 @@ pub(crate) use search::eval_string_apply;
 
 use self::regex::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::strings) enum StringPattern {
     Literal(Vec<char>),
     AnyCharacter,
@@ -64,7 +65,7 @@ enum StringSplitLimit {
     All,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::strings) struct StringPatternMatchConfig {
     ignore_case: bool,
 }
@@ -74,7 +75,7 @@ struct StringDeleteConfig {
     ignore_case: bool,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum StringSearchOverlaps {
     NonOverlapping,
     Overlapping,
@@ -86,7 +87,7 @@ impl Default for StringSearchOverlaps {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 struct StringCasesConfig {
     match_config: StringPatternMatchConfig,
     overlaps: StringSearchOverlaps,
@@ -113,13 +114,13 @@ struct StringCountConfig {
     overlaps: StringSearchOverlaps,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct ExactStringReplacementRule {
     pattern: StringPattern,
     replacement: ExactStringReplacementValue,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct GuardedExactStringReplacementRule {
     rule: ExactStringReplacementRule,
     guard: Option<StringRuleGuard>,
@@ -131,37 +132,37 @@ enum ParsedExactStringReplacementRules {
     Guarded(Vec<GuardedExactStringReplacementRule>),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum ExactStringReplacementValue {
     Immediate(Expr),
     Delayed(Expr),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct ExactStringCaseRule {
     pattern: StringPattern,
     output: ExactStringCaseOutput,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct GuardedExactStringCaseRule {
     rule: ExactStringCaseRule,
     guard: Option<StringRuleGuard>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct StringRuleGuard {
     lhs: Expr,
     guards: Box<[Expr]>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum ExactStringCaseOutput {
     Immediate(Expr),
     Delayed(Expr),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum ExactStringCaseSpec {
     Patterns(Vec<StringPattern>),
     Rules(Vec<ExactStringCaseRule>),
@@ -921,3 +922,19 @@ fn parse_string_repetition_bounds(expr: &Expr) -> Option<(usize, Option<usize>)>
         _ => None,
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<ExactStringCaseOutput>();
+    assert_traces::<ExactStringCaseRule>();
+    assert_traces::<ExactStringCaseSpec>();
+    assert_traces::<ExactStringReplacementRule>();
+    assert_traces::<ExactStringReplacementValue>();
+    assert_traces::<GuardedExactStringCaseRule>();
+    assert_traces::<GuardedExactStringReplacementRule>();
+    assert_traces::<StringCasesConfig>();
+    assert_traces::<StringPattern>();
+    assert_traces::<StringPatternMatchConfig>();
+    assert_traces::<StringRuleGuard>();
+    assert_traces::<StringSearchOverlaps>();
+};

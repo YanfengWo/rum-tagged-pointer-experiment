@@ -1,18 +1,19 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
 
 const REWRITE_RULE_EXACT_INDEX_THRESHOLD: usize = 32;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 pub(super) struct RewriteRulePlan(Arc<RewriteRulePlanData>);
 
-#[derive(Debug)]
+#[derive(Debug, FrameRootTrace)]
 struct RewriteRulePlanData {
     rules: Vec<RewriteRule>,
     exact_index: Option<RewriteRuleExactIndex>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, FrameRootTrace)]
 struct RewriteRuleExactIndex {
     first_rule_by_pattern: HashMap<Expr, usize>,
     non_exact_rule_indices: Vec<usize>,
@@ -127,3 +128,62 @@ impl RewriteRulePlan {
         self.0.rules.get(index)
     }
 }
+
+#[cfg(test)]
+mod frame_root_trace_tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct RecordedRoots {
+        exprs: Vec<*const Expr>,
+        symbols: Vec<*const Symbol>,
+    }
+
+    impl FrameRootVisitor for RecordedRoots {
+        fn visit_expr(&mut self, expr: &Expr) {
+            self.exprs.push(expr as *const Expr);
+        }
+
+        fn visit_symbol(&mut self, symbol: &Symbol) {
+            self.symbols.push(symbol as *const Symbol);
+        }
+    }
+
+    #[test]
+    fn rewrite_rule_plan_visits_the_exact_rule_roots() {
+        let plan = RewriteRulePlan::linear(vec![RewriteRule {
+            lhs: Expr::symbol("lhs"),
+            rhs: Expr::symbol("rhs"),
+            delayed: false,
+            rhs_may_splice_without_bindings: false,
+            matcher: MatcherNode::Exact(Expr::symbol("matcher")),
+            guards: vec![Expr::symbol("guard-1"), Expr::symbol("guard-2")].into_boxed_slice(),
+        }]);
+        let rule = &plan.0.rules[0];
+        let MatcherNode::Exact(matcher) = &rule.matcher else {
+            unreachable!("test rule should use an exact matcher");
+        };
+        let mut roots = RecordedRoots::default();
+
+        plan.trace_roots(&mut roots);
+
+        assert_eq!(
+            roots.exprs,
+            vec![
+                &rule.lhs as *const Expr,
+                &rule.rhs as *const Expr,
+                matcher as *const Expr,
+                &rule.guards[0] as *const Expr,
+                &rule.guards[1] as *const Expr,
+            ]
+        );
+        assert!(roots.symbols.is_empty());
+    }
+}
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<RewriteRuleExactIndex>();
+    assert_traces::<RewriteRulePlan>();
+    assert_traces::<RewriteRulePlanData>();
+};

@@ -1,13 +1,16 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashSet;
 
 use super::*;
 
+#[derive(FrameRootTrace)]
 struct OrderedQComparatorState {
     ordering: Expr,
     items: Vec<Expr>,
     index: usize,
 }
 
+#[derive(FrameRootTrace)]
 struct LexicographicListComparatorState {
     ordering: Expr,
     lhs: Vec<Expr>,
@@ -15,6 +18,7 @@ struct LexicographicListComparatorState {
     index: usize,
 }
 
+#[derive(FrameRootTrace)]
 struct LexicographicPairComparatorState {
     ordering: Expr,
     lhs: Expr,
@@ -479,3 +483,10 @@ fn comparator_says_before(value: &Expr) -> bool {
         _ => is_system_symbol_name(value, heads::structure::TRUE),
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<LexicographicListComparatorState>();
+    assert_traces::<LexicographicPairComparatorState>();
+    assert_traces::<OrderedQComparatorState>();
+};

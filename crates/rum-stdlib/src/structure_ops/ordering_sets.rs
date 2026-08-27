@@ -1,3 +1,4 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
@@ -6,7 +7,7 @@ use super::*;
 
 const SET_MEMBERSHIP_INDEX_THRESHOLD: usize = 16;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 struct SortByEntry {
     item: Expr,
     key: Expr,
@@ -61,13 +62,14 @@ impl<'a> AdaptiveSetMembership<'a> {
     }
 }
 
+#[derive(FrameRootTrace)]
 enum SetOperationKind {
     Union,
     Intersection { groups: Vec<Vec<Expr>> },
     Complement { excluded: Vec<Expr> },
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FrameRootTrace)]
 enum SetSameTestPhase {
     Scan,
     Deduplicate {
@@ -82,6 +84,7 @@ enum SetSameTestPhase {
     },
 }
 
+#[derive(FrameRootTrace)]
 struct SetSameTestState {
     expr_head: Expr,
     same_test: Expr,
@@ -895,3 +898,11 @@ fn compare_expr_slices(lhs: &[Expr], rhs: &[Expr]) -> Ordering {
     }
     lhs.len().cmp(&rhs.len())
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SetOperationKind>();
+    assert_traces::<SetSameTestPhase>();
+    assert_traces::<SetSameTestState>();
+    assert_traces::<SortByEntry>();
+};

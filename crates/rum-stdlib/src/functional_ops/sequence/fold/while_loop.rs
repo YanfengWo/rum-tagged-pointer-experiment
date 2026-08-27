@@ -1,5 +1,7 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct FoldWhileEvalState {
     head: Expr,
     operator: Expr,
@@ -248,3 +250,8 @@ fn finish_fold_while_result(state: FoldWhileEvalState, history: Vec<Expr>) -> Ex
         .cloned()
         .unwrap_or_else(|| Expr::call(state.head, state.raw_args))
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<FoldWhileEvalState>();
+};

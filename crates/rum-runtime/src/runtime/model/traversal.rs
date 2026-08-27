@@ -1,12 +1,13 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum CasesSpec {
     Pattern(Expr),
     Rule(RewriteRule),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct CasesLevelSpec {
     pub(in crate::runtime) min: isize,
     pub(in crate::runtime) max: Option<isize>,
@@ -161,3 +162,9 @@ impl TraversalCountOutcome {
 fn level_as_signed(level: usize) -> isize {
     isize::try_from(level).unwrap_or(isize::MAX)
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<CasesLevelSpec>();
+    assert_traces::<CasesSpec>();
+};

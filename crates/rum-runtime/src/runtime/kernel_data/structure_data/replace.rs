@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod guarded;
 mod guarded_plan;
@@ -7,7 +8,7 @@ mod plan;
 mod replace_at;
 mod replace_part;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct ReplacePartRule {
     position_specs: Vec<ReplacePartPositionSpec>,
     rhs: Expr,
@@ -16,7 +17,7 @@ struct ReplacePartRule {
     heads: ReplacePartHeadsMode,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum ReplacePartPositionSpec {
     Exact(Vec<PartSelector>),
     Pattern(Expr),
@@ -33,21 +34,21 @@ enum ReplacePlanAction {
     Immediate(Expr),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) enum ReplacePartHeadsMode {
     Automatic,
     Include,
     Exclude,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct ReplacePartTarget {
     path: Vec<isize>,
     rhs: Expr,
     delayed: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct GuardedReplacePartTarget {
     path: Vec<isize>,
     rule_index: usize,
@@ -56,10 +57,20 @@ struct GuardedReplacePartTarget {
     state: GuardedReplacePartTargetState,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum GuardedReplacePartTargetState {
     PatternCandidate,
     PendingGuard,
     Accepted,
     Inactive,
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<GuardedReplacePartTarget>();
+    assert_traces::<GuardedReplacePartTargetState>();
+    assert_traces::<ReplacePartHeadsMode>();
+    assert_traces::<ReplacePartPositionSpec>();
+    assert_traces::<ReplacePartRule>();
+    assert_traces::<ReplacePartTarget>();
+};

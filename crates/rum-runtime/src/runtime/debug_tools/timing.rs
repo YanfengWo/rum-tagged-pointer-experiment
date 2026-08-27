@@ -1,8 +1,9 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 const REPEATED_TIMING_SAMPLES: usize = 3;
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct RepeatedTimingEvalState {
     expr: Expr,
 }
@@ -142,3 +143,8 @@ pub(in crate::runtime) fn unix_time_expr(time: SystemTime) -> Expr {
         }
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<RepeatedTimingEvalState>();
+};

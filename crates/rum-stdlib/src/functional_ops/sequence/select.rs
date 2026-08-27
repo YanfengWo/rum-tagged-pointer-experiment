@@ -1,4 +1,5 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SelectLimit {
@@ -6,7 +7,7 @@ enum SelectLimit {
     Count(usize),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum SelectSource {
     Call { head: Expr, items: Vec<Expr> },
     Association(Vec<(Expr, Expr)>),
@@ -314,3 +315,8 @@ fn render_select_result(source: SelectSource, selected: Vec<Expr>) -> Expr {
 fn missing_not_found_expr() -> Expr {
     Expr::call(system_expr("Missing"), vec![Expr::string("NotFound")])
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<SelectSource>();
+};

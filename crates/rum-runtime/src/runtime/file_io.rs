@@ -1,9 +1,10 @@
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::error::Error;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct FileIoError {
     message: String,
 }
@@ -123,3 +124,8 @@ impl PartialEq for FileIoProvider {
 }
 
 impl Eq for FileIoProvider {}
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<FileIoError>();
+};

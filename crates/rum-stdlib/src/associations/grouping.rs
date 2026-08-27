@@ -1,3 +1,4 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
 use super::*;
@@ -9,6 +10,7 @@ use self::{association::*, list::*};
 
 const GROUP_INDEX_THRESHOLD: usize = 16;
 
+#[derive(FrameRootTrace)]
 pub(super) struct IndexedGroups<T> {
     entries: Vec<(Expr, Vec<T>)>,
     positions: Option<HashMap<Expr, usize>>,
@@ -104,7 +106,7 @@ impl<T> IndexedGroups<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct GroupBySpec {
     key_function: Expr,
     value_function: Option<Expr>,
@@ -270,3 +272,9 @@ pub(crate) fn eval_group_by(
 fn between_one_and_three_argument_count_message(symbol: &str, count: usize) -> String {
     format!("{symbol} called with {count} arguments; between 1 and 3 arguments are expected.")
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<GroupBySpec>();
+    assert_traces::<IndexedGroups<Expr>>();
+};

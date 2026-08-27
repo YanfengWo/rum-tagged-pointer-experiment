@@ -1,12 +1,13 @@
 use super::super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum HeldUpdateReturn {
     Updated,
     Previous(Expr),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum HeldUpdateTarget {
     Symbol(Symbol),
     Part {
@@ -553,3 +554,9 @@ fn replacement_values_matching_selection_shape(
         _ => Some(vec![updated.clone()]),
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<HeldUpdateReturn>();
+    assert_traces::<HeldUpdateTarget>();
+};

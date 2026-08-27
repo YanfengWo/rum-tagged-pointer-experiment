@@ -1,4 +1,5 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
 mod key_predicates;
@@ -473,13 +474,13 @@ fn normal_target_matches_association(target: &Expr) -> bool {
 
 const LOOKUP_INDEX_THRESHOLD: usize = 16;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 struct PreparedLookup {
     outcome: LookupOutcome,
     plan: LookupPlan,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 enum LookupOutcome {
     Hit(Expr),
     Missing(Expr),
@@ -536,7 +537,7 @@ impl PreparedLookupEntries {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 struct LookupPlan {
     has_hit: bool,
     has_missing: bool,
@@ -802,3 +803,10 @@ fn keyed_take_drop_result_for_expr(
 
     Ok(Expr::call(system_expr("List"), results))
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<LookupOutcome>();
+    assert_traces::<LookupPlan>();
+    assert_traces::<PreparedLookup>();
+};

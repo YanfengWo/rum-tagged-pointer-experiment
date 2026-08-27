@@ -92,6 +92,12 @@ pub use super::tree_walkers::collect_level_parts_owned;
 // suspension/core
 pub use super::suspension::ContinuationValue;
 
+// suspension/trace (stdlib-only bridge)
+#[doc(hidden)]
+pub use super::suspension::trace::{FrameRootTrace, FrameRootVisitor};
+#[doc(hidden)]
+pub use rum_derive::FrameRootTrace;
+
 // text_rendering
 pub use super::kernel_data::text_rendering::{
     ToStringFormat, render_input_like_expr, render_to_string_expr,

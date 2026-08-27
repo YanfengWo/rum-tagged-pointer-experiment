@@ -1,10 +1,11 @@
 use super::super::*;
 use super::incremental_mutation::DefinitionValueRollback;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[cfg(test)]
 use std::cell::RefCell;
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct PositionalPartAssignmentTarget {
     owner: Symbol,
     selectors: Vec<Expr>,
@@ -464,3 +465,8 @@ fn take_positional_part_assignment_failure(target: &Symbol) -> bool {
 fn take_positional_part_assignment_failure(_target: &Symbol) -> bool {
     false
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<PositionalPartAssignmentTarget>();
+};

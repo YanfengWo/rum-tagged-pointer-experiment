@@ -1,10 +1,11 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod builder;
 
 use builder::{StructuredTraceBuilder, trace_expr_path_depth};
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct TraceEvalState {
     original: Expr,
     pattern: Option<Expr>,
@@ -13,7 +14,7 @@ struct TraceEvalState {
     output: TraceOutput,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, FrameRootTrace)]
 enum TraceOutput {
     Structured,
     Detail,
@@ -805,3 +806,9 @@ fn normalize_trace_patterns(expr: &Expr) -> Vec<Expr> {
         other => vec![other.clone()],
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<TraceEvalState>();
+    assert_traces::<TraceOutput>();
+};

@@ -1,8 +1,9 @@
 use super::model::{EvalCapturedOutcome, TestCaseSpec, TestReportOptions};
 use super::parsing::{parse_test_case, parse_test_case_exprs, parse_test_report_objects};
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct TestReportEvalState {
     head: Expr,
     raw_args: Vec<Expr>,
@@ -11,7 +12,7 @@ struct TestReportEvalState {
     options: TestReportOptions,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct TestReportCaseEvalState {
     report: TestReportEvalState,
     index: usize,
@@ -22,7 +23,7 @@ struct TestReportCaseEvalState {
     expected_messages: Option<Vec<Expr>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct TestReportCaseOutputState {
     case: TestReportCaseEvalState,
     evaluation: EvalCapturedOutcome,
@@ -350,3 +351,10 @@ impl Session {
         ]))
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<TestReportCaseEvalState>();
+    assert_traces::<TestReportCaseOutputState>();
+    assert_traces::<TestReportEvalState>();
+};

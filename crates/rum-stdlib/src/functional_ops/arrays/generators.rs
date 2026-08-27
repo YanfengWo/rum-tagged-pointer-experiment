@@ -1,6 +1,7 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, FrameRootTrace)]
 struct ArrayEvalState {
     operator: Expr,
     output_head: Expr,
@@ -15,7 +16,7 @@ struct OuterInput {
     values: Vec<Expr>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, FrameRootTrace)]
 struct OuterEvalState {
     operator: Expr,
     output_head: Expr,
@@ -491,3 +492,9 @@ fn decode_tensor_index(mut index: usize, shape: &[usize]) -> Vec<usize> {
     }
     decoded
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<ArrayEvalState>();
+    assert_traces::<OuterEvalState>();
+};

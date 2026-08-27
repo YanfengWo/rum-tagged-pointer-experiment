@@ -1,17 +1,20 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 struct NestWhileConfig {
     test_arity: NestWhileTestArity,
     max_iterations: Option<usize>,
 }
 
+#[derive(FrameRootTrace)]
 struct NestEvalState {
     operator: Expr,
     count: usize,
     collect_all: bool,
 }
 
+#[derive(FrameRootTrace)]
 struct FixedPointEvalState {
     operator: Expr,
     max_iterations: Option<usize>,
@@ -19,6 +22,7 @@ struct FixedPointEvalState {
     collect_all: bool,
 }
 
+#[derive(FrameRootTrace)]
 struct NestWhileEvalState {
     operator: Expr,
     test: Expr,
@@ -573,3 +577,11 @@ fn finish_nest_while_result(collect_all: bool, history: Vec<Expr>) -> Expr {
             .expect("NestWhile history always starts with the initial expression")
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<FixedPointEvalState>();
+    assert_traces::<NestEvalState>();
+    assert_traces::<NestWhileConfig>();
+    assert_traces::<NestWhileEvalState>();
+};

@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod arguments;
 mod builtins;
@@ -9,14 +10,14 @@ mod patterns;
 pub(super) use defaults::default_system_options;
 pub(super) use patterns::{is_options_pattern_expr, options_pattern_sequence_matcher};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct SymbolOptionEntry {
     name: Symbol,
     value: Expr,
     delayed: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct SymbolOptions {
     entries: Vec<SymbolOptionEntry>,
 }
@@ -127,7 +128,7 @@ impl SymbolOptions {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct OptionValueScope {
     target: Symbol,
     explicit: SymbolOptions,
@@ -161,3 +162,10 @@ impl OptionsNormalizationError {
         }
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<OptionValueScope>();
+    assert_traces::<SymbolOptionEntry>();
+    assert_traces::<SymbolOptions>();
+};

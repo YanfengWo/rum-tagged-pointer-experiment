@@ -1,3 +1,4 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
 use super::*;
@@ -10,12 +11,13 @@ enum MapThreadDispatch {
     Mismatch,
 }
 
+#[derive(FrameRootTrace)]
 struct MapAtEvalState {
     operator: Expr,
     paths: Vec<Vec<isize>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct SubsetMapEvalState {
     expr: Expr,
     paths: Vec<Vec<isize>>,
@@ -667,3 +669,9 @@ fn push_missing_part_message(
         ),
     );
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<MapAtEvalState>();
+    assert_traces::<SubsetMapEvalState>();
+};

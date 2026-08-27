@@ -1,7 +1,7 @@
 use rum_core::{Atom, BigInt, Expr, Symbol};
 use rum_runtime::kernel_api::{
-    CasesLevelSpec, EvalError, Session, ThreadArgSpec, ThreadingDispatch,
-    association_entries_from_expr, call_items_with_head, exact_expr_at_path,
+    CasesLevelSpec, EvalError, FrameRootTrace, FrameRootVisitor, Session, ThreadArgSpec,
+    ThreadingDispatch, association_entries_from_expr, call_items_with_head, exact_expr_at_path,
     exact_position_paths_from_expr, expr_as_exact_integer, expr_as_non_negative_usize,
     expr_as_signed_isize, expr_as_symbol, is_system_symbol_name, parse_heads_option,
     parse_heads_option_with_default, parse_standard_level_spec, render_association,
@@ -147,7 +147,7 @@ fn generated_expr_nodes_memory_proxy_bytes(count: usize) -> usize {
     count.saturating_mul(std::mem::size_of::<Expr>())
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum NestWhileTestArity {
     Count(usize),
     All,
@@ -167,3 +167,8 @@ fn nest_while_test_args(history: &[Expr], arity: NestWhileTestArity) -> Vec<Expr
         NestWhileTestArity::All => history.to_vec(),
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<NestWhileTestArity>();
+};

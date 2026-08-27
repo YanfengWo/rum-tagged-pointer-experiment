@@ -1,9 +1,10 @@
 use super::super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::HashMap;
 
 pub(in crate::runtime) const ASSOCIATION_INDEX_THRESHOLD: usize = 16;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct AssociationEntryForm {
     /// Association entry key expression.
     pub key: Expr,
@@ -561,7 +562,7 @@ pub fn is_missing_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Call { head, .. } if is_system_symbol_name(head, "Missing"))
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum AssociationSetLValueTarget {
     FunctionCall {
         symbol: Symbol,
@@ -843,3 +844,9 @@ fn upsert_immediate_association_entry(
         entries.push(updated);
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<AssociationEntryForm>();
+    assert_traces::<AssociationSetLValueTarget>();
+};

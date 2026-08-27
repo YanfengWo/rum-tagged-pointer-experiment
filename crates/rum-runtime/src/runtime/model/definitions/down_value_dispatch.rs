@@ -1,5 +1,6 @@
 use super::tagged_value_store::TaggedValueStoreMetadata;
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::hash_map::RandomState;
 use std::hash::BuildHasher;
 use std::sync::OnceLock;
@@ -29,14 +30,14 @@ pub(in crate::runtime) trait DownValueScan: Copy + Send + 'static {
     ) -> Option<usize>;
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(super) struct DownValueDispatchMetadata {
     shallow_signatures: Option<Vec<DownValueShallowSignature>>,
     ground_count: usize,
     pub(super) dispatch_index: DownValueDispatchIndexCache,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, FrameRootTrace)]
 pub(super) struct DownValueDispatchIndexCache {
     index: OnceLock<Box<DownValueDispatchIndex>>,
 }
@@ -57,7 +58,7 @@ impl PartialEq for DownValueDispatchIndexCache {
 
 impl Eq for DownValueDispatchIndexCache {}
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FrameRootTrace)]
 struct DownValueDispatchIndex {
     hash_builder: RandomState,
     first_rule_by_equivalence_hash: HashMap<u64, usize>,
@@ -568,3 +569,10 @@ fn down_value_identity_equivalent(
             down_value_patterns_equivalent(&down_value.lhs, &down_value.guards, lhs, guards)
         }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<DownValueDispatchIndex>();
+    assert_traces::<DownValueDispatchIndexCache>();
+    assert_traces::<DownValueDispatchMetadata>();
+};

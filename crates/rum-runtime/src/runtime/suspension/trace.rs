@@ -1,9 +1,11 @@
 use std::cmp::Ordering;
+use std::collections::hash_map::RandomState;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use rum_core::{BigInt, Expr, Rational, SharedArgs, SharedExpr, Symbol, WeakSharedArgs};
+use rum_syntax::SyntaxError;
 
 use crate::runtime::metadata::BuiltinFn;
 
@@ -366,6 +368,14 @@ impl FrameRootTrace for Rational {
     fn trace_roots(&self, _visitor: &mut dyn FrameRootVisitor) {}
 }
 
+impl FrameRootTrace for RandomState {
+    fn trace_roots(&self, _visitor: &mut dyn FrameRootVisitor) {}
+}
+
+impl FrameRootTrace for SyntaxError {
+    fn trace_roots(&self, _visitor: &mut dyn FrameRootVisitor) {}
+}
+
 impl FrameRootTrace for Ordering {
     fn trace_roots(&self, _visitor: &mut dyn FrameRootVisitor) {}
 }
@@ -414,12 +424,14 @@ pub(in crate::runtime) const MANUAL_FRAME_ROOT_TRACE_IMPLS: &[&str] = &[
     "OnceLock<T>",
     "Option<T>",
     "Ordering",
+    "RandomState",
     "Rational",
     "Result<T,E>",
     "SharedArgs",
     "SharedExpr",
     "String",
     "Symbol",
+    "SyntaxError",
     "Vec<T>",
     "VecDeque<T>",
     "WeakSharedArgs",

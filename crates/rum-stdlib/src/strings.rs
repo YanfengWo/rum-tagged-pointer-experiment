@@ -1,3 +1,4 @@
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::collections::{BTreeMap, BTreeSet};
 
 use rum_core::{Atom, BigInt, Expr, Rational, Symbol, heads};
@@ -137,6 +138,7 @@ fn string_unary_operator_form(symbol: &str, operator: &Expr) -> Expr {
     )
 }
 
+#[derive(FrameRootTrace)]
 struct StringApplyEvalState {
     head: Expr,
     operator: Expr,
@@ -303,3 +305,8 @@ fn list_expr(items: Vec<Expr>) -> Expr {
 fn string_list_expr(items: Vec<String>) -> Expr {
     list_expr(items.into_iter().map(Expr::string).collect())
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<StringApplyEvalState>();
+};

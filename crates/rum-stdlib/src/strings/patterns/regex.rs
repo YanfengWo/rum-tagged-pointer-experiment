@@ -1,17 +1,19 @@
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::strings) struct RegexPattern {
     branches: Vec<Vec<RegexToken>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct RegexToken {
     atom: RegexAtom,
     quantifier: RegexQuantifier,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum RegexAtom {
     Literal(char),
     AnyChar,
@@ -25,7 +27,7 @@ enum RegexAtom {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum RegexClassItem {
     Char(char),
     Range(char, char),
@@ -34,7 +36,7 @@ enum RegexClassItem {
     Whitespace,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 enum RegexQuantifier {
     One,
     ZeroOrMore,
@@ -515,3 +517,12 @@ mod tests {
         }
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<RegexAtom>();
+    assert_traces::<RegexClassItem>();
+    assert_traces::<RegexPattern>();
+    assert_traces::<RegexQuantifier>();
+    assert_traces::<RegexToken>();
+};

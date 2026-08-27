@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 mod down_value_dispatch;
 mod tagged_value_store;
@@ -48,7 +49,7 @@ pub struct MessageCatalogEntry {
     pub delayed: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub struct SymbolDefinition {
     pub own_value: Option<Expr>,
     pub delayed_own_value: Option<Expr>,
@@ -59,7 +60,7 @@ pub struct SymbolDefinition {
     pub sub_values: Vec<SubValue>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct UpValue {
     pub lhs: Expr,
     pub rhs: Expr,
@@ -70,7 +71,7 @@ pub struct UpValue {
     pub guards: Box<[Expr]>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct DownValue {
     pub lhs: Expr,
     pub rhs: Expr,
@@ -82,7 +83,7 @@ pub struct DownValue {
     pub guards: Box<[Expr]>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct SubValue {
     pub lhs: Expr,
     pub rhs: Expr,
@@ -136,7 +137,7 @@ impl SymbolDefinition {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct DownValueShallowSignature {
     args: Vec<DownValueShallowArg>,
 }
@@ -170,7 +171,7 @@ impl DownValueShallowSignature {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum DownValueShallowArg {
     Any,
     Exact(Expr),
@@ -272,7 +273,7 @@ fn expr_has_symbol_head(value: &Expr, expected_symbol: &Symbol) -> bool {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 pub struct RewriteRule {
     pub(in crate::runtime) lhs: Expr,
     pub(in crate::runtime) rhs: Expr,
@@ -281,3 +282,14 @@ pub struct RewriteRule {
     pub(in crate::runtime) matcher: MatcherNode,
     pub(in crate::runtime) guards: Box<[Expr]>,
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<DownValue>();
+    assert_traces::<DownValueShallowArg>();
+    assert_traces::<DownValueShallowSignature>();
+    assert_traces::<RewriteRule>();
+    assert_traces::<SubValue>();
+    assert_traces::<SymbolDefinition>();
+    assert_traces::<UpValue>();
+};

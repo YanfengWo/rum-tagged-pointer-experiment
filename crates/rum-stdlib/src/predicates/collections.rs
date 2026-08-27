@@ -1,8 +1,9 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 const STACK_MATCHING_THRESHOLD: usize = 16;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FrameRootTrace)]
 enum SameTestRelationKind {
     Intersecting,
     Disjoint,
@@ -14,6 +15,7 @@ enum SameTestRelationKind {
     ContainsOnly,
 }
 
+#[derive(FrameRootTrace)]
 struct DuplicateFreeSameTestState {
     same_test: Expr,
     items: Vec<Expr>,
@@ -21,6 +23,7 @@ struct DuplicateFreeSameTestState {
     rhs_index: usize,
 }
 
+#[derive(FrameRootTrace)]
 struct SameTestMatrixState {
     same_test: Expr,
     lhs: Vec<Expr>,
@@ -670,7 +673,51 @@ fn install_same_test_augmenting_path(
 
 #[cfg(test)]
 mod matching_tests {
-    use super::has_perfect_same_test_matching;
+    use rum_core::Symbol;
+
+    use super::{
+        DuplicateFreeSameTestState, Expr, FrameRootTrace, FrameRootVisitor,
+        has_perfect_same_test_matching,
+    };
+
+    #[derive(Default)]
+    struct RecordedRoots {
+        exprs: Vec<*const Expr>,
+        symbols: Vec<*const Symbol>,
+    }
+
+    impl FrameRootVisitor for RecordedRoots {
+        fn visit_expr(&mut self, expr: &Expr) {
+            self.exprs.push(expr as *const Expr);
+        }
+
+        fn visit_symbol(&mut self, symbol: &Symbol) {
+            self.symbols.push(symbol as *const Symbol);
+        }
+    }
+
+    #[test]
+    fn duplicate_free_state_visits_the_exact_expression_roots() {
+        let state = DuplicateFreeSameTestState {
+            same_test: Expr::symbol("same-test"),
+            items: vec![Expr::symbol("first"), Expr::symbol("second")],
+            lhs_index: 0,
+            rhs_index: 1,
+        };
+        let mut roots = RecordedRoots::default();
+
+        state.trace_roots(&mut roots);
+
+        assert_eq!(
+            roots.exprs,
+            vec![
+                &state.same_test as *const Expr,
+                &state.items[0] as *const Expr,
+                &state.items[1] as *const Expr,
+            ]
+        );
+        assert!(roots.symbols.is_empty());
+    }
 
     #[test]
     fn augmenting_path_matching_agrees_with_exhaustive_small_graphs() {
@@ -712,3 +759,10 @@ mod matching_tests {
         false
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<DuplicateFreeSameTestState>();
+    assert_traces::<SameTestMatrixState>();
+    assert_traces::<SameTestRelationKind>();
+};

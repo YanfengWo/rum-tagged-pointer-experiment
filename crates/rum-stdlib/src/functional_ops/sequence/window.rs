@@ -1,6 +1,7 @@
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 enum SequenceLikeExpr {
     Call { head: Expr, items: Vec<Expr> },
     Association(Vec<(Expr, Expr)>),
@@ -12,7 +13,7 @@ enum WhileSequenceMode {
     Length,
 }
 
-#[derive(Clone)]
+#[derive(Clone, FrameRootTrace)]
 struct BlockMapEvalState {
     operator: Expr,
     block_head: Expr,
@@ -404,3 +405,9 @@ fn finish_while_sequence(
         WhileSequenceMode::Length => Expr::integer(BigInt::from(count)),
     }
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<BlockMapEvalState>();
+    assert_traces::<SequenceLikeExpr>();
+};

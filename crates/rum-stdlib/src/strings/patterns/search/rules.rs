@@ -3,7 +3,9 @@ use super::super::matcher::{
     pattern_match_text,
 };
 use super::*;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
+#[derive(FrameRootTrace)]
 struct StringReplaceRuleEvalState {
     chars: Vec<char>,
     rules: Vec<ExactStringReplacementRule>,
@@ -13,6 +15,7 @@ struct StringReplaceRuleEvalState {
     literal_match_index: usize,
 }
 
+#[derive(FrameRootTrace)]
 struct StringReplaceValuesEvalState {
     values: Vec<String>,
     rules: Vec<ExactStringReplacementRule>,
@@ -20,6 +23,7 @@ struct StringReplaceValuesEvalState {
     config: StringPatternMatchConfig,
 }
 
+#[derive(FrameRootTrace)]
 struct StringCasesRuleEvalState {
     chars: Vec<char>,
     spec: ExactStringCaseSpec,
@@ -29,6 +33,7 @@ struct StringCasesRuleEvalState {
     literal_match_index: usize,
 }
 
+#[derive(FrameRootTrace)]
 struct StringCasesValuesEvalState {
     values: Vec<String>,
     spec: ExactStringCaseSpec,
@@ -589,3 +594,11 @@ pub(super) fn evaluate_string_rule_output_expr_result(
     };
     session.evaluate(substituted)
 }
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<StringCasesRuleEvalState>();
+    assert_traces::<StringCasesValuesEvalState>();
+    assert_traces::<StringReplaceRuleEvalState>();
+    assert_traces::<StringReplaceValuesEvalState>();
+};
