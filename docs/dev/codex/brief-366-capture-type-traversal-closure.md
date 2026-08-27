@@ -26,8 +26,9 @@ without anyone editing a traversal.
 - `crates/rum-runtime/src/runtime/suspension/trace.rs` — landed in step 1
   (`d13aa27f`): the trait, the visitor, and base implementations for `Expr`,
   `Symbol`, shared-expression types, containers, scalars, and the two
-  function-pointer leaves. **You do not add base implementations here**; if
-  you think one is missing, say so in the report rather than adding it.
+  function-pointer leaves. You generally do not add base implementations here
+  — with the single narrow exception set out in "When the allowlist may grow"
+  below.
 - `crates/rum-runtime/src/runtime/tests/frame_root_trace.rs` — the step-1
   tests, including the sorted-allowlist gate.
 
@@ -91,16 +92,56 @@ finding to state, not a discrepancy to hide or to pad toward.
 If expansion pulls in a type that clearly has nothing to do with suspension
 state, stop and report it rather than deriving your way across the codebase.
 
+## When the allowlist may grow (amended after the second stop-loss)
+
+The previous version forbade both adding a base implementation and growing the
+allowlist, which left no legal move when the expansion reached `SyntaxError`:
+`EvalError` (`session/session_state.rs:348`) contains it, and it is defined in
+`rum-syntax` (`crates/rum-syntax/src/error.rs:5`), where no derive of ours can
+be placed. Codex stopped correctly, twice now on my own contradictions.
+
+A no-op base implementation for that shape is legitimate — it is the same
+category step 1 already established for scalars, containers, and function
+pointers. But the permission is narrow, and both parts of the test must hold
+and be argued in the report **per type**:
+
+1. **A derive is structurally impossible**, not merely inconvenient — the type
+   is defined in a crate where the derive cannot be applied. "Awkward",
+   "generic-heavy", or "many call sites" do not qualify; those are stop-loss
+   reports.
+2. **The type cannot hold a root**, and the argument must be structural rather
+   than a reading of its current fields. For `SyntaxError` the argument is
+   decisive: `rum-syntax` depends only on `thiserror`
+   (`crates/rum-syntax/Cargo.toml`), so it cannot name `Expr` at all — the
+   compiler guarantees the absence, no audit required.
+
+`SyntaxError` passes both and is pre-approved; add it as a no-op base
+implementation in `trace.rs` and to the sorted allowlist. Anything else that
+you believe passes must be reported with both arguments made explicitly —
+add at most that one and stop if a second candidate appears, so the boundary
+is reviewed rather than assumed.
+
+**The twelve types the expansion already reached in `rum-runtime` and
+`rum-stdlib` are derived, not allowlisted** — `RuntimeMessage`,
+`CasesLevelSpec`, `TraceOutput`, `ReplacePartHeadsMode`,
+`GuardedReplacePartTargetState`, `AtomicPartSpec` (both the runtime and stdlib
+definitions), `DownValueDispatchIndexCache`, `AttributeSet`, `MessageNameKey`,
+`SequenceGreediness`, `FileIoError`, and `RuntimeInputRequest`. They fail
+test 1: a derive is entirely possible there.
+
 ## Scope
 
 Files you MAY modify:
 
-- the files named in the `plan-364:493` closure list, **for derive attributes
-  and their imports only**;
+- the files named in the `plan-364:493` closure list **and any file the
+  expansion reaches**, for derive attributes and their imports only;
 - `crates/rum-runtime/src/runtime/suspension.rs` — module visibility;
+- `crates/rum-runtime/src/runtime/suspension/trace.rs` — **only** for the
+  pre-approved `SyntaxError` no-op and its sorted allowlist entry. Nothing
+  else in this file changes; the base implementations landed in step 1 are
+  finished.
 - whichever single `rum-runtime` module is the right export surface for the
   trait and the derive (name it in the report);
-- `crates/rum-stdlib/Cargo.toml` — **only if** you choose (b);
 - `crates/rum-runtime/src/runtime/tests/frame_root_trace.rs` and a sibling
   stdlib-side test file if one is needed.
 
@@ -136,11 +177,12 @@ out of scope; if you believe one belongs, report it rather than adding it.
    `assert_traces::<T>()` instantiations covering every type you derived.
    Report the count you reached and how it compares to plan-364's estimate of
    187, **without treating 187 as a target**: see "How scope is determined".
-4. **Zero growth in the handwritten allowlist.** Every type here is derived.
-   If some type genuinely cannot be, STOP and report it — do **not** write a
-   handwritten implementation and add it to the allowlist. That allowlist is
-   the enforcement boundary the user accepted on 2026-08-27; quietly widening
-   it converts an accepted boundary into an eroding one.
+4. **The allowlist grows only under the test in "When the allowlist may
+   grow".** Everything that can be derived is derived. A type that is merely
+   awkward to derive is not a candidate — STOP and report it instead. That
+   allowlist is the enforcement boundary the user accepted on 2026-08-27;
+   widening it for convenience converts an accepted boundary into an eroding
+   one.
 5. **Traversal tests recording exact visited roots** for at least: a matcher
    binding table (`SymbolExprMap`), a recursive `MatcherArg`, an
    `AssociationEntryForm`, a rewrite plan, the `Block` bare-symbol state, and
@@ -188,7 +230,8 @@ per-test-name diff, with `removed_or_changed=0` pasted.
 Also paste:
 
 - the negative calibration, before and after counts (pitfall 1);
-- the allowlist test's output, showing the list did not grow;
+- the allowlist test's output, and the diff of the sorted list — it may gain
+  `SyntaxError` and nothing else without an explicit two-part argument;
 - your final type count, the seed count you started from, and any type the
   expansion reached that surprised you.
 
