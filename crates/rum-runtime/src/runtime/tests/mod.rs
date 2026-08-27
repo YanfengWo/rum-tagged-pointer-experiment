@@ -140,6 +140,7 @@ mod definitions_rhs_guards_sub_values;
 mod definitions_rhs_guards_up_values;
 mod definitions_value_table_assignment;
 mod file_names;
+mod frame_root_trace;
 mod holding_and_control_io;
 mod holding_and_control_part2;
 mod hygiene;

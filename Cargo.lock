@@ -631,6 +631,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rum-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "rum-host"
 version = "0.1.0"
 dependencies = [
@@ -669,6 +678,7 @@ dependencies = [
  "num-integer",
  "num-traits",
  "rum-core",
+ "rum-derive",
  "rum-syntax",
  "thiserror 2.0.18",
 ]

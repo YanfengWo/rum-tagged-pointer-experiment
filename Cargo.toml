@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/rum-cli",
     "crates/rum-core",
+    "crates/rum-derive",
     "crates/rum-host",
     "crates/rum-jupyter",
     "crates/rum-repl",
@@ -23,6 +24,7 @@ keywords = ["symbolic-computation", "term-rewriting", "pattern-matching", "sandb
 categories = ["mathematics", "compilers"]
 
 [workspace.dependencies]
+rum-derive = { path = "crates/rum-derive" }
 crc32fast = { version = "1", default-features = false }
 md-5 = { version = "0.10", default-features = false }
 num-bigint = { version = "0.4", features = ["serde"] }
