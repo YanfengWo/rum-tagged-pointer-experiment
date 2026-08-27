@@ -326,10 +326,12 @@ fn resume_eval_request_with_input_can_finish_conditioned_downvalue_matching() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_conditioned_replace_all() {
+    let source = "ReplaceAll[1, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"] :> List[x, x]]";
+    let uninterrupted = eval_with_queued_inputs(source, &["yes"]);
     let mut session = session_with_test_control_builtins();
 
     let failure = session
-        .eval_request("ReplaceAll[1, x_ /; MatchQ[InputString[\"cond: \"], \"yes\"] :> List[x, x]]")
+        .eval_request(source)
         .expect_err("conditioned ReplaceAll rule should suspend when it requests input");
 
     match &failure.error {
@@ -344,6 +346,7 @@ fn resume_eval_request_with_input_can_finish_conditioned_replace_all() {
         .expect("resume should finish conditioned ReplaceAll");
 
     assert_eq!(response.value.to_string(), "List[1, 1]");
+    assert_eq!(response.value.to_string(), uninterrupted);
 }
 
 #[test]

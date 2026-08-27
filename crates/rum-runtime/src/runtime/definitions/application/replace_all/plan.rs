@@ -5,7 +5,7 @@ use std::sync::Arc;
 const REWRITE_RULE_EXACT_INDEX_THRESHOLD: usize = 32;
 
 #[derive(Clone, Debug, FrameRootTrace)]
-pub(super) struct RewriteRulePlan(Arc<RewriteRulePlanData>);
+pub(in crate::runtime) struct RewriteRulePlan(Arc<RewriteRulePlanData>);
 
 #[derive(Debug, FrameRootTrace)]
 struct RewriteRulePlanData {

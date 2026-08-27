@@ -354,22 +354,7 @@ impl Session {
         &mut self,
         expr: Expr,
     ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
-        self.drive_rewrite_rule_exprs_owned(expr, |session, rule_exprs| {
-            Ok(rule_exprs
-                .and_then(|rule_exprs| {
-                    session.compile_rewrite_rules_from_normalized_exprs(rule_exprs)
-                })
-                .map(|rules| {
-                    rules
-                        .into_iter()
-                        .map(|rule| RewriteRuleInfo {
-                            lhs: rule.lhs,
-                            rhs: rebuild_definition_rhs_guards(rule.rhs, &rule.guards),
-                            delayed: rule.delayed,
-                        })
-                        .collect()
-                }))
-        })
+        self.drive_rewrite_rule_infos_owned(expr, RewriteRuleInfoContinuation::InspectRewriteRules)
     }
 }
 

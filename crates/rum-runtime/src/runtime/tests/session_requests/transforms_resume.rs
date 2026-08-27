@@ -68,6 +68,15 @@ fn normalized_rule_expr_vec_continuation_roundtrip_matches_uninterrupted_run() {
 }
 
 #[test]
+fn compiled_rule_vec_continuation_roundtrip_matches_uninterrupted_run() {
+    assert_suspend_resume_matches_queued(
+        "ReplaceAll[1, If[MatchQ[InputString[\"rules: \"], \"yes\"], x_Integer -> hit, y_String -> miss]]",
+        &["yes"],
+        "hit",
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_can_finish_replacepart_with_suspending_delayed_rhs() {
     let mut session = session_with_test_control_builtins();
 
@@ -325,10 +334,12 @@ fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_position
 
 #[test]
 fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_delayed_rhs() {
+    let source = "ReplaceAt[f[1], x_Integer :> InputString[\"rhs: \"], 1]";
+    let uninterrupted = eval_with_queued_inputs(source, &["done"]);
     let mut session = session_with_test_control_builtins();
 
     let failure = session
-        .eval_request("ReplaceAt[f[1], x_Integer :> InputString[\"rhs: \"], 1]")
+        .eval_request(source)
         .expect_err("ReplaceAt should suspend when its delayed rhs requests input");
 
     match &failure.error {
@@ -343,6 +354,7 @@ fn resume_eval_request_with_input_can_finish_replaceat_after_suspending_delayed_
         .expect("resume should continue ReplaceAt after the delayed rhs resolves");
 
     assert_eq!(response.value.to_string(), "f[\"done\"]");
+    assert_eq!(response.value.to_string(), uninterrupted);
 }
 
 #[test]

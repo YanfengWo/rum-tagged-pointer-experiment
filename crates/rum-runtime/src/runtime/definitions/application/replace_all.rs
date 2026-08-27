@@ -2,7 +2,8 @@ use super::*;
 
 mod plan;
 
-use plan::{RewriteRulePlan, RewriteRuleScanCursor};
+pub(in crate::runtime) use plan::RewriteRulePlan;
+use plan::RewriteRuleScanCursor;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ReplaceAllTraversalOutcome {
@@ -58,26 +59,18 @@ impl Session {
         self.drive_internal_value(outcome_result, |_, outcome| Ok(outcome.expr))
     }
 
-    pub(in crate::runtime) fn shared_rewrite_rule_applier(
-        rules: Vec<RewriteRule>,
-    ) -> impl Clone
-    + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
-    + Send
-    + 'static {
-        let rules = if rules
+    pub(in crate::runtime) fn shared_rewrite_rule_plan(rules: Vec<RewriteRule>) -> RewriteRulePlan {
+        if rules
             .iter()
             .any(|rule| matches!(rule.matcher, MatcherNode::Exact(_)))
         {
             RewriteRulePlan::from_slice(&rules)
         } else {
             RewriteRulePlan::linear(rules)
-        };
-        move |session, expr, source| {
-            session.try_apply_rewrite_rules_once_owned(expr, rules.clone(), source)
         }
     }
 
-    fn try_apply_rewrite_rules_once_owned(
+    pub(in crate::runtime) fn apply_rewrite_rule_plan_once(
         &mut self,
         expr: Expr,
         rules: RewriteRulePlan,

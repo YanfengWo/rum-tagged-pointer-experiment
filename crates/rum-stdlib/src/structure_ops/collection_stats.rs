@@ -2,7 +2,7 @@ use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 
 use super::ordering_sets::compare_structural_order;
-use super::resumable_merge_sort::{ComparatorResultPolicy, sort_with_comparator};
+use super::resumable_merge_sort::{ComparatorResultPolicy, MergeCompletion, sort_with_comparator};
 use super::stable_groups::{StableCounts, StableGroups};
 use super::*;
 
@@ -11,6 +11,18 @@ struct KeyedEntry {
     item: Expr,
     key: Expr,
     index: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct ReverseSortCompletion {
+    expr_head: Expr,
+}
+
+impl MergeCompletion<Expr> for ReverseSortCompletion {
+    fn complete(self, mut items: Vec<Expr>) -> Expr {
+        items.reverse();
+        Expr::call(self.expr_head, items)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -231,10 +243,7 @@ pub(crate) fn eval_reverse_sort(
             items,
             ordering.clone(),
             ComparatorResultPolicy::ExactTrue,
-            move |mut items| {
-                items.reverse();
-                Expr::call(expr_head, items)
-            },
+            ReverseSortCompletion { expr_head },
         );
     }
 
@@ -820,5 +829,6 @@ const _: fn() = || {
     assert_traces::<DecoratedOperation>();
     assert_traces::<GatherByFunctionListState>();
     assert_traces::<KeyedEntry>();
+    assert_traces::<ReverseSortCompletion>();
     assert_traces::<TallyTestState>();
 };

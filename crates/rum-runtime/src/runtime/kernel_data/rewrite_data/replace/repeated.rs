@@ -47,18 +47,18 @@ impl Session {
         max_iterations_expr: Option<Expr>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        self.drive_rewrite_rule_exprs_owned(rules_expr.clone(), move |session, rule_exprs| {
-            session.resume_replace_repeated_after_rule_exprs(
+        self.drive_rewrite_rule_exprs_owned(
+            rules_expr.clone(),
+            RewriteRuleExprContinuation::ReplaceRepeated {
                 current,
-                rules_expr,
+                rules_input: rules_expr,
                 max_iterations_expr,
-                rule_exprs,
                 call_args,
-            )
-        })
+            },
+        )
     }
 
-    fn resume_replace_repeated_after_rule_exprs(
+    pub(in crate::runtime) fn resume_replace_repeated_after_rule_exprs(
         &mut self,
         current: Expr,
         rules_input: Expr,

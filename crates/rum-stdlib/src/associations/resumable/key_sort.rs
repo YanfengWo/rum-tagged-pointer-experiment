@@ -1,5 +1,7 @@
 use super::*;
-use crate::structure_ops::{ComparatorResultPolicy, MergeSortItem, sort_with_comparator};
+use crate::structure_ops::{
+    ComparatorResultPolicy, MergeCompletion, MergeSortItem, sort_with_comparator,
+};
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -12,6 +14,26 @@ enum KeySortOrderingDecision {
 struct KeySortByEntry {
     entry: AssociationEntryForm,
     sort_key: Expr,
+}
+
+#[derive(FrameRootTrace)]
+struct KeySortCompletion;
+
+impl MergeCompletion<AssociationEntryForm> for KeySortCompletion {
+    fn complete(self, entries: Vec<AssociationEntryForm>) -> Expr {
+        render_association_entry_forms_preserving_heads(entries)
+    }
+}
+
+#[derive(FrameRootTrace)]
+struct KeySortByCompletion;
+
+impl MergeCompletion<KeySortByEntry> for KeySortByCompletion {
+    fn complete(self, entries: Vec<KeySortByEntry>) -> Expr {
+        render_association_entry_forms_preserving_heads(
+            entries.into_iter().map(|entry| entry.entry).collect(),
+        )
+    }
 }
 
 impl MergeSortItem for AssociationEntryForm {
@@ -97,7 +119,7 @@ pub(crate) fn sort_key_entries_with_ordering(
         entries,
         ordering,
         ComparatorResultPolicy::Custom(key_sort_ordering_precedes),
-        render_association_entry_forms_preserving_heads,
+        KeySortCompletion,
     )
 }
 
@@ -161,11 +183,7 @@ fn resume_key_sort_by_ordering(
                 state.decorated,
                 state.ordering,
                 ComparatorResultPolicy::Custom(key_sort_ordering_precedes),
-                |sorted| {
-                    render_association_entry_forms_preserving_heads(
-                        sorted.into_iter().map(|entry| entry.entry).collect(),
-                    )
-                },
+                KeySortByCompletion,
             );
         };
 
@@ -212,6 +230,8 @@ fn key_sort_ordering_decision(value: &Expr) -> KeySortOrderingDecision {
 #[cfg(test)]
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<KeySortByCompletion>();
     assert_traces::<KeySortByEntry>();
     assert_traces::<KeySortByOrderingState>();
+    assert_traces::<KeySortCompletion>();
 };

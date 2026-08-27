@@ -90,12 +90,16 @@ fn resume_eval_request_with_input_preserves_keyselect_progress() {
 
 #[test]
 fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer() {
+    let source = "KeySort[{bb -> 2, a -> 1}, Function[If[SameQ[Slot[1], a], MatchQ[InputString[\"cmp: \"], \"yes\"], True]]]";
+    let mut uninterrupted_session = core_session();
+    uninterrupted_session.queue_input_response("yes");
+    let uninterrupted = uninterrupted_session
+        .eval_request(source)
+        .expect("queued input should complete KeySort");
     let mut session = core_session();
 
     let failure = session
-        .eval_request(
-            "KeySort[{bb -> 2, a -> 1}, Function[If[SameQ[Slot[1], a], MatchQ[InputString[\"cmp: \"], \"yes\"], True]]]",
-        )
+        .eval_request(source)
         .expect_err("KeySort should suspend when its custom comparer requests input");
 
     match &failure.error {
@@ -113,4 +117,5 @@ fn resume_eval_request_with_input_can_finish_keysort_after_suspending_comparer()
         response.value.to_string(),
         "Association[Rule[a, 1], Rule[bb, 2]]"
     );
+    assert_eq!(response.value, uninterrupted.value);
 }

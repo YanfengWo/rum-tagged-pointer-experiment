@@ -95,21 +95,30 @@ impl Session {
     }
 
     fn resume_normalize_rules(&mut self, original: Expr) -> Result<Expr, EvalError> {
-        self.drive_rewrite_rule_exprs_owned(original.clone(), move |session, rule_exprs| {
-            match rule_exprs {
-                Some(rule_exprs) => {
-                    let rules = session
-                        .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
-                        .expect("normalized rewrite rule expressions should recompile");
-                    Ok(Self::normalized_rules_expr(&rules))
-                }
-                None => Ok(session.invalid_call_with_arg_form(
-                    "NormalizeRules",
-                    &[original],
-                    "expected a rule, a rule list, or a symbol that evaluates to rules",
-                )),
+        self.drive_rewrite_rule_exprs_owned(
+            original.clone(),
+            RewriteRuleExprContinuation::NormalizeRules { original },
+        )
+    }
+
+    pub(in crate::runtime) fn resume_normalize_rules_after_rule_exprs(
+        &mut self,
+        original: Expr,
+        rule_exprs: Option<Vec<Expr>>,
+    ) -> Result<Expr, EvalError> {
+        match rule_exprs {
+            Some(rule_exprs) => {
+                let rules = self
+                    .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+                    .expect("normalized rewrite rule expressions should recompile");
+                Ok(Self::normalized_rules_expr(&rules))
             }
-        })
+            None => Ok(self.invalid_call_with_arg_form(
+                "NormalizeRules",
+                &[original],
+                "expected a rule, a rule list, or a symbol that evaluates to rules",
+            )),
+        }
     }
 
     fn resume_set_with_rhs(&mut self, lhs: Expr, rhs: Expr) -> Result<Expr, EvalError> {

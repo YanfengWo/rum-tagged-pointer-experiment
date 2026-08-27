@@ -8,6 +8,8 @@ mod rhs;
 mod sub_values;
 mod up_values;
 
+pub(in crate::runtime) use replace_all::RewriteRulePlan;
+
 impl Session {
     pub(in crate::runtime) fn push_trace(&mut self, event: TraceEvent) {
         let depth = self.evaluation_stack.len().saturating_sub(2);

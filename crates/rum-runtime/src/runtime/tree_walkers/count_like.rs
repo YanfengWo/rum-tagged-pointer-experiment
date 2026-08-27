@@ -1,4 +1,22 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(Clone, Copy, FrameRootTrace)]
+enum CountLikeFinish {
+    Count,
+    MemberQ,
+    FreeQ,
+}
+
+impl CountLikeFinish {
+    fn finish(self, count: usize) -> Expr {
+        match self {
+            Self::Count => Expr::integer(BigInt::from(count)),
+            Self::MemberQ => system_expr(if count > 0 { "True" } else { "False" }),
+            Self::FreeQ => system_expr(if count == 0 { "True" } else { "False" }),
+        }
+    }
+}
 
 impl Session {
     pub(in crate::runtime) fn eval_count(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -105,7 +123,7 @@ impl Session {
                 include_heads,
                 ..CasesTraversalConfig::default_cases()
             },
-            |count| Expr::integer(BigInt::from(count)),
+            CountLikeFinish::Count,
         )
     }
 
@@ -147,7 +165,7 @@ impl Session {
                 include_heads,
                 ..CasesTraversalConfig::default_member_q()
             },
-            |count| system_expr(if count > 0 { "True" } else { "False" }),
+            CountLikeFinish::MemberQ,
         )
     }
 
@@ -189,11 +207,11 @@ impl Session {
                 include_heads,
                 ..CasesTraversalConfig::default_free_q()
             },
-            |count| system_expr(if count == 0 { "True" } else { "False" }),
+            CountLikeFinish::FreeQ,
         )
     }
 
-    fn finish_count_like_after_pattern<F>(
+    fn finish_count_like_after_pattern(
         &mut self,
         builtin_name: &'static str,
         target: Expr,
@@ -201,11 +219,8 @@ impl Session {
         option_exprs: Vec<Expr>,
         call_args: Vec<Expr>,
         defaults: CasesTraversalConfig,
-        finish: F,
-    ) -> Result<Expr, EvalError>
-    where
-        F: FnOnce(usize) -> Expr + Send + 'static,
-    {
+        finish: CountLikeFinish,
+    ) -> Result<Expr, EvalError> {
         let traversal_result = self.resolve_traversal_without_limit_owned(option_exprs, defaults);
         self.drive_internal_value(traversal_result, move |session, traversal| {
             let traversal = match traversal {
@@ -221,8 +236,9 @@ impl Session {
 
             let outcome_result =
                 session.count_pattern_matches_owned(target, pattern, traversal, 0, 0);
-            session
-                .drive_internal_value(outcome_result, move |_, outcome| Ok(finish(outcome.count)))
+            session.drive_internal_value(outcome_result, move |_, outcome| {
+                Ok(finish.finish(outcome.count))
+            })
         })
     }
 
@@ -438,3 +454,9 @@ impl Session {
         }
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<CountLikeFinish>();
+};

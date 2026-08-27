@@ -1,4 +1,142 @@
 use super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(FrameRootTrace)]
+pub(in crate::runtime) enum RewriteRuleExprContinuation {
+    NormalizeRules {
+        original: Expr,
+    },
+    Replace {
+        target: Expr,
+        levels_expr: Option<Expr>,
+        heads_option_exprs: Vec<Expr>,
+        call_args: Vec<Expr>,
+    },
+    ReplaceAt {
+        target: Expr,
+        paths: Vec<Vec<isize>>,
+        call_args: Vec<Expr>,
+    },
+    ReplaceRepeated {
+        current: Expr,
+        rules_input: Expr,
+        max_iterations_expr: Option<Expr>,
+        call_args: Vec<Expr>,
+    },
+    ReplaceList {
+        target: Expr,
+        max_results: Option<usize>,
+        call_args: Vec<Expr>,
+    },
+}
+
+impl RewriteRuleExprContinuation {
+    fn resume(
+        self,
+        session: &mut Session,
+        rule_exprs: Option<Vec<Expr>>,
+    ) -> Result<Expr, EvalError> {
+        match self {
+            Self::NormalizeRules { original } => {
+                session.resume_normalize_rules_after_rule_exprs(original, rule_exprs)
+            }
+            Self::Replace {
+                target,
+                levels_expr,
+                heads_option_exprs,
+                call_args,
+            } => session.resume_replace_after_rule_exprs(
+                target,
+                levels_expr,
+                heads_option_exprs,
+                rule_exprs,
+                call_args,
+            ),
+            Self::ReplaceAt {
+                target,
+                paths,
+                call_args,
+            } => session.resume_replace_at_after_rule_exprs(target, paths, rule_exprs, call_args),
+            Self::ReplaceRepeated {
+                current,
+                rules_input,
+                max_iterations_expr,
+                call_args,
+            } => session.resume_replace_repeated_after_rule_exprs(
+                current,
+                rules_input,
+                max_iterations_expr,
+                rule_exprs,
+                call_args,
+            ),
+            Self::ReplaceList {
+                target,
+                max_results,
+                call_args,
+            } => session.resume_replace_list_after_rule_exprs(
+                target,
+                rule_exprs,
+                max_results,
+                call_args,
+            ),
+        }
+    }
+}
+
+#[derive(FrameRootTrace)]
+pub(in crate::runtime) enum RewriteRuleInfoContinuation {
+    InspectRewriteRules,
+}
+
+impl RewriteRuleInfoContinuation {
+    fn resume(
+        self,
+        session: &mut Session,
+        rule_exprs: Option<Vec<Expr>>,
+    ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
+        match self {
+            Self::InspectRewriteRules => Ok(rule_exprs
+                .and_then(|rule_exprs| {
+                    session.compile_rewrite_rules_from_normalized_exprs(rule_exprs)
+                })
+                .map(|rules| {
+                    rules
+                        .into_iter()
+                        .map(|rule| RewriteRuleInfo {
+                            lhs: rule.lhs,
+                            rhs: rebuild_definition_rhs_guards(rule.rhs, &rule.guards),
+                            delayed: rule.delayed,
+                        })
+                        .collect()
+                })),
+        }
+    }
+}
+
+#[derive(FrameRootTrace)]
+pub(in crate::runtime) enum CompiledRewriteRuleContinuation {
+    ReplaceAll { target: Expr, rules_input: Expr },
+    ReplaceAllUnheld { target: Expr, rules_input: Expr },
+}
+
+impl CompiledRewriteRuleContinuation {
+    fn resume(
+        self,
+        session: &mut Session,
+        rules: Option<Vec<RewriteRule>>,
+    ) -> Result<Expr, EvalError> {
+        match self {
+            Self::ReplaceAll {
+                target,
+                rules_input,
+            } => session.resume_replace_all_after_rules(target, rules_input, rules),
+            Self::ReplaceAllUnheld {
+                target,
+                rules_input,
+            } => session.resume_replace_all_unheld_after_rules(target, rules_input, rules),
+        }
+    }
+}
 
 impl Session {
     pub(in crate::runtime) fn resolve_cases_spec_expr_for_matching_owned(
@@ -44,35 +182,42 @@ impl Session {
         })
     }
 
-    pub(in crate::runtime) fn drive_rewrite_rule_exprs_owned<U, F>(
+    pub(in crate::runtime) fn drive_rewrite_rule_exprs_owned(
         &mut self,
         expr: Expr,
-        cont: F,
-    ) -> Result<U, EvalError>
-    where
-        U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, Option<Vec<Expr>>) -> Result<U, EvalError> + Send + 'static,
-    {
+        continuation: RewriteRuleExprContinuation,
+    ) -> Result<Expr, EvalError> {
         let resolved_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
-        self.drive_internal_value(resolved_rule_exprs_result, cont)
+        self.drive_internal_value(resolved_rule_exprs_result, move |session, rule_exprs| {
+            continuation.resume(session, rule_exprs)
+        })
     }
 
-    pub(in crate::runtime) fn drive_rewrite_rules_owned<U, F>(
+    pub(in crate::runtime) fn drive_rewrite_rule_infos_owned(
         &mut self,
         expr: Expr,
-        cont: F,
-    ) -> Result<U, EvalError>
-    where
-        U: ContinuationValue + 'static,
-        F: FnOnce(&mut Session, Option<Vec<RewriteRule>>) -> Result<U, EvalError> + Send + 'static,
-    {
+        continuation: RewriteRuleInfoContinuation,
+    ) -> Result<Option<Vec<RewriteRuleInfo>>, EvalError> {
+        let resolved_rule_exprs_result = self.resolve_rewrite_rule_exprs_owned(expr);
+        self.drive_internal_value(resolved_rule_exprs_result, move |session, rule_exprs| {
+            continuation.resume(session, rule_exprs)
+        })
+    }
+
+    pub(in crate::runtime) fn drive_rewrite_rules_owned(
+        &mut self,
+        expr: Expr,
+        continuation: CompiledRewriteRuleContinuation,
+    ) -> Result<Expr, EvalError> {
         match self.evaluate(expr) {
-            Ok(resolved) => cont(self, self.compile_rewrite_rules_for_matching(&resolved)),
+            Ok(resolved) => {
+                continuation.resume(self, self.compile_rewrite_rules_for_matching(&resolved))
+            }
             Err(EvalError::InputRequired { request }) => {
                 self.push_suspension_frame(move |session, outcome| match outcome {
                     Ok(resolved) => {
                         let rules = session.compile_rewrite_rules_for_matching(&resolved);
-                        let resumed = cont(session, rules)?;
+                        let resumed = continuation.resume(session, rules)?;
                         Ok(resumed.into_continuation_expr())
                     }
                     Err(error) => Err(error),
@@ -147,6 +292,14 @@ impl Session {
         compile_matcher(&self.normalize_match_expr(expr))
     }
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<CompiledRewriteRuleContinuation>();
+    assert_traces::<RewriteRuleExprContinuation>();
+    assert_traces::<RewriteRuleInfoContinuation>();
+};
 
 fn should_evaluate_single_rule_candidate(expr: &Expr) -> bool {
     match expr {

@@ -22,6 +22,10 @@ pub(crate) trait MergeSortItem {
     fn ordering_value(&self) -> &Expr;
 }
 
+pub(crate) trait MergeCompletion<T>: FrameRootTrace + Send + 'static {
+    fn complete(self, items: Vec<T>) -> Expr;
+}
+
 impl MergeSortItem for Expr {
     fn ordering_value(&self) -> &Expr {
         self
@@ -85,7 +89,7 @@ pub(crate) fn sort_with_comparator<T, C>(
 ) -> Result<Expr, EvalError>
 where
     T: MergeSortItem + Send + 'static,
-    C: FnOnce(Vec<T>) -> Expr + Send + 'static,
+    C: MergeCompletion<T>,
 {
     let runs = items.into_iter().map(Run::singleton).collect();
     resume_merge_sort(
@@ -108,12 +112,12 @@ fn resume_merge_sort<T, C>(
 ) -> Result<Expr, EvalError>
 where
     T: MergeSortItem + Send + 'static,
-    C: FnOnce(Vec<T>) -> Expr + Send + 'static,
+    C: MergeCompletion<T>,
 {
     loop {
         if state.runs.len() <= 1 && state.next_runs.is_empty() {
             let sorted = state.runs.pop().map(Run::into_items).unwrap_or_default();
-            return Ok((state.completion)(sorted));
+            return Ok(state.completion.complete(sorted));
         }
 
         if state.pair_index >= state.runs.len() {

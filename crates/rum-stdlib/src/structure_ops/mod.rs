@@ -40,7 +40,9 @@ pub(crate) use self::{
     list_plumbing::{eval_constant_array, eval_differences, eval_pad_left, eval_pad_right},
     ordering_sets::{eval_complement, eval_intersection, eval_sort, eval_sort_by, eval_union},
     reordering::{eval_reverse, eval_transpose},
-    resumable_merge_sort::{ComparatorResultPolicy, MergeSortItem, sort_with_comparator},
+    resumable_merge_sort::{
+        ComparatorResultPolicy, MergeCompletion, MergeSortItem, sort_with_comparator,
+    },
     sequence::{
         eval_delete, eval_drop, eval_insert, eval_range, eval_take, eval_take_drop, eval_take_list,
     },

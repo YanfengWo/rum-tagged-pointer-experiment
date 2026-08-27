@@ -66,12 +66,17 @@ impl Session {
         paths: Vec<Vec<isize>>,
         call_args: Vec<Expr>,
     ) -> Result<Expr, EvalError> {
-        self.drive_rewrite_rule_exprs_owned(rules_expr.clone(), move |session, rule_exprs| {
-            session.resume_replace_at_after_rule_exprs(target, paths, rule_exprs, call_args)
-        })
+        self.drive_rewrite_rule_exprs_owned(
+            rules_expr,
+            RewriteRuleExprContinuation::ReplaceAt {
+                target,
+                paths,
+                call_args,
+            },
+        )
     }
 
-    fn resume_replace_at_after_rule_exprs(
+    pub(in crate::runtime) fn resume_replace_at_after_rule_exprs(
         &mut self,
         target: Expr,
         paths: Vec<Vec<isize>>,
@@ -89,40 +94,38 @@ impl Session {
         let rules = self
             .compile_rewrite_rules_from_normalized_exprs(rule_exprs)
             .expect("normalized rewrite rule expressions should recompile");
-        let apply_rules = Self::shared_rewrite_rule_applier(rules);
+        let rule_plan = Self::shared_rewrite_rule_plan(rules);
 
-        self.replace_at_paths_owned(target, paths, apply_rules, 0)
+        self.replace_at_paths_owned(target, paths, rule_plan, 0)
     }
 
-    fn replace_at_paths_owned<F>(
+    fn replace_at_paths_owned(
         &mut self,
         expr: Expr,
         paths: Vec<Vec<isize>>,
-        apply_rules: F,
+        rule_plan: RewriteRulePlan,
         index: usize,
-    ) -> Result<Expr, EvalError>
-    where
-        F: Clone
-            + Fn(&mut Session, Expr, RuleApplicationSource) -> Result<Option<Expr>, EvalError>
-            + Send
-            + 'static,
-    {
+    ) -> Result<Expr, EvalError> {
         let Some(path) = paths.get(index).cloned() else {
             return Ok(expr);
         };
 
         let Some(part) = exact_expr_at_path(&expr, &path) else {
-            return self.replace_at_paths_owned(expr, paths, apply_rules, index + 1);
+            return self.replace_at_paths_owned(expr, paths, rule_plan, index + 1);
         };
 
-        let replaced_result = apply_rules(self, part, RuleApplicationSource::ReplaceAt);
+        let replaced_result = self.apply_rewrite_rule_plan_once(
+            part,
+            rule_plan.clone(),
+            RuleApplicationSource::ReplaceAt,
+        );
         self.drive_internal_value(replaced_result, move |session, replaced| {
             let Some(replaced) = replaced else {
-                return session.replace_at_paths_owned(expr, paths, apply_rules, index + 1);
+                return session.replace_at_paths_owned(expr, paths, rule_plan, index + 1);
             };
 
             let updated = replace_exact_path(expr, &path, replaced);
-            session.replace_at_paths_owned(updated, paths, apply_rules, index + 1)
+            session.replace_at_paths_owned(updated, paths, rule_plan, index + 1)
         })
     }
 }

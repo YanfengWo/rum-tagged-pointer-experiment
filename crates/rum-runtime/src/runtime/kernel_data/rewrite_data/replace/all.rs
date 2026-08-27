@@ -27,12 +27,16 @@ impl Session {
         target: Expr,
         rules_expr: Expr,
     ) -> Result<Expr, EvalError> {
-        self.drive_rewrite_rules_owned(rules_expr.clone(), move |session, rules| {
-            session.resume_replace_all_after_rules(target, rules_expr, rules)
-        })
+        self.drive_rewrite_rules_owned(
+            rules_expr.clone(),
+            CompiledRewriteRuleContinuation::ReplaceAll {
+                target,
+                rules_input: rules_expr,
+            },
+        )
     }
 
-    fn resume_replace_all_after_rules(
+    pub(in crate::runtime) fn resume_replace_all_after_rules(
         &mut self,
         target: Expr,
         rules_input: Expr,
@@ -82,12 +86,16 @@ impl Session {
         target: Expr,
         rules_expr: Expr,
     ) -> Result<Expr, EvalError> {
-        self.drive_rewrite_rules_owned(rules_expr.clone(), move |session, rules| {
-            session.resume_replace_all_unheld_after_rules(target, rules_expr, rules)
-        })
+        self.drive_rewrite_rules_owned(
+            rules_expr.clone(),
+            CompiledRewriteRuleContinuation::ReplaceAllUnheld {
+                target,
+                rules_input: rules_expr,
+            },
+        )
     }
 
-    fn resume_replace_all_unheld_after_rules(
+    pub(in crate::runtime) fn resume_replace_all_unheld_after_rules(
         &mut self,
         target: Expr,
         rules_input: Expr,

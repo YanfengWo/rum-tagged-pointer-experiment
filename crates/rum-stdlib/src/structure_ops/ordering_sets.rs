@@ -2,7 +2,9 @@ use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-use super::resumable_merge_sort::{ComparatorResultPolicy, MergeSortItem, sort_with_comparator};
+use super::resumable_merge_sort::{
+    ComparatorResultPolicy, MergeCompletion, MergeSortItem, sort_with_comparator,
+};
 use super::*;
 
 const SET_MEMBERSHIP_INDEX_THRESHOLD: usize = 16;
@@ -12,6 +14,31 @@ struct SortByEntry {
     item: Expr,
     key: Expr,
     index: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct SortCompletion {
+    expr_head: Expr,
+}
+
+impl MergeCompletion<Expr> for SortCompletion {
+    fn complete(self, items: Vec<Expr>) -> Expr {
+        Expr::call(self.expr_head, items)
+    }
+}
+
+#[derive(FrameRootTrace)]
+struct SortByCompletion {
+    expr_head: Expr,
+}
+
+impl MergeCompletion<SortByEntry> for SortByCompletion {
+    fn complete(self, entries: Vec<SortByEntry>) -> Expr {
+        Expr::call(
+            self.expr_head,
+            entries.into_iter().map(|entry| entry.item).collect(),
+        )
+    }
 }
 
 impl MergeSortItem for SortByEntry {
@@ -117,9 +144,8 @@ pub(crate) fn eval_sort(
                 expr_args.to_vec(),
                 ordering.clone(),
                 ComparatorResultPolicy::ExactTrue,
-                {
-                    let expr_head = expr_head.as_ref().clone();
-                    move |items| Expr::call(expr_head, items)
+                SortCompletion {
+                    expr_head: expr_head.as_ref().clone(),
                 },
             )
         }
@@ -723,12 +749,7 @@ fn resume_sort_by_ordering_from_index(
                 decorated,
                 ordering,
                 ComparatorResultPolicy::ExactTrue,
-                move |entries| {
-                    Expr::call(
-                        expr_head,
-                        entries.into_iter().map(|entry| entry.item).collect(),
-                    )
-                },
+                SortByCompletion { expr_head },
             );
         };
 
@@ -904,5 +925,7 @@ const _: fn() = || {
     assert_traces::<SetOperationKind>();
     assert_traces::<SetSameTestPhase>();
     assert_traces::<SetSameTestState>();
+    assert_traces::<SortByCompletion>();
     assert_traces::<SortByEntry>();
+    assert_traces::<SortCompletion>();
 };
