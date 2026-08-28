@@ -149,7 +149,8 @@ be fixed already.
      **Dispatch order (director, splitting plan-378's oversized step 1):**
      1a foundation — **COMPLETE 2026-08-28** (brief-379, `5698e8e5`);
      1b preparation plus `Set`/`SetDelayed` — **COMPLETE 2026-08-28** (brief-380, `aa441ff0`); 1c `Unset`
-     and value tables; 2 the association fallback; 3 tagged definitions,
+     and value tables — **COMPLETE 2026-08-28** (brief-381, `45c5aa33`);
+     2 the association fallback; 3 tagged definitions,
      `TagUnset`, and final sealing. **Four steps, not the six first sketched**:
      plan-378's specification makes `Flat`/`Orderless` identity normalization
      step 7 of the preparation pipeline rather than a separate transform, so
@@ -167,6 +168,13 @@ be fixed already.
        scanner that reports clean has to be shown capable of finding something
        — the frame-roots line lost a round to a regex silently truncated by a
        comma.
+     - *Best-of-2 measures a spread four to five times too small.* 1c's worker
+       left two labels open as possible regressions —
+       `matchq-integer-success`/`fail` at +6.34%/+6.72% against best-of-2
+       spreads of 2.01%/2.96%. At best-of-3 those same labels' spreads are
+       10.6% and 11.3%, and both movements fall inside. Nothing in 1c reaches
+       `MatchQ`. Run three, report the range, and treat a two-run spread as a
+       single random sample rather than a noise floor.
      - *Whether valid controls exist depends on the change's reach — do not
        generalize either way.* 1a sat on the common call path, where nothing
        is untouched. 1b sat on the assignment path, where the 28
