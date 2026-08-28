@@ -9,6 +9,40 @@ minor versions may include breaking changes; the project aims to follow
 
 ### Fixed
 
+- A definition's left-hand side is prepared consistently, so the identity a
+  definition is stored under matches the one a lookup constructs. Seven
+  defects shared this shape and pointed in both directions. Where preparation
+  was due but skipped: `AssociateTo[af[ii], …]` with `ii = 2` installed a
+  second definition under `af[ii]` and left `af[2]` untouched; `TagSet`,
+  `UpSet` and their delayed forms stored a raw lhs, so the rule they installed
+  could not be reached from any input; `f[iD] = 8` under `iD := 1 + 1` stored
+  `f[1 + 1]`, which `f[2]` could not reach; `Unset[f[i]]` could not remove what
+  `Set` had just stored; and `DownValues[f] = {…}` imported raw rule
+  left-hand sides. In the other direction, `f[xH] = 9` under a `HoldFirst`
+  head normalized a position that had to stay raw, so the natural `f[xH]`
+  lookup missed the rule it had just installed. A held ground nested `Flat`
+  call was unreachable from both its source and its flattened form, because
+  candidate matching normalized `Flat`/`Orderless` while the ground index did
+  not.
+
+  Arguments are now prepared by the head's hold attributes — active positions
+  evaluate once, including delayed own-values; held positions keep their raw
+  subtrees — and the same preparation serves storage, removal and lookup. A
+  stored identity is a state snapshot: later own-value or attribute changes
+  affect future preparation, never existing definitions, so removing after
+  rebinding addresses a different identity and leaves the original in place,
+  while `Clear` still removes everything. `m[ww] ^= 22` with `ww = 5` now
+  prepares to `m[5]`, finds no symbol able to serve as a tag, and reports
+  `UpSet::nosym` instead of silently installing an unreachable rule.
+  Value-table assignment is transactional: an invalid entry late in the list
+  leaves the previous table intact, including across a suspension.
+
+  The repair is enforced rather than maintained. Storage and removal travel as
+  tokens whose constructors are private to a single module, so storing a raw
+  left-hand side from source-language evaluation does not compile; only static
+  catalog installation and whole-state restoration bypass preparation, both
+  explicitly.
+
 - `lhs := rhs /; test` evaluates its guard. Right-hand-side `Condition` guards
   were stored as part of the body and never examined, so
   `b[x_] := x^2 /; x > 0` made `b[3]` return `9 /; True` and `b[-3]` return

@@ -152,13 +152,35 @@ be fixed already.
      and value tables — **COMPLETE 2026-08-28** (brief-381, `45c5aa33`);
      2 the association fallback — **COMPLETE 2026-08-28** (brief-382,
      `e90fcc62`); 3 tagged definitions,
-     `TagUnset`, and final sealing. **Four steps, not the six first sketched**:
+     `TagUnset`, and final sealing — **COMPLETE 2026-08-28** (brief-383,
+     `37a12479`). **The whole family is closed.** **Four steps, not the six first sketched**:
      plan-378's specification makes `Flat`/`Orderless` identity normalization
      step 7 of the preparation pipeline rather than a separate transform, so
      the held-ground defect closes in 1b alongside `Set`. The split is for
      gateability, not size: each step has to be independently verifiable and
      revertible, and 1a's criterion — an empty rum-vs-rum differential diff —
      only works while no consumer has moved.
+
+     **Close-out.** Seven defects, four dispatches, and the repair is
+     enforced rather than maintained: store and removal travel as tokens whose
+     constructors are private to one child module, so a raw lhs from
+     source-language evaluation is not expressible. Two non-preparing paths
+     remain by design — static catalog installation and whole-state
+     restoration. Both guarantees were calibrated, not assumed: forging a
+     token from another module fails to compile (E0603/E0624), and adding one
+     call to the trusted path makes the inventory test fail with the exact
+     count. `definition_tags.rs` and its neighbours lost 232 lines net.
+
+     **Open observation, no structural explanation, deliberately not fixed.**
+     Step 3 moved `downvalue-guarded-decline-fallback` +7.47% and
+     `downvalue-guarded-hit` +6.01%, above the 0.4-4.1% spread measured
+     between same-semantics binaries differing only in layout — while the
+     three hot lookup functions' disassembly is instruction-identical with
+     addresses shifted `+0xa0`. The layout estimate is itself incomplete: the
+     inert arms add code where this change removes 232 lines net, so they
+     perturb in the opposite direction. Overall the run is clean
+     (pure-computation controls +1.33%, everything else +0.74%). Revisit only
+     with a profile that explains the mechanism; do not tune blind.
 
      **Two things 1a established for the steps that follow.**
 
