@@ -64,6 +64,38 @@ impl Session {
             .unwrap_or_else(|| expr.clone())
     }
 
+    pub(super) fn normalize_definition_identity_for_matching(
+        &self,
+        expr: &Expr,
+        attributes: AttributeSet,
+    ) -> Expr {
+        if matches!(attributes.hold_attribute(), HoldAttribute::None) {
+            return expr.clone();
+        }
+
+        let Expr::Call { head, args } = expr else {
+            return expr.clone();
+        };
+        let normalized_head = self.normalize_match_expr_changed(head);
+        let mut normalized_args: Option<Vec<Expr>> = None;
+        for (index, arg) in args.iter().enumerate() {
+            if let Some(normalized_arg) = self.normalize_match_expr_changed(arg) {
+                normalized_args
+                    .get_or_insert_with(|| args[..index].to_vec())
+                    .push(normalized_arg);
+            } else if let Some(normalized_args) = &mut normalized_args {
+                normalized_args.push(arg.clone());
+            }
+        }
+
+        match (normalized_head, normalized_args) {
+            (None, None) => expr.clone(),
+            (Some(head), None) => Expr::call_with_shared_args(head, args.clone()),
+            (None, Some(args)) => Expr::call_shared(head.clone(), SharedArgs::new(args)),
+            (Some(head), Some(args)) => Expr::call(head, args),
+        }
+    }
+
     fn normalize_match_expr_changed(&self, expr: &Expr) -> Option<Expr> {
         match expr {
             Expr::Atom(_) => None,

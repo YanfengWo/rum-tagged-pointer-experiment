@@ -123,6 +123,7 @@ mod association_write_recovery;
 mod comparison_lowering;
 mod context_and_loader;
 mod debug_tools;
+mod definition_lhs_preparation;
 mod definitions_and_rules;
 mod definitions_and_rules_cases;
 mod definitions_and_rules_part2;

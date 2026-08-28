@@ -2,6 +2,10 @@ mod resume_frames;
 use resume_frames::*;
 
 use super::super::*;
+use super::definition_lhs_preparation::{
+    DefinitionLhsPreparationContinuation, PreparedDefinitionLhs, definition_lhs_blank_head,
+    definition_lhs_contains_pattern_syntax, definition_lhs_pattern_wrapper_head,
+};
 
 impl Session {
     pub(in crate::runtime) fn eval_normalize_rules(
@@ -135,6 +139,19 @@ impl Session {
     }
 
     fn resume_set_with_rhs(&mut self, lhs: Expr, rhs: Expr) -> Result<Expr, EvalError> {
+        if matches!(&lhs, Expr::Atom(Atom::Symbol(target)) if target.context() != SYSTEM_CONTEXT || !matches!(target.name(), "$ContextPath" | "$Packages" | "$Path"))
+        {
+            let runtime_profile_symbol = runtime_path_timing_start("set.try_symbol_own_value");
+            let symbol_result = self.try_set_symbol_own_value_lvalue("Set", &lhs, &rhs);
+            record_profile_runtime_path_timing(
+                runtime_profile_symbol,
+                runtime_profile_outcome_for_bool_result(&symbol_result),
+            );
+            debug_assert!(matches!(&symbol_result, Ok(true)));
+            symbol_result?;
+            return Ok(rhs);
+        }
+
         self.finish_definition_assignment("Set", lhs, rhs, false)
     }
 
@@ -143,7 +160,7 @@ impl Session {
     }
 
     fn evaluate_rule_lhs(&mut self, lhs: Expr) -> Result<Expr, EvalError> {
-        if rule_lhs_contains_pattern_syntax(&lhs) {
+        if definition_lhs_contains_pattern_syntax(&lhs) {
             self.evaluate_pattern_rule_lhs(lhs)
         } else {
             self.evaluate(lhs)
@@ -162,7 +179,7 @@ impl Session {
                     vec![args[0].clone(), pattern],
                 ))
             }
-            Expr::Call { head, args } if is_blank_head(&head) => {
+            Expr::Call { head, args } if definition_lhs_blank_head(&head) => {
                 let evaluated_args = args
                     .iter()
                     .cloned()
@@ -192,7 +209,7 @@ impl Session {
             Expr::Call { head, args } if is_system_symbol_name(&head, "HoldPattern") => {
                 Ok(Expr::call_with_shared_args(head.as_ref().clone(), args))
             }
-            Expr::Call { head, args } if pattern_wrapper_head(&head) => {
+            Expr::Call { head, args } if definition_lhs_pattern_wrapper_head(&head) => {
                 let evaluated_args = args
                     .iter()
                     .cloned()
@@ -205,7 +222,7 @@ impl Session {
                 let mut evaluated_args = Vec::with_capacity(args.len());
 
                 for arg in args.iter() {
-                    evaluated_args.push(if rule_lhs_contains_pattern_syntax(arg) {
+                    evaluated_args.push(if definition_lhs_contains_pattern_syntax(arg) {
                         self.evaluate_pattern_rule_lhs(arg.clone())?
                     } else {
                         self.evaluate(arg.clone())?
@@ -364,15 +381,27 @@ impl Session {
             }
         }
 
-        let runtime_profile_normalize_lhs = runtime_path_timing_start("set.normalize_lhs_heads");
-        let lhs = self.normalize_definition_lhs_call_heads(&lhs);
-        record_profile_runtime_path_timing(
-            runtime_profile_normalize_lhs,
-            RuntimeProfileOutcome::Ok,
+        let runtime_profile_prepare_lhs = runtime_path_timing_start("set.prepare_lhs");
+        let result = self.prepare_definition_lhs(
+            lhs,
+            DefinitionLhsPreparationContinuation::Set { rhs, delayed },
         );
+        record_profile_runtime_path_timing(
+            runtime_profile_prepare_lhs,
+            runtime_profile_outcome_for_expr_result(&result),
+        );
+        result
+    }
 
+    pub(super) fn finish_prepared_definition_assignment(
+        &mut self,
+        prepared: PreparedDefinitionLhs,
+        rhs: Expr,
+        delayed: bool,
+    ) -> Result<Expr, EvalError> {
+        let symbol = if delayed { "SetDelayed" } else { "Set" };
+        let (lhs, target) = prepared.into_parts();
         let runtime_profile_normalize_target = runtime_path_timing_start("set.normalize_target");
-        let target = self.normalize_definition_assignment_target(&lhs);
         record_profile_runtime_path_timing(
             runtime_profile_normalize_target,
             if target.is_some() {
@@ -494,139 +523,6 @@ impl Session {
         self.finish_definition_assignment(symbol, lhs.clone(), rhs.clone(), false)?;
         Ok(())
     }
-
-    fn normalize_definition_lhs_call_heads(&self, expr: &Expr) -> Expr {
-        match expr {
-            Expr::Atom(atom) => Expr::Atom(atom.clone()),
-            Expr::Call { .. } => self.normalize_definition_lhs_expr(expr, &mut BTreeSet::new()),
-        }
-    }
-
-    fn normalize_definition_lhs_expr(&self, expr: &Expr, visited: &mut BTreeSet<Symbol>) -> Expr {
-        match expr {
-            Expr::Atom(Atom::Symbol(symbol)) => self.resolve_definition_lhs_head_value(
-                Expr::Atom(Atom::Symbol(symbol.clone())),
-                visited,
-            ),
-            Expr::Atom(atom) => Expr::Atom(atom.clone()),
-            Expr::Call { head, args }
-                if is_system_symbol_name(head, heads::patterns::PATTERN) && args.len() == 2 =>
-            {
-                let mut pattern_visited = visited.clone();
-                Expr::call(
-                    head.as_ref().clone(),
-                    vec![
-                        args[0].clone(),
-                        self.normalize_definition_lhs_expr(&args[1], &mut pattern_visited),
-                    ],
-                )
-            }
-            Expr::Call { head, args } if is_blank_head(head) => {
-                let normalized_args = args
-                    .iter()
-                    .map(|arg| {
-                        let mut arg_visited = visited.clone();
-                        self.normalize_definition_lhs_expr(arg, &mut arg_visited)
-                    })
-                    .collect();
-                Expr::call(head.as_ref().clone(), normalized_args)
-            }
-            Expr::Call { head, args }
-                if is_system_symbol_name(head, heads::patterns::PATTERN_TEST)
-                    && args.len() == 2 =>
-            {
-                let mut pattern_visited = visited.clone();
-                Expr::call(
-                    head.as_ref().clone(),
-                    vec![
-                        self.normalize_definition_lhs_expr(&args[0], &mut pattern_visited),
-                        args[1].clone(),
-                    ],
-                )
-            }
-            Expr::Call { head, args }
-                if is_system_symbol_name(head, heads::patterns::CONDITION) && args.len() == 2 =>
-            {
-                let mut pattern_visited = visited.clone();
-                Expr::call(
-                    head.as_ref().clone(),
-                    vec![
-                        self.normalize_definition_lhs_expr(&args[0], &mut pattern_visited),
-                        args[1].clone(),
-                    ],
-                )
-            }
-            Expr::Call { head, args } if is_system_symbol_name(head, "HoldPattern") => {
-                Expr::call_with_shared_args(head.as_ref().clone(), args.clone())
-            }
-            Expr::Call { head, args } if is_system_symbol_name(head, "MessageName") => {
-                Expr::call_with_shared_args(head.as_ref().clone(), args.clone())
-            }
-            Expr::Call { head, args } if is_system_symbol_name(head, heads::patterns::DEFAULT) => {
-                Expr::call_with_shared_args(head.as_ref().clone(), args.clone())
-            }
-            Expr::Call { head, args } if pattern_wrapper_head(head) => {
-                let normalized_args = args
-                    .iter()
-                    .map(|arg| {
-                        let mut arg_visited = visited.clone();
-                        self.normalize_definition_lhs_expr(arg, &mut arg_visited)
-                    })
-                    .collect();
-                Expr::call(head.as_ref().clone(), normalized_args)
-            }
-            Expr::Call { head, args } => {
-                let mut head_visited = visited.clone();
-                let normalized_head =
-                    self.normalize_definition_lhs_head_expr(head, &mut head_visited);
-                let normalized_args = args
-                    .iter()
-                    .map(|arg| {
-                        let mut arg_visited = visited.clone();
-                        self.normalize_definition_lhs_expr(arg, &mut arg_visited)
-                    })
-                    .collect();
-                Expr::call(normalized_head, normalized_args)
-            }
-        }
-    }
-
-    fn normalize_definition_lhs_head_expr(
-        &self,
-        head: &Expr,
-        visited: &mut BTreeSet<Symbol>,
-    ) -> Expr {
-        self.normalize_definition_lhs_expr(head, visited)
-    }
-
-    fn resolve_definition_lhs_head_value(
-        &self,
-        expr: Expr,
-        visited: &mut BTreeSet<Symbol>,
-    ) -> Expr {
-        let Expr::Atom(Atom::Symbol(symbol)) = expr else {
-            return expr;
-        };
-
-        if !visited.insert(symbol.clone()) {
-            return Expr::Atom(Atom::Symbol(symbol));
-        }
-
-        let definition_value = self.definitions.get(&symbol).and_then(|definition| {
-            definition
-                .own_value
-                .clone()
-                .or_else(|| definition.delayed_own_value.clone())
-        });
-        let Some(value) =
-            definition_value.or_else(|| self.dynamic_own_value_binding(&symbol).flatten())
-        else {
-            return Expr::Atom(Atom::Symbol(symbol));
-        };
-
-        let normalized_value = self.normalize_definition_lhs_expr(&value, visited);
-        self.resolve_definition_lhs_head_value(normalized_value, visited)
-    }
 }
 
 fn is_context_path_symbol_expr(expr: &Expr) -> bool {
@@ -650,40 +546,6 @@ fn normalize_context_list(contexts: Vec<String>) -> Vec<String> {
         }
     }
     normalized
-}
-
-fn rule_lhs_contains_pattern_syntax(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atom(_) => false,
-        Expr::Call { head, args } => {
-            is_rule_lhs_pattern_syntax_head(head)
-                || rule_lhs_contains_pattern_syntax(head)
-                || args.iter().any(rule_lhs_contains_pattern_syntax)
-        }
-    }
-}
-
-fn is_rule_lhs_pattern_syntax_head(head: &Expr) -> bool {
-    is_blank_head(head)
-        || pattern_wrapper_head(head)
-        || is_system_symbol_name(head, heads::patterns::PATTERN)
-        || is_system_symbol_name(head, heads::patterns::PATTERN_TEST)
-        || is_system_symbol_name(head, heads::patterns::CONDITION)
-        || is_system_symbol_name(head, "HoldPattern")
-}
-
-fn is_blank_head(head: &Expr) -> bool {
-    is_system_symbol_name(head, heads::patterns::BLANK)
-        || is_system_symbol_name(head, heads::patterns::BLANK_SEQUENCE)
-        || is_system_symbol_name(head, heads::patterns::BLANK_NULL_SEQUENCE)
-}
-
-fn pattern_wrapper_head(head: &Expr) -> bool {
-    is_system_symbol_name(head, heads::patterns::ALTERNATIVES)
-        || is_system_symbol_name(head, heads::patterns::OPTIONAL)
-        || is_system_symbol_name(head, heads::patterns::EXCEPT)
-        || is_system_symbol_name(head, heads::patterns::REPEATED)
-        || is_system_symbol_name(head, heads::patterns::REPEATED_NULL)
 }
 
 fn list_expr_args(expr: &Expr) -> Option<&[Expr]> {

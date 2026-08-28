@@ -214,6 +214,97 @@ fn resumed_set_rhs_normalizes_iterator_lhs_once_and_restores_clean_scope() {
 }
 
 #[test]
+fn definition_lhs_preparation_resumes_a_callable_head_exactly_once() {
+    let mut session = core_session();
+    session
+        .eval_text(
+            "ClearAll[lhsHeadFactory, lhsHeadTarget, lhsHeadCalls, lhsHeadArg]; \
+             lhsHeadCalls = 0; \
+             lhsHeadFactory[] := (lhsHeadCalls = lhsHeadCalls + 1; Input[\"lhs head: \"])",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request("lhsHeadFactory[][lhsHeadArg] = headValue")
+        .expect_err("definition-lhs head evaluation should request input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lhs head: ");
+        }
+        other => panic!("expected input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("lhsHeadTarget")
+        .expect("the prepared callable head should resume into Set storage");
+    assert_eq!(response.value.to_string(), "headValue");
+    assert!(response.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text("{lhsHeadCalls, lhsHeadTarget[lhsHeadArg], DownValues[lhsHeadTarget]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, headValue, List[RuleDelayed[HoldPattern[lhsHeadTarget[lhsHeadArg]], headValue]]]"
+    );
+}
+
+#[test]
+fn definition_lhs_preparation_resumes_multiple_arguments_left_to_right_without_replay() {
+    let mut session = core_session();
+    session
+        .eval_text(
+            "ClearAll[lhsFirstArg, lhsSecondArg, lhsArgumentHead, lhsFirstCalls, \
+                      lhsSecondCalls, lhsArgumentOrder]; \
+             lhsFirstCalls = 0; lhsSecondCalls = 0; lhsArgumentOrder = 0; \
+             lhsFirstArg[] := (lhsFirstCalls = lhsFirstCalls + 1; \
+                               lhsArgumentOrder = lhsArgumentOrder * 10 + 1; \
+                               InputString[\"lhs first: \"]); \
+             lhsSecondArg[] := (lhsSecondCalls = lhsSecondCalls + 1; \
+                                lhsArgumentOrder = lhsArgumentOrder * 10 + 2; \
+                                InputString[\"lhs second: \"])",
+        )
+        .unwrap();
+
+    let first = session
+        .eval_request("lhsArgumentHead[lhsFirstArg[], lhsSecondArg[]] := delayedBody")
+        .expect_err("the first active lhs argument should request input first");
+    match &first.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lhs first: ");
+        }
+        other => panic!("expected first input-required failure, got {other:?}"),
+    }
+
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("resuming the first argument should advance to the second");
+    match &second.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "lhs second: ");
+        }
+        other => panic!("expected second input-required failure, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("the second response should finish SetDelayed without replay");
+    assert_eq!(response.value.to_string(), "Null");
+    assert!(response.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{lhsFirstCalls, lhsSecondCalls, lhsArgumentOrder, \
+                  lhsArgumentHead[\"one\", \"two\"], DownValues[lhsArgumentHead]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 1, 12, delayedBody, List[RuleDelayed[HoldPattern[lhsArgumentHead[\"one\", \"two\"]], delayedBody]]]"
+    );
+}
+
+#[test]
 fn resume_eval_request_with_input_preserves_prepared_lookup_across_default_and_wrapper() {
     let mut session = core_session();
 

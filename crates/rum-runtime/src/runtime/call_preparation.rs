@@ -87,6 +87,29 @@ impl PreparedArgumentAccumulator {
         values.extend(suffix);
         values
     }
+
+    pub(super) fn into_vec_allow_shared(self) -> Vec<Expr> {
+        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
+        let mut node = self.tail;
+        while let Some(current) = node {
+            match Arc::try_unwrap(current) {
+                Ok(current) => {
+                    suffix.push(current.value);
+                    node = current.previous;
+                }
+                Err(current) => {
+                    suffix.push(current.value.clone());
+                    node = current.previous.clone();
+                }
+            }
+        }
+        suffix.reverse();
+
+        let mut values = self.prefix.into_vec();
+        values.reserve(suffix.len());
+        values.extend(suffix);
+        values
+    }
 }
 
 pub(super) fn plan_call_argument_preparation(

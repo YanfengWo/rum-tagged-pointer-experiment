@@ -113,6 +113,22 @@ Upvalues run before ordinary downvalues for ordinary calls unless
 
 Subvalues run after downvalues once the nested head is stable.
 
+Definition assignment prepares the identity it stores without applying the
+outer call. `Set` evaluates its right-hand side first; `SetDelayed` keeps its
+right-hand side raw. Both then evaluate a callable left-hand-side head, take
+one snapshot of that head's attributes, and prepare arguments from left to
+right under the same hold, `Evaluate`, `Unevaluated`, `Sequence`, `Flat`, and
+`Orderless` rules used for ordinary call lookup. Active positions complete
+evaluation, including delayed own-values and nested definitions. Held
+positions retain their raw subtree. Pattern binder names and deferred
+`PatternTest`/`Condition` predicates remain raw, while typed blank constraints
+are prepared; opaque assignment forms such as `HoldPattern`, `MessageName`,
+and `Default` are not user-evaluated.
+
+The resulting definition identity is a snapshot. Later own-value or attribute
+changes affect identities prepared by later assignments and lookups, but do
+not rewrite definitions that are already stored.
+
 Assignment-style `Part` mutations have a stricter callback order. For the
 binary heads `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`, `ApplyTo`,
 `AppendTo`, and `PrependTo`, ordinary `HoldFirst` preparation evaluates the

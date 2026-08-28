@@ -1,7 +1,8 @@
 use super::super::*;
 use super::unique_symbols::UniqueSymbolCollector;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, rum_derive::FrameRootTrace)]
 pub(in crate::runtime) enum TaggedDefinitionTarget {
     OwnValue(Symbol),
     DownValue(Symbol),
@@ -26,7 +27,7 @@ pub(in crate::runtime) enum UnsetDefinitionTarget {
     TaggedDefinition { tag: Symbol, lhs: Expr },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, rum_derive::FrameRootTrace)]
 pub(in crate::runtime) enum DefinitionAssignmentTarget {
     Message(MessageNameKey),
     SyntaxInformation(Symbol),

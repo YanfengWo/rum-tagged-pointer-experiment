@@ -1,0 +1,560 @@
+mod resume_frames;
+use resume_frames::*;
+
+use super::super::*;
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+
+#[derive(Clone, FrameRootTrace)]
+pub(super) struct PreparedDefinitionLhs {
+    lhs: Expr,
+    target: Option<DefinitionAssignmentTarget>,
+}
+
+impl PreparedDefinitionLhs {
+    fn new(session: &Session, lhs: Expr) -> Self {
+        let target = session.normalize_definition_assignment_target(&lhs);
+        Self { lhs, target }
+    }
+
+    pub(super) fn into_parts(self) -> (Expr, Option<DefinitionAssignmentTarget>) {
+        (self.lhs, self.target)
+    }
+}
+
+#[derive(Clone, FrameRootTrace)]
+pub(super) enum DefinitionLhsPreparationContinuation {
+    Set {
+        rhs: Expr,
+        delayed: bool,
+    },
+    #[cfg(test)]
+    ReturnPrepared,
+}
+
+impl DefinitionLhsPreparationContinuation {
+    fn resume(
+        self,
+        session: &mut Session,
+        prepared: PreparedDefinitionLhs,
+    ) -> Result<Expr, EvalError> {
+        match self {
+            Self::Set { rhs, delayed } => {
+                session.finish_prepared_definition_assignment(prepared, rhs, delayed)
+            }
+            #[cfg(test)]
+            Self::ReturnPrepared => Ok(prepared.into_parts().0),
+        }
+    }
+}
+
+enum DefinitionLhsSyntaxCallPlan {
+    Opaque,
+    Structural(DefinitionLhsStructuralSelection),
+    Ordinary,
+}
+
+impl Session {
+    #[cold]
+    #[inline(never)]
+    pub(super) fn prepare_definition_lhs(
+        &mut self,
+        lhs: Expr,
+        continuation: DefinitionLhsPreparationContinuation,
+    ) -> Result<Expr, EvalError> {
+        self.drive_definition_lhs_preparation(DefinitionLhsPreparationState {
+            work: DefinitionLhsPreparationWork::PrepareNode {
+                expr: lhs,
+                region: DefinitionLhsRegion::Root,
+            },
+            parents: DefinitionLhsParentStack::default(),
+            continuation,
+        })
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn drive_definition_lhs_preparation(
+        &mut self,
+        mut state: DefinitionLhsPreparationState,
+    ) -> Result<Expr, EvalError> {
+        loop {
+            let work = std::mem::replace(&mut state.work, DefinitionLhsPreparationWork::Vacant);
+            match work {
+                DefinitionLhsPreparationWork::Vacant => {
+                    unreachable!("definition-lhs work is replaced only while it is being driven")
+                }
+                DefinitionLhsPreparationWork::PrepareNode { expr, region } => match expr {
+                    Expr::Atom(_) if matches!(region, DefinitionLhsRegion::Root) => {
+                        state.work = DefinitionLhsPreparationWork::CompleteNode(expr);
+                    }
+                    Expr::Atom(_) => {
+                        let source = expr;
+                        match self.evaluate_definition_lhs_active_expr(&source) {
+                            Ok(value) => {
+                                state.work = DefinitionLhsPreparationWork::CompleteNode(value);
+                            }
+                            Err(EvalError::InputRequired { request }) => {
+                                state.work =
+                                    DefinitionLhsPreparationWork::AwaitPatternAtom { source };
+                                crate::resume_or_suspend!(insert self, DefinitionLhsPreparationSuspensionFrame { state });
+                                return Err(EvalError::InputRequired { request });
+                            }
+                            Err(error) => return Err(error),
+                        }
+                    }
+                    Expr::Call { head, args } => {
+                        match definition_lhs_syntax_call_plan(&head, args.len()) {
+                            DefinitionLhsSyntaxCallPlan::Opaque => {
+                                state.work = DefinitionLhsPreparationWork::CompleteNode(
+                                    Expr::call_shared(head, args),
+                                );
+                            }
+                            DefinitionLhsSyntaxCallPlan::Structural(selection) => {
+                                self.start_definition_lhs_structural_call(
+                                    &mut state, head, args, selection,
+                                );
+                            }
+                            DefinitionLhsSyntaxCallPlan::Ordinary => {
+                                let source_head = head.clone();
+                                match self.evaluate_definition_lhs_call_head(head) {
+                                    Ok(evaluated_head) => {
+                                        state.work =
+                                            DefinitionLhsPreparationWork::PrepareCallArguments(
+                                                self.definition_lhs_call_state(
+                                                    evaluated_head,
+                                                    args,
+                                                ),
+                                            );
+                                    }
+                                    Err(EvalError::InputRequired { request }) => {
+                                        state.work = DefinitionLhsPreparationWork::AwaitCallHead {
+                                            source_head,
+                                            args,
+                                        };
+                                        crate::resume_or_suspend!(insert self, DefinitionLhsPreparationSuspensionFrame { state });
+                                        return Err(EvalError::InputRequired { request });
+                                    }
+                                    Err(error) => return Err(error),
+                                }
+                            }
+                        }
+                    }
+                },
+                DefinitionLhsPreparationWork::PrepareCallArguments(mut call) => {
+                    let Some(raw_arg) = call.args.get(call.cursor).cloned() else {
+                        state.work = DefinitionLhsPreparationWork::CompleteNode(
+                            self.finish_definition_lhs_call(call),
+                        );
+                        continue;
+                    };
+
+                    let source_index = call.cursor;
+                    let plan = plan_call_argument_preparation(
+                        call.metadata.attributes(),
+                        source_index,
+                        raw_arg,
+                    );
+                    call.cursor += 1;
+                    let argument = DefinitionLhsCallArgumentContinuation {
+                        source_index,
+                        allow_sequence_splice: plan.allow_sequence_splice,
+                    };
+
+                    match plan.mode {
+                        CallArgumentMode::Evaluate
+                            if definition_lhs_contains_pattern_syntax(&plan.expr) =>
+                        {
+                            state
+                                .parents
+                                .push(DefinitionLhsParentContext::CallArgument { call, argument });
+                            state.work = DefinitionLhsPreparationWork::PrepareNode {
+                                expr: plan.expr,
+                                region: DefinitionLhsRegion::Pattern,
+                            };
+                        }
+                        CallArgumentMode::Evaluate => {
+                            let source = plan.expr;
+                            match self.evaluate_definition_lhs_active_expr(&source) {
+                                Ok(value) => {
+                                    self.merge_definition_lhs_call_argument(
+                                        &mut call, argument, value,
+                                    );
+                                    state.work =
+                                        DefinitionLhsPreparationWork::PrepareCallArguments(call);
+                                }
+                                Err(EvalError::InputRequired { request }) => {
+                                    state.work = DefinitionLhsPreparationWork::AwaitCallArgument {
+                                        call,
+                                        argument,
+                                        source,
+                                    };
+                                    crate::resume_or_suspend!(insert self, DefinitionLhsPreparationSuspensionFrame { state });
+                                    return Err(EvalError::InputRequired { request });
+                                }
+                                Err(error) => return Err(error),
+                            }
+                        }
+                        CallArgumentMode::Hold | CallArgumentMode::StrippedUnevaluated => {
+                            self.merge_definition_lhs_call_argument(&mut call, argument, plan.expr);
+                            state.work = DefinitionLhsPreparationWork::PrepareCallArguments(call);
+                        }
+                    }
+                }
+                DefinitionLhsPreparationWork::CompleteNode(value) => {
+                    let Some(parent) = state.parents.pop() else {
+                        let prepared = PreparedDefinitionLhs::new(self, value);
+                        return state.continuation.resume(self, prepared);
+                    };
+
+                    match parent {
+                        DefinitionLhsParentContext::CallArgument { mut call, argument } => {
+                            self.merge_definition_lhs_call_argument(&mut call, argument, value);
+                            state.work = DefinitionLhsPreparationWork::PrepareCallArguments(call);
+                        }
+                        DefinitionLhsParentContext::StructuralArgument {
+                            mut call,
+                            source_index,
+                        } => {
+                            merge_definition_lhs_structural_argument(
+                                &mut call,
+                                source_index,
+                                value,
+                            );
+                            self.continue_definition_lhs_structural_call(&mut state, call);
+                        }
+                    }
+                }
+                DefinitionLhsPreparationWork::AwaitPatternAtom { .. }
+                | DefinitionLhsPreparationWork::AwaitCallHead { .. }
+                | DefinitionLhsPreparationWork::AwaitCallArgument { .. } => {
+                    unreachable!("only a suspension frame resumes awaited lhs preparation work")
+                }
+            }
+        }
+    }
+
+    fn resume_definition_lhs_preparation(
+        &mut self,
+        mut state: DefinitionLhsPreparationState,
+        outcome: Result<Expr, EvalError>,
+    ) -> Result<Expr, EvalError> {
+        let value = outcome?;
+        state.work = match state.work {
+            DefinitionLhsPreparationWork::AwaitPatternAtom { .. } => {
+                DefinitionLhsPreparationWork::CompleteNode(value)
+            }
+            DefinitionLhsPreparationWork::AwaitCallHead { source_head, args } => {
+                let evaluated_head = reuse_definition_lhs_call_head(source_head, value);
+                DefinitionLhsPreparationWork::PrepareCallArguments(
+                    self.definition_lhs_call_state(evaluated_head, args),
+                )
+            }
+            DefinitionLhsPreparationWork::AwaitCallArgument {
+                mut call, argument, ..
+            } => {
+                self.merge_definition_lhs_call_argument(&mut call, argument, value);
+                DefinitionLhsPreparationWork::PrepareCallArguments(call)
+            }
+            _ => unreachable!("a definition-lhs frame stores awaited work"),
+        };
+        self.drive_definition_lhs_preparation(state)
+    }
+
+    fn evaluate_definition_lhs_call_head(
+        &mut self,
+        source_head: SharedExpr,
+    ) -> Result<SharedExpr, EvalError> {
+        let evaluated = self.evaluate_definition_lhs_active_expr(&source_head)?;
+        Ok(reuse_definition_lhs_call_head(source_head, evaluated))
+    }
+
+    fn evaluate_definition_lhs_active_expr(&mut self, source: &Expr) -> Result<Expr, EvalError> {
+        match self.evaluate_atom_fast_path(source.clone()) {
+            Err(EvalError::EvaluationCycleDetected { expr })
+                if matches!(source, Expr::Atom(Atom::Symbol(_))) && expr == source.to_string() =>
+            {
+                Ok(source.clone())
+            }
+            result => result,
+        }
+    }
+
+    fn definition_lhs_call_state(
+        &mut self,
+        head: SharedExpr,
+        args: SharedArgs,
+    ) -> DefinitionLhsCallState {
+        let metadata = self.call_preparation_metadata(&head);
+        DefinitionLhsCallState {
+            head,
+            metadata,
+            args,
+            cursor: 0,
+            prepared: None,
+        }
+    }
+
+    fn merge_definition_lhs_call_argument(
+        &self,
+        call: &mut DefinitionLhsCallState,
+        argument: DefinitionLhsCallArgumentContinuation,
+        value: Expr,
+    ) {
+        let attributes = call.metadata.attributes();
+        let sequence_hold = attributes.sequence_hold();
+        let list_drops_nothing = is_system_symbol_name(&call.head, heads::structure::LIST);
+        let splices =
+            prepared_argument_splices(&value, argument.allow_sequence_splice, sequence_hold);
+        let drops_nothing = list_drops_nothing
+            && prepared_list_argument_drops_nothing(
+                &value,
+                argument.allow_sequence_splice,
+                sequence_hold,
+            );
+        let changed = splices || drops_nothing || value != call.args[argument.source_index];
+
+        if call.prepared.is_none() && changed {
+            call.prepared = Some(PreparedArgumentAccumulator::freeze(
+                call.args[..argument.source_index].to_vec(),
+            ));
+        }
+
+        if let Some(prepared) = call.prepared.take() {
+            call.prepared = Some(append_suspended_prepared_argument(
+                prepared,
+                value,
+                argument.allow_sequence_splice,
+                sequence_hold,
+                list_drops_nothing,
+            ));
+        }
+    }
+
+    fn finish_definition_lhs_call(&self, call: DefinitionLhsCallState) -> Expr {
+        let attributes = call.metadata.attributes();
+        let args = match call.prepared {
+            Some(prepared) => SharedArgs::new(prepared.into_vec_allow_shared()),
+            None => call.args,
+        };
+        let normalized_args = self.normalize_call_args_shared(&call.head, args, attributes);
+        let identity = Expr::call_shared(call.head, normalized_args);
+        self.normalize_definition_identity_for_matching(&identity, attributes)
+    }
+
+    fn start_definition_lhs_structural_call(
+        &self,
+        state: &mut DefinitionLhsPreparationState,
+        head: SharedExpr,
+        args: SharedArgs,
+        selection: DefinitionLhsStructuralSelection,
+    ) {
+        self.continue_definition_lhs_structural_call(
+            state,
+            DefinitionLhsStructuralCallState {
+                head,
+                args,
+                selection,
+                prepared: None,
+            },
+        );
+    }
+
+    fn continue_definition_lhs_structural_call(
+        &self,
+        state: &mut DefinitionLhsPreparationState,
+        mut call: DefinitionLhsStructuralCallState,
+    ) {
+        if let Some(source_index) = call.selection.next(call.args.len()) {
+            let expr = call.args[source_index].clone();
+            state
+                .parents
+                .push(DefinitionLhsParentContext::StructuralArgument { call, source_index });
+            state.work = DefinitionLhsPreparationWork::PrepareNode {
+                expr,
+                region: DefinitionLhsRegion::Pattern,
+            };
+            return;
+        }
+
+        let args = match call.prepared {
+            Some(mut prepared) => {
+                for value in &call.args[prepared.len..] {
+                    prepared = append_suspended_prepared_argument(
+                        prepared,
+                        value.clone(),
+                        false,
+                        true,
+                        false,
+                    );
+                }
+                SharedArgs::new(prepared.into_vec_allow_shared())
+            }
+            None => call.args,
+        };
+        state.work = DefinitionLhsPreparationWork::CompleteNode(Expr::call_shared(call.head, args));
+    }
+}
+
+fn reuse_definition_lhs_call_head(source_head: SharedExpr, evaluated: Expr) -> SharedExpr {
+    if source_head.as_ref() == &evaluated {
+        source_head
+    } else {
+        SharedExpr::new(evaluated)
+    }
+}
+
+fn merge_definition_lhs_structural_argument(
+    call: &mut DefinitionLhsStructuralCallState,
+    source_index: usize,
+    value: Expr,
+) {
+    let changed = value != call.args[source_index];
+    if call.prepared.is_none() && changed {
+        call.prepared = Some(PreparedArgumentAccumulator::freeze(
+            call.args[..source_index].to_vec(),
+        ));
+    }
+
+    if let Some(prepared) = call.prepared.take() {
+        call.prepared = Some(append_suspended_prepared_argument(
+            prepared, value, false, true, false,
+        ));
+    }
+}
+
+fn definition_lhs_syntax_call_plan(head: &Expr, arg_count: usize) -> DefinitionLhsSyntaxCallPlan {
+    let Some(symbol) = expr_as_symbol(head).filter(|symbol| symbol.context() == SYSTEM_CONTEXT)
+    else {
+        return DefinitionLhsSyntaxCallPlan::Ordinary;
+    };
+
+    match symbol.name() {
+        "HoldPattern"
+        | "MessageName"
+        | heads::patterns::DEFAULT
+        | "Attributes"
+        | "Options"
+        | "DefaultValues"
+        | "OwnValues"
+        | "DownValues"
+        | "UpValues"
+        | "SubValues"
+        | "SyntaxInformation" => DefinitionLhsSyntaxCallPlan::Opaque,
+        heads::patterns::PATTERN if arg_count == 2 => {
+            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::One {
+                index: Some(1),
+            })
+        }
+        heads::patterns::BLANK
+        | heads::patterns::BLANK_SEQUENCE
+        | heads::patterns::BLANK_NULL_SEQUENCE
+        | heads::patterns::ALTERNATIVES
+        | heads::patterns::OPTIONAL
+        | heads::patterns::EXCEPT
+        | heads::patterns::REPEATED
+        | heads::patterns::REPEATED_NULL => {
+            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::All {
+                cursor: 0,
+            })
+        }
+        heads::patterns::PATTERN_TEST | heads::patterns::CONDITION if arg_count == 2 => {
+            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::One {
+                index: Some(0),
+            })
+        }
+        _ => DefinitionLhsSyntaxCallPlan::Ordinary,
+    }
+}
+
+pub(super) fn definition_lhs_contains_pattern_syntax(expr: &Expr) -> bool {
+    match expr {
+        Expr::Atom(_) => false,
+        Expr::Call { head, args } => {
+            definition_lhs_pattern_syntax_head(head)
+                || definition_lhs_contains_pattern_syntax(head)
+                || args.iter().any(definition_lhs_contains_pattern_syntax)
+        }
+    }
+}
+
+fn definition_lhs_pattern_syntax_head(head: &Expr) -> bool {
+    matches!(
+        definition_lhs_system_head_name(head),
+        Some(
+            heads::patterns::BLANK
+                | heads::patterns::BLANK_SEQUENCE
+                | heads::patterns::BLANK_NULL_SEQUENCE
+                | heads::patterns::ALTERNATIVES
+                | heads::patterns::OPTIONAL
+                | heads::patterns::EXCEPT
+                | heads::patterns::REPEATED
+                | heads::patterns::REPEATED_NULL
+                | heads::patterns::PATTERN
+                | heads::patterns::PATTERN_TEST
+                | heads::patterns::CONDITION
+                | "HoldPattern"
+        )
+    )
+}
+
+pub(super) fn definition_lhs_blank_head(head: &Expr) -> bool {
+    matches!(
+        definition_lhs_system_head_name(head),
+        Some(
+            heads::patterns::BLANK
+                | heads::patterns::BLANK_SEQUENCE
+                | heads::patterns::BLANK_NULL_SEQUENCE
+        )
+    )
+}
+
+pub(super) fn definition_lhs_pattern_wrapper_head(head: &Expr) -> bool {
+    matches!(
+        definition_lhs_system_head_name(head),
+        Some(
+            heads::patterns::ALTERNATIVES
+                | heads::patterns::OPTIONAL
+                | heads::patterns::EXCEPT
+                | heads::patterns::REPEATED
+                | heads::patterns::REPEATED_NULL
+        )
+    )
+}
+
+fn definition_lhs_system_head_name(head: &Expr) -> Option<&str> {
+    expr_as_symbol(head)
+        .filter(|symbol| symbol.context() == SYSTEM_CONTEXT)
+        .map(Symbol::name)
+}
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<DefinitionLhsPreparationContinuation>();
+    assert_traces::<PreparedDefinitionLhs>();
+};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn already_canonical_lhs_reuses_its_shared_arguments() {
+        let mut session = Session::new();
+        let args = SharedArgs::new(vec![Expr::symbol("a"), Expr::symbol("b")]);
+        let lhs = Expr::call_shared(SharedExpr::new(Expr::symbol("f")), args.clone());
+
+        let prepared = session
+            .prepare_definition_lhs(lhs, DefinitionLhsPreparationContinuation::ReturnPrepared)
+            .unwrap();
+        let Expr::Call {
+            args: prepared_args,
+            ..
+        } = prepared
+        else {
+            panic!("prepared definition lhs should remain a call")
+        };
+
+        assert!(SharedArgs::ptr_eq(&args, &prepared_args));
+    }
+}
