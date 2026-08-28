@@ -122,10 +122,39 @@ be fixed already.
      `definition_updates.rs` 26.3k, both under the 35k architecture-debt line
      but rising, and family B touches both. Evaluate a split when family B
      closes — not mid-repair, where it would contaminate a semantic change.
-   - **Family B — definition-lhs lookup identity.** D1's fallback store, D3's
-     tagged installs, and the two ordinary-`Set` defects found while probing
-     (below). One attribute-aware, resumable preparation, shared by the store
-     side and the lookup side.
+   - **Family B — definition-lhs lookup identity.** Planned by brief-378,
+     which re-probed all four recorded defects and **found three more of the
+     same family**, all reproduced by the director at `dfedb317`:
+
+     - `Unset[f[i]]` with `i = 2` does not remove the definition `Set` just
+       stored under `f[2]` — removal compares the raw lhs. The mirror image of
+       B3/B4, and proof the invariant has to be enforced on the removal side
+       too.
+     - Value-table assignment (`DownValues[f] = {…}`) stores raw rule
+       left-hand sides, so active positions become unreachable.
+     - A held ground nested `Flat` call stores `fHF[hFlat[1, hFlat[2, 3]]]`,
+       which **neither** `fHF[hFlat[1, 2, 3]]` nor the source form reaches.
+       Candidate matching normalizes `Flat`/`Orderless` structurally while the
+       ground index does not, so store identity needs match normalization on
+       top of hold-aware evaluation.
+
+     Seven defects, one preparation. Brief-378 also settled, with evidence:
+     `SequenceHold` is not a hold attribute (it only prevents splicing);
+     `HoldAllComplete` additionally blocks `Evaluate` and splicing;
+     `Unevaluated` contributes its stripped inner expression to identity; and
+     `HoldAllComplete`'s upvalue suppression is documented behavior, not a
+     defect. **No existing test encodes any of the wrong outcomes**, so nothing
+     has to be deleted or weakened.
+
+     **Dispatch order (director, splitting plan-378's oversized step 1):**
+     1a foundation — extract the call-preparation primitives and give lookup a
+     prepared-identity view, with **no behavior change** (brief-379);
+     1b the preparation module plus `Set`/`SetDelayed`; 1c store-identity match
+     normalization; 1d `Unset` and value tables; 2 the association fallback;
+     3 tagged definitions, `TagUnset`, and final sealing. The split is for
+     gateability, not size: each step has to be independently verifiable and
+     revertible, and 1a's criterion — an empty rum-vs-rum differential diff —
+     only works while no consumer has moved.
 
    **The contract, settled 2026-08-28.** A definition's lhs arguments are
    prepared according to the head's hold attributes: non-held positions are
