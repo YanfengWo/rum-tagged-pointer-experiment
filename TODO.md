@@ -148,7 +148,7 @@ be fixed already.
 
      **Dispatch order (director, splitting plan-378's oversized step 1):**
      1a foundation — **COMPLETE 2026-08-28** (brief-379, `5698e8e5`);
-     1b the preparation module plus `Set`/`SetDelayed` (brief-380); 1c `Unset`
+     1b preparation plus `Set`/`SetDelayed` — **COMPLETE 2026-08-28** (brief-380, `aa441ff0`); 1c `Unset`
      and value tables; 2 the association fallback; 3 tagged definitions,
      `TagUnset`, and final sealing. **Four steps, not the six first sketched**:
      plan-378's specification makes `Flat`/`Orderless` identity normalization
@@ -167,6 +167,15 @@ be fixed already.
        scanner that reports clean has to be shown capable of finding something
        — the frame-roots line lost a round to a regex silently truncated by a
        comma.
+     - *Whether valid controls exist depends on the change's reach — do not
+       generalize either way.* 1a sat on the common call path, where nothing
+       is untouched. 1b sat on the assignment path, where the 28
+       pure-computation labels are a genuine control group — and they decided
+       the gate: they moved +3.82% at the median against the definition
+       path's +2.10%, so the affected labels moved *less* than the controls.
+       Judging 1b by 1a's rule (each label against its own spread, no
+       controls) would have left three labels looking like regressions.
+       Decide per step which of the two applies, and say which in the brief.
      - *Named control labels stop working once the change is on the common
        call path.* 1a's four controls were all fast labels from one tier and
        moved as a group (median -7.16% against a suite median of -1.83%),
