@@ -36,6 +36,8 @@ mod debug_tools_evaluation;
 mod debug_tools_reports;
 #[path = "tests/debug_tools_resources.rs"]
 mod debug_tools_resources;
+#[path = "tests/definition_lhs_assignment_resume.rs"]
+mod definition_lhs_assignment_resume;
 #[path = "tests/exact_reduction_shapes.rs"]
 mod exact_reduction_shapes;
 #[path = "tests/functional_ops/mod.rs"]

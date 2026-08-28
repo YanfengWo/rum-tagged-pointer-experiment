@@ -139,6 +139,7 @@ mod definitions_rhs_guards_own_values;
 mod definitions_rhs_guards_rewrite_rules;
 mod definitions_rhs_guards_sub_values;
 mod definitions_rhs_guards_up_values;
+mod definitions_unset_preparation;
 mod definitions_value_table_assignment;
 mod file_names;
 mod frame_root_trace;

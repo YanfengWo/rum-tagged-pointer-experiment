@@ -328,8 +328,7 @@ impl Session {
                     return Ok(rhs);
                 }
 
-                self.replace_value_table_from_expr(kind, target, &rhs);
-                return Ok(rhs);
+                return self.replace_value_table_from_expr(kind, target, rhs);
             }
 
             if let Some(target) = self.normalize_syntax_information_target_expr(&lhs) {

@@ -129,6 +129,20 @@ The resulting definition identity is a snapshot. Later own-value or attribute
 changes affect identities prepared by later assignments and lookups, but do
 not rewrite definitions that are already stored.
 
+`Unset[lhs]` and its `lhs =.` syntax prepare an ordinary definition lhs by the
+same rules before removing it. Removal therefore addresses the identity named
+by current state: if `i = 2`, then `f[i] = 1; Unset[f[i]]` removes `f[2]`, but
+rebinding `i` to `3` before `Unset[f[i]]` addresses `f[3]` and leaves the
+stored `f[2]` definition intact. `Clear[f]` remains the owner-wide operation
+that removes every identity stored for `f`.
+
+Assignments to `OwnValues`, `DownValues`, `UpValues`, and `SubValues` are
+definition stores. Every imported rule lhs is prepared under the same identity
+rules before installation. Replacement is transactional: the runtime parses,
+prepares, and validates the entire incoming table and rechecks protection
+before clearing the old table. If any entry is invalid, or preparation
+suspends and later fails validation, the existing table is left intact.
+
 Assignment-style `Part` mutations have a stricter callback order. For the
 binary heads `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`, `ApplyTo`,
 `AppendTo`, and `PrependTo`, ordinary `HoldFirst` preparation evaluates the

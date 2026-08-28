@@ -196,3 +196,172 @@ fn value_table_assignment_accepts_immediate_delayed_and_unwrapped_rules() {
         "List[1, 2]"
     );
 }
+
+#[test]
+fn downvalue_table_assignment_prepares_active_held_and_pattern_lhs() {
+    let mut session = session_with_test_control_builtins();
+
+    let assigned = session
+        .eval_text(
+            "ClearAll[iTableDown, xTableDown, activeTableDown, heldTableDown, patternTableDown]; \
+             iTableDown = 4; xTableDown = 5; SetAttributes[heldTableDown, HoldFirst]; \
+             DownValues[activeTableDown] = {HoldPattern[activeTableDown[iTableDown]] :> active}; \
+             DownValues[heldTableDown] = {HoldPattern[heldTableDown[xTableDown]] :> held}; \
+             DownValues[patternTableDown] = {HoldPattern[patternTableDown[x_]] :> x}",
+        )
+        .unwrap();
+
+    assert!(assigned.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{activeTableDown[4], heldTableDown[xTableDown], patternTableDown[9], \
+                  DownValues[activeTableDown], DownValues[heldTableDown], \
+                  DownValues[patternTableDown]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[active, held, 9, List[RuleDelayed[HoldPattern[activeTableDown[4]], active]], List[RuleDelayed[HoldPattern[heldTableDown[xTableDown]], held]], List[RuleDelayed[HoldPattern[patternTableDown[Pattern[x, Blank[]]]], x]]]"
+    );
+}
+
+#[test]
+fn upvalue_table_assignment_prepares_active_held_and_pattern_lhs() {
+    let mut session = session_with_test_control_builtins();
+
+    let assigned = session
+        .eval_text(
+            "ClearAll[iTableUp, xTableUp, activeTableUp, heldTableUp, patternTableUp, \
+                      activeOuterUp, heldOuterUp, patternOuterUp]; \
+             iTableUp = 4; xTableUp = 5; SetAttributes[heldOuterUp, HoldAll]; \
+             UpValues[activeTableUp] = {HoldPattern[activeOuterUp[activeTableUp[iTableUp]]] :> active}; \
+             UpValues[heldTableUp] = {HoldPattern[heldOuterUp[heldTableUp[xTableUp]]] :> held}; \
+             UpValues[patternTableUp] = {HoldPattern[patternOuterUp[patternTableUp[x_]]] :> x}",
+        )
+        .unwrap();
+
+    assert!(assigned.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{activeOuterUp[activeTableUp[4]], heldOuterUp[heldTableUp[xTableUp]], \
+                  patternOuterUp[patternTableUp[9]], UpValues[activeTableUp], \
+                  UpValues[heldTableUp], UpValues[patternTableUp]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[active, held, 9, List[RuleDelayed[HoldPattern[activeOuterUp[activeTableUp[4]]], active]], List[RuleDelayed[HoldPattern[heldOuterUp[heldTableUp[xTableUp]]], held]], List[RuleDelayed[HoldPattern[patternOuterUp[patternTableUp[Pattern[x, Blank[]]]]], x]]]"
+    );
+}
+
+#[test]
+fn subvalue_table_assignment_prepares_active_held_and_pattern_lhs() {
+    let mut session = session_with_test_control_builtins();
+
+    let assigned = session
+        .eval_text(
+            "ClearAll[iTableSub, xTableSub, activeTableSub, heldTableSub, patternTableSub]; \
+             iTableSub = 4; xTableSub = 5; SetAttributes[heldTableSub, SubValuesHoldAll]; \
+             SubValues[activeTableSub] = {HoldPattern[activeTableSub[iTableSub][x_]] :> x}; \
+             SubValues[heldTableSub] = {HoldPattern[heldTableSub[0][xTableSub]] :> held}; \
+             SubValues[patternTableSub] = {HoldPattern[patternTableSub[x_][y_]] :> pair[x, y]}",
+        )
+        .unwrap();
+
+    assert!(assigned.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{activeTableSub[4][9], heldTableSub[0][xTableSub], \
+                  patternTableSub[2][3], SubValues[activeTableSub], \
+                  SubValues[heldTableSub], SubValues[patternTableSub]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[9, held, pair[2, 3], List[RuleDelayed[HoldPattern[activeTableSub[4][Pattern[x, Blank[]]]], x]], List[RuleDelayed[HoldPattern[heldTableSub[0][xTableSub]], held]], List[RuleDelayed[HoldPattern[patternTableSub[Pattern[x, Blank[]]][Pattern[y, Blank[]]]], pair[x, y]]]]"
+    );
+}
+
+#[test]
+fn prepared_value_table_identity_is_a_snapshot_across_rebind_clear_and_reinstall() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[iTableSnapshot, tableSnapshot]; iTableSnapshot = 1; \
+             DownValues[tableSnapshot] = {HoldPattern[tableSnapshot[iTableSnapshot]] :> one}; \
+             iTableSnapshot = 2; Clear[iTableSnapshot]",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("{tableSnapshot[1], tableSnapshot[2], DownValues[tableSnapshot]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[one, tableSnapshot[2], List[RuleDelayed[HoldPattern[tableSnapshot[1]], one]]]"
+    );
+
+    session
+        .eval_text(
+            "Clear[tableSnapshot]; iTableSnapshot = 3; \
+             DownValues[tableSnapshot] = {HoldPattern[tableSnapshot[iTableSnapshot]] :> three}",
+        )
+        .unwrap();
+    assert_eq!(
+        session
+            .eval_text("{tableSnapshot[1], tableSnapshot[3], DownValues[tableSnapshot]}")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[tableSnapshot[1], three, List[RuleDelayed[HoldPattern[tableSnapshot[3]], three]]]"
+    );
+}
+
+#[test]
+fn protection_is_rechecked_after_value_table_lhs_preparation() {
+    let mut session = session_with_test_control_builtins();
+
+    session
+        .eval_text(
+            "ClearAll[protectedDuringTable, protectDuringTable]; \
+             protectedDuringTable[0] := old; \
+             protectDuringTable[] := (Protect[protectedDuringTable]; 1)",
+        )
+        .unwrap();
+    let before = session
+        .eval_text("DownValues[protectedDuringTable]")
+        .unwrap()
+        .value;
+    let assigned = session
+        .eval_text(
+            "DownValues[protectedDuringTable] = \
+             {HoldPattern[protectedDuringTable[protectDuringTable[]]] :> new}",
+        )
+        .unwrap();
+
+    assert!(
+        assigned
+            .messages
+            .iter()
+            .any(|message| message.symbol == "Set" && message.tag == "wrsym")
+    );
+    assert_eq!(
+        session
+            .eval_text("protectedDuringTable[0]")
+            .unwrap()
+            .value
+            .to_string(),
+        "old"
+    );
+    assert_eq!(
+        session
+            .eval_text("DownValues[protectedDuringTable]")
+            .unwrap()
+            .value,
+        before
+    );
+}

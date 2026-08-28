@@ -1,6 +1,12 @@
 use super::super::*;
+use super::definition_lhs_preparation::{
+    DefinitionLhsPreparationContinuation, DefinitionLhsPreparationContinuationResult,
+    PreparedDefinitionLhs,
+};
+use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) enum ValueTableKind {
     OwnValues,
     DownValues,
@@ -8,11 +14,65 @@ pub(in crate::runtime) enum ValueTableKind {
     SubValues,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 struct AssignedValueTableRule {
+    source: Expr,
     lhs: Expr,
     rhs: Expr,
     delayed: bool,
+}
+
+#[derive(Clone, Default, FrameRootTrace)]
+struct PreparedValueTableRuleAccumulator {
+    tail: Option<Arc<PreparedValueTableRuleNode>>,
+    len: usize,
+}
+
+#[derive(FrameRootTrace)]
+struct PreparedValueTableRuleNode {
+    previous: Option<Arc<PreparedValueTableRuleNode>>,
+    rule: AssignedValueTableRule,
+}
+
+#[derive(Clone, FrameRootTrace)]
+pub(super) struct ValueTableAssignmentState {
+    kind: ValueTableKind,
+    target: Symbol,
+    rhs: Expr,
+    rules: Arc<[AssignedValueTableRule]>,
+    cursor: usize,
+    prepared: PreparedValueTableRuleAccumulator,
+}
+
+impl PreparedValueTableRuleAccumulator {
+    fn appended(&self, rule: AssignedValueTableRule) -> Self {
+        Self {
+            tail: Some(Arc::new(PreparedValueTableRuleNode {
+                previous: self.tail.clone(),
+                rule,
+            })),
+            len: self.len + 1,
+        }
+    }
+
+    fn into_vec_allow_shared(self) -> Vec<AssignedValueTableRule> {
+        let mut rules = Vec::with_capacity(self.len);
+        let mut node = self.tail;
+        while let Some(current) = node {
+            match Arc::try_unwrap(current) {
+                Ok(current) => {
+                    rules.push(current.rule);
+                    node = current.previous;
+                }
+                Err(current) => {
+                    rules.push(current.rule.clone());
+                    node = current.previous.clone();
+                }
+            }
+        }
+        rules.reverse();
+        rules
+    }
 }
 
 impl ValueTableKind {
@@ -69,20 +129,105 @@ impl Session {
         &mut self,
         kind: ValueTableKind,
         target: Symbol,
-        rhs: &Expr,
-    ) -> bool {
-        let rules = match parse_assigned_value_table(kind, target, rhs) {
+        rhs: Expr,
+    ) -> Result<Expr, EvalError> {
+        let rules = match parse_assigned_value_table(kind, target, &rhs) {
             Ok(rules) => rules,
             Err(message) => {
                 self.push_message(kind.inspector_name(), "setval", message);
-                return false;
+                return Ok(rhs);
             }
         };
 
-        // Parsing and target-kind validation above are deliberately complete before
-        // this first mutation, so a bad later rule can never leave a partial table.
+        let state = ValueTableAssignmentState {
+            kind,
+            target,
+            rhs,
+            rules: Arc::from(rules),
+            cursor: 0,
+            prepared: PreparedValueTableRuleAccumulator::default(),
+        };
+        let Some(rule) = state.rules.first() else {
+            return Ok(self.finish_prepared_value_table_assignment(state));
+        };
+
+        self.prepare_definition_lhs(
+            rule.lhs.clone(),
+            DefinitionLhsPreparationContinuation::ValueTableEntry { state },
+        )
+    }
+
+    pub(super) fn resume_prepared_value_table_entry(
+        &mut self,
+        mut state: ValueTableAssignmentState,
+        prepared: PreparedDefinitionLhs,
+    ) -> Result<DefinitionLhsPreparationContinuationResult, EvalError> {
+        let rule = state
+            .rules
+            .get(state.cursor)
+            .expect("value-table preparation cursor should name the current entry");
+        let (lhs, _) = prepared.into_parts();
+        let expected_target = state.kind.definition_target(state.target);
+        if classify_tagged_definition(&state.target, &lhs) != Ok(expected_target) {
+            self.push_message(
+                state.kind.inspector_name(),
+                "setval",
+                format!(
+                    "Cannot assign rule {} to {}[{}]: its left-hand side {} does not define the target's {} table.",
+                    rule.source,
+                    state.kind.inspector_name(),
+                    state.target,
+                    lhs,
+                    state.kind.inspector_name()
+                ),
+            );
+            return Ok(DefinitionLhsPreparationContinuationResult::Complete(
+                state.rhs,
+            ));
+        }
+
+        // Append the completed entry before advancing the cursor. A suspended
+        // continuation therefore resumes the current entry exactly once, while
+        // every earlier prepared rule remains in the Arc-backed prefix.
+        state.prepared = state.prepared.appended(AssignedValueTableRule {
+            source: rule.source.clone(),
+            lhs,
+            rhs: rule.rhs.clone(),
+            delayed: rule.delayed,
+        });
+        state.cursor += 1;
+
+        if let Some(next) = state.rules.get(state.cursor) {
+            return Ok(DefinitionLhsPreparationContinuationResult::PrepareNext {
+                lhs: next.lhs.clone(),
+                continuation: DefinitionLhsPreparationContinuation::ValueTableEntry { state },
+            });
+        }
+
+        Ok(DefinitionLhsPreparationContinuationResult::Complete(
+            self.finish_prepared_value_table_assignment(state),
+        ))
+    }
+
+    fn finish_prepared_value_table_assignment(&mut self, state: ValueTableAssignmentState) -> Expr {
+        let ValueTableAssignmentState {
+            kind,
+            target,
+            rhs,
+            prepared,
+            ..
+        } = state;
+
+        // Lhs preparation can run user code, so protection must be checked again
+        // after every entry is ready and before the first table mutation.
+        if !self.ensure_symbol_not_protected_for_write("Set", &target) {
+            return rhs;
+        }
+
+        // Parsing, preparation, target-kind validation, and the protection
+        // recheck above all complete before this first mutation.
         self.clear_value_table(kind, &target);
-        for rule in rules {
+        for rule in prepared.into_vec_allow_shared() {
             self.store_definition_target(
                 kind.definition_target(target),
                 rule.lhs,
@@ -90,7 +235,7 @@ impl Session {
                 rule.delayed,
             );
         }
-        true
+        rhs
     }
 
     fn clear_value_table(&mut self, kind: ValueTableKind, target: &Symbol) {
@@ -158,7 +303,6 @@ fn parse_assigned_value_table(
         ));
     }
 
-    let expected_target = kind.definition_target(target);
     let mut rules = Vec::with_capacity(args.len());
     for rule_expr in args {
         let Expr::Call {
@@ -181,21 +325,12 @@ fn parse_assigned_value_table(
         };
 
         let lhs = strip_hold_pattern(&rule_args[0]);
-        if classify_tagged_definition(&target, lhs) != Ok(expected_target.clone()) {
-            return Err(format!(
-                "Cannot assign rule {} to {}[{}]: its left-hand side {} does not define the target's {} table.",
-                rule_expr,
-                kind.inspector_name(),
-                target,
-                lhs,
-                kind.inspector_name()
-            ));
-        }
 
         // Inspectors serialize every entry as RuleDelayed, even an immediate own
         // value. Its rhs is already evaluated, so the round-trip safely restores it
         // as a delayed own value.
         rules.push(AssignedValueTableRule {
+            source: rule_expr.clone(),
             lhs: lhs.clone(),
             rhs: rule_args[1].clone(),
             delayed,
@@ -213,3 +348,13 @@ fn malformed_value_table_rule_message(kind: ValueTableKind, target: Symbol, rule
         target
     )
 }
+
+#[cfg(test)]
+const _: fn() = || {
+    fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<AssignedValueTableRule>();
+    assert_traces::<PreparedValueTableRuleAccumulator>();
+    assert_traces::<PreparedValueTableRuleNode>();
+    assert_traces::<ValueTableAssignmentState>();
+    assert_traces::<ValueTableKind>();
+};

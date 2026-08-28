@@ -2,6 +2,7 @@ mod resume_frames;
 use resume_frames::*;
 
 use super::super::*;
+use super::value_table_assignment::ValueTableAssignmentState;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, FrameRootTrace)]
@@ -27,8 +28,22 @@ pub(super) enum DefinitionLhsPreparationContinuation {
         rhs: Expr,
         delayed: bool,
     },
+    Unset {
+        source: Expr,
+    },
+    ValueTableEntry {
+        state: ValueTableAssignmentState,
+    },
     #[cfg(test)]
     ReturnPrepared,
+}
+
+pub(super) enum DefinitionLhsPreparationContinuationResult {
+    Complete(Expr),
+    PrepareNext {
+        lhs: Expr,
+        continuation: DefinitionLhsPreparationContinuation,
+    },
 }
 
 impl DefinitionLhsPreparationContinuation {
@@ -36,13 +51,21 @@ impl DefinitionLhsPreparationContinuation {
         self,
         session: &mut Session,
         prepared: PreparedDefinitionLhs,
-    ) -> Result<Expr, EvalError> {
+    ) -> Result<DefinitionLhsPreparationContinuationResult, EvalError> {
         match self {
-            Self::Set { rhs, delayed } => {
-                session.finish_prepared_definition_assignment(prepared, rhs, delayed)
+            Self::Set { rhs, delayed } => session
+                .finish_prepared_definition_assignment(prepared, rhs, delayed)
+                .map(DefinitionLhsPreparationContinuationResult::Complete),
+            Self::Unset { source } => session
+                .finish_prepared_unset(prepared, source)
+                .map(DefinitionLhsPreparationContinuationResult::Complete),
+            Self::ValueTableEntry { state } => {
+                session.resume_prepared_value_table_entry(state, prepared)
             }
             #[cfg(test)]
-            Self::ReturnPrepared => Ok(prepared.into_parts().0),
+            Self::ReturnPrepared => Ok(DefinitionLhsPreparationContinuationResult::Complete(
+                prepared.into_parts().0,
+            )),
         }
     }
 }
@@ -203,7 +226,25 @@ impl Session {
                 DefinitionLhsPreparationWork::CompleteNode(value) => {
                     let Some(parent) = state.parents.pop() else {
                         let prepared = PreparedDefinitionLhs::new(self, value);
-                        return state.continuation.resume(self, prepared);
+                        match state.continuation.resume(self, prepared)? {
+                            DefinitionLhsPreparationContinuationResult::Complete(value) => {
+                                return Ok(value);
+                            }
+                            DefinitionLhsPreparationContinuationResult::PrepareNext {
+                                lhs,
+                                continuation,
+                            } => {
+                                state = DefinitionLhsPreparationState {
+                                    work: DefinitionLhsPreparationWork::PrepareNode {
+                                        expr: lhs,
+                                        region: DefinitionLhsRegion::Root,
+                                    },
+                                    parents: DefinitionLhsParentStack::default(),
+                                    continuation,
+                                };
+                                continue;
+                            }
+                        }
                     };
 
                     match parent {

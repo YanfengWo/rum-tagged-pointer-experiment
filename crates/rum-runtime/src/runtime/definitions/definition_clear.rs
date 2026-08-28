@@ -1,4 +1,7 @@
 use super::super::*;
+use super::definition_lhs_preparation::{
+    DefinitionLhsPreparationContinuation, PreparedDefinitionLhs,
+};
 
 impl Session {
     pub(in crate::runtime) fn refresh_has_up_value_definitions(&mut self) {
@@ -10,16 +13,30 @@ impl Session {
 
     pub(in crate::runtime) fn eval_unset(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
         match args {
-            [target] => match self.normalize_unset_target(target) {
-                Ok(target) => {
-                    if self.ensure_symbol_not_protected_for_write("Unset", target.symbol()) {
-                        self.unset_normalized_definition(target);
-                    }
-                    Ok(system_expr("Null"))
-                }
-                Err(error) => Ok(self.invalid_call_with_arg_form("Unset", args, error.message())),
-            },
+            [target] => self.prepare_definition_lhs(
+                target.clone(),
+                DefinitionLhsPreparationContinuation::Unset {
+                    source: target.clone(),
+                },
+            ),
             _ => Ok(self.invalid_call_with_exact_arg_count("Unset", args, 1)),
+        }
+    }
+
+    pub(super) fn finish_prepared_unset(
+        &mut self,
+        prepared: PreparedDefinitionLhs,
+        source: Expr,
+    ) -> Result<Expr, EvalError> {
+        let lhs = prepared.into_parts().0;
+        match self.normalize_unset_target(&lhs) {
+            Ok(target) => {
+                if self.ensure_symbol_not_protected_for_write("Unset", target.symbol()) {
+                    self.unset_normalized_definition(target);
+                }
+                Ok(system_expr("Null"))
+            }
+            Err(error) => Ok(self.invalid_call_with_arg_form("Unset", &[source], error.message())),
         }
     }
 
