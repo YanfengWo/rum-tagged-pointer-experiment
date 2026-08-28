@@ -17,6 +17,7 @@ mod builtin_adapters;
 mod builtin_catalog;
 mod builtins_context_loader;
 mod builtins_input;
+mod call_preparation;
 mod capabilities;
 mod context_and_load_helpers;
 mod debug_tools;
@@ -57,13 +58,13 @@ mod tree_walkers;
 #[allow(unused_imports)]
 use self::{
     arithmetic::*, attributes::*, builtin_adapters::*, builtin_catalog::*,
-    builtins_context_loader::*, builtins_input::*, capabilities::*, context_and_load_helpers::*,
-    debug_tools::*, definitions::*, eval_call_prepare::*, eval_core::*, eval_dispatch::*,
-    evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*, file_io::*, hold_thread::*,
-    kernel_data::*, listable_dispatch::*, lowering::*, matcher_and_symbols::*, messages::*,
-    metadata::*, model::*, namespace_tools::*, options::*, package_tools::*, pattern_matching::*,
-    profiling::*, random::*, resolution::*, scoping::*, session::*, substitution::*, suspension::*,
-    tree_walkers::*,
+    builtins_context_loader::*, builtins_input::*, call_preparation::*, capabilities::*,
+    context_and_load_helpers::*, debug_tools::*, definitions::*, eval_call_prepare::*,
+    eval_core::*, eval_dispatch::*, evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*,
+    file_io::*, hold_thread::*, kernel_data::*, listable_dispatch::*, lowering::*,
+    matcher_and_symbols::*, messages::*, metadata::*, model::*, namespace_tools::*, options::*,
+    package_tools::*, pattern_matching::*, profiling::*, random::*, resolution::*, scoping::*,
+    session::*, substitution::*, suspension::*, tree_walkers::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, file_io::*, lowering::lower_syntax_expr,

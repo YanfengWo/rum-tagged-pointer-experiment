@@ -3,30 +3,22 @@ use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 impl Session {
     pub(super) fn build_call_dispatch_plan(&mut self, head: &Expr) -> CallDispatchPlan {
-        let mut attributes = self.cached_attribute_set_for_head(head);
-        let head_symbol = expr_as_symbol(head);
-        let builtin_spec =
-            head_symbol.and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
+        let metadata = self.call_preparation_metadata(head);
+        let attributes = metadata.attributes();
+        let head_symbol = metadata.head_symbol();
+        let builtin_spec = head_symbol
+            .as_ref()
+            .and_then(|symbol| self.cached_builtin_dispatch_spec_for_symbol(symbol));
         let builtin_dispatch = builtin_spec.map(|spec| spec.dispatch);
 
         if builtin_dispatch == Some(BuiltinDispatch::SpecialForm) {
             return CallDispatchPlan::special_form(attributes, builtin_spec);
         }
 
-        let value_definition = if let Some(symbol) = head_symbol {
-            self.definitions.get(symbol)
-        } else {
-            let base_symbol = base_head_symbol_of_nested_call(head);
-            if let Some(symbol) = base_symbol {
-                if self
-                    .cached_attribute_set_for_symbol(symbol)
-                    .contains(Attribute::SubValuesHoldAll)
-                {
-                    attributes = attributes.with(Attribute::HoldAll);
-                }
-            }
-            base_symbol.and_then(|symbol| self.definitions.get(symbol))
-        };
+        let definition_symbol = metadata.definition_symbol();
+        let value_definition = definition_symbol
+            .as_ref()
+            .and_then(|symbol| self.definitions.get(symbol));
         let has_down_values = head_symbol.is_some()
             && value_definition.is_some_and(|definition| !definition.down_values.is_empty());
         let has_sub_values =
@@ -83,18 +75,18 @@ impl Session {
     {
         match stage {
             CallDispatchStage::SpecialForm => {
-                self.try_dispatch_builtin_call(builtin_spec, head, &state.raw_args)
+                self.try_dispatch_builtin_call(builtin_spec, head, state.raw_args())
             }
             CallDispatchStage::PrepareArguments => {
-                let raw_args = std::mem::take(&mut state.raw_args);
+                let raw_args = state.take_raw_args();
                 let prepared =
                     self.prepare_arguments_for_call(head.clone(), attributes, raw_args)?;
-                state.evaluated_args =
-                    Some(self.normalize_call_args_shared(head, prepared, attributes));
+                state
+                    .set_prepared_args(self.normalize_call_args_shared(head, prepared, attributes));
                 Ok(None)
             }
             CallDispatchStage::Listable => {
-                match self.dispatch_listable_stage(head, state.evaluated_args(), attributes)? {
+                match self.dispatch_listable_stage(head, state.prepared_args(), attributes)? {
                     ThreadingDispatch::NotApplicable => Ok(None),
                     ThreadingDispatch::Threaded(threaded) => {
                         let threaded_result = self.evaluate(threaded);
@@ -108,23 +100,23 @@ impl Session {
                     }
                     ThreadingDispatch::Mismatch => Ok(Some(Expr::call(
                         head.clone(),
-                        state.evaluated_args().to_vec(),
+                        state.prepared_args().to_vec(),
                     ))),
                 }
             }
             CallDispatchStage::UpValues => {
-                self.try_apply_up_values(head, state.evaluated_shared_args(), attributes)
+                self.try_apply_up_values(state.prepared_definition_lookup(head, attributes))
             }
             CallDispatchStage::DownValues => {
-                self.try_apply_down_values(head, state.evaluated_shared_args(), attributes)
+                self.try_apply_down_values(state.prepared_definition_lookup(head, attributes))
             }
             CallDispatchStage::SubValues => {
-                self.try_apply_sub_values(head, state.evaluated_shared_args(), attributes)
+                self.try_apply_sub_values(state.prepared_definition_lookup(head, attributes))
             }
             CallDispatchStage::OrdinaryBuiltin => {
-                self.try_dispatch_builtin_call(builtin_spec, head, state.evaluated_shared_args())
+                self.try_dispatch_builtin_call(builtin_spec, head, state.prepared_shared_args())
             }
-            CallDispatchStage::Function => self.try_apply_function(head, state.evaluated_args()),
+            CallDispatchStage::Function => self.try_apply_function(head, state.prepared_args()),
         }
     }
 

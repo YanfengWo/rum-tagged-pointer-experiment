@@ -137,7 +137,7 @@ impl Session {
 
         let stage = plan.stage(stage_index);
         let mut state = state;
-        if stage == CallDispatchStage::PrepareArguments && state.evaluated_args.is_some() {
+        if stage == CallDispatchStage::PrepareArguments && state.is_prepared() {
             return self.resume_call_with_dispatch_plan(
                 evaluated_head,
                 plan,
@@ -151,14 +151,14 @@ impl Session {
             runtime_path_timing_start(call_dispatch_stage_profile_name(stage));
         let mut unevaluated_restore = unevaluated_restore;
         let stage_result = if stage == CallDispatchStage::PrepareArguments {
-            let raw_args = std::mem::take(&mut state.raw_args);
+            let raw_args = state.take_raw_args();
             self.prepare_arguments_for_call_with_unevaluated_restore(
                 evaluated_head.as_ref().clone(),
                 plan.attributes,
                 raw_args,
             )
             .map(|prepared| {
-                state.evaluated_args = Some(self.normalize_call_args_shared(
+                state.set_prepared_args(self.normalize_call_args_shared(
                     evaluated_head.as_ref(),
                     prepared.evaluated_args,
                     plan.attributes,
@@ -226,7 +226,7 @@ impl Session {
         }
 
         let stage = plan.stage(stage_index);
-        if stage == CallDispatchStage::PrepareArguments && state.evaluated_args.is_some() {
+        if stage == CallDispatchStage::PrepareArguments && state.is_prepared() {
             return self.resume_suspended_call_with_dispatch_plan(
                 evaluated_head,
                 plan,
@@ -240,14 +240,14 @@ impl Session {
             runtime_path_timing_start(call_dispatch_stage_profile_name(stage));
         let mut unevaluated_restore = unevaluated_restore;
         let stage_result = if stage == CallDispatchStage::PrepareArguments {
-            let raw_args = std::mem::take(&mut state.raw_args);
+            let raw_args = state.take_raw_args();
             self.prepare_arguments_for_call_with_unevaluated_restore(
                 evaluated_head.as_ref().clone(),
                 plan.attributes,
                 raw_args,
             )
             .map(|prepared| {
-                state.evaluated_args = Some(self.normalize_call_args_shared(
+                state.set_prepared_args(self.normalize_call_args_shared(
                     evaluated_head.as_ref(),
                     prepared.evaluated_args,
                     plan.attributes,
@@ -302,7 +302,7 @@ impl Session {
             match prepared_call_arguments_from_continuation_expr(value) {
                 Ok(prepared) => {
                     debug_assert!(unevaluated_restore.is_none());
-                    state.evaluated_args = Some(self.normalize_call_args_shared(
+                    state.set_prepared_args(self.normalize_call_args_shared(
                         evaluated_head.as_ref(),
                         prepared.evaluated_args,
                         plan.attributes,

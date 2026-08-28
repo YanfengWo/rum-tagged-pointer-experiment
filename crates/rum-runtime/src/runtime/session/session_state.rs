@@ -173,30 +173,92 @@ impl SuspendedCallDispatchPlan {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, FrameRootTrace)]
 pub(in crate::runtime) struct CallDispatchState {
-    pub(in crate::runtime) raw_args: SharedArgs,
-    pub(in crate::runtime) evaluated_args: Option<SharedArgs>,
+    raw_args: SharedArgs,
+    prepared_identity: Option<SharedArgs>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
+pub(in crate::runtime) struct PreparedDefinitionLookup<'a> {
+    head: &'a Expr,
+    args: &'a SharedArgs,
+    attributes: AttributeSet,
 }
 
 impl CallDispatchState {
     pub(in crate::runtime) fn new(raw_args: SharedArgs) -> Self {
         Self {
             raw_args,
-            evaluated_args: None,
+            prepared_identity: None,
         }
     }
 
-    pub(in crate::runtime) fn evaluated_args(&self) -> &[Expr] {
-        self.evaluated_shared_args().as_ref()
+    pub(in crate::runtime) fn from_prepared(prepared_args: SharedArgs) -> Self {
+        Self {
+            raw_args: SharedArgs::default(),
+            prepared_identity: Some(prepared_args),
+        }
     }
 
-    pub(in crate::runtime) fn evaluated_shared_args(&self) -> &SharedArgs {
-        self.evaluated_args
+    pub(in crate::runtime) fn is_prepared(&self) -> bool {
+        self.prepared_identity.is_some()
+    }
+
+    pub(in crate::runtime) fn raw_args(&self) -> &SharedArgs {
+        &self.raw_args
+    }
+
+    #[inline]
+    pub(in crate::runtime) fn take_raw_args(&mut self) -> SharedArgs {
+        debug_assert!(self.prepared_identity.is_none());
+        std::mem::take(&mut self.raw_args)
+    }
+
+    #[inline]
+    pub(in crate::runtime) fn set_prepared_args(&mut self, prepared_args: SharedArgs) {
+        debug_assert!(self.prepared_identity.is_none());
+        self.prepared_identity = Some(prepared_args);
+    }
+
+    #[inline]
+    pub(in crate::runtime) fn prepared_args(&self) -> &[Expr] {
+        self.prepared_shared_args().as_ref()
+    }
+
+    #[inline]
+    pub(in crate::runtime) fn prepared_shared_args(&self) -> &SharedArgs {
+        self.prepared_identity
             .as_ref()
             .expect("call arguments should be prepared before this stage")
     }
 
+    pub(in crate::runtime) fn prepared_definition_lookup<'a>(
+        &'a self,
+        head: &'a Expr,
+        attributes: AttributeSet,
+    ) -> PreparedDefinitionLookup<'a> {
+        PreparedDefinitionLookup {
+            head,
+            args: self.prepared_shared_args(),
+            attributes,
+        }
+    }
+
     pub(in crate::runtime) fn into_final_shared_args(self) -> SharedArgs {
-        self.evaluated_args.unwrap_or(self.raw_args)
+        self.prepared_identity.unwrap_or(self.raw_args)
+    }
+}
+
+impl PreparedDefinitionLookup<'_> {
+    pub(in crate::runtime) fn head(&self) -> &Expr {
+        self.head
+    }
+
+    pub(in crate::runtime) fn args(&self) -> &SharedArgs {
+        self.args
+    }
+
+    pub(in crate::runtime) fn attributes(&self) -> AttributeSet {
+        self.attributes
     }
 }
 
@@ -637,6 +699,7 @@ const _: fn() = || {
     assert_traces::<EvalError>();
     assert_traces::<MatcherArg>();
     assert_traces::<MatcherNode>();
+    assert_traces::<PreparedDefinitionLookup<'_>>();
     assert_traces::<ReapBucket>();
     assert_traces::<ReapBucketGroup>();
     assert_traces::<SequenceGreediness>();

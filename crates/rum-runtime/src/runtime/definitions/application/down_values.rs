@@ -15,10 +15,11 @@ struct SuspendedDownValueApplication {
 impl Session {
     pub(in crate::runtime) fn try_apply_down_values(
         &mut self,
-        head: &Expr,
-        args: &SharedArgs,
-        attributes: AttributeSet,
+        identity: PreparedDefinitionLookup<'_>,
     ) -> Result<Option<Expr>, EvalError> {
+        let head = identity.head();
+        let args = identity.args();
+        let attributes = identity.attributes();
         let runtime_profile_head = runtime_path_timing_start("down_values.head_lookup");
         let Some(symbol) = expr_as_symbol(head) else {
             record_profile_runtime_path_timing(runtime_profile_head, RuntimeProfileOutcome::None);

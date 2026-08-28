@@ -15,10 +15,11 @@ struct SuspendedSubValueApplication {
 impl Session {
     pub(in crate::runtime) fn try_apply_sub_values(
         &mut self,
-        head: &Expr,
-        args: &SharedArgs,
-        attributes: AttributeSet,
+        identity: PreparedDefinitionLookup<'_>,
     ) -> Result<Option<Expr>, EvalError> {
+        let head = identity.head();
+        let args = identity.args();
+        let attributes = identity.attributes();
         let runtime_profile_head = runtime_path_timing_start("sub_values.base_head_lookup");
         let Some(symbol) = base_head_symbol_of_nested_call(head).cloned() else {
             record_profile_runtime_path_timing(runtime_profile_head, RuntimeProfileOutcome::None);

@@ -13,10 +13,11 @@ struct SuspendedUpValueScan {
 impl Session {
     pub(in crate::runtime) fn try_apply_up_values(
         &mut self,
-        head: &Expr,
-        args: &SharedArgs,
-        attributes: AttributeSet,
+        identity: PreparedDefinitionLookup<'_>,
     ) -> Result<Option<Expr>, EvalError> {
+        let head = identity.head();
+        let args = identity.args();
+        let attributes = identity.attributes();
         if !self.has_up_value_definitions {
             return Ok(None);
         }
