@@ -573,6 +573,52 @@ fn associateto_keydropfrom_and_keyvaluepattern_cover_first_pass_mutation_surface
 }
 
 #[test]
+fn association_part_mutations_evaluate_symbol_selectors_before_reading_the_owner() {
+    for selector in ["kk", "1"] {
+        let mut session = core_session();
+        let associate = session
+            .eval_text(&format!(
+                "kk = 2; parts = {{Association[a -> 1], Association[a -> 2]}}; \
+                 kk = 1; {{AssociateTo[parts[[{selector}]], b -> 3], parts}}"
+            ))
+            .unwrap();
+        assert_eq!(
+            associate.value.to_string(),
+            "List[List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2]]], List[Association[Rule[a, 1], Rule[b, 3]], Association[Rule[a, 2]]]]",
+            "AssociateTo selector {selector}"
+        );
+        assert!(associate.messages.is_empty(), "{:?}", associate.messages);
+
+        let drop = session
+            .eval_text(&format!(
+                "kk = 2; parts = {{Association[a -> 1, b -> 2]}}; \
+                 kk = 1; {{KeyDropFrom[parts[[{selector}]], a], parts}}"
+            ))
+            .unwrap();
+        assert_eq!(
+            drop.value.to_string(),
+            "List[Association[Rule[b, 2]], List[Association[Rule[b, 2]]]]",
+            "KeyDropFrom selector {selector}"
+        );
+        assert!(drop.messages.is_empty(), "{:?}", drop.messages);
+    }
+
+    let mut session = core_session();
+    assert_eq!(
+        session
+            .eval_text(
+                "parts = {Association[a -> 1], Association[a -> 2]}; \
+                 sel := (parts = {Association[a -> 10], Association[a -> 20]}; 2); \
+                 {AssociateTo[parts[[sel]], b -> 3], parts}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[Association[Rule[a, 10]], Association[Rule[a, 20], Rule[b, 3]]], List[Association[Rule[a, 10]], Association[Rule[a, 20], Rule[b, 3]]]]"
+    );
+}
+
+#[test]
 fn keydropfrom_preserves_association_order_at_indexed_width() {
     let mut session = core_session();
 

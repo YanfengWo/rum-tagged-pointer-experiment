@@ -3,11 +3,41 @@ use resume_frames::*;
 
 use super::*;
 use rum_core::SharedArgs;
+use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum HeldAssociationPartMutationResult {
     UpdatedTarget,
     UpdatedPart,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, rum_runtime::kernel_api::FrameRootTrace)]
+enum AssociationPartMutationOperation {
+    AssociateTo,
+    KeyDropFrom,
+}
+
+impl AssociationPartMutationOperation {
+    fn name(self) -> &'static str {
+        match self {
+            Self::AssociateTo => "AssociateTo",
+            Self::KeyDropFrom => "KeyDropFrom",
+        }
+    }
+
+    fn result(self) -> HeldAssociationPartMutationResult {
+        match self {
+            Self::AssociateTo => HeldAssociationPartMutationResult::UpdatedTarget,
+            Self::KeyDropFrom => HeldAssociationPartMutationResult::UpdatedPart,
+        }
+    }
+
+    fn mutate(self, expr: Expr, spec: Expr) -> Option<Expr> {
+        match self {
+            Self::AssociateTo => apply_associate_to_value(expr, spec),
+            Self::KeyDropFrom => apply_key_drop_from_value(expr, spec),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -16,8 +46,8 @@ enum ExactPartSelectorFailure {
     PartD { part: Expr },
 }
 
-fn part_target_selectors_are_exact_leaf_path(selector_exprs: &[Expr]) -> bool {
-    selector_exprs.iter().all(|expr| {
+fn part_target_selectors_are_exact_leaf_path(selector_exprs: &EvaluatedPartSelectors) -> bool {
+    selector_exprs.as_slice().iter().all(|expr| {
         expr_as_signed_isize(expr).is_some()
             || matches!(
                 expr,
@@ -152,18 +182,14 @@ pub(crate) fn eval_associate_to(
     };
 
     if let Some((target, selector_exprs)) = normalize_part_mutation_target(session, target_expr) {
-        if let Some(updated) = try_eval_held_association_part_mutation(
+        return eval_held_association_part_mutation(
             session,
-            "AssociateTo",
+            AssociationPartMutationOperation::AssociateTo,
             target_expr.clone(),
             target,
             selector_exprs,
             spec.clone(),
-            apply_associate_to_value,
-            HeldAssociationPartMutationResult::UpdatedTarget,
-        )? {
-            return Ok(updated);
-        }
+        );
     }
 
     if is_non_symbol_atom(target_expr) {
@@ -268,27 +294,14 @@ pub(crate) fn eval_key_drop_from(
     };
 
     if let Some((target, selector_exprs)) = normalize_part_mutation_target(session, target_expr) {
-        if part_target_selectors_are_exact_leaf_path(&selector_exprs) {
-            if let Some(updated) = try_eval_held_association_part_mutation(
-                session,
-                "KeyDropFrom",
-                target_expr.clone(),
-                target,
-                selector_exprs,
-                key_spec.clone(),
-                apply_key_drop_from_value,
-                HeldAssociationPartMutationResult::UpdatedPart,
-            )? {
-                return Ok(updated);
-            }
-        }
-
-        return Ok(session.invalid_call_with_message(
-            "KeyDropFrom",
-            args_slice,
-            "invak",
-            invalid_association_message(target_expr),
-        ));
+        return eval_held_association_part_mutation(
+            session,
+            AssociationPartMutationOperation::KeyDropFrom,
+            target_expr.clone(),
+            target,
+            selector_exprs,
+            key_spec.clone(),
+        );
     }
 
     if association_entries_from_expr(target_expr).is_some() {
@@ -490,36 +503,96 @@ fn normalize_part_mutation_target(
     Some((target, args[1..].to_vec()))
 }
 
-fn try_eval_held_association_part_mutation(
+fn eval_held_association_part_mutation(
     session: &mut Session,
-    operator: &'static str,
+    operation: AssociationPartMutationOperation,
     target_expr: Expr,
     target: Symbol,
     selector_exprs: Vec<Expr>,
     spec: Expr,
-    mutate: fn(Expr, Expr) -> Option<Expr>,
-    result: HeldAssociationPartMutationResult,
-) -> Result<Option<Expr>, EvalError> {
-    let held_call = vec![target_expr.clone(), spec.clone()];
+) -> Result<Expr, EvalError> {
+    let evaluated_result = session.evaluate_part_selectors_owned(selector_exprs);
+    rum_runtime::resume_or_suspend!(
+        session,
+        evaluated_result,
+        ok(evaluated_selectors) => finish_held_association_part_mutation(
+            session,
+            operation,
+            target_expr,
+            target,
+            evaluated_selectors,
+            spec,
+        ),
+        suspend => FinishHeldAssociationPartSelectorEvaluationSuspensionFrame {
+            operation,
+            target_expr,
+            target,
+            spec,
+        },
+    )
+}
+
+fn finish_held_association_part_mutation(
+    session: &mut Session,
+    operation: AssociationPartMutationOperation,
+    target_expr: Expr,
+    target: Symbol,
+    selector_exprs: EvaluatedPartSelectors,
+    spec: Expr,
+) -> Result<Expr, EvalError> {
+    let operator = operation.name();
+    let mut evaluated_target_args = Vec::with_capacity(selector_exprs.as_slice().len() + 1);
+    evaluated_target_args.push(Expr::Atom(Atom::Symbol(target)));
+    evaluated_target_args.extend_from_slice(selector_exprs.as_slice());
+    let evaluated_target_expr = Expr::call(system_expr("Part"), evaluated_target_args);
+    let held_call = vec![evaluated_target_expr, spec.clone()];
 
     if !session.ensure_symbol_not_protected_for_write(operator, &target) {
-        return Ok(Some(Expr::call(system_expr(operator), held_call)));
+        return Ok(Expr::call(system_expr(operator), held_call));
     }
 
     let Some(current) = session.definition_own_value(&target) else {
-        return Ok(None);
+        return Ok(invalid_missing_part_mutation_target(
+            session,
+            operation,
+            &target_expr,
+            &held_call,
+        ));
     };
 
     let Some(paths) = exact_position_paths_from_part_selector_exprs(&current, &selector_exprs)
     else {
-        return Ok(None);
+        if let Some(offender) = invalid_part_selector_expr(&selector_exprs) {
+            let detail =
+                format!("The expression {offender} cannot be used as a part specification.");
+            session.push_message("Part", "pkspec1", detail.clone());
+            session.push_message("Set", "pkspec1", detail);
+            return Ok(Expr::call(system_expr(operator), held_call));
+        }
+        return Ok(invalid_missing_part_mutation_target(
+            session,
+            operation,
+            &target_expr,
+            &held_call,
+        ));
     };
 
+    if operation == AssociationPartMutationOperation::KeyDropFrom
+        && !part_target_selectors_are_exact_leaf_path(&selector_exprs)
+    {
+        return Ok(session.invalid_call_with_message(
+            operator,
+            &held_call,
+            "invak",
+            invalid_association_message(&target_expr),
+        ));
+    }
+
     if paths.is_empty() {
-        let part_failure = failed_exact_part_selector_path(&current, &selector_exprs);
-        if operator == "AssociateTo" {
+        let part_failure = failed_exact_part_selector_path(&current, selector_exprs.as_slice());
+        if operation == AssociationPartMutationOperation::AssociateTo {
             if let Some((key, target)) =
-                missing_key_in_exact_part_selector_path(&current, &selector_exprs)
+                missing_key_in_exact_part_selector_path(&current, selector_exprs.as_slice())
             {
                 session.push_message(
                     "AssociateTo",
@@ -529,10 +602,10 @@ fn try_eval_held_association_part_mutation(
             } else if let Some(ExactPartSelectorFailure::PartW { part, target }) = part_failure {
                 session.push_message("AssociateTo", "partw", partw_message(&part, &target));
             }
-            return Ok(Some(Expr::call(system_expr(operator), held_call)));
+            return Ok(Expr::call(system_expr(operator), held_call));
         }
 
-        if operator == "KeyDropFrom" {
+        if operation == AssociationPartMutationOperation::KeyDropFrom {
             match part_failure {
                 Some(ExactPartSelectorFailure::PartW { part, target }) => {
                     session.push_message("Part", "partw", partw_message(&part, &target));
@@ -542,28 +615,31 @@ fn try_eval_held_association_part_mutation(
                 }
                 None => {}
             }
-            return Ok(None);
+            return Ok(session.invalid_call_with_message(
+                operator,
+                &held_call,
+                "invak",
+                invalid_association_message(&target_expr),
+            ));
         }
-
-        return Ok(Some(Expr::call(system_expr(operator), held_call)));
     }
 
     let mut replacements = Vec::with_capacity(paths.len());
     for path in paths {
         let Some(part) = exact_expr_at_path(&current, &path) else {
-            return Ok(Some(Expr::call(system_expr(operator), held_call)));
+            return Ok(Expr::call(system_expr(operator), held_call));
         };
-        let Some(updated_part) = mutate(part.clone(), spec.clone()) else {
-            let invalid_expr = match result {
+        let Some(updated_part) = operation.mutate(part.clone(), spec.clone()) else {
+            let invalid_expr = match operation.result() {
                 HeldAssociationPartMutationResult::UpdatedTarget => part,
                 HeldAssociationPartMutationResult::UpdatedPart => target_expr,
             };
-            return Ok(Some(session.invalid_call_with_message(
+            return Ok(session.invalid_call_with_message(
                 operator,
                 &held_call,
                 "invak",
                 invalid_association_message(&invalid_expr),
-            )));
+            ));
         };
         replacements.push((path, updated_part));
     }
@@ -578,16 +654,40 @@ fn try_eval_held_association_part_mutation(
         updated_target = replace_exact_path(updated_target, &path, updated_part);
     }
 
+    if !session.ensure_symbol_not_protected_for_write(operator, &target) {
+        return Ok(Expr::call(system_expr(operator), held_call));
+    }
+
     session.store_definition_assignment_target_immediate(
         &Expr::Atom(Atom::Symbol(target)),
         updated_target.clone(),
     );
 
-    let value = match result {
+    let value = match operation.result() {
         HeldAssociationPartMutationResult::UpdatedTarget => updated_target,
         HeldAssociationPartMutationResult::UpdatedPart => selected_result,
     };
-    Ok(Some(value))
+    Ok(value)
+}
+
+fn invalid_missing_part_mutation_target(
+    session: &mut Session,
+    operation: AssociationPartMutationOperation,
+    target_expr: &Expr,
+    held_call: &[Expr],
+) -> Expr {
+    match operation {
+        AssociationPartMutationOperation::AssociateTo => {
+            session.push_message("AssociateTo", "wrsym", "Symbol Part is Protected.");
+            Expr::call(system_expr("AssociateTo"), held_call.to_vec())
+        }
+        AssociationPartMutationOperation::KeyDropFrom => session.invalid_call_with_message(
+            "KeyDropFrom",
+            held_call,
+            "invak",
+            invalid_association_message(target_expr),
+        ),
+    }
 }
 
 fn exact_argument_count_message(symbol: &str, count: usize, expected: usize) -> String {

@@ -3,78 +3,9 @@ use resume_frames::*;
 
 use super::super::*;
 use super::incremental_mutation::DefinitionValueRollback;
-use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
-use std::sync::Arc;
 
 #[cfg(test)]
 use std::cell::RefCell;
-
-#[derive(Clone, FrameRootTrace)]
-struct PositionalPartAssignmentTarget {
-    owner: Symbol,
-    selectors: Vec<Expr>,
-}
-
-#[derive(Clone, FrameRootTrace)]
-struct EvaluatedSelectorAccumulator {
-    prefix: SharedArgs,
-    tail: Option<Arc<EvaluatedSelectorNode>>,
-    len: usize,
-}
-
-#[derive(FrameRootTrace)]
-struct EvaluatedSelectorNode {
-    previous: Option<Arc<EvaluatedSelectorNode>>,
-    value: Expr,
-}
-
-#[derive(Clone, FrameRootTrace)]
-struct SuspendedPositionalPartAssignment {
-    owner: Symbol,
-    selectors: Arc<[Expr]>,
-    rhs: Expr,
-    cursor: usize,
-    evaluated: EvaluatedSelectorAccumulator,
-}
-
-impl EvaluatedSelectorAccumulator {
-    fn freeze(values: Vec<Expr>) -> Self {
-        let len = values.len();
-        Self {
-            prefix: SharedArgs::new(values),
-            tail: None,
-            len,
-        }
-    }
-
-    fn appended(&self, value: Expr) -> Self {
-        Self {
-            prefix: self.prefix.clone(),
-            tail: Some(Arc::new(EvaluatedSelectorNode {
-                previous: self.tail.clone(),
-                value,
-            })),
-            len: self.len + 1,
-        }
-    }
-
-    fn into_vec(self) -> Vec<Expr> {
-        let mut suffix = Vec::with_capacity(self.len.saturating_sub(self.prefix.len()));
-        let mut node = self.tail;
-        while let Some(current) = node {
-            let current = Arc::try_unwrap(current)
-                .unwrap_or_else(|_| panic!("completed selector accumulator must be unique"));
-            suffix.push(current.value);
-            node = current.previous;
-        }
-        suffix.reverse();
-
-        let mut values = self.prefix.into_vec();
-        values.reserve(suffix.len());
-        values.extend(suffix);
-        values
-    }
-}
 
 impl Session {
     pub(in crate::runtime) fn try_set_positional_part_lvalue(
@@ -108,86 +39,24 @@ impl Session {
             return Ok(Some(rhs));
         }
 
-        let target = PositionalPartAssignmentTarget {
-            owner,
-            selectors: selectors.to_vec(),
-        };
-        let value = self.resume_positional_part_selector_evaluation(target, rhs, Vec::new(), 0)?;
+        let evaluated_result = self.evaluate_part_selectors_owned(selectors.to_vec());
+        let value = crate::resume_or_suspend!(
+            self,
+            evaluated_result,
+            ok(evaluated_selectors) => self.finish_positional_part_assignment(
+                owner,
+                evaluated_selectors,
+                rhs,
+            ),
+            suspend => FinishPositionalPartSelectorEvaluationSuspensionFrame { owner, rhs },
+        )?;
         Ok(Some(value))
-    }
-
-    fn resume_positional_part_selector_evaluation(
-        &mut self,
-        target: PositionalPartAssignmentTarget,
-        rhs: Expr,
-        mut evaluated_selectors: Vec<Expr>,
-        mut index: usize,
-    ) -> Result<Expr, EvalError> {
-        loop {
-            let Some(selector_expr) = target.selectors.get(index) else {
-                return self.finish_positional_part_assignment(
-                    target.owner,
-                    evaluated_selectors,
-                    rhs,
-                );
-            };
-
-            match self.evaluate(selector_expr.clone()) {
-                Ok(selector) => {
-                    evaluated_selectors.push(selector);
-                    index += 1;
-                }
-                Err(EvalError::InputRequired { request }) => {
-                    let suspended = SuspendedPositionalPartAssignment {
-                        owner: target.owner,
-                        selectors: Arc::from(target.selectors),
-                        rhs,
-                        cursor: index,
-                        evaluated: EvaluatedSelectorAccumulator::freeze(evaluated_selectors),
-                    };
-                    crate::resume_or_suspend!(insert self, ResumePositionalPartSelectorEvaluationSuspensionFrame { suspended });
-                    return Err(EvalError::InputRequired { request });
-                }
-                Err(error) => return Err(error),
-            }
-        }
-    }
-
-    fn resume_suspended_positional_part_assignment(
-        &mut self,
-        mut state: SuspendedPositionalPartAssignment,
-        selector: Expr,
-    ) -> Result<Expr, EvalError> {
-        state.evaluated = state.evaluated.appended(selector);
-        state.cursor += 1;
-
-        loop {
-            let Some(selector_expr) = state.selectors.get(state.cursor) else {
-                return self.finish_positional_part_assignment(
-                    state.owner,
-                    state.evaluated.into_vec(),
-                    state.rhs,
-                );
-            };
-
-            match self.evaluate(selector_expr.clone()) {
-                Ok(selector) => {
-                    state.evaluated = state.evaluated.appended(selector);
-                    state.cursor += 1;
-                }
-                Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedPositionalPartAssignmentSuspensionFrame { state });
-                    return Err(EvalError::InputRequired { request });
-                }
-                Err(error) => return Err(error),
-            }
-        }
     }
 
     fn finish_positional_part_assignment(
         &mut self,
         owner: Symbol,
-        evaluated_selectors: Vec<Expr>,
+        evaluated_selectors: EvaluatedPartSelectors,
         rhs: Expr,
     ) -> Result<Expr, EvalError> {
         // Selector evaluation can reassign, clear, protect, or remove the
@@ -215,6 +84,7 @@ impl Session {
         };
 
         if let Some(selector) = evaluated_selectors
+            .as_slice()
             .iter()
             .find(|selector| !is_positive_machine_integer_selector(selector))
         {
@@ -566,10 +436,3 @@ fn take_positional_part_assignment_failure(target: &Symbol) -> bool {
 fn take_positional_part_assignment_failure(_target: &Symbol) -> bool {
     false
 }
-#[cfg(test)]
-const _: fn() = || {
-    fn assert_traces<T: FrameRootTrace>() {}
-    assert_traces::<PositionalPartAssignmentTarget>();
-    assert_traces::<EvaluatedSelectorAccumulator>();
-    assert_traces::<SuspendedPositionalPartAssignment>();
-};

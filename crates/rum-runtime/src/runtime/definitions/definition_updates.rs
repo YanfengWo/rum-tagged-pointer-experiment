@@ -11,6 +11,39 @@ enum HeldUpdateReturn {
     Previous(Expr),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
+enum HeldUpdateOperation {
+    AddTo,
+    SubtractFrom,
+    TimesBy,
+    DivideBy,
+    ApplyTo,
+    AppendTo,
+    PrependTo,
+    Increment,
+    Decrement,
+    PreIncrement,
+    PreDecrement,
+}
+
+impl HeldUpdateOperation {
+    fn name(self) -> &'static str {
+        match self {
+            Self::AddTo => "AddTo",
+            Self::SubtractFrom => "SubtractFrom",
+            Self::TimesBy => "TimesBy",
+            Self::DivideBy => "DivideBy",
+            Self::ApplyTo => "ApplyTo",
+            Self::AppendTo => "AppendTo",
+            Self::PrependTo => "PrependTo",
+            Self::Increment => "Increment",
+            Self::Decrement => "Decrement",
+            Self::PreIncrement => "PreIncrement",
+            Self::PreDecrement => "PreDecrement",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, FrameRootTrace)]
 enum HeldUpdateTarget {
     Symbol(Symbol),
@@ -73,93 +106,61 @@ enum HeldUpdateCurrent {
 
 impl Session {
     pub(in crate::runtime) fn eval_add_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [target_expr, increment] = args else {
+        let [_, _] = args else {
             if args.len() == 1 {
                 return Ok(self.invalid_call("AddTo", args));
             }
             return Ok(self.invalid_call_with_exact_arg_count("AddTo", args, 2));
         };
 
-        let (target, current) = match self.current_held_update_value("AddTo", target_expr, args) {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-
-        let update = Expr::call(system_expr("Plus"), vec![current, increment.clone()]);
-        self.finish_held_update("AddTo", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::AddTo, args)
     }
 
     pub(in crate::runtime) fn eval_subtract_from(
         &mut self,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        let [target_expr, decrement] = args else {
+        let [_, _] = args else {
             if args.len() == 1 {
                 return Ok(self.invalid_call("SubtractFrom", args));
             }
             return Ok(self.invalid_call_with_exact_arg_count("SubtractFrom", args, 2));
         };
 
-        let (target, current) =
-            match self.current_held_update_value("SubtractFrom", target_expr, args) {
-                HeldUpdateCurrent::Ready { target, current } => (target, current),
-                HeldUpdateCurrent::Immediate(value) => return Ok(value),
-            };
-
-        let update = Expr::call(system_expr("Subtract"), vec![current, decrement.clone()]);
-        self.finish_held_update("SubtractFrom", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::SubtractFrom, args)
     }
 
     pub(in crate::runtime) fn eval_times_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [target_expr, factor] = args else {
+        let [_, _] = args else {
             if args.len() == 1 {
                 return Ok(self.invalid_call("TimesBy", args));
             }
             return Ok(self.invalid_call_with_exact_arg_count("TimesBy", args, 2));
         };
 
-        let (target, current) = match self.current_held_update_value("TimesBy", target_expr, args) {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-
-        let update = Expr::call(system_expr("Times"), vec![current, factor.clone()]);
-        self.finish_held_update("TimesBy", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::TimesBy, args)
     }
 
     pub(in crate::runtime) fn eval_divide_by(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [target_expr, divisor] = args else {
+        let [_, _] = args else {
             if args.len() == 1 {
                 return Ok(self.invalid_call("DivideBy", args));
             }
             return Ok(self.invalid_call_with_exact_arg_count("DivideBy", args, 2));
         };
 
-        let (target, current) = match self.current_held_update_value("DivideBy", target_expr, args)
-        {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-
-        let update = Expr::call(system_expr("Divide"), vec![current, divisor.clone()]);
-        self.finish_held_update("DivideBy", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::DivideBy, args)
     }
 
     pub(in crate::runtime) fn eval_apply_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [target_expr, function] = args else {
+        let [_, _] = args else {
             if args.len() == 1 {
                 return Ok(self.invalid_call("ApplyTo", args));
             }
             return Ok(self.invalid_call_with_exact_arg_count("ApplyTo", args, 2));
         };
 
-        let (target, current) = match self.current_held_update_value("ApplyTo", target_expr, args) {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-
-        let update = Expr::call(function.clone(), vec![current]);
-        self.finish_held_update("ApplyTo", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::ApplyTo, args)
     }
 
     pub(in crate::runtime) fn eval_append_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
@@ -174,164 +175,104 @@ impl Session {
             return Ok(updated);
         }
 
-        let (target, current) = match self.current_held_update_value("AppendTo", target_expr, args)
-        {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-
-        let update = match current {
-            Expr::Atom(_) => {
-                let held_call = Expr::call(system_expr("AppendTo"), args.to_vec());
-                self.push_message(
-                    "AppendTo",
-                    "normal",
-                    format!("Nonatomic expression expected at position 1 in {held_call}."),
-                );
-                return Ok(held_call);
-            }
-            Expr::Call { head, args } => {
-                let mut args = Expr::unwrap_shared_args(args);
-                args.push(item.clone());
-                Expr::Call {
-                    head,
-                    args: SharedArgs::new(args),
-                }
-            }
-        };
-
-        self.finish_held_update("AppendTo", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::AppendTo, args)
     }
 
     pub(in crate::runtime) fn eval_prepend_to(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [target_expr, item] = args else {
+        let [_, _] = args else {
             if args.len() == 1 {
                 return Ok(self.invalid_call("PrependTo", args));
             }
             return Ok(self.invalid_call_with_exact_arg_count("PrependTo", args, 2));
         };
 
-        let (target, current) = match self.current_held_update_value("PrependTo", target_expr, args)
-        {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-
-        let update = match current {
-            Expr::Atom(_) => {
-                let held_call = Expr::call(system_expr("PrependTo"), args.to_vec());
-                self.push_message(
-                    "PrependTo",
-                    "normal",
-                    format!("Nonatomic expression expected at position 1 in {held_call}."),
-                );
-                return Ok(held_call);
-            }
-            Expr::Call { head, args } => {
-                let mut args = Expr::unwrap_shared_args(args);
-                args.insert(0, item.clone());
-                Expr::Call {
-                    head,
-                    args: SharedArgs::new(args),
-                }
-            }
-        };
-
-        self.finish_held_update("PrependTo", target, update, HeldUpdateReturn::Updated)
+        self.eval_held_update_operation(HeldUpdateOperation::PrependTo, args)
     }
 
     pub(in crate::runtime) fn eval_increment(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        let [target_expr] = args else {
+        let [_] = args else {
             return Ok(self.invalid_call_with_exact_arg_count("Increment", args, 1));
         };
 
-        let (target, current) = match self.current_held_update_value("Increment", target_expr, args)
-        {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-        let update = Expr::call(
-            system_expr("Plus"),
-            vec![current.clone(), Expr::integer(BigInt::from(1))],
-        );
-
-        self.finish_held_update(
-            "Increment",
-            target,
-            update,
-            HeldUpdateReturn::Previous(current),
-        )
+        self.eval_held_update_operation(HeldUpdateOperation::Increment, args)
     }
 
     pub(in crate::runtime) fn eval_decrement(&mut self, args: &[Expr]) -> Result<Expr, EvalError> {
-        self.eval_unary_increment_update("Decrement", args, Expr::integer(BigInt::from(-1)), true)
+        let [_target_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("Decrement", args, 1));
+        };
+        self.eval_held_update_operation(HeldUpdateOperation::Decrement, args)
     }
 
     pub(in crate::runtime) fn eval_pre_increment(
         &mut self,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        self.eval_unary_increment_update(
-            "PreIncrement",
-            args,
-            Expr::integer(BigInt::from(1)),
-            false,
-        )
+        let [_target_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("PreIncrement", args, 1));
+        };
+        self.eval_held_update_operation(HeldUpdateOperation::PreIncrement, args)
     }
 
     pub(in crate::runtime) fn eval_pre_decrement(
         &mut self,
         args: &[Expr],
     ) -> Result<Expr, EvalError> {
-        self.eval_unary_increment_update(
-            "PreDecrement",
-            args,
-            Expr::integer(BigInt::from(-1)),
-            false,
-        )
+        let [_target_expr] = args else {
+            return Ok(self.invalid_call_with_exact_arg_count("PreDecrement", args, 1));
+        };
+        self.eval_held_update_operation(HeldUpdateOperation::PreDecrement, args)
     }
 
-    fn eval_unary_increment_update(
+    fn eval_held_update_operation(
         &mut self,
-        operator: &'static str,
+        operation: HeldUpdateOperation,
         args: &[Expr],
-        delta: Expr,
-        return_previous: bool,
     ) -> Result<Expr, EvalError> {
-        let [target_expr] = args else {
-            return Ok(self.invalid_call_with_exact_arg_count(operator, args, 1));
-        };
-
-        let (target, current) = match self.current_held_update_value(operator, target_expr, args) {
-            HeldUpdateCurrent::Ready { target, current } => (target, current),
-            HeldUpdateCurrent::Immediate(value) => return Ok(value),
-        };
-        let update = Expr::call(system_expr("Plus"), vec![current.clone(), delta]);
-        let return_value = if return_previous {
-            HeldUpdateReturn::Previous(current)
-        } else {
-            HeldUpdateReturn::Updated
-        };
-
-        self.finish_held_update(operator, target, update, return_value)
+        let target_expr = &args[0];
+        let (target, current) =
+            match self.current_held_update_value(operation, target_expr, args)? {
+                HeldUpdateCurrent::Ready { target, current } => (target, current),
+                HeldUpdateCurrent::Immediate(value) => return Ok(value),
+            };
+        self.finish_held_update_operation(operation, target, current, args)
     }
 
     fn current_held_update_value(
         &mut self,
-        operator: &'static str,
+        operation: HeldUpdateOperation,
         target_expr: &Expr,
         args: &[Expr],
-    ) -> HeldUpdateCurrent {
+    ) -> Result<HeldUpdateCurrent, EvalError> {
+        let operator = operation.name();
         if let Some(target) = self.normalize_symbol_target_expr(target_expr, true) {
-            return self.current_symbol_held_update_value(operator, target, args);
+            return Ok(self.current_symbol_held_update_value(operator, target, args));
         }
 
         if let Some((target, selector_exprs)) = normalize_part_update_target(target_expr) {
-            return self.current_part_held_update_value(operator, target, selector_exprs, args);
+            let evaluated_result = self.evaluate_part_selectors_owned(selector_exprs);
+            return crate::resume_or_suspend!(
+                self,
+                evaluated_result,
+                ok(evaluated_selectors) => Ok(self.current_part_held_update_value(
+                    operator,
+                    target,
+                    &evaluated_selectors,
+                    args,
+                )),
+                suspend => FinishHeldPartSelectorEvaluationSuspensionFrame {
+                    operation,
+                    target,
+                    args: SharedArgs::new(args.to_vec()),
+                },
+            );
         }
 
         self.push_held_update_rvalue_message(operator, target_expr);
-        HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()))
+        Ok(HeldUpdateCurrent::Immediate(Expr::call(
+            system_expr(operator),
+            args.to_vec(),
+        )))
     }
 
     fn current_symbol_held_update_value(
@@ -366,11 +307,16 @@ impl Session {
         &mut self,
         operator: &'static str,
         target: Symbol,
-        selector_exprs: Vec<Expr>,
+        selector_exprs: &EvaluatedPartSelectors,
         args: &[Expr],
     ) -> HeldUpdateCurrent {
         if !self.ensure_symbol_not_protected_for_write(operator, &target) {
-            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+            return HeldUpdateCurrent::Immediate(evaluated_part_held_update_call(
+                operator,
+                target,
+                selector_exprs,
+                args,
+            ));
         }
 
         let Some(current_target) = self
@@ -382,7 +328,12 @@ impl Session {
                 operator,
                 &Expr::Atom(Atom::Symbol(target.clone())),
             );
-            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+            return HeldUpdateCurrent::Immediate(evaluated_part_held_update_call(
+                operator,
+                target,
+                selector_exprs,
+                args,
+            ));
         };
 
         let Some(paths) =
@@ -397,13 +348,23 @@ impl Session {
                     "expected an exact Part target as the first argument",
                 );
             }
-            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+            return HeldUpdateCurrent::Immediate(evaluated_part_held_update_call(
+                operator,
+                target,
+                selector_exprs,
+                args,
+            ));
         };
 
         let Some(current) =
             selected_expr_from_part_target_selector_exprs(self, &current_target, &selector_exprs)
         else {
-            return HeldUpdateCurrent::Immediate(Expr::call(system_expr(operator), args.to_vec()));
+            return HeldUpdateCurrent::Immediate(evaluated_part_held_update_call(
+                operator,
+                target,
+                selector_exprs,
+                args,
+            ));
         };
 
         HeldUpdateCurrent::Ready {
@@ -411,11 +372,120 @@ impl Session {
                 symbol: target,
                 current_target,
                 selection_shape: current.clone(),
-                distribute_updates: part_selector_exprs_select_bulk(&selector_exprs),
+                distribute_updates: part_selector_exprs_select_bulk(selector_exprs),
                 paths,
             },
             current,
         }
+    }
+
+    fn finish_suspended_held_part_selector_evaluation(
+        &mut self,
+        operation: HeldUpdateOperation,
+        target: Symbol,
+        args: SharedArgs,
+        evaluated_selectors: EvaluatedPartSelectors,
+    ) -> Result<Expr, EvalError> {
+        let operator = operation.name();
+        match self.current_part_held_update_value(
+            operator,
+            target,
+            &evaluated_selectors,
+            args.as_ref(),
+        ) {
+            HeldUpdateCurrent::Ready { target, current } => {
+                self.finish_held_update_operation(operation, target, current, args.as_ref())
+            }
+            HeldUpdateCurrent::Immediate(value) => Ok(value),
+        }
+    }
+
+    fn finish_held_update_operation(
+        &mut self,
+        operation: HeldUpdateOperation,
+        target: HeldUpdateTarget,
+        current: Expr,
+        args: &[Expr],
+    ) -> Result<Expr, EvalError> {
+        let operator = operation.name();
+        let (update, return_value) = match operation {
+            HeldUpdateOperation::AddTo => (
+                Expr::call(system_expr("Plus"), vec![current, args[1].clone()]),
+                HeldUpdateReturn::Updated,
+            ),
+            HeldUpdateOperation::SubtractFrom => (
+                Expr::call(system_expr("Subtract"), vec![current, args[1].clone()]),
+                HeldUpdateReturn::Updated,
+            ),
+            HeldUpdateOperation::TimesBy => (
+                Expr::call(system_expr("Times"), vec![current, args[1].clone()]),
+                HeldUpdateReturn::Updated,
+            ),
+            HeldUpdateOperation::DivideBy => (
+                Expr::call(system_expr("Divide"), vec![current, args[1].clone()]),
+                HeldUpdateReturn::Updated,
+            ),
+            HeldUpdateOperation::ApplyTo => (
+                Expr::call(args[1].clone(), vec![current]),
+                HeldUpdateReturn::Updated,
+            ),
+            HeldUpdateOperation::AppendTo | HeldUpdateOperation::PrependTo => {
+                let Expr::Call {
+                    head,
+                    args: current_args,
+                } = current
+                else {
+                    let held_call = Expr::call(system_expr(operator), args.to_vec());
+                    self.push_message(
+                        operator,
+                        "normal",
+                        format!("Nonatomic expression expected at position 1 in {held_call}."),
+                    );
+                    return Ok(held_call);
+                };
+                let mut current_args = Expr::unwrap_shared_args(current_args);
+                if operation == HeldUpdateOperation::AppendTo {
+                    current_args.push(args[1].clone());
+                } else {
+                    current_args.insert(0, args[1].clone());
+                }
+                (
+                    Expr::Call {
+                        head,
+                        args: SharedArgs::new(current_args),
+                    },
+                    HeldUpdateReturn::Updated,
+                )
+            }
+            HeldUpdateOperation::Increment
+            | HeldUpdateOperation::Decrement
+            | HeldUpdateOperation::PreIncrement
+            | HeldUpdateOperation::PreDecrement => {
+                let delta = match operation {
+                    HeldUpdateOperation::Increment | HeldUpdateOperation::PreIncrement => 1,
+                    HeldUpdateOperation::Decrement | HeldUpdateOperation::PreDecrement => -1,
+                    _ => unreachable!("matched increment operation"),
+                };
+                let return_value = match operation {
+                    HeldUpdateOperation::Increment | HeldUpdateOperation::Decrement => {
+                        HeldUpdateReturn::Previous(current.clone())
+                    }
+                    HeldUpdateOperation::PreIncrement | HeldUpdateOperation::PreDecrement => {
+                        HeldUpdateReturn::Updated
+                    }
+                    _ => unreachable!("matched increment operation"),
+                };
+                (
+                    Expr::call(
+                        system_expr("Plus"),
+                        vec![current, Expr::integer(BigInt::from(delta))],
+                    ),
+                    return_value,
+                )
+            }
+        };
+
+        self.finish_held_update(operator, target, update, return_value)
     }
 
     fn push_invalid_part_target_selector_messages(&mut self, offender: &Expr) {
@@ -578,6 +648,21 @@ fn normalize_part_update_target(expr: &Expr) -> Option<(Symbol, Vec<Expr>)> {
     Some((target, args[1..].to_vec()))
 }
 
+fn evaluated_part_held_update_call(
+    operator: &'static str,
+    target: Symbol,
+    selector_exprs: &EvaluatedPartSelectors,
+    args: &[Expr],
+) -> Expr {
+    let mut part_args = Vec::with_capacity(selector_exprs.len() + 1);
+    part_args.push(Expr::Atom(Atom::Symbol(target)));
+    part_args.extend_from_slice(selector_exprs.as_slice());
+
+    let mut call_args = args.to_vec();
+    call_args[0] = Expr::call(system_expr("Part"), part_args);
+    Expr::call(system_expr(operator), call_args)
+}
+
 fn bulk_part_update_replacements<'a>(
     paths: &'a [Vec<isize>],
     selection_shape: &Expr,
@@ -619,8 +704,11 @@ fn part_update_replacement_values(
     }
 }
 
-fn part_selector_exprs_select_bulk(selector_exprs: &[Expr]) -> bool {
-    selector_exprs.iter().any(part_selector_expr_selects_bulk)
+fn part_selector_exprs_select_bulk(selector_exprs: &EvaluatedPartSelectors) -> bool {
+    selector_exprs
+        .as_slice()
+        .iter()
+        .any(part_selector_expr_selects_bulk)
 }
 
 fn part_selector_expr_selects_bulk(expr: &Expr) -> bool {
@@ -667,6 +755,7 @@ fn replacement_values_matching_selection_shape(
 #[cfg(test)]
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
+    assert_traces::<HeldUpdateOperation>();
     assert_traces::<HeldUpdateReturn>();
     assert_traces::<HeldUpdateTarget>();
     assert_traces::<SuspendedHeldUpdateTarget>();

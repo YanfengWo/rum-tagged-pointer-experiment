@@ -578,12 +578,6 @@ enum AssociationSetLValueTarget {
     },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
-enum AssociationSetLValueKind {
-    FunctionCall,
-    Part,
-}
-
 #[derive(Clone, FrameRootTrace)]
 struct AssociationSelectorAccumulator {
     prefix: SharedArgs,
@@ -599,7 +593,6 @@ struct AssociationSelectorNode {
 
 #[derive(Clone, FrameRootTrace)]
 struct SuspendedAssociationSetLValue {
-    kind: AssociationSetLValueKind,
     symbol: Symbol,
     selectors: Arc<[Expr]>,
     rhs: Expr,
@@ -648,21 +641,13 @@ impl AssociationSelectorAccumulator {
 
 impl SuspendedAssociationSetLValue {
     fn freeze(
-        target: AssociationSetLValueTarget,
+        symbol: Symbol,
+        selectors: Vec<Expr>,
         rhs: Expr,
         cursor: usize,
         evaluated: Vec<Expr>,
     ) -> Self {
-        let (kind, symbol, selectors) = match target {
-            AssociationSetLValueTarget::FunctionCall { symbol, selectors } => {
-                (AssociationSetLValueKind::FunctionCall, symbol, selectors)
-            }
-            AssociationSetLValueTarget::Part { symbol, selectors } => {
-                (AssociationSetLValueKind::Part, symbol, selectors)
-            }
-        };
         Self {
-            kind,
             symbol,
             selectors: Arc::from(selectors),
             rhs,
@@ -683,12 +668,6 @@ impl AssociationSetLValueTarget {
     fn symbol(&self) -> &Symbol {
         match self {
             Self::FunctionCall { symbol, .. } | Self::Part { symbol, .. } => symbol,
-        }
-    }
-
-    fn selectors(&self) -> &[Expr] {
-        match self {
-            Self::FunctionCall { selectors, .. } | Self::Part { selectors, .. } => selectors,
         }
     }
 
@@ -722,8 +701,38 @@ impl Session {
             return Ok(Some(rhs));
         }
 
-        let value =
-            self.resume_association_set_lvalue_selector_evaluation(target, rhs, Vec::new(), 0)?;
+        let value = match target {
+            AssociationSetLValueTarget::FunctionCall { symbol, selectors } => self
+                .resume_association_set_lvalue_selector_evaluation(
+                    symbol,
+                    selectors,
+                    rhs,
+                    Vec::new(),
+                    0,
+                )?,
+            AssociationSetLValueTarget::Part { symbol, selectors } => {
+                let direct_single_key = matches!(
+                    selectors.as_slice(),
+                    [selector] if explicit_association_key_selector(selector).is_some()
+                );
+                let evaluated_result = self.evaluate_part_selectors_owned(selectors);
+                crate::resume_or_suspend!(
+                    self,
+                    evaluated_result,
+                    ok(evaluated_selectors) => self.finish_association_set_part_lvalue(
+                        symbol,
+                        direct_single_key,
+                        evaluated_selectors,
+                        rhs,
+                    ),
+                    suspend => FinishAssociationSetPartSelectorEvaluationSuspensionFrame {
+                        symbol,
+                        direct_single_key,
+                        rhs,
+                    },
+                )?
+            }
+        };
         Ok(Some(value))
     }
 
@@ -761,14 +770,20 @@ impl Session {
 
     fn resume_association_set_lvalue_selector_evaluation(
         &mut self,
-        target: AssociationSetLValueTarget,
+        symbol: Symbol,
+        selectors: Vec<Expr>,
         rhs: Expr,
         mut evaluated_selectors: Vec<Expr>,
         mut index: usize,
     ) -> Result<Expr, EvalError> {
         loop {
-            let Some(selector) = target.selectors().get(index) else {
-                return self.finish_association_set_lvalue(target, evaluated_selectors, rhs);
+            let Some(selector) = selectors.get(index) else {
+                return self.finish_association_set_function_lvalue(
+                    symbol,
+                    &selectors,
+                    evaluated_selectors,
+                    rhs,
+                );
             };
 
             match self.evaluate(selector.clone()) {
@@ -778,7 +793,8 @@ impl Session {
                 }
                 Err(EvalError::InputRequired { request }) => {
                     let suspended = SuspendedAssociationSetLValue::freeze(
-                        target,
+                        symbol,
+                        selectors,
                         rhs,
                         index,
                         evaluated_selectors,
@@ -801,8 +817,7 @@ impl Session {
 
         loop {
             let Some(selector) = state.selectors.get(state.cursor) else {
-                return self.finish_association_set_lvalue_parts(
-                    state.kind,
+                return self.finish_association_set_function_lvalue(
                     state.symbol,
                     state.selectors.as_ref(),
                     state.evaluated.into_vec(),
@@ -824,33 +839,14 @@ impl Session {
         }
     }
 
-    fn finish_association_set_lvalue(
+    fn finish_association_set_function_lvalue(
         &mut self,
-        target: AssociationSetLValueTarget,
-        evaluated_selectors: Vec<Expr>,
-        rhs: Expr,
-    ) -> Result<Expr, EvalError> {
-        let (kind, symbol, selectors) = match target {
-            AssociationSetLValueTarget::FunctionCall { symbol, selectors } => {
-                (AssociationSetLValueKind::FunctionCall, symbol, selectors)
-            }
-            AssociationSetLValueTarget::Part { symbol, selectors } => {
-                (AssociationSetLValueKind::Part, symbol, selectors)
-            }
-        };
-        self.finish_association_set_lvalue_parts(kind, symbol, &selectors, evaluated_selectors, rhs)
-    }
-
-    fn finish_association_set_lvalue_parts(
-        &mut self,
-        kind: AssociationSetLValueKind,
         symbol: Symbol,
         raw_selectors: &[Expr],
         evaluated_selectors: Vec<Expr>,
         rhs: Expr,
     ) -> Result<Expr, EvalError> {
-        if let Some(key) = direct_association_lvalue_key(kind, raw_selectors, &evaluated_selectors)
-        {
+        if let Some(key) = direct_association_lvalue_key(raw_selectors, &evaluated_selectors) {
             if self.try_direct_association_rule_update(&symbol, key, &rhs)? {
                 return Ok(rhs);
             }
@@ -860,15 +856,49 @@ impl Session {
             return Ok(rhs);
         };
 
-        let update = match kind {
-            AssociationSetLValueKind::FunctionCall => {
-                set_association_key_path(current, &evaluated_selectors, rhs.clone())
-            }
-            AssociationSetLValueKind::Part => {
-                set_association_part_path(current, &evaluated_selectors, rhs.clone())
-            }
-        };
+        let update = set_association_key_path(current, &evaluated_selectors, rhs.clone());
 
+        match update {
+            AssociationSetUpdate::Updated(updated) => {
+                let definition = self.definitions.entry(symbol).or_default();
+                definition.own_value = Some(updated);
+                definition.delayed_own_value = None;
+                self.bump_evaluation_epoch_for_symbol(&symbol);
+            }
+            AssociationSetUpdate::MissingKey(key) => {
+                self.push_message(
+                    "Set",
+                    "kval",
+                    format!("The value for the key {key} does not exist."),
+                );
+            }
+            AssociationSetUpdate::Unchanged => {}
+        }
+
+        Ok(rhs)
+    }
+
+    fn finish_association_set_part_lvalue(
+        &mut self,
+        symbol: Symbol,
+        direct_single_key: bool,
+        evaluated_selectors: EvaluatedPartSelectors,
+        rhs: Expr,
+    ) -> Result<Expr, EvalError> {
+        if direct_single_key {
+            if let [selector] = evaluated_selectors.as_slice() {
+                if let Some(key) = explicit_association_key_selector(selector) {
+                    if self.try_direct_association_rule_update(&symbol, key.clone(), &rhs)? {
+                        return Ok(rhs);
+                    }
+                }
+            }
+        }
+
+        let Some(current) = self.association_lvalue_current(&symbol) else {
+            return Ok(rhs);
+        };
+        let update = set_association_part_path(current, &evaluated_selectors, rhs.clone());
         match update {
             AssociationSetUpdate::Updated(updated) => {
                 let definition = self.definitions.entry(symbol).or_default();
@@ -891,7 +921,6 @@ impl Session {
 }
 
 fn direct_association_lvalue_key(
-    kind: AssociationSetLValueKind,
     raw_selectors: &[Expr],
     evaluated_selectors: &[Expr],
 ) -> Option<Expr> {
@@ -899,18 +928,14 @@ fn direct_association_lvalue_key(
         return None;
     };
 
-    match kind {
-        AssociationSetLValueKind::FunctionCall if raw_selectors.len() == 1 => {
-            Some(selector.clone())
-        }
-        AssociationSetLValueKind::Part if matches!(raw_selectors, [raw] if explicit_association_key_selector(raw).is_some()) => {
-            explicit_association_key_selector(selector).cloned()
-        }
-        _ => None,
-    }
+    (raw_selectors.len() == 1).then(|| selector.clone())
 }
 
-fn set_association_part_path(current: Expr, selectors: &[Expr], rhs: Expr) -> AssociationSetUpdate {
+fn set_association_part_path(
+    current: Expr,
+    selectors: &EvaluatedPartSelectors,
+    rhs: Expr,
+) -> AssociationSetUpdate {
     if let Some(keys) = association_part_key_path(selectors) {
         return set_association_key_path(current, &keys, rhs);
     }
@@ -918,8 +943,9 @@ fn set_association_part_path(current: Expr, selectors: &[Expr], rhs: Expr) -> As
     AssociationSetUpdate::Unchanged
 }
 
-fn association_part_key_path(selectors: &[Expr]) -> Option<Vec<Expr>> {
+fn association_part_key_path(selectors: &EvaluatedPartSelectors) -> Option<Vec<Expr>> {
     selectors
+        .as_slice()
         .iter()
         .map(association_part_key_selector)
         .collect()

@@ -14,6 +14,10 @@ pub use super::builtin_catalog::{BuiltinAttributeSpec, stdlib_builtin_attribute_
 // control_data
 pub use super::kernel_data::control_data::ControlDataBuiltin;
 
+// assignment Part selectors
+#[doc(hidden)]
+pub use super::kernel_data::evaluated_part_selectors::EvaluatedPartSelectors;
+
 // rewrite_data
 pub use super::kernel_data::rewrite_data::RewriteDataBuiltin;
 
@@ -81,6 +85,8 @@ pub use super::messages::parse_and_message_helpers::{
 pub use super::session::session_state::{EvalError, ThreadArgSpec, ThreadingDispatch};
 
 // structure_data
+#[doc(hidden)]
+pub use super::kernel_data::structure_data::invalid_part_selector_expr;
 pub use super::kernel_data::structure_data::{
     exact_expr_at_path, exact_position_paths_from_expr,
     exact_position_paths_from_part_selector_exprs, replace_exact_path,

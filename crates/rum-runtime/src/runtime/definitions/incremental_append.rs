@@ -18,7 +18,8 @@ impl Session {
         {
             return Ok(None);
         }
-        let Some(plan) = self.incremental_append_plain_list_plan(&target, selector_exprs) else {
+        let Some(plan) = self.incremental_append_plain_list_plan(&target, selector_exprs.as_ref())
+        else {
             return Ok(None);
         };
 
@@ -93,7 +94,7 @@ impl Session {
     fn incremental_append_plain_list_plan(
         &self,
         target: &Symbol,
-        selector_exprs: Option<&[Expr]>,
+        selector_exprs: Option<&EvaluatedPartSelectors>,
     ) -> Option<IncrementalAppendPlan> {
         let current = self
             .definitions
@@ -112,10 +113,6 @@ impl Session {
             });
         };
 
-        if selector_exprs.is_empty() || !selector_exprs.iter().all(is_positive_exact_part_selector)
-        {
-            return None;
-        }
         let paths = exact_position_paths_from_part_target_selector_exprs(current, selector_exprs)?;
         let [path] = paths.as_slice() else {
             return None;
@@ -183,7 +180,9 @@ struct IncrementalAppendPlan {
     leaf_cache_key: CallStabilityCacheKey,
 }
 
-fn incremental_append_target(target_expr: &Expr) -> Option<(Symbol, Option<&[Expr]>)> {
+fn incremental_append_target(
+    target_expr: &Expr,
+) -> Option<(Symbol, Option<EvaluatedPartSelectors>)> {
     if let Some(target) = expr_as_symbol(target_expr) {
         return Some((*target, None));
     }
@@ -195,11 +194,9 @@ fn incremental_append_target(target_expr: &Expr) -> Option<(Symbol, Option<&[Exp
         return None;
     }
 
-    Some((*expr_as_symbol(&args[0])?, Some(&args[1..])))
-}
-
-fn is_positive_exact_part_selector(selector: &Expr) -> bool {
-    expr_as_signed_isize(selector).is_some_and(|index| index > 0)
+    let target = *expr_as_symbol(&args[0])?;
+    let selectors = EvaluatedPartSelectors::from_stable_positive_part_args(args)?;
+    Some((target, Some(selectors)))
 }
 
 fn exact_plain_list_leaf_mut<'a>(

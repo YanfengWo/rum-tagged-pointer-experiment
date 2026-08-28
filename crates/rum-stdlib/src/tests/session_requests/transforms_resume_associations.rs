@@ -8,6 +8,69 @@ fn core_session() -> Session {
 }
 
 #[test]
+fn held_part_update_resumes_two_selectors_without_replay_and_refetches_owner() {
+    const SOURCE: &str = "x = {{1}, {2}}; seen = {}; \
+        AddTo[x[[(AppendTo[seen, firstBefore]; InputString[\"first: \"]; \
+                     AppendTo[seen, firstAfter]; x = {{10}, {20}}; 1), \
+                  (AppendTo[seen, secondBefore]; InputString[\"second: \"]; \
+                     AppendTo[seen, secondAfter]; x = {{30}, {40}}; 1)]], 5]; \
+        {x, seen}";
+
+    let mut resumed_session = core_session();
+    let first = resumed_session
+        .eval_request(SOURCE)
+        .expect_err("the first selector should request input");
+    assert_input_prompt(&first.error, "first: ");
+
+    let second = resumed_session
+        .resume_eval_request_with_input("one")
+        .expect_err("the second selector should request input after the first resumes");
+    assert_input_prompt(&second.error, "second: ");
+
+    let resumed = resumed_session
+        .resume_eval_request_with_input("two")
+        .expect("the held update should finish after both selectors resume");
+    assert_eq!(
+        resumed.value.to_string(),
+        "List[List[List[35], List[40]], List[firstBefore, firstAfter, secondBefore, secondAfter]]"
+    );
+    assert!(resumed.messages.is_empty());
+
+    let mut queued_session = core_session();
+    queued_session.queue_input_response("one");
+    queued_session.queue_input_response("two");
+    let queued = queued_session
+        .eval_request(SOURCE)
+        .expect("queued inputs should follow the same two-selector path");
+    assert_eq!(queued.value, resumed.value);
+    assert_eq!(queued.messages, resumed.messages);
+}
+
+#[test]
+fn association_part_mutation_resumes_one_selector_without_replay_and_refetches_owner() {
+    const SOURCE: &str = "parts = {Association[a -> 1]}; seen = {}; \
+        AssociateTo[parts[[(AppendTo[seen, before]; InputString[\"selector: \"]; \
+                              AppendTo[seen, after]; \
+                              parts = {Association[a -> 10]}; 1)]], b -> 2]; \
+        {parts, seen}";
+
+    let mut session = core_session();
+    let failure = session
+        .eval_request(SOURCE)
+        .expect_err("the association Part selector should request input");
+    assert_input_prompt(&failure.error, "selector: ");
+
+    let response = session
+        .resume_eval_request_with_input("ready")
+        .expect("the association Part mutation should finish after selector input");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[Association[Rule[a, 10], Rule[b, 2]]], List[before, after]]"
+    );
+    assert!(response.messages.is_empty());
+}
+
+#[test]
 fn associateto_requires_an_immediate_symbol_value_instead_of_suspending_delayed_values() {
     let mut session = core_session();
     session

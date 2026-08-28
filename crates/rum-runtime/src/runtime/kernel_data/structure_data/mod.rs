@@ -1,4 +1,5 @@
 use super::super::*;
+use super::evaluated_part_selectors::EvaluatedPartSelectors;
 
 mod exact_paths;
 mod replace;
@@ -22,9 +23,9 @@ pub fn exact_position_paths_from_expr(expr: &Expr, spec_expr: &Expr) -> Option<V
 /// Returns exact structural paths for Part-style selector expressions.
 pub fn exact_position_paths_from_part_selector_exprs(
     expr: &Expr,
-    selector_exprs: &[Expr],
+    selector_exprs: &EvaluatedPartSelectors,
 ) -> Option<Vec<Vec<isize>>> {
-    let selectors = parse_part_selectors(selector_exprs)?;
+    let selectors = parse_part_selectors(selector_exprs.as_slice())?;
     Some(collect_exact_paths_for_position_spec(
         expr,
         &selectors,
@@ -32,11 +33,19 @@ pub fn exact_position_paths_from_part_selector_exprs(
     ))
 }
 
+/// Returns the first evaluated expression that is not a valid Part selector.
+pub fn invalid_part_selector_expr(selector_exprs: &EvaluatedPartSelectors) -> Option<&Expr> {
+    selector_exprs
+        .as_slice()
+        .iter()
+        .find(|selector| parse_part_selectors(std::slice::from_ref(selector)).is_none())
+}
+
 pub(in crate::runtime) fn exact_position_paths_from_part_target_selector_exprs(
     expr: &Expr,
-    selector_exprs: &[Expr],
+    selector_exprs: &EvaluatedPartSelectors,
 ) -> Option<Vec<Vec<isize>>> {
-    let selectors = parse_part_selectors_for_part(selector_exprs)?;
+    let selectors = parse_part_selectors_for_part(selector_exprs.as_slice())?;
     Some(collect_exact_paths_for_position_spec(
         expr,
         &selectors,
@@ -45,17 +54,17 @@ pub(in crate::runtime) fn exact_position_paths_from_part_target_selector_exprs(
 }
 
 pub(in crate::runtime) fn invalid_part_target_selector_expr(
-    selector_exprs: &[Expr],
+    selector_exprs: &EvaluatedPartSelectors,
 ) -> Option<&Expr> {
-    invalid_part_selector_for_part(selector_exprs)
+    invalid_part_selector_for_part(selector_exprs.as_slice())
 }
 
 pub(in crate::runtime) fn selected_expr_from_part_target_selector_exprs(
     session: &mut Session,
     expr: &Expr,
-    selector_exprs: &[Expr],
+    selector_exprs: &EvaluatedPartSelectors,
 ) -> Option<Expr> {
-    let selectors = parse_part_selectors_for_part(selector_exprs)?;
+    let selectors = parse_part_selectors_for_part(selector_exprs.as_slice())?;
     apply_part_selectors(session, expr, &selectors)
 }
 

@@ -173,6 +173,281 @@ fn held_updates_mutate_single_exact_part_targets() {
 }
 
 #[test]
+fn held_updates_evaluate_rebound_part_selectors_for_all_eleven_heads() {
+    for (name, setup, call, expected) in [
+        (
+            "AddTo",
+            "x = {10, 20}",
+            "AddTo[x[[$selector]], 5]",
+            "List[15, List[15, 20]]",
+        ),
+        (
+            "SubtractFrom",
+            "x = {10, 20}",
+            "SubtractFrom[x[[$selector]], 5]",
+            "List[5, List[5, 20]]",
+        ),
+        (
+            "TimesBy",
+            "x = {10, 20}",
+            "TimesBy[x[[$selector]], 2]",
+            "List[20, List[20, 20]]",
+        ),
+        (
+            "DivideBy",
+            "x = {10, 20}",
+            "DivideBy[x[[$selector]], 2]",
+            "List[5, List[5, 20]]",
+        ),
+        (
+            "ApplyTo",
+            "x = {10, 20}",
+            "ApplyTo[x[[$selector]], f]",
+            "List[f[10], List[f[10], 20]]",
+        ),
+        (
+            "AppendTo",
+            "x = {{a}, {b}}",
+            "AppendTo[x[[$selector]], z]",
+            "List[List[a, z], List[List[a, z], List[b]]]",
+        ),
+        (
+            "PrependTo",
+            "x = {{a}, {b}}",
+            "PrependTo[x[[$selector]], z]",
+            "List[List[z, a], List[List[z, a], List[b]]]",
+        ),
+        (
+            "Increment",
+            "x = {10, 20}",
+            "Increment[x[[$selector]]]",
+            "List[10, List[11, 20]]",
+        ),
+        (
+            "Decrement",
+            "x = {10, 20}",
+            "Decrement[x[[$selector]]]",
+            "List[10, List[9, 20]]",
+        ),
+        (
+            "PreIncrement",
+            "x = {10, 20}",
+            "PreIncrement[x[[$selector]]]",
+            "List[11, List[11, 20]]",
+        ),
+        (
+            "PreDecrement",
+            "x = {10, 20}",
+            "PreDecrement[x[[$selector]]]",
+            "List[9, List[9, 20]]",
+        ),
+    ] {
+        for selector in ["kk", "1"] {
+            let call = call.replace("$selector", selector);
+            let source = format!("kk = 2; {setup}; kk = 1; {{{call}, x}}");
+            let mut session = core_session();
+            let outcome = session.eval_text(&source).unwrap();
+
+            assert_eq!(outcome.value.to_string(), expected, "{name}: {source}");
+            assert!(
+                outcome.messages.is_empty(),
+                "{name}: {:?}",
+                outcome.messages
+            );
+        }
+    }
+}
+
+#[test]
+fn held_update_part_selectors_run_left_to_right_after_binary_rhs_preparation() {
+    let mut session = core_session();
+    assert_eq!(
+        session
+            .eval_text(
+                "order = {}; x = {{1, 2}, {3, 4}}; \
+                 AddTo[x[[(AppendTo[order, first]; 1), (AppendTo[order, second]; 2)]], 10]; \
+                 {order, x}",
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[List[first, second], List[List[1, 12], List[3, 4]]]"
+    );
+
+    for (name, setup, call, expected) in [
+        (
+            "AddTo",
+            "x = {10}",
+            "AddTo[x[[kk]], (AppendTo[order, rhs]; 5)]",
+            "List[List[rhs, selector], 15, List[15]]",
+        ),
+        (
+            "SubtractFrom",
+            "x = {10}",
+            "SubtractFrom[x[[kk]], (AppendTo[order, rhs]; 5)]",
+            "List[List[rhs, selector], 5, List[5]]",
+        ),
+        (
+            "TimesBy",
+            "x = {10}",
+            "TimesBy[x[[kk]], (AppendTo[order, rhs]; 5)]",
+            "List[List[rhs, selector], 50, List[50]]",
+        ),
+        (
+            "DivideBy",
+            "x = {10}",
+            "DivideBy[x[[kk]], (AppendTo[order, rhs]; 5)]",
+            "List[List[rhs, selector], 2, List[2]]",
+        ),
+        (
+            "ApplyTo",
+            "x = {10}",
+            "ApplyTo[x[[kk]], (AppendTo[order, rhs]; f)]",
+            "List[List[rhs, selector], f[10], List[f[10]]]",
+        ),
+        (
+            "AppendTo",
+            "x = {{a}}",
+            "AppendTo[x[[kk]], (AppendTo[order, rhs]; z)]",
+            "List[List[rhs, selector], List[a, z], List[List[a, z]]]",
+        ),
+        (
+            "PrependTo",
+            "x = {{a}}",
+            "PrependTo[x[[kk]], (AppendTo[order, rhs]; z)]",
+            "List[List[rhs, selector], List[z, a], List[List[z, a]]]",
+        ),
+    ] {
+        let source = format!(
+            "order = {{}}; kk := (AppendTo[order, selector]; 1); {setup}; \
+             result = {call}; {{order, result, x}}"
+        );
+        let mut session = core_session();
+        let outcome = session.eval_text(&source).unwrap();
+
+        assert_eq!(outcome.value.to_string(), expected, "{name}: {source}");
+        assert!(
+            outcome.messages.is_empty(),
+            "{name}: {:?}",
+            outcome.messages
+        );
+    }
+}
+
+#[test]
+fn held_update_part_selectors_rederive_owner_state_after_callbacks() {
+    let mut session = core_session();
+    assert_eq!(
+        session
+            .eval_text(
+                "x = {1, 2}; sel := (x = {10, 20}; 2); \
+                 {AddTo[x[[sel]], 5], x}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[25, List[10, 25]]"
+    );
+
+    session
+        .eval_text("x = {1, 2}; sel := (Clear[x]; 1)")
+        .unwrap();
+    let cleared = session.eval_text("AddTo[x[[sel]], 5]").unwrap();
+    assert!(
+        cleared
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "AddTo" && message.tag == "rvalue" })
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[x]").unwrap().value.to_string(),
+        "False"
+    );
+
+    session
+        .eval_text("x = {1, 2}; sel := (Remove[x]; 1)")
+        .unwrap();
+    let removed = session.eval_text("AddTo[x[[sel]], 5]").unwrap();
+    assert!(
+        removed
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "AddTo" && message.tag == "rvalue" })
+    );
+    assert_eq!(
+        session.eval_text("ValueQ[x]").unwrap().value.to_string(),
+        "False"
+    );
+
+    session
+        .eval_text("x = {1, 2}; sel := (Protect[x]; 1)")
+        .unwrap();
+    let protected = session.eval_text("AddTo[x[[sel]], 5]").unwrap();
+    assert!(
+        protected
+            .messages
+            .iter()
+            .any(|message| { message.symbol == "AddTo" && message.tag == "wrsym" })
+    );
+    assert_eq!(
+        session.eval_text("x").unwrap().value.to_string(),
+        "List[1, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[Protected]"
+    );
+
+    session
+        .eval_text("Unprotect[x]; x = {1, 2}; sel := (Unprotect[x]; 1); Protect[x]")
+        .unwrap();
+    let unprotected = session.eval_text("AddTo[x[[sel]], 5]").unwrap();
+    assert_eq!(unprotected.value.to_string(), "6");
+    assert!(unprotected.messages.is_empty());
+    assert_eq!(
+        session.eval_text("x").unwrap().value.to_string(),
+        "List[6, 2]"
+    );
+    assert_eq!(
+        session
+            .eval_text("Attributes[x]")
+            .unwrap()
+            .value
+            .to_string(),
+        "List[]"
+    );
+}
+
+#[test]
+fn held_update_invalid_selector_diagnostics_use_the_evaluated_offender() {
+    let mut session = core_session();
+    let outcome = session
+        .eval_text(
+            "calls = 0; sel := (calls = calls + 1; evaluatedBad); \
+             x = {1}; AddTo[x[[sel]], 5]",
+        )
+        .unwrap();
+
+    let selector_messages = outcome
+        .messages
+        .iter()
+        .filter(|message| message.tag == "pkspec1")
+        .collect::<Vec<_>>();
+    assert!(!selector_messages.is_empty());
+    assert!(
+        selector_messages
+            .iter()
+            .all(|message| message.text.contains("evaluatedBad"))
+    );
+    assert_eq!(session.eval_text("calls").unwrap().value.to_string(), "1");
+    assert_eq!(session.eval_text("x").unwrap().value.to_string(), "List[1]");
+}
+
+#[test]
 fn held_updates_mutate_bulk_exact_part_targets() {
     let mut session = core_session();
 

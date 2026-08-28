@@ -1,5 +1,6 @@
 use super::*;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use crate::runtime::kernel_data::evaluated_part_selectors::EvaluatedPartSelectors;
 
 mod apply;
 mod diagnostics;
@@ -77,8 +78,9 @@ impl Session {
     pub(in crate::runtime) fn push_existing_part_selection_failure_messages(
         &mut self,
         target: &Expr,
-        selector_exprs: &[Expr],
+        selector_exprs: &EvaluatedPartSelectors,
     ) -> bool {
+        let selector_exprs = selector_exprs.as_slice();
         let Some(selectors) = parse_part_selectors_for_part(selector_exprs) else {
             return false;
         };

@@ -2,6 +2,41 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct FinishHeldAssociationPartSelectorEvaluationSuspensionFrame {
+    pub(super) operation: AssociationPartMutationOperation,
+    pub(super) target_expr: Expr,
+    pub(super) target: Symbol,
+    pub(super) spec: Expr,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame
+    for FinishHeldAssociationPartSelectorEvaluationSuspensionFrame
+{
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        let operation = self.operation;
+        let target_expr = self.target_expr.clone();
+        let target = self.target;
+        let spec = self.spec.clone();
+        let resumed = (|| {
+            let evaluated_selectors = <EvaluatedPartSelectors as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(outcome?);
+            finish_held_association_part_mutation(
+                session,
+                operation,
+                target_expr,
+                target,
+                evaluated_selectors,
+                spec,
+            )
+        })();
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
 pub(super) struct EvalAssociateToSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) target_expr: rum_core::Expr,
