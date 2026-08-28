@@ -1,7 +1,7 @@
 use super::super::*;
 use super::definition_lhs_preparation::{
     DefinitionLhsPreparationContinuation, DefinitionLhsPreparationContinuationResult,
-    PreparedDefinitionLhs,
+    PreparedDefinitionLhs, PreparedDefinitionStore,
 };
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
@@ -22,6 +22,13 @@ struct AssignedValueTableRule {
     delayed: bool,
 }
 
+#[derive(Clone, FrameRootTrace)]
+struct PreparedValueTableRule {
+    store: PreparedDefinitionStore,
+    rhs: Expr,
+    delayed: bool,
+}
+
 #[derive(Clone, Default, FrameRootTrace)]
 struct PreparedValueTableRuleAccumulator {
     tail: Option<Arc<PreparedValueTableRuleNode>>,
@@ -31,7 +38,7 @@ struct PreparedValueTableRuleAccumulator {
 #[derive(FrameRootTrace)]
 struct PreparedValueTableRuleNode {
     previous: Option<Arc<PreparedValueTableRuleNode>>,
-    rule: AssignedValueTableRule,
+    rule: PreparedValueTableRule,
 }
 
 #[derive(Clone, FrameRootTrace)]
@@ -45,7 +52,7 @@ pub(super) struct ValueTableAssignmentState {
 }
 
 impl PreparedValueTableRuleAccumulator {
-    fn appended(&self, rule: AssignedValueTableRule) -> Self {
+    fn appended(&self, rule: PreparedValueTableRule) -> Self {
         Self {
             tail: Some(Arc::new(PreparedValueTableRuleNode {
                 previous: self.tail.clone(),
@@ -55,7 +62,7 @@ impl PreparedValueTableRuleAccumulator {
         }
     }
 
-    fn into_vec_allow_shared(self) -> Vec<AssignedValueTableRule> {
+    fn into_vec_allow_shared(self) -> Vec<PreparedValueTableRule> {
         let mut rules = Vec::with_capacity(self.len);
         let mut node = self.tail;
         while let Some(current) = node {
@@ -166,10 +173,11 @@ impl Session {
             .rules
             .get(state.cursor)
             .expect("value-table preparation cursor should name the current entry");
-        let (lhs, _) = prepared.into_parts();
         let expected_target = state.kind.definition_target(state.target);
-        if classify_tagged_definition(&state.target, &lhs) != Ok(expected_target) {
-            self.push_message(
+        let store = match prepared.into_store_for_owner(expected_target) {
+            Ok(store) => store,
+            Err(lhs) => {
+                self.push_message(
                 state.kind.inspector_name(),
                 "setval",
                 format!(
@@ -181,17 +189,17 @@ impl Session {
                     state.kind.inspector_name()
                 ),
             );
-            return Ok(DefinitionLhsPreparationContinuationResult::Complete(
-                state.rhs,
-            ));
-        }
+                return Ok(DefinitionLhsPreparationContinuationResult::Complete(
+                    state.rhs,
+                ));
+            }
+        };
 
         // Append the completed entry before advancing the cursor. A suspended
         // continuation therefore resumes the current entry exactly once, while
         // every earlier prepared rule remains in the Arc-backed prefix.
-        state.prepared = state.prepared.appended(AssignedValueTableRule {
-            source: rule.source.clone(),
-            lhs,
+        state.prepared = state.prepared.appended(PreparedValueTableRule {
+            store,
             rhs: rule.rhs.clone(),
             delayed: rule.delayed,
         });
@@ -228,12 +236,7 @@ impl Session {
         // recheck above all complete before this first mutation.
         self.clear_value_table(kind, &target);
         for rule in prepared.into_vec_allow_shared() {
-            self.store_definition_target(
-                kind.definition_target(target),
-                rule.lhs,
-                rule.rhs,
-                rule.delayed,
-            );
+            self.store_prepared_definition(rule.store, rule.rhs, rule.delayed);
         }
         rhs
     }
@@ -353,6 +356,7 @@ fn malformed_value_table_rule_message(kind: ValueTableKind, target: Symbol, rule
 const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<AssignedValueTableRule>();
+    assert_traces::<PreparedValueTableRule>();
     assert_traces::<PreparedValueTableRuleAccumulator>();
     assert_traces::<PreparedValueTableRuleNode>();
     assert_traces::<ValueTableAssignmentState>();

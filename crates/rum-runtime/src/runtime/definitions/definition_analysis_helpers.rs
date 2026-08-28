@@ -16,17 +16,6 @@ pub(in crate::runtime) enum TagDefinitionError {
     TagPositionInvalid,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::runtime) enum UnsetDefinitionTarget {
-    Message(MessageNameKey),
-    Options(Symbol),
-    SyntaxInformation(Symbol),
-    OwnValue(Symbol),
-    DownValue { symbol: Symbol, lhs: Expr },
-    SubValue { symbol: Symbol, lhs: Expr },
-    TaggedDefinition { tag: Symbol, lhs: Expr },
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, rum_derive::FrameRootTrace)]
 pub(in crate::runtime) enum DefinitionAssignmentTarget {
     Message(MessageNameKey),
@@ -41,20 +30,6 @@ impl TaggedDefinitionTarget {
             | Self::DownValue(symbol)
             | Self::SubValue(symbol)
             | Self::UpValue(symbol) => symbol,
-        }
-    }
-}
-
-impl UnsetDefinitionTarget {
-    pub(in crate::runtime) fn symbol(&self) -> &Symbol {
-        match self {
-            Self::Message(key) => &key.symbol,
-            Self::Options(symbol) => symbol,
-            Self::SyntaxInformation(symbol) => symbol,
-            Self::OwnValue(symbol)
-            | Self::DownValue { symbol, .. }
-            | Self::SubValue { symbol, .. }
-            | Self::TaggedDefinition { tag: symbol, .. } => symbol,
         }
     }
 }
@@ -150,52 +125,6 @@ impl Session {
         }
     }
 
-    pub(in crate::runtime) fn normalize_unset_target(
-        &self,
-        expr: &Expr,
-    ) -> Result<UnsetDefinitionTarget, DefinitionTargetNormalizationError> {
-        if let Some(key) = self.message_name_key_from_expr(expr) {
-            return Ok(UnsetDefinitionTarget::Message(key));
-        }
-
-        if let Some(symbol) = self.normalize_options_target_expr(expr) {
-            return Ok(UnsetDefinitionTarget::Options(symbol));
-        }
-
-        if let Some(symbol) = self.normalize_syntax_information_target_expr(expr) {
-            return Ok(UnsetDefinitionTarget::SyntaxInformation(symbol));
-        }
-
-        if let Some(symbol) = expr_as_symbol(expr).cloned() {
-            return Ok(UnsetDefinitionTarget::OwnValue(symbol));
-        }
-
-        if let Expr::Call { head, args } = expr {
-            if is_system_symbol_name(head, "TagSet") && args.len() == 2 {
-                return Ok(UnsetDefinitionTarget::TaggedDefinition {
-                    tag: self.normalize_tag_target(&args[0])?,
-                    lhs: args[1].clone(),
-                });
-            }
-        }
-
-        if let Some(symbol) = downvalue_head_symbol(expr).cloned() {
-            return Ok(UnsetDefinitionTarget::DownValue {
-                symbol,
-                lhs: expr.clone(),
-            });
-        }
-
-        if let Some(symbol) = subvalue_base_symbol(expr).cloned() {
-            return Ok(UnsetDefinitionTarget::SubValue {
-                symbol,
-                lhs: expr.clone(),
-            });
-        }
-
-        Err(DefinitionTargetNormalizationError::InvalidUnsetTarget)
-    }
-
     pub(in crate::runtime) fn normalize_definition_assignment_target(
         &self,
         lhs: &Expr,
@@ -222,30 +151,6 @@ impl Session {
         self.definitions
             .get(symbol)
             .and_then(|definition| definition.own_value.clone())
-    }
-
-    /// Stores an immediate value for a normalized definition assignment target.
-    pub fn store_definition_assignment_target_immediate(&mut self, lhs: &Expr, rhs: Expr) {
-        if let Some(DefinitionAssignmentTarget::Definition(target)) =
-            self.normalize_definition_assignment_target(lhs)
-        {
-            self.store_definition_target(target, lhs.clone(), rhs, false);
-        }
-    }
-
-    /// Returns the definition target symbol when it is protected or known-system.
-    pub fn protected_or_known_definition_target_symbol(&self, lhs: &Expr) -> Option<Symbol> {
-        let Some(DefinitionAssignmentTarget::Definition(target)) =
-            self.normalize_definition_assignment_target(lhs)
-        else {
-            return None;
-        };
-
-        let symbol = target.symbol().clone();
-        (self.symbol_is_protected(&symbol)
-            || is_known_system_symbol(&symbol)
-            || self.builtin_spec_for_symbol(&symbol).is_some())
-        .then_some(symbol)
     }
 
     pub(in crate::runtime) fn normalize_options_target_expr(&self, expr: &Expr) -> Option<Symbol> {

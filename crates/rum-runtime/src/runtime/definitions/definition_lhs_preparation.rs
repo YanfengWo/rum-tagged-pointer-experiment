@@ -1,4 +1,8 @@
+mod prepared_store;
 mod resume_frames;
+pub(super) use prepared_store::{
+    PreparedDefinitionAssignment, PreparedDefinitionStore, PreparedUnsetDefinitionTarget,
+};
 use resume_frames::*;
 
 use super::super::*;
@@ -70,13 +74,14 @@ impl PreparedDefinitionLhs {
         }
     }
 
-    pub(super) fn into_parts(self) -> (Expr, Option<DefinitionAssignmentTarget>) {
-        (self.lhs, self.target)
-    }
-
     #[doc(hidden)]
     pub fn lhs(&self) -> &Expr {
         &self.lhs
+    }
+
+    #[cfg(test)]
+    fn into_lhs(self) -> Expr {
+        self.lhs
     }
 }
 
@@ -91,6 +96,20 @@ pub(super) enum DefinitionLhsPreparationContinuation {
     },
     ValueTableEntry {
         state: ValueTableAssignmentState,
+    },
+    TagSet {
+        tag: Symbol,
+        args: SharedArgs,
+        rhs: Expr,
+        delayed: bool,
+    },
+    TagUnset {
+        tag: Symbol,
+        args: SharedArgs,
+    },
+    UpSet {
+        rhs: Expr,
+        delayed: bool,
     },
     External(PreparedDefinitionLhsContinuation),
     #[cfg(test)]
@@ -121,12 +140,26 @@ impl DefinitionLhsPreparationContinuation {
             Self::ValueTableEntry { state } => {
                 session.resume_prepared_value_table_entry(state, prepared)
             }
+            Self::TagSet {
+                tag,
+                args,
+                rhs,
+                delayed,
+            } => session
+                .finish_prepared_tag_set(prepared, tag, args, rhs, delayed)
+                .map(DefinitionLhsPreparationContinuationResult::Complete),
+            Self::TagUnset { tag, args } => session
+                .finish_prepared_tag_unset(prepared, tag, args)
+                .map(DefinitionLhsPreparationContinuationResult::Complete),
+            Self::UpSet { rhs, delayed } => session
+                .finish_prepared_up_set(prepared, rhs, delayed)
+                .map(DefinitionLhsPreparationContinuationResult::Complete),
             Self::External(continuation) => continuation
                 .resume(session, prepared)
                 .map(DefinitionLhsPreparationContinuationResult::Complete),
             #[cfg(test)]
             Self::ReturnPrepared => Ok(DefinitionLhsPreparationContinuationResult::Complete(
-                prepared.into_parts().0,
+                prepared.into_lhs(),
             )),
         }
     }
@@ -196,33 +229,6 @@ impl Session {
             0,
             unevaluated_restore,
         )
-    }
-
-    #[doc(hidden)]
-    pub fn protected_or_known_prepared_definition_target_symbol(
-        &self,
-        prepared: &PreparedDefinitionLhs,
-    ) -> Option<Symbol> {
-        let Some(DefinitionAssignmentTarget::Definition(target)) = &prepared.target else {
-            return None;
-        };
-        let symbol = target.symbol().clone();
-        (self.symbol_is_protected(&symbol)
-            || is_known_system_symbol(&symbol)
-            || self.builtin_spec_for_symbol(&symbol).is_some())
-        .then_some(symbol)
-    }
-
-    #[doc(hidden)]
-    pub fn store_prepared_definition_lhs_immediate(
-        &mut self,
-        prepared: PreparedDefinitionLhs,
-        rhs: Expr,
-    ) {
-        let PreparedDefinitionLhs { lhs, target, .. } = prepared;
-        if let Some(DefinitionAssignmentTarget::Definition(target)) = target {
-            self.store_definition_target(target, lhs, rhs, false);
-        }
     }
 
     #[cold]
@@ -722,6 +728,14 @@ fn definition_lhs_syntax_call_plan(head: &Expr, arg_count: usize) -> DefinitionL
                 index: Some(0),
             })
         }
+        // Unset[TagSet[tag, lhs]] is the explicit spelling retained for
+        // tagged removal. Keep the tag opaque and prepare only the embedded
+        // definition lhs before prepared_unset_target classifies it.
+        heads::rules::TAG_SET if arg_count == 2 => {
+            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::One {
+                index: Some(1),
+            })
+        }
         _ => DefinitionLhsSyntaxCallPlan::Ordinary,
     }
 }
@@ -794,6 +808,7 @@ const _: fn() = || {
     assert_traces::<PreparedDefinitionLhs>();
     assert_traces::<PreparedDefinitionLhsContinuation>();
     assert_traces::<PreparedDefinitionOuterCall>();
+    assert_traces::<PreparedDefinitionStore>();
     assert_traces::<PreparedDefinitionUnevaluatedRestore>();
 };
 

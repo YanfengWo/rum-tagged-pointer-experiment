@@ -1,6 +1,6 @@
 use super::super::*;
 use super::definition_lhs_preparation::{
-    DefinitionLhsPreparationContinuation, PreparedDefinitionLhs,
+    DefinitionLhsPreparationContinuation, PreparedDefinitionLhs, PreparedUnsetDefinitionTarget,
 };
 
 impl Session {
@@ -28,11 +28,10 @@ impl Session {
         prepared: PreparedDefinitionLhs,
         source: Expr,
     ) -> Result<Expr, EvalError> {
-        let lhs = prepared.into_parts().0;
-        match self.normalize_unset_target(&lhs) {
+        match self.prepared_unset_target(prepared) {
             Ok(target) => {
                 if self.ensure_symbol_not_protected_for_write("Unset", target.symbol()) {
-                    self.unset_normalized_definition(target);
+                    self.unset_prepared_definition(target);
                 }
                 Ok(system_expr("Null"))
             }
@@ -103,23 +102,20 @@ impl Session {
         Ok(system_expr("Null"))
     }
 
-    pub(in crate::runtime) fn unset_normalized_definition(
-        &mut self,
-        target: UnsetDefinitionTarget,
-    ) {
+    fn unset_prepared_definition(&mut self, target: PreparedUnsetDefinitionTarget) {
         match target {
-            UnsetDefinitionTarget::Message(key) => {
+            PreparedUnsetDefinitionTarget::Message(key) => {
                 if self.message_definitions.remove(&key).is_some() {
                     self.discount_message_symbol(&key.symbol);
                 }
             }
-            UnsetDefinitionTarget::Options(symbol) => {
+            PreparedUnsetDefinitionTarget::Options(symbol) => {
                 self.options.remove(&symbol);
             }
-            UnsetDefinitionTarget::SyntaxInformation(symbol) => {
+            PreparedUnsetDefinitionTarget::SyntaxInformation(symbol) => {
                 self.syntax_information.remove(&symbol);
             }
-            UnsetDefinitionTarget::OwnValue(symbol) => {
+            PreparedUnsetDefinitionTarget::OwnValue(symbol) => {
                 let mut changed = false;
                 if let Some(definition) = self.definitions.get_mut(&symbol) {
                     changed = definition.clear_own_values();
@@ -130,132 +126,11 @@ impl Session {
                     self.bump_evaluation_epoch_for_symbol(&symbol);
                 }
             }
-            UnsetDefinitionTarget::DownValue { symbol, lhs } => {
-                self.remove_matching_down_values(&symbol, &lhs);
-                self.prune_definition_if_empty(&symbol);
+            PreparedUnsetDefinitionTarget::Definition(prepared) => {
+                self.remove_prepared_definition(prepared);
             }
-            UnsetDefinitionTarget::SubValue { symbol, lhs } => {
-                self.remove_matching_sub_values(&symbol, &lhs);
-                self.prune_definition_if_empty(&symbol);
-            }
-            UnsetDefinitionTarget::TaggedDefinition { tag, lhs } => {
-                if self.unset_tagged_definition(&tag, &lhs).is_ok() {
-                    self.prune_definition_if_empty(&tag);
-                }
-            }
+            PreparedUnsetDefinitionTarget::TaggedNoop(_) => {}
         }
-    }
-
-    pub(in crate::runtime) fn unset_tagged_definition(
-        &mut self,
-        tag: &Symbol,
-        lhs: &Expr,
-    ) -> Result<bool, TagDefinitionError> {
-        match classify_tagged_definition(tag, lhs) {
-            Ok(TaggedDefinitionTarget::OwnValue(symbol)) => {
-                if let Some(definition) = self.definitions.get_mut(&symbol) {
-                    let changed = definition.clear_own_values();
-                    self.prune_definition_if_empty(&symbol);
-                    if changed {
-                        self.bump_evaluation_epoch_for_symbol(&symbol);
-                    }
-                    Ok(changed)
-                } else {
-                    Ok(false)
-                }
-            }
-            Ok(TaggedDefinitionTarget::DownValue(symbol)) => {
-                let changed = self.remove_matching_down_values(&symbol, lhs);
-                self.prune_definition_if_empty(&symbol);
-                Ok(changed)
-            }
-            Ok(TaggedDefinitionTarget::SubValue(symbol)) => {
-                let changed = self.remove_matching_sub_values(&symbol, lhs);
-                self.prune_definition_if_empty(&symbol);
-                Ok(changed)
-            }
-            Ok(TaggedDefinitionTarget::UpValue(symbol)) => {
-                let changed = self.remove_matching_up_values(&symbol, lhs);
-                self.prune_definition_if_empty(&symbol);
-                Ok(changed)
-            }
-            Err(error) => Err(error),
-        }
-    }
-
-    pub(in crate::runtime) fn remove_matching_down_values(
-        &mut self,
-        symbol: &Symbol,
-        lhs: &Expr,
-    ) -> bool {
-        let Some(definition) = self.definitions.get_mut(symbol) else {
-            return false;
-        };
-
-        let original_len = definition.down_values.len();
-        definition
-            .down_values
-            .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-        let changed = definition.down_values.len() != original_len;
-        if changed {
-            definition.note_down_values_rebuilt(symbol);
-            self.bump_evaluation_epoch_for_symbol(symbol);
-        }
-        changed
-    }
-
-    pub(in crate::runtime) fn remove_matching_up_values(
-        &mut self,
-        symbol: &Symbol,
-        lhs: &Expr,
-    ) -> bool {
-        let changed;
-        let symbol_has_no_more_up_values;
-
-        {
-            let Some(definition) = self.definitions.get_mut(symbol) else {
-                return false;
-            };
-
-            let original_len = definition.up_values.len();
-            definition
-                .up_values
-                .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-            changed = definition.up_values.len() != original_len;
-            if changed {
-                definition.note_up_values_rebuilt();
-            }
-            symbol_has_no_more_up_values = definition.up_values.is_empty();
-        }
-
-        if changed {
-            if symbol_has_no_more_up_values {
-                self.refresh_has_up_value_definitions();
-            }
-            self.bump_evaluation_epoch_for_symbol(symbol);
-        }
-        changed
-    }
-
-    pub(in crate::runtime) fn remove_matching_sub_values(
-        &mut self,
-        symbol: &Symbol,
-        lhs: &Expr,
-    ) -> bool {
-        let Some(definition) = self.definitions.get_mut(symbol) else {
-            return false;
-        };
-
-        let original_len = definition.sub_values.len();
-        definition
-            .sub_values
-            .retain(|entry| !lhs_patterns_equivalent(&entry.lhs, lhs));
-        let changed = definition.sub_values.len() != original_len;
-        if changed {
-            definition.note_sub_values_rebuilt();
-            self.bump_evaluation_epoch_for_symbol(symbol);
-        }
-        changed
     }
 
     pub(in crate::runtime) fn prune_definition_if_empty(&mut self, symbol: &Symbol) {

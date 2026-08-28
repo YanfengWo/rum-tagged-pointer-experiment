@@ -307,7 +307,6 @@ pub(in crate::runtime) fn builtin_up_set(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     session.eval_up_set(args)
 }
 
@@ -316,7 +315,6 @@ pub(in crate::runtime) fn builtin_up_set_delayed(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     session.eval_up_set_delayed(args)
 }
 
@@ -333,7 +331,6 @@ pub(in crate::runtime) fn builtin_tag_set_delayed(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     session.eval_tag_set_delayed(args)
 }
 
@@ -342,7 +339,6 @@ pub(in crate::runtime) fn builtin_tag_unset(
     _head: &Expr,
     args: &SharedArgs,
 ) -> Result<Expr, EvalError> {
-    let args = args.as_ref();
     session.eval_tag_unset(args)
 }
 

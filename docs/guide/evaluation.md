@@ -129,6 +129,16 @@ The resulting definition identity is a snapshot. Later own-value or attribute
 changes affect identities prepared by later assignments and lookups, but do
 not rewrite definitions that are already stored.
 
+Tagged assignments use that same prepared identity. `TagSet` normalizes its
+explicit tag, evaluates an immediate right-hand side, and then prepares the
+left-hand side; `TagSetDelayed` skips right-hand-side evaluation. Ownership is
+classified only after preparation. `UpSet` and `UpSetDelayed` likewise infer
+their tag symbols from the prepared left-hand side. Consequently, if preparing
+an `UpSet` left-hand side leaves no valid tag symbol, the assignment reports
+`UpSet::nosym` (or `UpSetDelayed::nosym`) and stores nothing. `TagUnset`
+prepares its left-hand side under current state before classifying and removing
+the explicitly tagged identity.
+
 `Unset[lhs]` and its `lhs =.` syntax prepare an ordinary definition lhs by the
 same rules before removing it. Removal therefore addresses the identity named
 by current state: if `i = 2`, then `f[i] = 1; Unset[f[i]]` removes `f[2]`, but

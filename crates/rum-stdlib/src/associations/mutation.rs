@@ -498,10 +498,7 @@ fn finish_held_association_mutation(
         ));
     };
 
-    session.store_definition_assignment_target_immediate(
-        &Expr::Atom(Atom::Symbol(target)),
-        updated.clone(),
-    );
+    session.store_immediate_symbol_own_value(target, updated.clone());
 
     Ok(updated)
 }
@@ -677,10 +674,7 @@ fn finish_held_association_part_mutation(
         return Ok(Expr::call(system_expr(operator), held_call));
     }
 
-    session.store_definition_assignment_target_immediate(
-        &Expr::Atom(Atom::Symbol(target)),
-        updated_target.clone(),
-    );
+    session.store_immediate_symbol_own_value(target, updated_target.clone());
 
     let value = match operation.result() {
         HeldAssociationPartMutationResult::UpdatedTarget => updated_target,

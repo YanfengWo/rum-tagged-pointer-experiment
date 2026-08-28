@@ -158,3 +158,192 @@ fn value_table_failure_after_suspension_keeps_the_old_table_intact() {
         before
     );
 }
+
+#[test]
+fn tagset_resumes_rhs_tag_position_and_lhs_once_in_settled_order() {
+    let mut session = core_session();
+    session
+        .eval_text(
+            "ClearAll[tagResumeOwner, tagResumeHead, tagResumeTag, tagResumeLhs, \
+                      tagResumeRhs, tagResumeTagCalls, tagResumeLhsCalls, \
+                      tagResumeRhsCalls, tagResumeOrder]; \
+             tagResumeTagCalls = 0; tagResumeLhsCalls = 0; \
+             tagResumeRhsCalls = 0; tagResumeOrder = 0; \
+             tagResumeTag[] := (tagResumeTagCalls = tagResumeTagCalls + 1; \
+                                tagResumeOrder = tagResumeOrder * 10 + 2; \
+                                Input[\"tag lhs: \"]); \
+             tagResumeLhs[] := (tagResumeLhsCalls = tagResumeLhsCalls + 1; \
+                                tagResumeOrder = tagResumeOrder * 10 + 3; \
+                                InputString[\"tag argument: \"]); \
+             tagResumeRhs[] := (tagResumeRhsCalls = tagResumeRhsCalls + 1; \
+                                tagResumeOrder = tagResumeOrder * 10 + 1; \
+                                InputString[\"tag rhs: \"])",
+        )
+        .unwrap();
+
+    let rhs = session
+        .eval_request(
+            "TagSet[tagResumeOwner, \
+                    tagResumeHead[tagResumeTag[], tagResumeLhs[]], \
+                    tagResumeRhs[]]",
+        )
+        .expect_err("TagSet immediate rhs should suspend before lhs preparation");
+    match &rhs.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "tag rhs: ");
+        }
+        other => panic!("expected rhs input request, got {other:?}"),
+    }
+
+    let tag = session
+        .resume_eval_request_with_input("stored")
+        .expect_err("resuming the rhs should advance to the lhs tag position");
+    match &tag.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "tag lhs: ");
+        }
+        other => panic!("expected tag-position input request, got {other:?}"),
+    }
+
+    let lhs = session
+        .resume_eval_request_with_input("tagResumeOwner")
+        .expect_err("resuming the tag position should advance to the next lhs argument");
+    match &lhs.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "tag argument: ");
+        }
+        other => panic!("expected lhs input request, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("key")
+        .expect("the final lhs response should install the prepared TagSet identity");
+    assert_eq!(response.value.to_string(), "\"stored\"");
+    assert!(response.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{tagResumeRhsCalls, tagResumeTagCalls, tagResumeLhsCalls, \
+                  tagResumeOrder, tagResumeHead[tagResumeOwner, \"key\"], \
+                  UpValues[tagResumeOwner]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 1, 1, 123, \"stored\", List[RuleDelayed[HoldPattern[tagResumeHead[tagResumeOwner, \"key\"]], \"stored\"]]]"
+    );
+}
+
+#[test]
+fn upset_resumes_rhs_inferred_tag_and_lhs_once_without_replay() {
+    let mut session = core_session();
+    session
+        .eval_text(
+            "ClearAll[upResumeOwner, upResumeHead, upResumeTag, upResumeLhs, \
+                      upResumeRhs, upResumeTagCalls, upResumeLhsCalls, \
+                      upResumeRhsCalls, upResumeOrder]; \
+             upResumeTagCalls = 0; upResumeLhsCalls = 0; \
+             upResumeRhsCalls = 0; upResumeOrder = 0; \
+             upResumeTag[] := (upResumeTagCalls = upResumeTagCalls + 1; \
+                               upResumeOrder = upResumeOrder * 10 + 2; \
+                               Input[\"up tag: \"]); \
+             upResumeLhs[] := (upResumeLhsCalls = upResumeLhsCalls + 1; \
+                               upResumeOrder = upResumeOrder * 10 + 3; \
+                               InputString[\"up argument: \"]); \
+             upResumeRhs[] := (upResumeRhsCalls = upResumeRhsCalls + 1; \
+                               upResumeOrder = upResumeOrder * 10 + 1; \
+                               InputString[\"up rhs: \"])",
+        )
+        .unwrap();
+
+    let rhs = session
+        .eval_request("UpSet[upResumeHead[upResumeTag[], upResumeLhs[]], upResumeRhs[]]")
+        .expect_err("UpSet immediate rhs should suspend before lhs preparation");
+    match &rhs.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "up rhs: "),
+        other => panic!("expected rhs input request, got {other:?}"),
+    }
+
+    let tag = session
+        .resume_eval_request_with_input("stored-up")
+        .expect_err("resuming the rhs should advance to inferred-tag preparation");
+    match &tag.error {
+        SessionRequestError::InputRequired { request } => assert_eq!(request.prompt, "up tag: "),
+        other => panic!("expected inferred-tag input request, got {other:?}"),
+    }
+
+    let lhs = session
+        .resume_eval_request_with_input("upResumeOwner")
+        .expect_err("resuming the inferred tag should advance to the next lhs argument");
+    match &lhs.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "up argument: ");
+        }
+        other => panic!("expected lhs input request, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("key")
+        .expect("the final lhs response should install the prepared UpSet identity");
+    assert_eq!(response.value.to_string(), "\"stored-up\"");
+    assert!(response.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{upResumeRhsCalls, upResumeTagCalls, upResumeLhsCalls, \
+                  upResumeOrder, upResumeHead[upResumeOwner, \"key\"], \
+                  UpValues[upResumeOwner]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, 1, 1, 123, \"stored-up\", List[RuleDelayed[HoldPattern[upResumeHead[upResumeOwner, \"key\"]], \"stored-up\"]]]"
+    );
+}
+
+#[test]
+fn tagunset_resumes_preparation_once_and_removes_only_the_canonical_identity() {
+    let mut session = core_session();
+    session
+        .eval_text(
+            "ClearAll[tagUnsetResumeOwner, tagUnsetResumeHead, tagUnsetResumeArg, \
+                      tagUnsetResumeCalls]; \
+             tagUnsetResumeCalls = 0; \
+             TagSet[tagUnsetResumeOwner, \
+                    tagUnsetResumeHead[tagUnsetResumeOwner, \"drop\"], old]; \
+             tagUnsetResumeArg[] := (tagUnsetResumeCalls = tagUnsetResumeCalls + 1; \
+                                     InputString[\"tag unset lhs: \"])",
+        )
+        .unwrap();
+
+    let failure = session
+        .eval_request(
+            "TagUnset[tagUnsetResumeOwner, \
+                      tagUnsetResumeHead[tagUnsetResumeOwner, tagUnsetResumeArg[]]]",
+        )
+        .expect_err("TagUnset lhs preparation should request input");
+    match &failure.error {
+        SessionRequestError::InputRequired { request } => {
+            assert_eq!(request.prompt, "tag unset lhs: ");
+        }
+        other => panic!("expected TagUnset lhs input request, got {other:?}"),
+    }
+
+    let response = session
+        .resume_eval_request_with_input("drop")
+        .expect("resumed TagUnset should remove the prepared identity");
+    assert_eq!(response.value.to_string(), "Null");
+    assert!(response.messages.is_empty());
+    assert_eq!(
+        session
+            .eval_text(
+                "{tagUnsetResumeCalls, \
+                  tagUnsetResumeHead[tagUnsetResumeOwner, \"drop\"], \
+                  UpValues[tagUnsetResumeOwner]}"
+            )
+            .unwrap()
+            .value
+            .to_string(),
+        "List[1, tagUnsetResumeHead[tagUnsetResumeOwner, \"drop\"], List[]]"
+    );
+}

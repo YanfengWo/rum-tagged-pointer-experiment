@@ -3,8 +3,9 @@ use resume_frames::*;
 
 use super::super::*;
 use super::definition_lhs_preparation::{
-    DefinitionLhsPreparationContinuation, PreparedDefinitionLhs, definition_lhs_blank_head,
-    definition_lhs_contains_pattern_syntax, definition_lhs_pattern_wrapper_head,
+    DefinitionLhsPreparationContinuation, PreparedDefinitionAssignment, PreparedDefinitionLhs,
+    definition_lhs_blank_head, definition_lhs_contains_pattern_syntax,
+    definition_lhs_pattern_wrapper_head,
 };
 
 impl Session {
@@ -399,11 +400,16 @@ impl Session {
         delayed: bool,
     ) -> Result<Expr, EvalError> {
         let symbol = if delayed { "SetDelayed" } else { "Set" };
-        let (lhs, target) = prepared.into_parts();
+        let target = prepared.into_assignment();
         let runtime_profile_normalize_target = runtime_path_timing_start("set.normalize_target");
         record_profile_runtime_path_timing(
             runtime_profile_normalize_target,
-            if target.is_some() {
+            if matches!(
+                &target,
+                PreparedDefinitionAssignment::Message(_)
+                    | PreparedDefinitionAssignment::SyntaxInformation { .. }
+                    | PreparedDefinitionAssignment::Definition(_)
+            ) {
                 RuntimeProfileOutcome::Some
             } else {
                 RuntimeProfileOutcome::None
@@ -411,32 +417,37 @@ impl Session {
         );
 
         match target {
-            Some(DefinitionAssignmentTarget::Message(key)) => {
+            PreparedDefinitionAssignment::Message(key) => {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &key.symbol) {
                     return Ok(if delayed { system_expr("Null") } else { rhs });
                 }
                 self.define_message(key, rhs.clone(), delayed);
                 Ok(if delayed { system_expr("Null") } else { rhs })
             }
-            Some(DefinitionAssignmentTarget::SyntaxInformation(target)) => {
+            PreparedDefinitionAssignment::SyntaxInformation {
+                lhs,
+                symbol: target,
+            } => {
                 if !self.ensure_symbol_not_protected_for_write(symbol, &target) {
                     return Ok(if delayed { system_expr("Null") } else { rhs });
                 }
                 Ok(Expr::call(system_expr(symbol), vec![lhs, rhs]))
             }
-            Some(DefinitionAssignmentTarget::Definition(target)) => {
-                if !self.ensure_symbol_not_protected_for_write(symbol, target.symbol()) {
+            PreparedDefinitionAssignment::Definition(prepared) => {
+                if !self.ensure_symbol_not_protected_for_write(symbol, prepared.symbol()) {
                     return Ok(if delayed { system_expr("Null") } else { rhs });
                 }
                 let runtime_profile_store = runtime_path_timing_start("set.store_definition");
-                self.store_definition_target(target, lhs.clone(), rhs.clone(), delayed);
+                self.store_prepared_definition(prepared, rhs.clone(), delayed);
                 record_profile_runtime_path_timing(
                     runtime_profile_store,
                     RuntimeProfileOutcome::Ok,
                 );
                 Ok(if delayed { system_expr("Null") } else { rhs })
             }
-            None => Ok(Expr::call(system_expr(symbol), vec![lhs, rhs])),
+            PreparedDefinitionAssignment::Invalid(lhs) => {
+                Ok(Expr::call(system_expr(symbol), vec![lhs, rhs]))
+            }
         }
     }
 

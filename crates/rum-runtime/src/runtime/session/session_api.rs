@@ -9,6 +9,29 @@ struct SnapshotRestoreMode<'a> {
     session: &'a mut Session,
 }
 
+/// The sole raw-lhs definition-store capability: static system-catalog
+/// installation constructs it here, outside every source-language evaluator
+/// entry point. Private fields prevent other runtime modules from forging it.
+pub(in crate::runtime) struct TrustedSystemDownValue {
+    symbol: Symbol,
+    lhs: Expr,
+    rhs: Expr,
+}
+
+impl TrustedSystemDownValue {
+    fn new(name: &str, lhs: Expr, rhs: Expr) -> Self {
+        Self {
+            symbol: Symbol::system(name),
+            lhs,
+            rhs,
+        }
+    }
+
+    pub(in crate::runtime) fn into_parts(self) -> (Symbol, Expr, Expr) {
+        (self.symbol, self.lhs, self.rhs)
+    }
+}
+
 impl Drop for SnapshotRestoreMode<'_> {
     fn drop(&mut self) {
         self.session.restoring_snapshot = false;
@@ -202,12 +225,11 @@ impl Session {
     #[doc(hidden)]
     pub fn install_system_down_value(&mut self, name: &str, lhs: Expr, rhs: Expr) {
         let symbol = Symbol::system(name);
-        self.store_definition_target(
-            TaggedDefinitionTarget::DownValue(symbol),
+        self.store_trusted_system_down_value(TrustedSystemDownValue::new(
+            name,
             lhs.clone(),
             rhs.clone(),
-            false,
-        );
+        ));
         self.installed_system_down_values
             .entry(symbol)
             .or_default()
