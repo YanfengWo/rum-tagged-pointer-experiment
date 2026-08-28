@@ -147,14 +147,44 @@ be fixed already.
      has to be deleted or weakened.
 
      **Dispatch order (director, splitting plan-378's oversized step 1):**
-     1a foundation — extract the call-preparation primitives and give lookup a
-     prepared-identity view, with **no behavior change** (brief-379);
+     1a foundation — **COMPLETE 2026-08-28** (brief-379, `5698e8e5`);
      1b the preparation module plus `Set`/`SetDelayed`; 1c store-identity match
      normalization; 1d `Unset` and value tables; 2 the association fallback;
      3 tagged definitions, `TagUnset`, and final sealing. The split is for
      gateability, not size: each step has to be independently verifiable and
      revertible, and 1a's criterion — an empty rum-vs-rum differential diff —
      only works while no consumer has moved.
+
+     **Two things 1a established for the steps that follow.**
+
+     - *A differential diff must be calibrated before it is trusted.* Run
+       against a pre-family-A binary the same probe reports a non-empty diff,
+       messages included; an empty result therefore means something. Every
+       later step reusing this gate must re-run that calibration, because a
+       scanner that reports clean has to be shown capable of finding something
+       — the frame-roots line lost a round to a regex silently truncated by a
+       comma.
+     - *Named control labels stop working once the change is on the common
+       call path.* 1a's four controls were all fast labels from one tier and
+       moved as a group (median -7.16% against a suite median of -1.83%),
+       which would read as "targets are 4.5% slower" if taken as the baseline.
+       `sameq-integer` and `string-repeat-small` themselves run through call
+       preparation. For steps touching the shared path, judge on each label's
+       own same-build spread and the suite distribution instead, and say so in
+       the brief rather than naming controls that cannot be untouched.
+
+     **Flake, first occurrence, recorded not explained away.** One workspace
+     run during brief-379 failed
+     `runtime::tests::association_write_index::repeated_replacement_writes_stay_indexed`
+     (`association_write_index.rs:146`); a focused rerun and both later full
+     runs passed, and the director's two full runs were green. The worker did
+     not state whether it had changed code between the failure and the rerun,
+     so flake versus fixed-in-passing is unresolved. Worth noting: this test
+     asserts pointer identity (`own_args_ptr_key`) and lookup counters, and
+     the other open flake — `has_valid_call_stability_proof_for_key`,
+     `evaluation_cache/tests.rs:374` — asserts a stability proof in the same
+     association write path. Two identity-shaped assertions in one area may be
+     one cause. Same standing agreement: brief on a third occurrence.
 
    **The contract, settled 2026-08-28.** A definition's lhs arguments are
    prepared according to the head's hold attributes: non-held positions are
