@@ -148,9 +148,12 @@ be fixed already.
 
      **Dispatch order (director, splitting plan-378's oversized step 1):**
      1a foundation — **COMPLETE 2026-08-28** (brief-379, `5698e8e5`);
-     1b the preparation module plus `Set`/`SetDelayed`; 1c store-identity match
-     normalization; 1d `Unset` and value tables; 2 the association fallback;
-     3 tagged definitions, `TagUnset`, and final sealing. The split is for
+     1b the preparation module plus `Set`/`SetDelayed` (brief-380); 1c `Unset`
+     and value tables; 2 the association fallback; 3 tagged definitions,
+     `TagUnset`, and final sealing. **Four steps, not the six first sketched**:
+     plan-378's specification makes `Flat`/`Orderless` identity normalization
+     step 7 of the preparation pipeline rather than a separate transform, so
+     the held-ground defect closes in 1b alongside `Set`. The split is for
      gateability, not size: each step has to be independently verifiable and
      revertible, and 1a's criterion — an empty rum-vs-rum differential diff —
      only works while no consumer has moved.
