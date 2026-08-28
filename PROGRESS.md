@@ -1780,3 +1780,64 @@ cannot have been affected even indirectly.
 Endstate: workspace 2163/0, zero build warnings, no production file over 35k,
 and a first occurrence of a call-stability-proof flake recorded in `TODO.md`
 without adopting the worker's explanation for it.
+
+## 2026-08-28 — the assignment-target normalization line (briefs 376-383)
+
+Opened from three items `TODO.md` had recorded as batch-7 leftovers. A
+re-probe found one of the four already fixed four days earlier and never
+retired from the record, and the design brief then found three more defects of
+the same family. The line closed eight defects in total across two repair
+families.
+
+**Family A (brief-377)** — thirteen mutation heads did not evaluate a `Part`
+selector, so `kk = 1; lst[[kk]] += 5` reported `Part::pkspec1` and changed
+nothing while `lst[[kk]] = 99` worked. A typed `EvaluatedPartSelectors` is now
+what assignment-target parsers accept, obtainable only by exactly-once
+evaluation or a stable-literal proof, so a future head cannot pass raw
+selectors without failing to compile.
+
+**Family B (briefs 379-383)** — seven defects, one invariant: the identity a
+definition is stored under must come from the same attribute-aware preparation
+as the identity a lookup constructs. Four failed to prepare, two prepared a
+position that had to stay raw, and one needed the `Flat`/`Orderless`
+normalization the ground index was not applying. Storage and removal now
+travel as tokens whose constructors are private to one module.
+
+**What the line is worth beyond the fixes.**
+
+- *The bidirectional invariant was the thing.* Four defects failed to
+  normalize and two over-normalized. Fixing only the common direction would
+  have closed three and hidden the fourth — the shape the frame-roots line hit
+  with `Block`'s bare `Symbol`. The user's decision to check WL behavior
+  before ruling is what exposed the second direction.
+- *A conclusion whose evidence is our own defect is not evidence.* plan-376
+  recorded "raw rules become reachable after `Clear`" as resolved-with-evidence
+  and reasoned from it. The behavior was real but was a by-product of the raw
+  store itself; WL has no such effect. The whole preserve-raw option went with
+  it.
+- *Gate instruments must be calibrated before they are believed.* Every
+  differential gate in this line was first shown to report a diff against a
+  pre-family-A binary. The sealing test was calibrated the same way — one
+  inserted call makes it fail with the exact count — and the compile-time
+  boundary was checked by trying to forge a token (E0603/E0624).
+- *Measurement lessons, three of them, each caught the hard way.* Best-of-2
+  reports a spread four to five times too small: 1c left two labels open at
+  +6.34%/+6.72% against 2.01%/2.96% spreads that are 10.6%/11.3% at
+  best-of-3. Whether valid control labels exist depends on the change's
+  reach — 1a sat on the common call path where nothing is untouched, 1b sat
+  on the assignment path where 28 pure-computation labels decided the gate by
+  moving *more* than the affected ones. And when a label looks like a
+  regression but the disassembly is unchanged, a third binary carrying only an
+  inert dead function settles it: in step 2 that arm moved the labels further
+  than the real change did.
+- *The same coincidence appeared twice, one step apart.* After 1b made `Set`
+  store raw held forms, `Unset` on a held position "worked" because two
+  unprepared expressions happened to be equal; after 1c, `TagUnset` did the
+  same. Both had to be migrated in the step that would otherwise break them.
+
+**Left open, deliberately.** Two guarded lookup labels moved +7.47% and +6.01%
+in step 3, above the 0.4-4.1% spread measured between same-semantics binaries
+differing only in layout, while the three hot lookup functions' disassembly is
+instruction-identical with addresses shifted `+0xa0`. The layout estimate is
+incomplete in a known direction — the inert arms add code where the change
+removes 232 lines net. Recorded rather than tuned blind.
