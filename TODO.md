@@ -96,13 +96,56 @@ Ordered after re-probing everything below. Silent defects outrank loud ones,
 and the instrument outranks nothing here because the instrument turned out to
 be fixed already.
 
-1. **The assignment-target normalization family** (the three defects under
-   "the same matrix exposed three defects" below). Two of the three are
-   silent and one of those installs a definition that nothing can ever reach.
-   Plan-first: one design-only brief covering all three, since they share a
-   shape — the target expression is not normalized before the definition is
-   installed — but reach it by three different mechanisms, so the brief has to
-   argue whether that is one repair or three rather than assume either.
+1. **The assignment-target normalization family.** Planned by brief-376,
+   which re-probed all three defects, widened each, and returned two repair
+   families rather than one or three. **Dispatch order: brief-377 (family A)
+   first, then family B in three steps.**
+
+   - **Family A — evaluated `Part` selectors.** D2 plus the `Part` branches of
+     `AssociateTo`/`KeyDropFrom`: thirteen mutation heads, not eleven. The
+     repair is a typed `EvaluatedPartSelectors` that assignment-target parsers
+     require, so a future head cannot pass raw selectors without a compile
+     error. Brief-377.
+   - **Family B — definition-lhs lookup identity.** D1's fallback store, D3's
+     tagged installs, and the two ordinary-`Set` defects found while probing
+     (below). One attribute-aware, resumable preparation, shared by the store
+     side and the lookup side.
+
+   **The contract, settled 2026-08-28.** A definition's lhs arguments are
+   prepared according to the head's hold attributes: non-held positions are
+   fully evaluated, including a delayed own-value; held positions keep their
+   raw symbols. **The invariant is bidirectional — the identity a definition is
+   stored under and the identity a lookup constructs must come from the same
+   preparation.** rum currently violates it in both directions, which is why
+   family B covers both:
+
+   - Not normalizing where it should: `AssociateTo[af[ii], …]` storing
+     `af[ii]`, `TagSet`/`UpSet` storing a raw lhs, and `fD[iD] = 8` with
+     `iD := 1 + 1` storing `HoldPattern[fD[1 + 1]]` so `fD[2]` cannot reach it.
+   - Normalizing where it should not: with `SetAttributes[fH, HoldFirst]` and
+     `xH = 5`, `fH[xH] = 9` stores `HoldPattern[fH[5]]`, so the natural
+     `fH[xH]` lookup misses it. This one is the opposite direction, and
+     covering only the first direction would fix three defects and hide it —
+     the same shape as the `Block` frame's bare `Symbol` in the frame-roots
+     line.
+
+   `TagUnset` is in family B's ripple: if tagged definitions normalize, removal
+   must use the same preparation.
+
+   **Ruling (user, 2026-08-28): keep rum's `UpSet::nosym`.** Once `m[ww] ^= 22`
+   with `ww = 5` normalizes to `m[5]`, no symbol in the lhs can serve as a tag,
+   and rum already reports exactly that for `m2[7] ^= 33`. The wider WL family
+   reaches a differently-shaped diagnostic there; rum keeps the more direct one
+   and stays internally consistent, as it did when it kept its precise
+   `ValueQ[f[2]]` answer. Design input only — no engine comparison enters the
+   repository.
+
+   **Retired by evidence: the "raw rules become reachable after `Clear`"
+   argument.** Plan-376 recorded it as a reason a repair must diagnose rather
+   than refuse. It describes rum's own raw-store behavior, not a semantics
+   worth keeping: under the settled contract the rule is stored ready for
+   lookup and is reachable immediately. The "preserve raw plus a warning"
+   option, and the diagnostic question that depended on it, are both closed.
 2. **The `rum-jupyter` ZeroMQ ordering flake.** Third occurrence reached, which
    is what the standing agreement said to wait for. Diagnostic brief.
 3. **`ValueQ` session-clone cost** and the remaining batch-7 performance items,
