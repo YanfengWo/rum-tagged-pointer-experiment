@@ -150,7 +150,8 @@ be fixed already.
      1a foundation — **COMPLETE 2026-08-28** (brief-379, `5698e8e5`);
      1b preparation plus `Set`/`SetDelayed` — **COMPLETE 2026-08-28** (brief-380, `aa441ff0`); 1c `Unset`
      and value tables — **COMPLETE 2026-08-28** (brief-381, `45c5aa33`);
-     2 the association fallback; 3 tagged definitions,
+     2 the association fallback — **COMPLETE 2026-08-28** (brief-382,
+     `e90fcc62`); 3 tagged definitions,
      `TagUnset`, and final sealing. **Four steps, not the six first sketched**:
      plan-378's specification makes `Flat`/`Orderless` identity normalization
      step 7 of the preparation pipeline rather than a separate transform, so
@@ -168,6 +169,16 @@ be fixed already.
        scanner that reports clean has to be shown capable of finding something
        — the frame-roots line lost a round to a regex silently truncated by a
        comma.
+     - *To tell a layout effect from an algorithmic regression, build a third
+       binary that changes only the layout.* Step 2 left two labels looking
+       like regressions with non-overlapping three-run ranges
+       (`downvalue-exact-miss` +4.94%, `downvalue-pattern-miss` +7.63%), while
+       the affected function's disassembly was instruction-identical between
+       binaries. An arm carrying nothing but an inert `#[inline(never)]` dead
+       function in an unrelated file moved those same labels +2.60% and
+       +5.10% — further than the real change did — which settles it: those
+       rows are layout-sensitive and carry no information about the change.
+       One extra build, and far more conclusive than arguing from medians.
      - *Best-of-2 measures a spread four to five times too small.* 1c's worker
        left two labels open as possible regressions —
        `matchq-integer-success`/`fail` at +6.34%/+6.72% against best-of-2
