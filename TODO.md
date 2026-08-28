@@ -101,11 +101,27 @@ be fixed already.
    families rather than one or three. **Dispatch order: brief-377 (family A)
    first, then family B in three steps.**
 
-   - **Family A — evaluated `Part` selectors.** D2 plus the `Part` branches of
+   - **Family A — evaluated `Part` selectors — COMPLETE 2026-08-28**
+     (brief-377, `636e01ee`). D2 plus the `Part` branches of
      `AssociateTo`/`KeyDropFrom`: thirteen mutation heads, not eleven. The
      repair is a typed `EvaluatedPartSelectors` that assignment-target parsers
      require, so a future head cannot pass raw selectors without a compile
-     error. Brief-377.
+     error; the only constructors are exactly-once evaluation and a
+     stable-positive-literal proof that keeps `AppendTo`'s incremental path
+     zero-callback. Plain `Set` and association `Set` were routed through the
+     same driver, removing their duplicated accumulators. The callback and
+     return-order contract is now in `docs/guide/evaluation.md`.
+
+     Gate note for family B, which touches the same files: the A/B run carried
+     a **+1.81% whole-run offset** measured on the 102 untouched control
+     labels, against +1.02% median on the ten affected ones. The raw split was
+     86-of-112 labels slower, which reads as a regression until the controls
+     are consulted. Name the controls before judging.
+
+     Watch, not yet actionable: `association_data.rs` is now 32.2k and
+     `definition_updates.rs` 26.3k, both under the 35k architecture-debt line
+     but rising, and family B touches both. Evaluate a split when family B
+     closes — not mid-repair, where it would contaminate a semantic change.
    - **Family B — definition-lhs lookup identity.** D1's fallback store, D3's
      tagged installs, and the two ordinary-`Set` defects found while probing
      (below). One attribute-aware, resumable preparation, shared by the store
