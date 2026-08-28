@@ -1711,3 +1711,72 @@ same-binary spread at 12.6-26.7% and the movements at -1.72%, -0.01% and
 not treated as live, and it is reachable two ways. The `rum-jupyter` ZeroMQ
 ordering flake reached its third appearance. Both are recorded in `TODO.md`
 with what a fix would have to decide.
+
+## 2026-08-28 — the suspension-frame roots line (briefs 364-375)
+
+The defect `TODO.md` opened after batch 7 is closed. A gensym reachable only
+from a suspension frame could be swept while still needed, because the root
+walk stopped at `active_stack` and the frames themselves were
+`Box<dyn SuspensionFrame>` wrapping arbitrary closures — state Rust cannot
+enumerate. The repair replaced that with named frames whose traversal is
+derived from their fields, and made forgetting it a compile error rather than
+a thing to remember.
+
+**Four defects, not two.** The design brief's re-probe found a matcher binding
+table (`SymbolExprMap`) losing its bindings, and a `Block` frame holding a
+bare `Symbol` that *leaked* on the following sweep — failing in the opposite
+direction. That fourth one settled a design question: a visitor covering only
+`Expr` would have fixed the three requested probes and left the leak in place,
+so `Symbol` is a root in its own right. All four are verified closed against
+plan-364's original probes, which assert the old buggy values and now fail by
+asserting the defect.
+
+**Enforcement, not vigilance.** `SuspensionFrame: FrameRootTrace` makes a
+missing traversal fail compilation; the frame queue is private so there is one
+insertion route; a repository invariant test bans the deleted APIs and any
+handwritten traversal outside a sorted two-entry allowlist. Both allowlist
+entries pass a two-part test argued per type: a derive is structurally
+impossible (`std`, `rum-syntax`), and the type cannot name `Expr` at all
+because its crate cannot reach `rum-core`. The honest limit is recorded too —
+Rust cannot prove an impl came from a derive across crates, so the allowlist
+is the boundary, accepted by user ruling on 2026-08-27 rather than paying for
+absolute sealing by moving every stdlib frame into `rum-runtime` and undoing
+the crate-rebalance line.
+
+**It paid for itself on the ordinary path.** A closure captures at
+construction, before the `Ok`/`InputRequired` split, so every call built a
+suspension capture it usually threw away: a width-2003 `Switch` paid 63.8 KiB.
+Measured by differential against a lazy-capturing control, that width slope is
+now -128 bytes of constant noise. `INTO_VEC_CLONE` could not see the copy at
+all — the builtin boundary had already degraded `SharedArgs` to a slice — so
+the allocation counter was the applicable instrument.
+
+**Six stop-losses, five of them mine.** A list treated as scope authority on a
+line whose purpose is to replace lists with compiler enforcement; an absolute
+prohibition with no test for its first legitimate exception; a
+stop-on-second-candidate rule whose test was mechanically checkable all along;
+and twice, reaching for step 374's frame lifetime before it existed — once in
+the cutover's `self.as_ref().clone()`, once in carriers assuming
+`try_unwrap` uniqueness while a rooted frame still held an alias. The one
+genuinely technical stop was the worker's: a suspension-only merge
+representation changed observable comparator progression, so the sort family
+waited for the cutover.
+
+**Instrument notes.** A scan for remaining escape hatches reported zero
+everywhere including inside `suspension/core.rs`, where eight were known to
+remain; the regex had broken on the comma in `Result<Expr, EvalError>`.
+Recalibrated against that known-eight control, it then confirmed zero
+elsewhere. A scanner reporting a clean result has to be shown finding
+something first. Separately, a probe that "reproduced" nothing turned out to
+be an `Option<Expr>` field left as `None`, which visits nothing — a probe
+needs a value that can actually be seen.
+
+**A/B read in both directions.** Step 372's labels all improved and step 373's
+all regressed, and both were reported as no regression: the untouched controls
+moved as far or further each time. Step 373 had the stronger evidence — the
+sort family had zero diff and still moved 7%, and code that was not touched
+cannot have been affected even indirectly.
+
+Endstate: workspace 2163/0, zero build warnings, no production file over 35k,
+and a first occurrence of a call-stability-proof flake recorded in `TODO.md`
+without adopting the worker's explanation for it.

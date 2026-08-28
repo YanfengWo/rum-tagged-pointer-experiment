@@ -92,16 +92,28 @@ what the batch was looking for, and both have their own entries above:
 
 ## Opened by batch 7, not yet scheduled
 
-- **Gensyms held only by an opaque continuation frame are not treated as
-  live.** The sweep visits `pending_suspension.active_stack` only, so a gensym
-  captured by a suspended continuation and nothing else can be reclaimed while
-  still needed. Reachable two ways, both demonstrated: a second request can
-  trigger a sweep during a suspension, and an ordinary resumption can itself
-  cross the watermark. A no-suspension control confirmed the root walk is
-  otherwise correct, so this is specific to opaque frames. The fix is a real
-  design choice — enumerate frame roots, refuse request re-entry during a
-  suspension, or defer sweeps while frames are opaque — and needs its own
-  brief.
+- **Gensyms held only by an opaque continuation frame — CLOSED 2026-08-28**
+  (briefs 364-375, `d13aa27f` through `4e4c229f`). Four defects, not the two
+  originally recorded: the design brief's re-probe added a matcher binding
+  table losing its bindings, and a `Block` frame holding a bare `Symbol` that
+  *leaked* on the next sweep — the opposite direction from the others, and
+  proof that covering only `Expr` would have fixed three and hidden the
+  fourth. All four are verified closed against plan-364's original probes,
+  which assert the old buggy values and therefore now fail by asserting the
+  defect.
+
+  The fix is enforced rather than maintained. `SuspensionFrame: FrameRootTrace`
+  makes a missing traversal a compile error, the frame queue is private so
+  there is one insertion route, and a repository invariant test bans the
+  deleted APIs and any handwritten traversal outside a two-entry allowlist
+  (`RandomState`, `SyntaxError` — both structurally incapable of holding a
+  root). Frames are `Arc`-rooted in two Session slots so the executing frame
+  stays visible to a sweep, and one traversal now feeds both the root walk and
+  the memory proxy, which used to charge a flat 16 bytes per frame.
+
+  It also removed ordinary-path waste: a closure captured its state before the
+  suspend/resume split, so a width-2003 `Switch` paid 63.8 KiB for a capture it
+  never used. That width slope is now constant-size noise.
 - **The `rum-jupyter` native ZeroMQ ordering flake has now appeared three
   times** (briefs 165, 242, and a workspace run during brief-362). Each time it
   passes in isolation — three isolated runs and two further workspace runs

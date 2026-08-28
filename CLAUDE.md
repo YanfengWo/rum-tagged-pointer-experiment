@@ -203,12 +203,21 @@ Consequences for how I present and pick work:
   definition, and right-hand-side `Condition` guards (`f[x_] := rhs /; test`)
   were not implemented in any of the eight candidate-selecting lanes. Both are
   fixed; the guard line took eight briefs and one repair of my own gate.
-- **Open, with the decision stated in `TODO.md`:** gensyms held only by an
-  opaque continuation frame can be swept while still needed (reachable two
-  ways, both demonstrated); the `rum-jupyter` ZeroMQ ordering flake has
-  reached the third occurrence that the standing agreement said to brief on;
-  association keyed reads remain sublinear rather than flat because cache
-  admission is a standing decision.
+- **The suspension-frame roots line is COMPLETE (2026-08-28, briefs 364-375,
+  `d13aa27f` through `4e4c229f`).** The gensym defect batch 7 opened is closed,
+  and the re-probe found four defects rather than the two recorded — including
+  a `Block` frame's bare `Symbol` that leaked in the opposite direction, which
+  is why the visitor treats `Symbol` as a root. The repair is enforced, not
+  maintained: `SuspensionFrame: FrameRootTrace` makes a missing traversal a
+  compile error, the queue is private, and an invariant test holds handwritten
+  traversals to a two-entry allowlist. It also removed a 63.8 KiB per-call
+  ordinary-path capture. Detail in `TODO.md`, the 2026-08-28 `PROGRESS.md`
+  entry, and memory `suspension-frame-roots-line.md`.
+- **Still open, with the decision stated in `TODO.md`:** the `rum-jupyter`
+  ZeroMQ ordering flake has reached the third occurrence that the standing
+  agreement said to brief on; a call-stability-proof flake has its first
+  recorded occurrence; association keyed reads remain sublinear rather than
+  flat because cache admission is a standing decision.
 - **The gate lesson from batch 7, now in memory as
   `gate-assert-after-invalidation`:** six green gates missed a guard that
   stopped being enforced after any `SetAttributes`, because every gate — and
