@@ -13,6 +13,11 @@ pub(super) mod rhs_guards;
 mod unique_symbols;
 mod value_table_assignment;
 
+#[doc(hidden)]
+pub use self::definition_lhs_preparation::{
+    PreparedDefinitionLhs, PreparedDefinitionLhsContinuation,
+};
+
 #[allow(unused_imports)]
 pub(super) use self::{
     application::*, definition_analysis_helpers::*, definition_catalog::*, definition_clear::*,

@@ -4,7 +4,7 @@ use std::sync::atomic::Ordering;
 
 use std::time::Instant;
 
-mod call;
+pub(in crate::runtime) mod call;
 
 mod stability;
 

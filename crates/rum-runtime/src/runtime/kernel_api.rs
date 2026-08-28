@@ -53,6 +53,8 @@ pub use super::random::{EntropyError, EntropyProvider, EntropySource};
 pub use super::definitions::rhs_guards::{
     evaluate_definition_rhs_guards_for_match, split_definition_rhs_guards,
 };
+#[doc(hidden)]
+pub use super::definitions::{PreparedDefinitionLhs, PreparedDefinitionLhsContinuation};
 
 // lexical_substitution
 pub use super::substitution::lexical_substitution::substitute_lexical_bindings;

@@ -13,6 +13,7 @@ pub(super) struct DefinitionLhsPreparationState {
     pub(super) work: DefinitionLhsPreparationWork,
     pub(super) parents: DefinitionLhsParentStack,
     pub(super) continuation: DefinitionLhsPreparationContinuation,
+    pub(super) prepared_outer_call: Option<PreparedDefinitionOuterCall>,
 }
 
 #[derive(Clone, rum_derive::FrameRootTrace)]
@@ -28,6 +29,7 @@ pub(super) enum DefinitionLhsPreparationWork {
     AwaitCallHead {
         source_head: SharedExpr,
         args: SharedArgs,
+        capture_outer_call: bool,
     },
     PrepareCallArguments(DefinitionLhsCallState),
     AwaitCallArgument {
@@ -79,10 +81,12 @@ pub(super) enum DefinitionLhsParentContext {
 #[derive(Clone, rum_derive::FrameRootTrace)]
 pub(super) struct DefinitionLhsCallState {
     pub(super) head: SharedExpr,
-    pub(super) metadata: CallPreparationMetadata,
+    pub(super) attributes: AttributeSet,
     pub(super) args: SharedArgs,
     pub(super) cursor: usize,
     pub(super) prepared: Option<PreparedArgumentAccumulator>,
+    pub(super) unevaluated_restores: Option<Vec<(usize, Expr)>>,
+    pub(super) outer_dispatch_plan: Option<SuspendedCallDispatchPlan>,
 }
 
 #[derive(Clone, Copy, rum_derive::FrameRootTrace)]

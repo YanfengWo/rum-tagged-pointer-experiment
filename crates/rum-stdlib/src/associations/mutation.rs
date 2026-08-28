@@ -3,7 +3,9 @@ use resume_frames::*;
 
 use super::*;
 use rum_core::SharedArgs;
-use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use rum_runtime::kernel_api::{
+    FrameRootTrace, FrameRootVisitor, PreparedDefinitionLhs, PreparedDefinitionLhsContinuation,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum HeldAssociationPartMutationResult {
@@ -201,45 +203,56 @@ pub(crate) fn eval_associate_to(
         ));
     }
 
-    if let Some(target_symbol) = protected_definition_target_symbol(session, target_expr) {
+    session.prepare_definition_lhs_for_consumer(
+        target_expr.clone(),
+        PreparedDefinitionLhsContinuation::new(
+            resume_associate_to_after_target_preparation,
+            args.clone(),
+        ),
+    )
+}
+
+fn resume_associate_to_after_target_preparation(
+    session: &mut Session,
+    prepared: PreparedDefinitionLhs,
+    call_args: SharedArgs,
+) -> Result<Expr, EvalError> {
+    if let Some(target_symbol) =
+        session.protected_or_known_prepared_definition_target_symbol(&prepared)
+    {
         session.push_message(
             "AssociateTo",
             "wrsym",
             format!("Symbol {target_symbol} is Protected."),
         );
-        return Ok(Expr::call(head.clone(), args_slice.to_vec()));
+        return Ok(Expr::call(
+            system_expr("AssociateTo"),
+            call_args.as_ref().to_vec(),
+        ));
     }
 
-    let target_result = session.evaluate(target_expr.clone());
-    let expr = rum_runtime::resume_or_suspend!(
+    let target_result = session.evaluate_prepared_definition_lhs(&prepared);
+    rum_runtime::resume_or_suspend!(
         session,
         target_result,
-        ok(value) => Ok(value),
-        suspend => {
-    let args = args.clone();
-            let target_expr = target_expr.clone();
-            let spec = spec.clone();
-    EvalAssociateToSuspensionFrame { args, target_expr, spec }
-    },
-    )?;
-
-    finish_associate_to_value(
-        session,
-        args.clone(),
-        target_expr.clone(),
-        expr,
-        spec.clone(),
+        ok(expr) => finish_associate_to_value(session, call_args, prepared, expr),
+        suspend => EvalAssociateToSuspensionFrame {
+            args: call_args,
+            prepared,
+        },
     )
 }
 
 fn finish_associate_to_value(
     session: &mut Session,
     call_args: SharedArgs,
-    target_expr: Expr,
+    prepared: PreparedDefinitionLhs,
     expr: Expr,
-    spec: Expr,
 ) -> Result<Expr, EvalError> {
-    let Some(updated) = apply_associate_to_value(expr, spec) else {
+    let [target_expr, spec] = call_args.as_ref() else {
+        unreachable!("AssociateTo preparation retains its two held arguments")
+    };
+    let Some(updated) = apply_associate_to_value(expr, spec.clone()) else {
         return Ok(session.invalid_call_with_message(
             "AssociateTo",
             call_args.as_ref(),
@@ -248,7 +261,7 @@ fn finish_associate_to_value(
         ));
     };
 
-    store_association_lvalue_update(session, &target_expr, updated.clone());
+    store_association_lvalue_update(session, prepared, updated.clone());
     Ok(updated)
 }
 
@@ -333,36 +346,42 @@ pub(crate) fn eval_key_drop_from(
         ));
     }
 
-    let target_result = session.evaluate(target_expr.clone());
-    let expr = rum_runtime::resume_or_suspend!(
+    session.prepare_definition_lhs_for_consumer(
+        target_expr.clone(),
+        PreparedDefinitionLhsContinuation::new(
+            resume_key_drop_from_after_target_preparation,
+            args.clone(),
+        ),
+    )
+}
+
+fn resume_key_drop_from_after_target_preparation(
+    session: &mut Session,
+    prepared: PreparedDefinitionLhs,
+    call_args: SharedArgs,
+) -> Result<Expr, EvalError> {
+    let target_result = session.evaluate_prepared_definition_lhs(&prepared);
+    rum_runtime::resume_or_suspend!(
         session,
         target_result,
-        ok(value) => Ok(value),
-        suspend => {
-    let args = args.clone();
-            let target_expr = target_expr.clone();
-            let key_spec = key_spec.clone();
-    EvalKeyDropFromSuspensionFrame { args, target_expr, key_spec }
-    },
-    )?;
-
-    finish_key_drop_from_value(
-        session,
-        args.clone(),
-        target_expr.clone(),
-        expr,
-        key_spec.clone(),
+        ok(expr) => finish_key_drop_from_value(session, call_args, prepared, expr),
+        suspend => EvalKeyDropFromSuspensionFrame {
+            args: call_args,
+            prepared,
+        },
     )
 }
 
 fn finish_key_drop_from_value(
     session: &mut Session,
     call_args: SharedArgs,
-    target_expr: Expr,
+    prepared: PreparedDefinitionLhs,
     expr: Expr,
-    key_spec: Expr,
 ) -> Result<Expr, EvalError> {
-    let Some(updated) = apply_key_drop_from_value(expr, key_spec) else {
+    let [target_expr, key_spec] = call_args.as_ref() else {
+        unreachable!("KeyDropFrom preparation retains its two held arguments")
+    };
+    let Some(updated) = apply_key_drop_from_value(expr, key_spec.clone()) else {
         return Ok(session.invalid_call_with_message(
             "KeyDropFrom",
             call_args.as_ref(),
@@ -371,10 +390,10 @@ fn finish_key_drop_from_value(
         ));
     };
 
-    if let Some(message) = protected_definition_target_write_message(session, &target_expr) {
+    if let Some(message) = protected_prepared_definition_target_write_message(session, &prepared) {
         session.push_message("Set", "write", message);
     } else {
-        store_association_lvalue_update(session, &target_expr, updated.clone());
+        store_association_lvalue_update(session, prepared, updated.clone());
     }
     Ok(updated)
 }
@@ -409,20 +428,20 @@ fn apply_key_drop_from_value(expr: Expr, key_spec: Expr) -> Option<Expr> {
     Some(render_association_entry_forms_preserving_heads(kept))
 }
 
-fn protected_definition_target_symbol(session: &Session, target_expr: &Expr) -> Option<Symbol> {
-    session.protected_or_known_definition_target_symbol(target_expr)
-}
-
-fn protected_definition_target_write_message(
+fn protected_prepared_definition_target_write_message(
     session: &Session,
-    target_expr: &Expr,
+    prepared: &PreparedDefinitionLhs,
 ) -> Option<String> {
-    protected_definition_target_symbol(session, target_expr)?;
-    protected_tag_write_message(target_expr)
+    session.protected_or_known_prepared_definition_target_symbol(prepared)?;
+    protected_tag_write_message(prepared.lhs())
 }
 
-fn store_association_lvalue_update(session: &mut Session, target_expr: &Expr, updated: Expr) {
-    session.store_definition_assignment_target_immediate(target_expr, updated);
+fn store_association_lvalue_update(
+    session: &mut Session,
+    prepared: PreparedDefinitionLhs,
+    updated: Expr,
+) {
+    session.store_prepared_definition_lhs_immediate(prepared, updated);
 }
 
 fn eval_held_association_mutation(

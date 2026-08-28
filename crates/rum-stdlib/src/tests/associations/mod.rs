@@ -19,6 +19,7 @@ mod associations_key_sort;
 mod associations_key_value_pattern;
 mod associations_missing_diagnostics;
 mod associations_mutation;
+mod associations_mutation_definition_fallback;
 mod associations_mutation_diagnostics;
 mod associations_mutation_operator_forms;
 mod associations_mutation_surface;

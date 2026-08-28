@@ -3,9 +3,9 @@ use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 use std::sync::Arc;
 
 #[derive(Clone, FrameRootTrace)]
-struct SuspendedUnevaluatedRestorePlan {
-    prepared_args: SharedArgs,
-    wrappers: Arc<[(usize, Expr)]>,
+pub(in crate::runtime) struct SuspendedUnevaluatedRestorePlan {
+    pub(in crate::runtime) prepared_args: SharedArgs,
+    pub(in crate::runtime) wrappers: Arc<[(usize, Expr)]>,
 }
 
 impl SuspendedUnevaluatedRestorePlan {
@@ -199,7 +199,7 @@ impl Session {
         }
     }
 
-    fn resume_suspended_call_with_dispatch_plan(
+    pub(in crate::runtime) fn resume_suspended_call_with_dispatch_plan(
         &mut self,
         evaluated_head: SharedExpr,
         plan: SuspendedCallDispatchPlan,

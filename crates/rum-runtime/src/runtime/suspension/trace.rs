@@ -424,6 +424,7 @@ pub(in crate::runtime) const MANUAL_FRAME_ROOT_TRACE_IMPLS: &[&str] = &[
     "OnceLock<T>",
     "Option<T>",
     "Ordering",
+    "PreparedDefinitionLhsCallback",
     "RandomState",
     "Rational",
     "Result<T,E>",

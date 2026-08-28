@@ -39,8 +39,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
 pub(super) struct EvalAssociateToSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
-    pub(super) target_expr: rum_core::Expr,
-    pub(super) spec: rum_core::Expr,
+    pub(super) prepared: PreparedDefinitionLhs,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame for EvalAssociateToSuspensionFrame {
@@ -52,11 +51,9 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalAssociateToSuspensionFrame
         #[allow(unused_mut)]
         let mut args = self.args.clone();
         #[allow(unused_mut)]
-        let mut target_expr = self.target_expr.clone();
-        #[allow(unused_mut)]
-        let mut spec = self.spec.clone();
+        let mut prepared = self.prepared.clone();
         let resumed = match outcome {
-            Ok(expr) => (|| finish_associate_to_value(session, args, target_expr, expr, spec))(),
+            Ok(expr) => (|| finish_associate_to_value(session, args, prepared, expr))(),
             Err(error) => Err(error),
         };
         rum_runtime::kernel_api::FrameAction::complete(resumed)
@@ -66,8 +63,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalAssociateToSuspensionFrame
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
 pub(super) struct EvalKeyDropFromSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
-    pub(super) target_expr: rum_core::Expr,
-    pub(super) key_spec: rum_core::Expr,
+    pub(super) prepared: PreparedDefinitionLhs,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame for EvalKeyDropFromSuspensionFrame {
@@ -79,13 +75,9 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalKeyDropFromSuspensionFrame
         #[allow(unused_mut)]
         let mut args = self.args.clone();
         #[allow(unused_mut)]
-        let mut target_expr = self.target_expr.clone();
-        #[allow(unused_mut)]
-        let mut key_spec = self.key_spec.clone();
+        let mut prepared = self.prepared.clone();
         let resumed = match outcome {
-            Ok(expr) => {
-                (|| finish_key_drop_from_value(session, args, target_expr, expr, key_spec))()
-            }
+            Ok(expr) => (|| finish_key_drop_from_value(session, args, prepared, expr))(),
             Err(error) => Err(error),
         };
         rum_runtime::kernel_api::FrameAction::complete(resumed)

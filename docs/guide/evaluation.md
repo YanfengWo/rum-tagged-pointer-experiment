@@ -143,6 +143,14 @@ prepares, and validates the entire incoming table and rechecks protection
 before clearing the old table. If any entry is invalid, or preparation
 suspends and later fails validation, the existing table is left intact.
 
+`AssociateTo` and `KeyDropFrom` keep dedicated symbol and `Part` mutation
+paths. For a definition-lvalue fallback such as `f[i]` or `f[p][q]`, they
+prepare the target once, read it by continuing the captured outer-call plan
+after argument preparation, and store a successful update under that same
+prepared identity. Active target arguments and the selected outer definition
+therefore run at most once, including when either phase suspends, while held
+target positions remain raw.
+
 Assignment-style `Part` mutations have a stricter callback order. For the
 binary heads `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`, `ApplyTo`,
 `AppendTo`, and `PrependTo`, ordinary `HoldFirst` preparation evaluates the

@@ -3,22 +3,80 @@ use resume_frames::*;
 
 use super::super::*;
 use super::value_table_assignment::ValueTableAssignmentState;
+use crate::runtime::eval_core::call::SuspendedUnevaluatedRestorePlan;
 use crate::runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
+use std::sync::Arc;
+
+type PreparedDefinitionLhsCallback =
+    fn(&mut Session, PreparedDefinitionLhs, SharedArgs) -> Result<Expr, EvalError>;
+
+impl FrameRootTrace for PreparedDefinitionLhsCallback {
+    fn trace_roots(&self, _visitor: &mut dyn FrameRootVisitor) {}
+}
+
+#[doc(hidden)]
+#[derive(Clone, FrameRootTrace)]
+pub struct PreparedDefinitionLhsContinuation {
+    callback: PreparedDefinitionLhsCallback,
+    state: SharedArgs,
+}
+
+impl PreparedDefinitionLhsContinuation {
+    #[doc(hidden)]
+    pub fn new(
+        callback: fn(&mut Session, PreparedDefinitionLhs, SharedArgs) -> Result<Expr, EvalError>,
+        state: SharedArgs,
+    ) -> Self {
+        Self { callback, state }
+    }
+
+    fn resume(
+        self,
+        session: &mut Session,
+        prepared: PreparedDefinitionLhs,
+    ) -> Result<Expr, EvalError> {
+        (self.callback)(session, prepared, self.state)
+    }
+}
 
 #[derive(Clone, FrameRootTrace)]
-pub(super) struct PreparedDefinitionLhs {
+struct PreparedDefinitionUnevaluatedRestore {
+    prepared_args: SharedArgs,
+    wrappers: Arc<[(usize, Expr)]>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+pub(super) struct PreparedDefinitionOuterCall {
+    head: SharedExpr,
+    plan: SuspendedCallDispatchPlan,
+    prepared_args: SharedArgs,
+    unevaluated_restore: Option<PreparedDefinitionUnevaluatedRestore>,
+}
+
+#[derive(Clone, FrameRootTrace)]
+pub struct PreparedDefinitionLhs {
     lhs: Expr,
     target: Option<DefinitionAssignmentTarget>,
+    outer_call: Option<PreparedDefinitionOuterCall>,
 }
 
 impl PreparedDefinitionLhs {
-    fn new(session: &Session, lhs: Expr) -> Self {
+    fn new(session: &Session, lhs: Expr, outer_call: Option<PreparedDefinitionOuterCall>) -> Self {
         let target = session.normalize_definition_assignment_target(&lhs);
-        Self { lhs, target }
+        Self {
+            lhs,
+            target,
+            outer_call,
+        }
     }
 
     pub(super) fn into_parts(self) -> (Expr, Option<DefinitionAssignmentTarget>) {
         (self.lhs, self.target)
+    }
+
+    #[doc(hidden)]
+    pub fn lhs(&self) -> &Expr {
+        &self.lhs
     }
 }
 
@@ -34,6 +92,7 @@ pub(super) enum DefinitionLhsPreparationContinuation {
     ValueTableEntry {
         state: ValueTableAssignmentState,
     },
+    External(PreparedDefinitionLhsContinuation),
     #[cfg(test)]
     ReturnPrepared,
 }
@@ -62,11 +121,18 @@ impl DefinitionLhsPreparationContinuation {
             Self::ValueTableEntry { state } => {
                 session.resume_prepared_value_table_entry(state, prepared)
             }
+            Self::External(continuation) => continuation
+                .resume(session, prepared)
+                .map(DefinitionLhsPreparationContinuationResult::Complete),
             #[cfg(test)]
             Self::ReturnPrepared => Ok(DefinitionLhsPreparationContinuationResult::Complete(
                 prepared.into_parts().0,
             )),
         }
+    }
+
+    fn captures_outer_call(&self) -> bool {
+        matches!(self, Self::External(_))
     }
 }
 
@@ -91,7 +157,72 @@ impl Session {
             },
             parents: DefinitionLhsParentStack::default(),
             continuation,
+            prepared_outer_call: None,
         })
+    }
+
+    #[doc(hidden)]
+    #[cold]
+    #[inline(never)]
+    pub fn prepare_definition_lhs_for_consumer(
+        &mut self,
+        lhs: Expr,
+        continuation: PreparedDefinitionLhsContinuation,
+    ) -> Result<Expr, EvalError> {
+        self.prepare_definition_lhs(
+            lhs,
+            DefinitionLhsPreparationContinuation::External(continuation),
+        )
+    }
+
+    #[doc(hidden)]
+    pub fn evaluate_prepared_definition_lhs(
+        &mut self,
+        prepared: &PreparedDefinitionLhs,
+    ) -> Result<Expr, EvalError> {
+        let Some(outer_call) = &prepared.outer_call else {
+            return self.evaluate(prepared.lhs.clone());
+        };
+        let unevaluated_restore = outer_call.unevaluated_restore.as_ref().map(|restore| {
+            SuspendedUnevaluatedRestorePlan {
+                prepared_args: restore.prepared_args.clone(),
+                wrappers: restore.wrappers.clone(),
+            }
+        });
+        self.resume_suspended_call_with_dispatch_plan(
+            outer_call.head.clone(),
+            outer_call.plan.clone(),
+            CallDispatchState::from_prepared(outer_call.prepared_args.clone()),
+            0,
+            unevaluated_restore,
+        )
+    }
+
+    #[doc(hidden)]
+    pub fn protected_or_known_prepared_definition_target_symbol(
+        &self,
+        prepared: &PreparedDefinitionLhs,
+    ) -> Option<Symbol> {
+        let Some(DefinitionAssignmentTarget::Definition(target)) = &prepared.target else {
+            return None;
+        };
+        let symbol = target.symbol().clone();
+        (self.symbol_is_protected(&symbol)
+            || is_known_system_symbol(&symbol)
+            || self.builtin_spec_for_symbol(&symbol).is_some())
+        .then_some(symbol)
+    }
+
+    #[doc(hidden)]
+    pub fn store_prepared_definition_lhs_immediate(
+        &mut self,
+        prepared: PreparedDefinitionLhs,
+        rhs: Expr,
+    ) {
+        let PreparedDefinitionLhs { lhs, target, .. } = prepared;
+        if let Some(DefinitionAssignmentTarget::Definition(target)) = target {
+            self.store_definition_target(target, lhs, rhs, false);
+        }
     }
 
     #[cold]
@@ -138,6 +269,9 @@ impl Session {
                                 );
                             }
                             DefinitionLhsSyntaxCallPlan::Ordinary => {
+                                let capture_outer_call =
+                                    matches!(region, DefinitionLhsRegion::Root)
+                                        && state.continuation.captures_outer_call();
                                 let source_head = head.clone();
                                 match self.evaluate_definition_lhs_call_head(head) {
                                     Ok(evaluated_head) => {
@@ -146,6 +280,7 @@ impl Session {
                                                 self.definition_lhs_call_state(
                                                     evaluated_head,
                                                     args,
+                                                    capture_outer_call,
                                                 ),
                                             );
                                     }
@@ -153,6 +288,7 @@ impl Session {
                                         state.work = DefinitionLhsPreparationWork::AwaitCallHead {
                                             source_head,
                                             args,
+                                            capture_outer_call,
                                         };
                                         crate::resume_or_suspend!(insert self, DefinitionLhsPreparationSuspensionFrame { state });
                                         return Err(EvalError::InputRequired { request });
@@ -165,18 +301,20 @@ impl Session {
                 },
                 DefinitionLhsPreparationWork::PrepareCallArguments(mut call) => {
                     let Some(raw_arg) = call.args.get(call.cursor).cloned() else {
-                        state.work = DefinitionLhsPreparationWork::CompleteNode(
-                            self.finish_definition_lhs_call(call),
-                        );
+                        let (value, outer_call) = self.finish_definition_lhs_call(call);
+                        if let Some(outer_call) = outer_call {
+                            state.prepared_outer_call = Some(outer_call);
+                        }
+                        state.work = DefinitionLhsPreparationWork::CompleteNode(value);
                         continue;
                     };
 
                     let source_index = call.cursor;
-                    let plan = plan_call_argument_preparation(
-                        call.metadata.attributes(),
-                        source_index,
-                        raw_arg,
-                    );
+                    let restore_wrapper = (call.outer_dispatch_plan.is_some()
+                        && unevaluated_wrapper_arg(&raw_arg).is_some())
+                    .then(|| raw_arg.clone());
+                    let plan =
+                        plan_call_argument_preparation(call.attributes, source_index, raw_arg);
                     call.cursor += 1;
                     let argument = DefinitionLhsCallArgumentContinuation {
                         source_index,
@@ -218,6 +356,13 @@ impl Session {
                             }
                         }
                         CallArgumentMode::Hold | CallArgumentMode::StrippedUnevaluated => {
+                            if matches!(plan.mode, CallArgumentMode::StrippedUnevaluated) {
+                                if let Some(wrapper) = restore_wrapper {
+                                    self.record_definition_lhs_unevaluated_restore(
+                                        &mut call, argument, &plan.expr, wrapper,
+                                    );
+                                }
+                            }
                             self.merge_definition_lhs_call_argument(&mut call, argument, plan.expr);
                             state.work = DefinitionLhsPreparationWork::PrepareCallArguments(call);
                         }
@@ -225,7 +370,11 @@ impl Session {
                 }
                 DefinitionLhsPreparationWork::CompleteNode(value) => {
                     let Some(parent) = state.parents.pop() else {
-                        let prepared = PreparedDefinitionLhs::new(self, value);
+                        let prepared = PreparedDefinitionLhs::new(
+                            self,
+                            value,
+                            state.prepared_outer_call.take(),
+                        );
                         match state.continuation.resume(self, prepared)? {
                             DefinitionLhsPreparationContinuationResult::Complete(value) => {
                                 return Ok(value);
@@ -241,6 +390,7 @@ impl Session {
                                     },
                                     parents: DefinitionLhsParentStack::default(),
                                     continuation,
+                                    prepared_outer_call: None,
                                 };
                                 continue;
                             }
@@ -280,24 +430,29 @@ impl Session {
         outcome: Result<Expr, EvalError>,
     ) -> Result<Expr, EvalError> {
         let value = outcome?;
-        state.work = match state.work {
-            DefinitionLhsPreparationWork::AwaitPatternAtom { .. } => {
-                DefinitionLhsPreparationWork::CompleteNode(value)
-            }
-            DefinitionLhsPreparationWork::AwaitCallHead { source_head, args } => {
-                let evaluated_head = reuse_definition_lhs_call_head(source_head, value);
-                DefinitionLhsPreparationWork::PrepareCallArguments(
-                    self.definition_lhs_call_state(evaluated_head, args),
-                )
-            }
-            DefinitionLhsPreparationWork::AwaitCallArgument {
-                mut call, argument, ..
-            } => {
-                self.merge_definition_lhs_call_argument(&mut call, argument, value);
-                DefinitionLhsPreparationWork::PrepareCallArguments(call)
-            }
-            _ => unreachable!("a definition-lhs frame stores awaited work"),
-        };
+        state.work =
+            match state.work {
+                DefinitionLhsPreparationWork::AwaitPatternAtom { .. } => {
+                    DefinitionLhsPreparationWork::CompleteNode(value)
+                }
+                DefinitionLhsPreparationWork::AwaitCallHead {
+                    source_head,
+                    args,
+                    capture_outer_call,
+                } => {
+                    let evaluated_head = reuse_definition_lhs_call_head(source_head, value);
+                    DefinitionLhsPreparationWork::PrepareCallArguments(
+                        self.definition_lhs_call_state(evaluated_head, args, capture_outer_call),
+                    )
+                }
+                DefinitionLhsPreparationWork::AwaitCallArgument {
+                    mut call, argument, ..
+                } => {
+                    self.merge_definition_lhs_call_argument(&mut call, argument, value);
+                    DefinitionLhsPreparationWork::PrepareCallArguments(call)
+                }
+                _ => unreachable!("a definition-lhs frame stores awaited work"),
+            };
         self.drive_definition_lhs_preparation(state)
     }
 
@@ -324,14 +479,28 @@ impl Session {
         &mut self,
         head: SharedExpr,
         args: SharedArgs,
+        capture_outer_call: bool,
     ) -> DefinitionLhsCallState {
-        let metadata = self.call_preparation_metadata(&head);
+        let (attributes, outer_dispatch_plan) = if capture_outer_call {
+            let plan = self.build_call_dispatch_plan(&head);
+            let attributes = plan.attributes;
+            let has_prepare_arguments = (0..plan.len())
+                .any(|index| plan.stage(index) == CallDispatchStage::PrepareArguments);
+            (
+                attributes,
+                has_prepare_arguments.then(|| plan.into_suspended()),
+            )
+        } else {
+            (self.call_preparation_metadata(&head).attributes(), None)
+        };
         DefinitionLhsCallState {
             head,
-            metadata,
+            attributes,
             args,
             cursor: 0,
             prepared: None,
+            unevaluated_restores: None,
+            outer_dispatch_plan,
         }
     }
 
@@ -341,7 +510,7 @@ impl Session {
         argument: DefinitionLhsCallArgumentContinuation,
         value: Expr,
     ) {
-        let attributes = call.metadata.attributes();
+        let attributes = call.attributes;
         let sequence_hold = attributes.sequence_hold();
         let list_drops_nothing = is_system_symbol_name(&call.head, heads::structure::LIST);
         let splices =
@@ -371,15 +540,65 @@ impl Session {
         }
     }
 
-    fn finish_definition_lhs_call(&self, call: DefinitionLhsCallState) -> Expr {
-        let attributes = call.metadata.attributes();
+    fn record_definition_lhs_unevaluated_restore(
+        &self,
+        call: &mut DefinitionLhsCallState,
+        argument: DefinitionLhsCallArgumentContinuation,
+        value: &Expr,
+        wrapper: Expr,
+    ) {
+        let sequence_hold = call.attributes.sequence_hold();
+        let list_drops_nothing = is_system_symbol_name(&call.head, heads::structure::LIST);
+        let splices =
+            prepared_argument_splices(value, argument.allow_sequence_splice, sequence_hold);
+        let drops_nothing = list_drops_nothing
+            && prepared_list_argument_drops_nothing(
+                value,
+                argument.allow_sequence_splice,
+                sequence_hold,
+            );
+        if splices || drops_nothing {
+            return;
+        }
+
+        let position = call
+            .prepared
+            .as_ref()
+            .map_or(argument.source_index, |prepared| prepared.len);
+        call.unevaluated_restores
+            .get_or_insert_with(Vec::new)
+            .push((position, wrapper));
+    }
+
+    fn finish_definition_lhs_call(
+        &self,
+        call: DefinitionLhsCallState,
+    ) -> (Expr, Option<PreparedDefinitionOuterCall>) {
+        let attributes = call.attributes;
         let args = match call.prepared {
             Some(prepared) => SharedArgs::new(prepared.into_vec_allow_shared()),
             None => call.args,
         };
+        let unevaluated_restore =
+            call.unevaluated_restores
+                .map(|wrappers| PreparedDefinitionUnevaluatedRestore {
+                    prepared_args: args.clone(),
+                    wrappers: Arc::from(wrappers),
+                });
         let normalized_args = self.normalize_call_args_shared(&call.head, args, attributes);
+        let outer_call = call
+            .outer_dispatch_plan
+            .map(|plan| PreparedDefinitionOuterCall {
+                head: call.head.clone(),
+                plan,
+                prepared_args: normalized_args.clone(),
+                unevaluated_restore,
+            });
         let identity = Expr::call_shared(call.head, normalized_args);
-        self.normalize_definition_identity_for_matching(&identity, attributes)
+        (
+            self.normalize_definition_identity_for_matching(&identity, attributes),
+            outer_call,
+        )
     }
 
     fn start_definition_lhs_structural_call(
@@ -573,6 +792,9 @@ const _: fn() = || {
     fn assert_traces<T: FrameRootTrace>() {}
     assert_traces::<DefinitionLhsPreparationContinuation>();
     assert_traces::<PreparedDefinitionLhs>();
+    assert_traces::<PreparedDefinitionLhsContinuation>();
+    assert_traces::<PreparedDefinitionOuterCall>();
+    assert_traces::<PreparedDefinitionUnevaluatedRestore>();
 };
 
 #[cfg(test)]
