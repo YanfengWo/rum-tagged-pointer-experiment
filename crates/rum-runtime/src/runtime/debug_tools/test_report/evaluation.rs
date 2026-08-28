@@ -119,7 +119,7 @@ impl Session {
             ok(resolved_expr) => { let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
                     Ok(is_system_symbol_name(&resolved, "True"))
                 })() },
-            suspend => TestCaseOutputMatchesPartsSuspensionFrameL115C70,
+            suspend => TestCaseOutputMatchesPartsSuspensionFrame,
         )
     }
 
@@ -197,7 +197,7 @@ impl Session {
             self,
             outcome_result,
             ok(outcome) => { (|| { Ok(finish_test_case_input_outcome(started, outcome)) })() },
-            suspend => EvaluateTestCaseInputSuspensionFrameL192C13 { started },
+            suspend => EvaluateTestCaseInputSuspensionFrame { started },
         )
     }
 
@@ -263,7 +263,7 @@ impl Session {
 
         match result {
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, EvalExprWithStreamCaptureSuspensionFrameL258C44 { started, message_checkpoint, print_checkpoint, handled_error_checkpoint });
+                crate::resume_or_suspend!(insert self, EvalExprWithStreamCaptureSuspensionFrame { started, message_checkpoint, print_checkpoint, handled_error_checkpoint });
                 Err(EvalError::InputRequired { request })
             }
             result => self.finish_eval_expr_with_stream_capture(
@@ -444,11 +444,9 @@ fn test_report_memory_constraint_sentinel() -> Expr {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct TestCaseOutputMatchesPartsSuspensionFrameL115C70;
+struct TestCaseOutputMatchesPartsSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for TestCaseOutputMatchesPartsSuspensionFrameL115C70
-{
+impl crate::runtime::suspension::SuspensionFrame for TestCaseOutputMatchesPartsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -469,11 +467,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateTestCaseInputSuspensionFrameL192C13 {
-    pub(super) started: std::time::Instant,
+struct EvaluateTestCaseInputSuspensionFrame {
+    started: std::time::Instant,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvaluateTestCaseInputSuspensionFrameL192C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvaluateTestCaseInputSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -494,16 +492,14 @@ impl crate::runtime::suspension::SuspensionFrame for EvaluateTestCaseInputSuspen
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalExprWithStreamCaptureSuspensionFrameL258C44 {
-    pub(super) started: std::time::Instant,
-    pub(super) message_checkpoint: usize,
-    pub(super) print_checkpoint: usize,
-    pub(super) handled_error_checkpoint: usize,
+struct EvalExprWithStreamCaptureSuspensionFrame {
+    started: std::time::Instant,
+    message_checkpoint: usize,
+    print_checkpoint: usize,
+    handled_error_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for EvalExprWithStreamCaptureSuspensionFrameL258C44
-{
+impl crate::runtime::suspension::SuspensionFrame for EvalExprWithStreamCaptureSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

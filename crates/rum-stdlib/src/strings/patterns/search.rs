@@ -239,7 +239,7 @@ pub(crate) fn eval_string_replace(
             ok(rendered) => { (|| {
                     Ok(Expr::string(rendered))
                 })() },
-            suspend => EvalStringReplaceSuspensionFrameL233C72,
+            suspend => EvalStringReplaceSuspensionFrame,
         );
     }
 
@@ -307,7 +307,7 @@ pub(crate) fn eval_string_cases(
                         ok(items) => { (|| {
                                             Ok(list_expr(items))
                                         })() },
-                        suspend => EvalStringCasesSuspensionFrameL296C80,
+                        suspend => EvalStringCasesSuspensionFrame1,
                     )
                 } else {
                     Ok(list_expr(collect_string_cases(
@@ -332,7 +332,7 @@ pub(crate) fn eval_string_cases(
                     ok(items) => { (|| {
                                     Ok(list_expr(items))
                                 })() },
-                    suspend => EvalStringCasesSuspensionFrameL316C76,
+                    suspend => EvalStringCasesSuspensionFrame2,
                 )
             }
         };

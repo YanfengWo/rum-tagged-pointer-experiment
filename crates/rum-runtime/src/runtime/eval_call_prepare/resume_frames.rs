@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrameL373C60 {
+pub(super) struct PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrame {
     pub(super) state: crate::runtime::eval_call_prepare::SuspendedCallArgumentPreparation,
     pub(super) allow_sequence_splice: bool,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrameL373C60
+    for PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -32,13 +32,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedCallArgumentPreparationSuspensionFrameL558C56 {
+pub(super) struct ResumeSuspendedCallArgumentPreparationSuspensionFrame {
     pub(super) state: crate::runtime::eval_call_prepare::SuspendedCallArgumentPreparation,
     pub(super) allow_sequence_splice: bool,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedCallArgumentPreparationSuspensionFrameL558C56
+    for ResumeSuspendedCallArgumentPreparationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

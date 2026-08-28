@@ -66,7 +66,7 @@ impl Session {
             self,
             applied_result,
             ok(value) => Ok(value),
-            suspend => TryApplyFunctionSuspensionFrameL65C13,
+            suspend => TryApplyFunctionSuspensionFrame,
         );
 
         match outcome {
@@ -139,9 +139,9 @@ fn runtime_profile_outcome_for_expr_result(
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct TryApplyFunctionSuspensionFrameL65C13;
+struct TryApplyFunctionSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for TryApplyFunctionSuspensionFrameL65C13 {
+impl crate::runtime::suspension::SuspensionFrame for TryApplyFunctionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

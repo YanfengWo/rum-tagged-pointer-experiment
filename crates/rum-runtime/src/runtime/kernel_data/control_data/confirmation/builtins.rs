@@ -30,7 +30,7 @@ impl Session {
         let handler = handler.clone();
                     let form = form.clone();
                     let lexical_tag = lexical_tag.clone();
-        EvalEncloseSuspensionFrameL26C13 { handler, form, lexical_tag }
+        EvalEncloseSuspensionFrame { handler, form, lexical_tag }
         },
         );
 
@@ -56,7 +56,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalConfirmSuspensionFrameL49C13 { args }
+        EvalConfirmSuspensionFrame { args }
         },
         )?;
 
@@ -79,7 +79,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalConfirmBySuspensionFrameL67C13 { args }
+        EvalConfirmBySuspensionFrame { args }
         },
         )?;
 
@@ -102,7 +102,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalConfirmMatchSuspensionFrameL85C13 { args }
+        EvalConfirmMatchSuspensionFrame { args }
         },
         )?;
 
@@ -142,7 +142,7 @@ impl Session {
                             .take()
                             .expect("confirm selectors are frozen only after input suspension"),
                     );
-        EvalConfirmQuietSuspensionFrameL120C13 { args, selectors, message_checkpoint }
+        EvalConfirmQuietSuspensionFrame { args, selectors, message_checkpoint }
         },
         );
 
@@ -176,7 +176,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalConfirmAssertSuspensionFrameL156C13 { args }
+        EvalConfirmAssertSuspensionFrame { args }
         },
         )?;
 
@@ -252,7 +252,7 @@ impl Session {
                         })
                     }
                 })() },
-            suspend => ResumeEncloseForFailureSuspensionFrameL217C49 { handler, value, tag, explicit_tag },
+            suspend => ResumeEncloseForFailureSuspensionFrame { handler, value, tag, explicit_tag },
         )
     }
 
@@ -288,7 +288,7 @@ impl Session {
             ok(info) => { let session = self; (|| {
                     session.finish_confirm_failure(raw_expr, value, info, tag)
                 })() },
-            suspend => ResumeConfirmAfterValueSuspensionFrameL256C48 { raw_expr, value, tag },
+            suspend => ResumeConfirmAfterValueSuspensionFrame { raw_expr, value, tag },
         )
     }
 
@@ -311,7 +311,7 @@ impl Session {
                                 explicit_tag: true,
                             })
                         })() },
-                suspend => FinishConfirmFailureSuspensionFrameL270C62 { raw_expr, info, tag },
+                suspend => FinishConfirmFailureSuspensionFrame { raw_expr, info, tag },
             );
         }
 
@@ -336,7 +336,7 @@ impl Session {
             suspend => {
         let args = args.clone();
                     let value = value.clone();
-        ResumeConfirmByAfterValueSuspensionFrameL296C13 { args, value }
+        ResumeConfirmByAfterValueSuspensionFrame { args, value }
         },
         )?;
 
@@ -363,7 +363,7 @@ impl Session {
             ok(info) => { let session = self; (|| {
                     session.finish_confirm_by_failure(raw_expr, raw_function, info, tag)
                 })() },
-            suspend => ResumeConfirmByAfterTestSuspensionFrameL316C48 { raw_expr, raw_function, tag },
+            suspend => ResumeConfirmByAfterTestSuspensionFrame { raw_expr, raw_function, tag },
         )
     }
 
@@ -409,11 +409,11 @@ impl Session {
             ok(info) => { (|| {
                             session.finish_confirm_match_failure(raw_expr, raw_pattern, info, tag)
                         })() },
-            suspend => ResumeConfirmMatchAfterValueSuspensionFrameL354C59 { raw_expr, raw_pattern, tag },
+            suspend => ResumeConfirmMatchAfterValueSuspensionFrame2 { raw_expr, raw_pattern, tag },
         )
                     }
                 })() },
-            suspend => ResumeConfirmMatchAfterValueSuspensionFrameL349C49 { value, info_expr, raw_expr, raw_pattern, tag },
+            suspend => ResumeConfirmMatchAfterValueSuspensionFrame1 { value, info_expr, raw_expr, raw_pattern, tag },
         )
     }
 
@@ -458,7 +458,7 @@ impl Session {
             ok(info) => { let session = self; (|| {
                     session.finish_confirm_quiet_failure(raw_expr, info, tag, message)
                 })() },
-            suspend => ResumeConfirmQuietAfterBodySuspensionFrameL396C48 { raw_expr, tag, message },
+            suspend => ResumeConfirmQuietAfterBodySuspensionFrame { raw_expr, tag, message },
         )
     }
 
@@ -506,7 +506,7 @@ impl Session {
             ok(info) => { let session = self; (|| {
                     session.finish_confirm_assert_failure(raw_test, info, tag)
                 })() },
-            suspend => ResumeConfirmAssertAfterTestSuspensionFrameL439C48 { raw_test, tag },
+            suspend => ResumeConfirmAssertAfterTestSuspensionFrame { raw_test, tag },
         )
     }
 

@@ -149,27 +149,28 @@ fn matcher_guard_binding_survives_a_sweep_while_suspended() {
     let candidate = allocate_named_candidate(&mut session, "gcM", 703);
     assert_eq!(eval_string(&mut session, &candidate.to_string()), "703");
     session
-        .eval_text(
-            "ClearAll[gcMThunk]; SetAttributes[gcMThunk, HoldAll]; \
-             gcMThunk[x_ /; MatchQ[InputString[\"M: \"], \"yes\"]] := x",
-        )
+        .eval_text(&format!(
+            "gcMRoot = Hold[{candidate}]; \
+             gcMFn[Hold[z_] /; MatchQ[InputString[\"M: \"], \"yes\"]] := z; \
+             gcMThunk := With[{{v = gcMRoot}}, Clear[gcMRoot, gcMThunk]; v]"
+        ))
         .expect("matcher probe definition should install");
 
     let failure = session
-        .eval_request(&format!("gcMThunk[{candidate}]"))
+        .eval_request("gcMFn[gcMThunk]")
         .expect_err("the matcher guard should suspend");
     assert_input_required(&failure, "M: ");
 
     let sweeps_before = session.gensym_gc_sweep_count;
     session
-        .eval_request("Module[{gcMTrigger}, gcMTrigger = 1; Hold[gcMTrigger]]")
+        .eval_text("Module[{gcMTrigger}, gcMTrigger = 1; Hold[gcMTrigger]]")
         .expect("the matcher probe should cross the watermark");
     assert!(session.gensym_gc_sweep_count > sweeps_before);
 
     let resumed = session
-        .resume_suspended_evaluation("yes")
+        .resume_eval_request_with_input("yes")
         .expect("the matcher guard should resume");
-    assert_eq!(resumed.to_string(), "703");
+    assert_eq!(resumed.value.to_string(), "703");
 }
 
 #[test]

@@ -143,7 +143,7 @@ fn resume_truth_aggregate_from_index(
                     ok(value) => Ok(value),
                     suspend => {
                 let parts = FrozenPredicateSequence::freeze(parts);
-                ResumeTruthAggregateFromIndexSuspensionFrameL143C25 { kind, head, call_args, parts, criterion, index, saw_unknown }
+                ResumeTruthAggregateFromIndexSuspensionFrame { kind, head, call_args, parts, criterion, index, saw_unknown }
                 },
                 );
             }
@@ -187,7 +187,7 @@ fn resume_suspended_truth_aggregate_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedTruthAggregateFromIndexSuspensionFrameL198C25 { kind, head, call_args, parts, criterion, index, saw_unknown },
+                    suspend => ResumeSuspendedTruthAggregateFromIndexSuspensionFrame { kind, head, call_args, parts, criterion, index, saw_unknown },
                 );
             }
             Err(error) => return Err(error),
@@ -291,19 +291,17 @@ fn finalize_truth_aggregate(
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeTruthAggregateFromIndexSuspensionFrameL143C25 {
-    pub(super) kind: crate::predicates::truth::TruthAggregateKind,
-    pub(super) head: rum_core::Expr,
-    pub(super) call_args: rum_core::SharedArgs,
-    pub(super) parts: crate::predicates::suspended_state::FrozenPredicateSequence<rum_core::Expr>,
-    pub(super) criterion: rum_core::Expr,
-    pub(super) index: usize,
-    pub(super) saw_unknown: bool,
+struct ResumeTruthAggregateFromIndexSuspensionFrame {
+    kind: crate::predicates::truth::TruthAggregateKind,
+    head: rum_core::Expr,
+    call_args: rum_core::SharedArgs,
+    parts: crate::predicates::suspended_state::FrozenPredicateSequence<rum_core::Expr>,
+    criterion: rum_core::Expr,
+    index: usize,
+    saw_unknown: bool,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeTruthAggregateFromIndexSuspensionFrameL143C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeTruthAggregateFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -344,18 +342,18 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedTruthAggregateFromIndexSuspensionFrameL198C25 {
-    pub(super) kind: crate::predicates::truth::TruthAggregateKind,
-    pub(super) head: rum_core::Expr,
-    pub(super) call_args: rum_core::SharedArgs,
-    pub(super) parts: crate::predicates::suspended_state::FrozenPredicateSequence<rum_core::Expr>,
-    pub(super) criterion: rum_core::Expr,
-    pub(super) index: usize,
-    pub(super) saw_unknown: bool,
+struct ResumeSuspendedTruthAggregateFromIndexSuspensionFrame {
+    kind: crate::predicates::truth::TruthAggregateKind,
+    head: rum_core::Expr,
+    call_args: rum_core::SharedArgs,
+    parts: crate::predicates::suspended_state::FrozenPredicateSequence<rum_core::Expr>,
+    criterion: rum_core::Expr,
+    index: usize,
+    saw_unknown: bool,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedTruthAggregateFromIndexSuspensionFrameL198C25
+    for ResumeSuspendedTruthAggregateFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

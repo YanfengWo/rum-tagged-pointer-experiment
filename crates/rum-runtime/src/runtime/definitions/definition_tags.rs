@@ -15,7 +15,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let lhs = lhs.clone();
-        EvalUpSetSuspensionFrameL13C13 { lhs }
+        EvalUpSetSuspensionFrame { lhs }
         },
         )?;
 
@@ -61,7 +61,7 @@ impl Session {
         let tag = tag.clone();
                     let lhs = lhs.clone();
                     let args = args.clone();
-        EvalTagSetSuspensionFrameL54C13 { args, tag, lhs }
+        EvalTagSetSuspensionFrame { args, tag, lhs }
         },
         )?;
         self.store_tagged_definition("TagSet", args_slice, tag, lhs, rhs, false)
@@ -496,11 +496,11 @@ fn replace_or_append_default_value(entries: &mut Vec<DownValue>, lhs: &Expr, new
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalUpSetSuspensionFrameL13C13 {
-    pub(super) lhs: rum_core::Expr,
+struct EvalUpSetSuspensionFrame {
+    lhs: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalUpSetSuspensionFrameL13C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalUpSetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -517,13 +517,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalUpSetSuspensionFrameL13
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalTagSetSuspensionFrameL54C13 {
-    pub(super) args: rum_core::SharedArgs,
-    pub(super) tag: rum_core::Symbol,
-    pub(super) lhs: rum_core::Expr,
+struct EvalTagSetSuspensionFrame {
+    args: rum_core::SharedArgs,
+    tag: rum_core::Symbol,
+    lhs: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalTagSetSuspensionFrameL54C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalTagSetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

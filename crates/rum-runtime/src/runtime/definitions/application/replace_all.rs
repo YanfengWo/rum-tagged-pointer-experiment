@@ -134,7 +134,7 @@ impl Session {
             self,
             outcome_result,
             ok(outcome) => { (|| { Ok(outcome.expr) })() },
-            suspend => ApplyReplaceAllSuspensionFrameL130C51,
+            suspend => ApplyReplaceAllSuspensionFrame,
         )
     }
 
@@ -149,7 +149,7 @@ impl Session {
             self,
             outcome_result,
             ok(outcome) => { (|| { Ok(outcome.expr) })() },
-            suspend => ApplyReplaceAllWithPlanSuspensionFrameL140C51,
+            suspend => ApplyReplaceAllWithPlanSuspensionFrame,
         )
     }
 
@@ -204,7 +204,7 @@ impl Session {
                     }),
                     None => session.apply_replace_all_after_miss(expr, rules, source),
                 } })() },
-            suspend => ApplyReplaceAllOwnedSuspensionFrameL184C51 { expr, rules, source },
+            suspend => ApplyReplaceAllOwnedSuspensionFrame { expr, rules, source },
         )
     }
 
@@ -245,7 +245,7 @@ impl Session {
                                         None,
                                     )
                                 })() },
-                    suspend => ApplyReplaceAllAfterMissSuspensionFrameL213C56 { remaining_args, rules, source, hold_attribute },
+                    suspend => ApplyReplaceAllAfterMissSuspensionFrame { remaining_args, rules, source, hold_attribute },
                 )
             }
         }
@@ -326,7 +326,7 @@ impl Session {
                         changed,
                         argument_index,
                     };
-                    crate::resume_or_suspend!(insert self, ApplyReplaceAllArgsSuspensionFrameL306C48 { state, source, hold_attribute });
+                    crate::resume_or_suspend!(insert self, ApplyReplaceAllArgsSuspensionFrame { state, source, hold_attribute });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -375,7 +375,7 @@ impl Session {
                         break;
                     }
                     Err(EvalError::InputRequired { request }) => {
-                        crate::resume_or_suspend!(insert self, ResumeSuspendedReplaceAllArgsSuspensionFrameL365C52 { state, source, hold_attribute });
+                        crate::resume_or_suspend!(insert self, ResumeSuspendedReplaceAllArgsSuspensionFrame { state, source, hold_attribute });
                         return Err(EvalError::InputRequired { request });
                     }
                     Err(error) => return Err(error),
@@ -468,7 +468,7 @@ impl Session {
                         normalized_expr,
                         rules,
                     };
-                    crate::resume_or_suspend!(insert self, ApplyRulesOnceFromListSuspensionFrameL469C48 { state, source, cursor, index, would_reject });
+                    crate::resume_or_suspend!(insert self, ApplyRulesOnceFromListSuspensionFrame { state, source, cursor, index, would_reject });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

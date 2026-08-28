@@ -24,7 +24,7 @@ impl Session {
                     suspend => {
                 let expr = expr.clone();
                                     let cleanup = cleanup.clone();
-                EvalWithCleanupSuspensionFrameL23C21 { expr, cleanup }
+                EvalWithCleanupSuspensionFrame { expr, cleanup }
                 },
                 );
 
@@ -67,7 +67,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let cleanup = cleanup.clone();
-        DriveWithCleanupPrimarySuspensionFrameL63C13 { cleanup }
+        DriveWithCleanupPrimarySuspensionFrame { cleanup }
         },
         );
 
@@ -87,7 +87,7 @@ impl Session {
             Ok(value) => finish_with_cleanup_outcomes(primary_outcome, Ok(value)),
             Err(EvalError::InputRequired { request }) => {
                 let primary_outcome = SuspendedCleanupPrimaryOutcome(Arc::new(primary_outcome));
-                crate::resume_or_suspend!(insert self, ResumeWithCleanupAfterPrimarySuspensionFrameL84C44 { primary_outcome });
+                crate::resume_or_suspend!(insert self, ResumeWithCleanupAfterPrimarySuspensionFrame { primary_outcome });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => finish_with_cleanup_outcomes(primary_outcome, Err(error)),
@@ -147,12 +147,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalWithCleanupSuspensionFrameL23C21 {
-    pub(super) expr: rum_core::Expr,
-    pub(super) cleanup: rum_core::Expr,
+struct EvalWithCleanupSuspensionFrame {
+    expr: rum_core::Expr,
+    cleanup: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalWithCleanupSuspensionFrameL23C21 {
+impl crate::runtime::suspension::SuspensionFrame for EvalWithCleanupSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -168,11 +168,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalWithCleanupSuspensionFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DriveWithCleanupPrimarySuspensionFrameL63C13 {
-    pub(super) cleanup: rum_core::Expr,
+struct DriveWithCleanupPrimarySuspensionFrame {
+    cleanup: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for DriveWithCleanupPrimarySuspensionFrameL63C13 {
+impl crate::runtime::suspension::SuspensionFrame for DriveWithCleanupPrimarySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -187,14 +187,12 @@ impl crate::runtime::suspension::SuspensionFrame for DriveWithCleanupPrimarySusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeWithCleanupAfterPrimarySuspensionFrameL84C44 {
+struct ResumeWithCleanupAfterPrimarySuspensionFrame {
     pub(super) primary_outcome:
         crate::runtime::kernel_data::control_data::cleanup::SuspendedCleanupPrimaryOutcome,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeWithCleanupAfterPrimarySuspensionFrameL84C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeWithCleanupAfterPrimarySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

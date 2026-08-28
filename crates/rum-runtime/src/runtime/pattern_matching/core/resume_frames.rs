@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledOwnedSuspensionFrameL39C44 {
+pub(super) struct MatchCompiledOwnedSuspensionFrame {
     pub(super) snapshot: crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
         (rum_core::Symbol, std::option::Option<rum_core::Expr>),
     >,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for MatchCompiledOwnedSuspensionFrameL39C44 {
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -27,14 +27,14 @@ impl crate::runtime::suspension::SuspensionFrame for MatchCompiledOwnedSuspensio
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluatePatternTestOwnedSuspensionFrameL66C44 {
+pub(super) struct EvaluatePatternTestOwnedSuspensionFrame {
     pub(super) bindings_for_true:
         crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
     pub(super) bindings_for_false:
         crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvaluatePatternTestOwnedSuspensionFrameL66C44 {
+impl crate::runtime::suspension::SuspensionFrame for EvaluatePatternTestOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -82,7 +82,7 @@ impl crate::runtime::suspension::PureFrameFinalizer for FinishPatternTestFinaliz
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledAlternativesOwnedSuspensionFrameL104C44 {
+pub(super) struct MatchCompiledAlternativesOwnedSuspensionFrame {
     pub(super) alternatives:
         crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
             crate::runtime::session::session_state::MatcherNode,
@@ -91,9 +91,7 @@ pub(super) struct MatchCompiledAlternativesOwnedSuspensionFrameL104C44 {
     pub(super) index: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledAlternativesOwnedSuspensionFrameL104C44
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledAlternativesOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -188,12 +186,12 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueCompiledAlternative
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledNamedOwnedSuspensionFrameL143C49 {
+pub(super) struct MatchCompiledNamedOwnedSuspensionFrame {
     pub(super) name: rum_core::Symbol,
     pub(super) value: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for MatchCompiledNamedOwnedSuspensionFrameL143C49 {
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledNamedOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -226,13 +224,11 @@ impl crate::runtime::suspension::SuspensionFrame for MatchCompiledNamedOwnedSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledConditionOwnedSuspensionFrameL164C49 {
+pub(super) struct MatchCompiledConditionOwnedSuspensionFrame {
     pub(super) condition: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledConditionOwnedSuspensionFrameL164C49
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledConditionOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -261,14 +257,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledPatternTestOwnedSuspensionFrameL183C49 {
+pub(super) struct MatchCompiledPatternTestOwnedSuspensionFrame {
     pub(super) test: rum_core::Expr,
     pub(super) value: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledPatternTestOwnedSuspensionFrameL183C49
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledPatternTestOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -303,16 +297,14 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledExceptOwnedSuspensionFrameL210C44 {
+pub(super) struct MatchCompiledExceptOwnedSuspensionFrame {
     pub(super) excluded: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
         crate::runtime::session::session_state::MatcherNode,
     >,
     pub(super) value: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledExceptOwnedSuspensionFrameL210C44
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledExceptOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -387,11 +379,9 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueCompiledExceptFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCompiledExceptInnerSuspensionFrameL239C44;
+pub(super) struct FinishCompiledExceptInnerSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishCompiledExceptInnerSuspensionFrameL239C44
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishCompiledExceptInnerSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -410,7 +400,7 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledCallOwnedSuspensionFrameL294C52 {
+pub(super) struct MatchCompiledCallOwnedSuspensionFrame {
     pub(super) args: crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
         crate::runtime::session::session_state::MatcherArg,
     >,
@@ -421,7 +411,7 @@ pub(super) struct MatchCompiledCallOwnedSuspensionFrameL294C52 {
     pub(super) flat: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for MatchCompiledCallOwnedSuspensionFrameL294C52 {
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledCallOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -535,13 +525,13 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueCompiledCallFrame {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledKeyValuePatternChoiceOwnedSuspensionFrameL478C44 {
+pub(super) struct MatchCompiledKeyValuePatternChoiceOwnedSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::core::SuspendedKeyValueChoice,
     pub(super) candidate_value: rum_core::Expr,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledKeyValuePatternChoiceOwnedSuspensionFrameL478C44
+    for MatchCompiledKeyValuePatternChoiceOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -563,11 +553,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishKeyValueKeyMatchSuspensionFrameL517C44 {
+pub(super) struct FinishKeyValueKeyMatchSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::core::SuspendedKeyValueChoice,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for FinishKeyValueKeyMatchSuspensionFrameL517C44 {
+impl crate::runtime::suspension::SuspensionFrame for FinishKeyValueKeyMatchSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -690,7 +680,7 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueKeyValueValueMatchF
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateSequencePatternChecksOwnedSuspensionFrameL584C52 {
+pub(super) struct EvaluateSequencePatternChecksOwnedSuspensionFrame1 {
     pub(super) checks: crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
         crate::runtime::session::session_state::SequencePatternCheck,
     >,
@@ -700,7 +690,7 @@ pub(super) struct EvaluateSequencePatternChecksOwnedSuspensionFrameL584C52 {
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateSequencePatternChecksOwnedSuspensionFrameL584C52
+    for EvaluateSequencePatternChecksOwnedSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -727,7 +717,7 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateSequencePatternChecksOwnedSuspensionFrameL622C52 {
+pub(super) struct EvaluateSequencePatternChecksOwnedSuspensionFrame2 {
     pub(super) checks: crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
         crate::runtime::session::session_state::SequencePatternCheck,
     >,
@@ -738,7 +728,7 @@ pub(super) struct EvaluateSequencePatternChecksOwnedSuspensionFrameL622C52 {
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateSequencePatternChecksOwnedSuspensionFrameL622C52
+    for EvaluateSequencePatternChecksOwnedSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,

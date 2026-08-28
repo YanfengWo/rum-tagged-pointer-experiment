@@ -70,7 +70,7 @@ fn resume_association_map_from_index(
                     suspend => {
                 let keys = FrozenAssociationSequence::freeze(keys);
                                         let entries = PersistentAssociationSequence::freeze(entries);
-                ResumeAssociationMapFromIndexSuspensionFrameL70C25 { function, keys, index, entries, key }
+                ResumeAssociationMapFromIndexSuspensionFrame { function, keys, index, entries, key }
                 },
                 );
             }
@@ -101,7 +101,7 @@ fn resume_suspended_association_map_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAssociationMapFromIndexSuspensionFrameL104C25 { function, keys, index, entries, key },
+                    suspend => ResumeSuspendedAssociationMapFromIndexSuspensionFrame { function, keys, index, entries, key },
                 );
             }
             Err(error) => return Err(error),
@@ -153,7 +153,7 @@ fn resume_association_map_association_from_index(
                     suspend => {
                 let items = FrozenAssociationSequence::freeze(items);
                                         let mapped_items = PersistentAssociationSequence::freeze(mapped_items);
-                ResumeAssociationMapAssociationFromIndexSuspensionFrameL159C25 { function, items, index, mapped_items, item }
+                ResumeAssociationMapAssociationFromIndexSuspensionFrame { function, items, index, mapped_items, item }
                 },
                 );
             }
@@ -186,7 +186,7 @@ fn resume_suspended_association_map_association_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAssociationMapAssociationFromIndexSuspensionFrameL201C25 { function, items, index, mapped_items, item },
+                    suspend => ResumeSuspendedAssociationMapAssociationFromIndexSuspensionFrame { function, items, index, mapped_items, item },
                 );
             }
             Err(error) => return Err(error),
@@ -247,20 +247,59 @@ fn report_invalid_association_map_value(
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationMapFromIndexSuspensionFrameL70C25 {
-    pub(super) function: rum_core::Expr,
-    pub(super) keys:
-        crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) entries: crate::associations::suspended_state::PersistentAssociationSequence<(
+struct ResumeAssociationMapFromIndexSuspensionFrame {
+    function: rum_core::Expr,
+    keys: crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
+    index: usize,
+    entries: crate::associations::suspended_state::PersistentAssociationSequence<(
         rum_core::Expr,
         rum_core::Expr,
     )>,
-    pub(super) key: rum_core::Expr,
+    key: rum_core::Expr,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeAssociationMapFromIndexSuspensionFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut function = self.function.clone();
+        #[allow(unused_mut)]
+        let mut keys = self.keys.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut entries = self.entries.clone();
+        #[allow(unused_mut)]
+        let mut key = self.key.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_association_map_with_value(
+                    session, function, keys, index, entries, key, value,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+struct ResumeSuspendedAssociationMapFromIndexSuspensionFrame {
+    function: rum_core::Expr,
+    keys: crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
+    index: usize,
+    entries: crate::associations::suspended_state::PersistentAssociationSequence<(
+        rum_core::Expr,
+        rum_core::Expr,
+    )>,
+    key: rum_core::Expr,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationMapFromIndexSuspensionFrameL70C25
+    for ResumeSuspendedAssociationMapFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -290,61 +329,17 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationMapFromIndexSuspensionFrameL104C25 {
-    pub(super) function: rum_core::Expr,
-    pub(super) keys:
-        crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) entries: crate::associations::suspended_state::PersistentAssociationSequence<(
-        rum_core::Expr,
-        rum_core::Expr,
-    )>,
-    pub(super) key: rum_core::Expr,
-}
-
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationMapFromIndexSuspensionFrameL104C25
-{
-    fn resume(
-        self: std::sync::Arc<Self>,
-        session: &mut Session,
-        outcome: Result<Expr, EvalError>,
-    ) -> rum_runtime::kernel_api::FrameAction {
-        #[allow(unused_mut)]
-        let mut function = self.function.clone();
-        #[allow(unused_mut)]
-        let mut keys = self.keys.clone();
-        #[allow(unused_mut)]
-        let mut index = self.index.clone();
-        #[allow(unused_mut)]
-        let mut entries = self.entries.clone();
-        #[allow(unused_mut)]
-        let mut key = self.key.clone();
-        let resumed = match outcome {
-            Ok(value) => (|| {
-                resume_suspended_association_map_with_value(
-                    session, function, keys, index, entries, key, value,
-                )
-            })(),
-            Err(error) => Err(error),
-        };
-        rum_runtime::kernel_api::FrameAction::complete(resumed)
-    }
-}
-
-#[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationMapAssociationFromIndexSuspensionFrameL159C25 {
-    pub(super) function: rum_core::Expr,
-    pub(super) items:
-        crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) mapped_items:
+struct ResumeAssociationMapAssociationFromIndexSuspensionFrame {
+    function: rum_core::Expr,
+    items: crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
+    index: usize,
+    mapped_items:
         crate::associations::suspended_state::PersistentAssociationSequence<rum_core::Expr>,
-    pub(super) item: rum_core::Expr,
+    item: rum_core::Expr,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationMapAssociationFromIndexSuspensionFrameL159C25
+    for ResumeAssociationMapAssociationFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -380,18 +375,17 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationMapAssociationFromIndexSuspensionFrameL201C25 {
-    pub(super) function: rum_core::Expr,
-    pub(super) items:
-        crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) mapped_items:
+struct ResumeSuspendedAssociationMapAssociationFromIndexSuspensionFrame {
+    function: rum_core::Expr,
+    items: crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
+    index: usize,
+    mapped_items:
         crate::associations::suspended_state::PersistentAssociationSequence<rum_core::Expr>,
-    pub(super) item: rum_core::Expr,
+    item: rum_core::Expr,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationMapAssociationFromIndexSuspensionFrameL201C25
+    for ResumeSuspendedAssociationMapAssociationFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

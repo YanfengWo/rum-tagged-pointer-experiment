@@ -54,23 +54,19 @@ fn resume_suspended_set_same_test(
                     .candidate
                     .as_ref()
                     .expect("deduplication should have a candidate");
-                let value = match eval_binary_predicate(
-                    session,
-                    &state.same_test,
-                    candidate,
-                    existing,
-                ) {
-                    Ok(value) => value,
-                    Err(EvalError::InputRequired { request }) => {
-                        return rum_runtime::resume_or_suspend!(
-                            session,
-                            Err(EvalError::InputRequired { request }),
-                            ok(value) => Ok(value),
-                            suspend => ResumeSuspendedSetSameTestSuspensionFrameL63C37 { state },
-                        );
-                    }
-                    Err(error) => return Err(error),
-                };
+                let value =
+                    match eval_binary_predicate(session, &state.same_test, candidate, existing) {
+                        Ok(value) => value,
+                        Err(EvalError::InputRequired { request }) => {
+                            return rum_runtime::resume_or_suspend!(
+                                session,
+                                Err(EvalError::InputRequired { request }),
+                                ok(value) => Ok(value),
+                                suspend => ResumeSuspendedSetSameTestSuspensionFrame1 { state },
+                            );
+                        }
+                        Err(error) => return Err(error),
+                    };
                 advance_suspended_set_same_test_after_value(&mut state, &value);
             }
             SetSameTestPhase::Intersection {
@@ -100,7 +96,7 @@ fn resume_suspended_set_same_test(
                             session,
                             Err(EvalError::InputRequired { request }),
                             ok(value) => Ok(value),
-                            suspend => ResumeSuspendedSetSameTestSuspensionFrameL101C33 { state },
+                            suspend => ResumeSuspendedSetSameTestSuspensionFrame2 { state },
                         );
                     }
                     Err(error) => return Err(error),
@@ -127,7 +123,7 @@ fn resume_suspended_set_same_test(
                             session,
                             Err(EvalError::InputRequired { request }),
                             ok(value) => Ok(value),
-                            suspend => ResumeSuspendedSetSameTestSuspensionFrameL130C33 { state },
+                            suspend => ResumeSuspendedSetSameTestSuspensionFrame3 { state },
                         );
                     }
                     Err(error) => return Err(error),
@@ -225,11 +221,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSetSameTestSuspensionFrameL63C37 {
-    pub(super) state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
+struct ResumeSuspendedSetSameTestSuspensionFrame1 {
+    state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSuspensionFrameL63C37 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -246,11 +242,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSusp
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSetSameTestSuspensionFrameL101C33 {
-    pub(super) state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
+struct ResumeSuspendedSetSameTestSuspensionFrame2 {
+    state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSuspensionFrameL101C33 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -267,11 +263,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSusp
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSetSameTestSuspensionFrameL130C33 {
-    pub(super) state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
+struct ResumeSuspendedSetSameTestSuspensionFrame3 {
+    state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSuspensionFrameL130C33 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSetSameTestSuspensionFrame3 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

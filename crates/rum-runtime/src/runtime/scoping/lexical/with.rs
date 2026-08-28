@@ -120,7 +120,7 @@ impl Session {
                         bindings: PersistentWithBindings::freeze(bindings),
                         cursor: index + 1,
                     };
-                    crate::resume_or_suspend!(insert self, ResumeWithBindingsSuspensionFrameL123C48 { state, symbol });
+                    crate::resume_or_suspend!(insert self, ResumeWithBindingsSuspensionFrame { state, symbol });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -153,7 +153,7 @@ impl Session {
                 }
                 Err(EvalError::InputRequired { request }) => {
                     state.cursor += 1;
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedWithBindingSuspensionFrameL159C48 { state, symbol });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedWithBindingSuspensionFrame { state, symbol });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -170,12 +170,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeWithBindingsSuspensionFrameL123C48 {
+struct ResumeWithBindingsSuspensionFrame {
     pub(super) state: crate::runtime::scoping::lexical::with::SuspendedWithBindings,
     pub(super) symbol: rum_core::Symbol,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeWithBindingsSuspensionFrameL123C48 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeWithBindingsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -194,14 +194,12 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeWithBindingsSuspensio
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeSuspendedWithBindingSuspensionFrameL159C48 {
+struct ResumeSuspendedWithBindingSuspensionFrame {
     pub(super) state: crate::runtime::scoping::lexical::with::SuspendedWithBindings,
     pub(super) symbol: rum_core::Symbol,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedWithBindingSuspensionFrameL159C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSuspendedWithBindingSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

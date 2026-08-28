@@ -66,7 +66,7 @@ impl Session {
             self,
             body_result,
             ok(value) => Ok(value),
-            suspend => EvalDialogSuspensionFrameL65C13,
+            suspend => EvalDialogSuspensionFrame,
         );
 
         match outcome {
@@ -95,7 +95,7 @@ impl Session {
             self,
             text_result,
             ok(value) => Ok(value),
-            suspend => EvalInputSuspensionFrameL91C13,
+            suspend => EvalInputSuspensionFrame,
         )?;
 
         self.resume_input_after_text(text)
@@ -304,7 +304,7 @@ impl Session {
             self,
             evaluated,
             ok(value) => Ok(value),
-            suspend => ResumeInputAfterTextSuspensionFrameL296C52,
+            suspend => ResumeInputAfterTextSuspensionFrame,
         )
     }
 }
@@ -443,9 +443,9 @@ fn expr_as_nonnegative_duration(expr: &Expr) -> Option<Duration> {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalDialogSuspensionFrameL65C13;
+struct EvalDialogSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for EvalDialogSuspensionFrameL65C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalDialogSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -457,9 +457,9 @@ impl crate::runtime::suspension::SuspensionFrame for EvalDialogSuspensionFrameL6
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalInputSuspensionFrameL91C13;
+struct EvalInputSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for EvalInputSuspensionFrameL91C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalInputSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -474,9 +474,9 @@ impl crate::runtime::suspension::SuspensionFrame for EvalInputSuspensionFrameL91
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeInputAfterTextSuspensionFrameL296C52;
+struct ResumeInputAfterTextSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeInputAfterTextSuspensionFrameL296C52 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeInputAfterTextSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

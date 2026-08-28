@@ -74,7 +74,7 @@ fn resume_sequence_fold_from_offset(
                     suspend => {
                 let state = SuspendedSequenceFoldEvalState::freeze(state);
                                         let history = PersistentFunctionalSequence::freeze(history);
-                ResumeSequenceFoldFromOffsetSuspensionFrameL75C25 { state, offset, history }
+                ResumeSequenceFoldFromOffsetSuspensionFrame { state, offset, history }
                 },
                 );
             }
@@ -115,7 +115,7 @@ fn resume_suspended_sequence_fold_from_offset(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedSequenceFoldFromOffsetSuspensionFrameL119C25 { state, offset, history },
+                    suspend => ResumeSuspendedSequenceFoldFromOffsetSuspensionFrame { state, offset, history },
                 );
             }
             Err(error) => return Err(error),
@@ -227,17 +227,13 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSequenceFoldFromOffsetSuspensionFrameL75C25 {
-    pub(super) state:
-        crate::functional_ops::sequence::fold::sequence_fold::SuspendedSequenceFoldEvalState,
-    pub(super) offset: usize,
-    pub(super) history:
-        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+struct ResumeSequenceFoldFromOffsetSuspensionFrame {
+    state: crate::functional_ops::sequence::fold::sequence_fold::SuspendedSequenceFoldEvalState,
+    offset: usize,
+    history: crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSequenceFoldFromOffsetSuspensionFrameL75C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSequenceFoldFromOffsetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -260,16 +256,14 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSequenceFoldFromOffsetSuspensionFrameL119C25 {
-    pub(super) state:
-        crate::functional_ops::sequence::fold::sequence_fold::SuspendedSequenceFoldEvalState,
-    pub(super) offset: usize,
-    pub(super) history:
-        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+struct ResumeSuspendedSequenceFoldFromOffsetSuspensionFrame {
+    state: crate::functional_ops::sequence::fold::sequence_fold::SuspendedSequenceFoldEvalState,
+    offset: usize,
+    history: crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedSequenceFoldFromOffsetSuspensionFrameL119C25
+    for ResumeSuspendedSequenceFoldFromOffsetSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

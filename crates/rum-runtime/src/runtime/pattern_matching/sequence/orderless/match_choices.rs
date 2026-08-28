@@ -233,7 +233,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessChoiceState::freeze(state);
                 let rest_values = SharedArgs::new(choice.rest_values);
-                crate::resume_or_suspend!(insert self, MatchOrderlessChoiceSuspensionFrameL135C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, MatchOrderlessChoiceSuspensionFrame { state, rest_values });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessChoicePatternFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -269,7 +269,7 @@ impl Session {
             Ok(outcome) => self.finish_orderless_choice_rest(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessChoiceState::freeze(state);
-                crate::resume_or_suspend!(insert self, FinishOrderlessChoicePatternSuspensionFrameL179C44 { state });
+                crate::resume_or_suspend!(insert self, FinishOrderlessChoicePatternSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessChoiceRestFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -321,12 +321,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct MatchOrderlessChoiceSuspensionFrameL135C44 {
+struct MatchOrderlessChoiceSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::orderless::match_choices::SuspendedOrderlessChoiceState,
     pub(super) rest_values: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for MatchOrderlessChoiceSuspensionFrameL135C44 {
+impl crate::runtime::suspension::SuspensionFrame for MatchOrderlessChoiceSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -404,13 +404,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueOrderlessChoicePatt
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct FinishOrderlessChoicePatternSuspensionFrameL179C44 {
+struct FinishOrderlessChoicePatternSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::orderless::match_choices::SuspendedOrderlessChoiceState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishOrderlessChoicePatternSuspensionFrameL179C44
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishOrderlessChoicePatternSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

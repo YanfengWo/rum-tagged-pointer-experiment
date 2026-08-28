@@ -101,7 +101,7 @@ impl Session {
                                 rule_index,
                                 position_spec_index,
                             };
-                            crate::resume_or_suspend!(insert self, PlanGuardedReplacePartTargetsOwnedSuspensionFrameL101C56 { state });
+                            crate::resume_or_suspend!(insert self, PlanGuardedReplacePartTargetsOwnedSuspensionFrame { state });
                             Err(EvalError::InputRequired { request })
                         }
                         Err(error) => Err(error),
@@ -201,7 +201,7 @@ impl Session {
                         range_end,
                         index,
                     };
-                    crate::resume_or_suspend!(insert self, MatchGuardedReplacePartPatternTargetsOwnedSuspensionFrameL205C48 { state });
+                    crate::resume_or_suspend!(insert self, MatchGuardedReplacePartPatternTargetsOwnedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -293,7 +293,7 @@ impl Session {
             targets: SuspendedGuardedTargetList::freeze(targets),
             remaining,
         };
-        crate::resume_or_suspend!(insert self, SelectGuardedReplacePartTargetsOwnedSuspensionFrameL284C48 { state });
+        crate::resume_or_suspend!(insert self, SelectGuardedReplacePartTargetsOwnedSuspensionFrame { state });
         Err(EvalError::InputRequired { request })
     }
 
@@ -341,7 +341,7 @@ impl Session {
                             self.plan_guarded_replace_part_pattern_targets_suspended(state, pattern)
                         }
                         Err(EvalError::InputRequired { request }) => {
-                            crate::resume_or_suspend!(insert self, PlanGuardedReplacePartTargetsSuspendedSuspensionFrameL342C56 { state });
+                            crate::resume_or_suspend!(insert self, PlanGuardedReplacePartTargetsSuspendedSuspensionFrame { state });
                             Err(EvalError::InputRequired { request })
                         }
                         Err(error) => Err(error),
@@ -415,7 +415,7 @@ impl Session {
             match match_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, MatchGuardedReplacePartPatternTargetsSuspendedSuspensionFrameL420C48 { state });
+                    crate::resume_or_suspend!(insert self, MatchGuardedReplacePartPatternTargetsSuspendedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -481,7 +481,7 @@ impl Session {
             match guard_result {
                 Ok(matched) => pending = Some(matched),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, SelectGuardedReplacePartTargetsSuspendedSuspensionFrameL492C48 { state });
+                    crate::resume_or_suspend!(insert self, SelectGuardedReplacePartTargetsSuspendedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

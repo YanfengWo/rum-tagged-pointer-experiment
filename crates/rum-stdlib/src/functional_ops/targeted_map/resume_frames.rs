@@ -2,13 +2,13 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeMapAtFromIndexSuspensionFrameL332C25 {
+pub(super) struct ResumeMapAtFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::targeted_map::SuspendedMapAtEvalState,
     pub(super) index: usize,
     pub(super) current: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeMapAtFromIndexSuspensionFrameL332C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeMapAtFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -31,15 +31,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeMapAtFromIndexSuspension
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedMapAtFromIndexSuspensionFrameL370C25 {
+pub(super) struct ResumeSuspendedMapAtFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::targeted_map::SuspendedMapAtEvalState,
     pub(super) index: usize,
     pub(super) current: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedMapAtFromIndexSuspensionFrameL370C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedMapAtFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -62,9 +60,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct FinishSubsetMapFromMappedSuspensionFrameL423C58;
+pub(super) struct FinishSubsetMapFromMappedSuspensionFrame;
 
-impl rum_runtime::kernel_api::SuspensionFrame for FinishSubsetMapFromMappedSuspensionFrameL423C58 {
+impl rum_runtime::kernel_api::SuspensionFrame for FinishSubsetMapFromMappedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -79,10 +77,10 @@ impl rum_runtime::kernel_api::SuspensionFrame for FinishSubsetMapFromMappedSuspe
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct FinishSuspendedSubsetMapFromMappedSuspensionFrameL448C58;
+pub(super) struct FinishSuspendedSubsetMapFromMappedSuspensionFrame;
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for FinishSuspendedSubsetMapFromMappedSuspensionFrameL448C58
+    for FinishSuspendedSubsetMapFromMappedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -98,11 +96,11 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ApplySubsetMapSuspensionFrameL677C17 {
+pub(super) struct ApplySubsetMapSuspensionFrame {
     pub(super) suspended_state: crate::functional_ops::targeted_map::SuspendedSubsetMapEvalState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ApplySubsetMapSuspensionFrameL677C17 {
+impl rum_runtime::kernel_api::SuspensionFrame for ApplySubsetMapSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

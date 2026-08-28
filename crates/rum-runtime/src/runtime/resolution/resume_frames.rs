@@ -2,13 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateProfiledFixedPointSuspensionFrameL414C48 {
+pub(super) struct EvaluateProfiledFixedPointSuspensionFrame {
     pub(super) state: crate::runtime::resolution::SuspendedFixedPointState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateProfiledFixedPointSuspensionFrameL414C48
-{
+impl crate::runtime::suspension::SuspensionFrame for EvaluateProfiledFixedPointSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -25,11 +23,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeFixedPointFromSuspensionFrameL480C48 {
+pub(super) struct ResumeFixedPointFromSuspensionFrame {
     pub(super) state: crate::runtime::resolution::SuspendedFixedPointState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeFixedPointFromSuspensionFrameL480C48 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeFixedPointFromSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

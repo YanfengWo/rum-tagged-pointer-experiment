@@ -153,7 +153,7 @@ impl Session {
             Ok(outcome) => self.finish_orderless_optional_present(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                crate::resume_or_suspend!(insert self, MatchOrderlessOptionalChoicesSuspensionFrameL105C44 { state });
+                crate::resume_or_suspend!(insert self, MatchOrderlessOptionalChoicesSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -182,7 +182,7 @@ impl Session {
             Ok(default_expr) => self.finish_orderless_optional_default(state, default_expr),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                crate::resume_or_suspend!(insert self, MatchOrderlessOptionalOmissionSuspensionFrameL138C44 { state });
+                crate::resume_or_suspend!(insert self, MatchOrderlessOptionalOmissionSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -217,7 +217,7 @@ impl Session {
             Ok(outcome) => self.finish_orderless_optional_default_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalDefaultSuspensionFrameL177C44 { state });
+                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalDefaultSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -309,7 +309,7 @@ impl Session {
             Ok(present) => self.finish_orderless_optional_present_collection(state, present),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                crate::resume_or_suspend!(insert self, CollectOrderlessOptionalMatchesSuspensionFrameL273C44 { state });
+                crate::resume_or_suspend!(insert self, CollectOrderlessOptionalMatchesSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -327,7 +327,7 @@ impl Session {
             Ok(omitted) => Ok(append_match_results(present, omitted)),
             Err(EvalError::InputRequired { request }) => {
                 let present = PersistentMatchResults::freeze(present);
-                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalPresentCollectionSuspensionFrameL295C44 { present });
+                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalPresentCollectionSuspensionFrame { present });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -345,7 +345,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                crate::resume_or_suspend!(insert self, CollectOrderlessOptionalOmissionSuspensionFrameL316C44 { state });
+                crate::resume_or_suspend!(insert self, CollectOrderlessOptionalOmissionSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -380,7 +380,7 @@ impl Session {
             Ok(outcome) => self.finish_orderless_optional_collection_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOrderlessOptionalState::freeze(state);
-                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalCollectionDefaultSuspensionFrameL358C44 { state });
+                crate::resume_or_suspend!(insert self, FinishOrderlessOptionalCollectionDefaultSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOrderlessOptionalFrame);
                 Err(EvalError::InputRequired { request })
             }

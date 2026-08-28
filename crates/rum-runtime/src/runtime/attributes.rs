@@ -87,7 +87,7 @@ impl Session {
             suspend => {
         let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
                     let args = args.clone();
-        EvalUpdateAttributesSuspensionFrameL85C13 {
+        EvalUpdateAttributesSuspensionFrame {
             symbol_name: std::sync::Arc::new(symbol_name),
             args,
             targets,
@@ -224,14 +224,14 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalUpdateAttributesSuspensionFrameL85C13 {
-    pub(super) symbol_name: std::sync::Arc<std::string::String>,
-    pub(super) args: rum_core::SharedArgs,
-    pub(super) targets: std::sync::Arc<[rum_core::Symbol]>,
-    pub(super) update: crate::runtime::session::session_state::AttributeUpdate,
+struct EvalUpdateAttributesSuspensionFrame {
+    symbol_name: std::sync::Arc<std::string::String>,
+    args: rum_core::SharedArgs,
+    targets: std::sync::Arc<[rum_core::Symbol]>,
+    update: crate::runtime::session::session_state::AttributeUpdate,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalUpdateAttributesSuspensionFrameL85C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalUpdateAttributesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -471,7 +471,7 @@ impl Session {
                                     unevaluated_restores: unevaluated_restores
                                         .map(UnevaluatedRestoreAccumulator::freeze),
                                 };
-                                crate::resume_or_suspend!(insert self, PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrameL373C60 { state, allow_sequence_splice });
+                                crate::resume_or_suspend!(insert self, PrepareArgumentsForCallWithUnevaluatedRestoreSuspensionFrame { state, allow_sequence_splice });
                                 return Err(EvalError::InputRequired { request });
                             }
                             Err(error) => return Err(error),
@@ -638,7 +638,7 @@ impl Session {
                         Ok(value) => value,
                         Err(EvalError::InputRequired { request }) => {
                             state.cursor += 1;
-                            crate::resume_or_suspend!(insert self, ResumeSuspendedCallArgumentPreparationSuspensionFrameL558C56 { state, allow_sequence_splice });
+                            crate::resume_or_suspend!(insert self, ResumeSuspendedCallArgumentPreparationSuspensionFrame { state, allow_sequence_splice });
                             return Err(EvalError::InputRequired { request });
                         }
                         Err(error) => return Err(error),

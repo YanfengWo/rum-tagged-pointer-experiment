@@ -2,7 +2,7 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledArgAndRestOwnedSuspensionFrameL184C52 {
+pub(super) struct MatchCompiledArgAndRestOwnedSuspensionFrame {
     pub(super) rest_patterns:
         crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
             crate::runtime::session::session_state::MatcherArg,
@@ -10,9 +10,7 @@ pub(super) struct MatchCompiledArgAndRestOwnedSuspensionFrameL184C52 {
     pub(super) rest_values: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledArgAndRestOwnedSuspensionFrameL184C52
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchCompiledArgAndRestOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -85,12 +83,12 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueMatchCompiledArgAnd
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchFlatSingleChoiceSuspensionFrameL326C44 {
+pub(super) struct MatchFlatSingleChoiceSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::SuspendedFlatSingleChoiceState,
     pub(super) rest_values: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for MatchFlatSingleChoiceSuspensionFrameL326C44 {
+impl crate::runtime::suspension::SuspensionFrame for MatchFlatSingleChoiceSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -159,11 +157,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueFlatSinglePatternFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishFlatSinglePatternSuspensionFrameL363C44 {
+pub(super) struct FinishFlatSinglePatternSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::SuspendedFlatSingleChoiceState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for FinishFlatSinglePatternSuspensionFrameL363C44 {
+impl crate::runtime::suspension::SuspensionFrame for FinishFlatSinglePatternSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -225,7 +223,7 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueFlatSingleRestFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectCompiledArgAndRestMatchesOwnedSuspensionFrameL465C52 {
+pub(super) struct CollectCompiledArgAndRestMatchesOwnedSuspensionFrame {
     pub(super) rest_patterns:
         crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
             crate::runtime::session::session_state::MatcherArg,
@@ -234,7 +232,7 @@ pub(super) struct CollectCompiledArgAndRestMatchesOwnedSuspensionFrameL465C52 {
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectCompiledArgAndRestMatchesOwnedSuspensionFrameL465C52
+    for CollectCompiledArgAndRestMatchesOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -293,13 +291,13 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueCollectCompiledArgA
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectFlatSingleChoiceSuspensionFrameL617C44 {
+pub(super) struct CollectFlatSingleChoiceSuspensionFrame {
     pub(super) state:
         crate::runtime::pattern_matching::sequence::SuspendedFlatSingleCollectionState,
     pub(super) rest_values: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for CollectFlatSingleChoiceSuspensionFrameL617C44 {
+impl crate::runtime::suspension::SuspensionFrame for CollectFlatSingleChoiceSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -373,13 +371,13 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueFlatSingleCollectio
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishFlatSingleCollectionPatternSuspensionFrameL653C44 {
+pub(super) struct FinishFlatSingleCollectionPatternSuspensionFrame {
     pub(super) state:
         crate::runtime::pattern_matching::sequence::SuspendedFlatSingleCollectionState,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishFlatSingleCollectionPatternSuspensionFrameL653C44
+    for FinishFlatSingleCollectionPatternSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

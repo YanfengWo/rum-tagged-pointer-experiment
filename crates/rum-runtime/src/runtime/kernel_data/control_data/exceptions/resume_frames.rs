@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalCatchExceptionsSuspensionFrameL177C13 {
+pub(super) struct EvalCatchExceptionsSuspensionFrame {
     pub(super) handlers: std::option::Option<
         std::sync::Arc<[crate::runtime::kernel_data::control_data::exceptions::ExceptionHandler]>,
     >,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalCatchExceptionsSuspensionFrameL177C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalCatchExceptionsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -23,13 +23,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalCatchExceptionsSuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DispatchExceptionHandlersOwnedSuspensionFrameL314C56 {
+pub(super) struct DispatchExceptionHandlersOwnedSuspensionFrame1 {
     pub(super) state:
         crate::runtime::kernel_data::control_data::exceptions::SuspendedExceptionDispatch,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DispatchExceptionHandlersOwnedSuspensionFrameL314C56
+    for DispatchExceptionHandlersOwnedSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -44,13 +44,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DispatchExceptionHandlersOwnedSuspensionFrameL331C48 {
+pub(super) struct DispatchExceptionHandlersOwnedSuspensionFrame2 {
     pub(super) state:
         crate::runtime::kernel_data::control_data::exceptions::SuspendedExceptionDispatch,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DispatchExceptionHandlersOwnedSuspensionFrameL331C48
+    for DispatchExceptionHandlersOwnedSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -65,13 +65,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DispatchSuspendedExceptionHandlersSuspensionFrameL368C48 {
+pub(super) struct DispatchSuspendedExceptionHandlersSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::control_data::exceptions::SuspendedExceptionDispatch,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DispatchSuspendedExceptionHandlersSuspensionFrameL368C48
+    for DispatchSuspendedExceptionHandlersSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -86,13 +86,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedExceptionMatchOutcomeSuspensionFrameL412C44 {
+pub(super) struct ResumeSuspendedExceptionMatchOutcomeSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::control_data::exceptions::SuspendedExceptionDispatch,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedExceptionMatchOutcomeSuspensionFrameL412C44
+    for ResumeSuspendedExceptionMatchOutcomeSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -107,11 +107,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateExceptionHandlerRhsSuspensionFrameL455C53;
+pub(super) struct EvaluateExceptionHandlerRhsSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateExceptionHandlerRhsSuspensionFrameL455C53
-{
+impl crate::runtime::suspension::SuspensionFrame for EvaluateExceptionHandlerRhsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

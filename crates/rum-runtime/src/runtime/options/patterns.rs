@@ -25,7 +25,7 @@ impl Session {
                 Ok(value)
             }
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, EvaluateWithOptionValueScopeSuspensionFrameL27C44);
+                crate::resume_or_suspend!(insert self, EvaluateWithOptionValueScopeSuspensionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => {
@@ -165,11 +165,9 @@ fn automatic_options_pattern_target(candidate: &Expr) -> Option<Symbol> {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateWithOptionValueScopeSuspensionFrameL27C44;
+struct EvaluateWithOptionValueScopeSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateWithOptionValueScopeSuspensionFrameL27C44
-{
+impl crate::runtime::suspension::SuspensionFrame for EvaluateWithOptionValueScopeSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

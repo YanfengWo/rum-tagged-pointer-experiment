@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumePositionalPartSelectorEvaluationSuspensionFrameL145C48 {
+pub(super) struct ResumePositionalPartSelectorEvaluationSuspensionFrame {
     pub(super) suspended:
         crate::runtime::definitions::part_assignment::SuspendedPositionalPartAssignment,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumePositionalPartSelectorEvaluationSuspensionFrameL145C48
+    for ResumePositionalPartSelectorEvaluationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -26,13 +26,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedPositionalPartAssignmentSuspensionFrameL179C48 {
+pub(super) struct ResumeSuspendedPositionalPartAssignmentSuspensionFrame {
     pub(super) state:
         crate::runtime::definitions::part_assignment::SuspendedPositionalPartAssignment,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedPositionalPartAssignmentSuspensionFrameL179C48
+    for ResumeSuspendedPositionalPartAssignmentSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

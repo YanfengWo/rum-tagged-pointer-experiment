@@ -193,7 +193,7 @@ pub(crate) fn eval_associate_to(
     let args = args.clone();
             let target_expr = target_expr.clone();
             let spec = spec.clone();
-    EvalAssociateToSuspensionFrameL189C9 { args, target_expr, spec }
+    EvalAssociateToSuspensionFrame { args, target_expr, spec }
     },
     )?;
 
@@ -329,7 +329,7 @@ pub(crate) fn eval_key_drop_from(
     let args = args.clone();
             let target_expr = target_expr.clone();
             let key_spec = key_spec.clone();
-    EvalKeyDropFromSuspensionFrameL320C9 { args, target_expr, key_spec }
+    EvalKeyDropFromSuspensionFrame { args, target_expr, key_spec }
     },
     )?;
 

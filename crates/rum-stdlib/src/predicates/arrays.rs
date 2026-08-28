@@ -104,7 +104,7 @@ pub(crate) fn eval_array_q(
                 ok(value) => Ok(value),
                 suspend => {
             let leaf_test = leaf_test.map(SuspendedArrayLeafTestState::freeze);
-            EvalArrayQSuspensionFrameL105C21 { leaf_test }
+            EvalArrayQSuspensionFrame { leaf_test }
             },
             );
         }
@@ -184,7 +184,7 @@ fn resume_array_leaf_test_from_index(
                     ok(value) => Ok(value),
                     suspend => {
                 let state = SuspendedArrayLeafTestState::freeze(state);
-                ResumeArrayLeafTestFromIndexSuspensionFrameL185C25 { state }
+                ResumeArrayLeafTestFromIndexSuspensionFrame { state }
                 },
                 );
             }
@@ -218,7 +218,7 @@ fn resume_suspended_array_leaf_test_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedArrayLeafTestFromIndexSuspensionFrameL220C25 { state },
+                    suspend => ResumeSuspendedArrayLeafTestFromIndexSuspensionFrame { state },
                 );
             }
             Err(error) => return Err(error),
@@ -261,12 +261,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalArrayQSuspensionFrameL105C21 {
-    pub(super) leaf_test:
-        std::option::Option<crate::predicates::arrays::SuspendedArrayLeafTestState>,
+struct EvalArrayQSuspensionFrame {
+    leaf_test: std::option::Option<crate::predicates::arrays::SuspendedArrayLeafTestState>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalArrayQSuspensionFrameL105C21 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalArrayQSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -283,13 +282,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalArrayQSuspensionFrameL105C
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeArrayLeafTestFromIndexSuspensionFrameL185C25 {
-    pub(super) state: crate::predicates::arrays::SuspendedArrayLeafTestState,
+struct ResumeArrayLeafTestFromIndexSuspensionFrame {
+    state: crate::predicates::arrays::SuspendedArrayLeafTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeArrayLeafTestFromIndexSuspensionFrameL185C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeArrayLeafTestFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -306,12 +303,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedArrayLeafTestFromIndexSuspensionFrameL220C25 {
-    pub(super) state: crate::predicates::arrays::SuspendedArrayLeafTestState,
+struct ResumeSuspendedArrayLeafTestFromIndexSuspensionFrame {
+    state: crate::predicates::arrays::SuspendedArrayLeafTestState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedArrayLeafTestFromIndexSuspensionFrameL220C25
+    for ResumeSuspendedArrayLeafTestFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

@@ -2,11 +2,11 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSetSameTestSuspensionFrameL542C37 {
+pub(super) struct ResumeSetSameTestSuspensionFrame1 {
     pub(super) state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFrameL542C37 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -23,11 +23,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFra
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSetSameTestSuspensionFrameL581C33 {
+pub(super) struct ResumeSetSameTestSuspensionFrame2 {
     pub(super) state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFrameL581C33 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -44,11 +44,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFra
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSetSameTestSuspensionFrameL611C33 {
+pub(super) struct ResumeSetSameTestSuspensionFrame3 {
     pub(super) state: crate::structure_ops::ordering_sets::suspended::SuspendedSetSameTestState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFrameL611C33 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFrame3 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -65,7 +65,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSetSameTestSuspensionFra
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSortByFromIndexSuspensionFrameL719C25 {
+pub(super) struct ResumeSortByFromIndexSuspensionFrame {
     pub(super) expr_head: rum_core::Expr,
     pub(super) function: rum_core::Expr,
     pub(super) items:
@@ -77,7 +77,7 @@ pub(super) struct ResumeSortByFromIndexSuspensionFrameL719C25 {
     pub(super) item: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSortByFromIndexSuspensionFrameL719C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSortByFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -108,7 +108,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSortByFromIndexSuspensio
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSortByOrderingFromIndexSuspensionFrameL776C25 {
+pub(super) struct ResumeSortByOrderingFromIndexSuspensionFrame {
     pub(super) expr_head: rum_core::Expr,
     pub(super) function: rum_core::Expr,
     pub(super) ordering: rum_core::Expr,
@@ -121,9 +121,7 @@ pub(super) struct ResumeSortByOrderingFromIndexSuspensionFrameL776C25 {
     pub(super) item: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSortByOrderingFromIndexSuspensionFrameL776C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSortByOrderingFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

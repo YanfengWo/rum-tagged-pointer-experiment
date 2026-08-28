@@ -2,25 +2,25 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeTallyTestFromCountSuspensionFrameL159C25 {
-    pub(super) state__test: rum_core::Expr,
-    pub(super) state__index: usize,
+pub(super) struct ResumeTallyTestFromCountSuspensionFrame {
+    pub(super) state_test: rum_core::Expr,
+    pub(super) state_index: usize,
     pub(super) items:
         crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
     pub(super) counts: crate::structure_ops::suspended_state::PersistentStructureCounts,
     pub(super) count_index: usize,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeTallyTestFromCountSuspensionFrameL159C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeTallyTestFromCountSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
         outcome: Result<Expr, EvalError>,
     ) -> rum_runtime::kernel_api::FrameAction {
         #[allow(unused_mut)]
-        let mut state__test = self.state__test.clone();
+        let mut state_test = self.state_test.clone();
         #[allow(unused_mut)]
-        let mut state__index = self.state__index.clone();
+        let mut state_index = self.state_index.clone();
         #[allow(unused_mut)]
         let mut items = self.items.clone();
         #[allow(unused_mut)]
@@ -31,9 +31,9 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeTallyTestFromCountSuspen
             Ok(value) => (|| {
                 resume_suspended_tally_test_with_value(
                     session,
-                    state__test,
+                    state_test,
                     items,
-                    state__index,
+                    state_index,
                     counts,
                     count_index,
                     value,
@@ -46,7 +46,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeTallyTestFromCountSuspen
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedTallyTestFromCountSuspensionFrameL217C25 {
+pub(super) struct ResumeSuspendedTallyTestFromCountSuspensionFrame {
     pub(super) test: rum_core::Expr,
     pub(super) items:
         crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
@@ -55,9 +55,7 @@ pub(super) struct ResumeSuspendedTallyTestFromCountSuspensionFrameL217C25 {
     pub(super) count_index: usize,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedTallyTestFromCountSuspensionFrameL217C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedTallyTestFromCountSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -92,7 +90,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeGatherByFunctionListFromPositionSuspensionFrameL515C25 {
+pub(super) struct ResumeGatherByFunctionListFromPositionSuspensionFrame {
     pub(super) items:
         crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
     pub(super) functions:
@@ -104,7 +102,7 @@ pub(super) struct ResumeGatherByFunctionListFromPositionSuspensionFrameL515C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeGatherByFunctionListFromPositionSuspensionFrameL515C25
+    for ResumeGatherByFunctionListFromPositionSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -140,7 +138,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrameL589C25 {
+pub(super) struct ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrame {
     pub(super) items:
         crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
     pub(super) functions:
@@ -152,7 +150,7 @@ pub(super) struct ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrame
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrameL589C25
+    for ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -188,7 +186,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDecorateByFromIndexSuspensionFrameL793C25 {
+pub(super) struct ResumeDecorateByFromIndexSuspensionFrame {
     pub(super) state: crate::structure_ops::collection_stats::SuspendedDecorateByState,
     pub(super) index: usize,
     pub(super) decorated: crate::structure_ops::suspended_state::PersistentStructureSequence<
@@ -197,7 +195,7 @@ pub(super) struct ResumeDecorateByFromIndexSuspensionFrameL793C25 {
     pub(super) item: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeDecorateByFromIndexSuspensionFrameL793C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeDecorateByFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -222,7 +220,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeDecorateByFromIndexSuspe
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDecorateByFromIndexSuspensionFrameL825C25 {
+pub(super) struct ResumeSuspendedDecorateByFromIndexSuspensionFrame {
     pub(super) state: crate::structure_ops::collection_stats::SuspendedDecorateByState,
     pub(super) index: usize,
     pub(super) decorated: crate::structure_ops::suspended_state::PersistentStructureSequence<
@@ -232,7 +230,7 @@ pub(super) struct ResumeSuspendedDecorateByFromIndexSuspensionFrameL825C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedDecorateByFromIndexSuspensionFrameL825C25
+    for ResumeSuspendedDecorateByFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

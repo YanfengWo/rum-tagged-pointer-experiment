@@ -52,7 +52,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalCountSuspensionFrameL48C13 { args }
+        EvalCountSuspensionFrame { args }
         },
         )?;
 
@@ -78,7 +78,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalMemberQSuspensionFrameL69C13 { args }
+        EvalMemberQSuspensionFrame { args }
         },
         )?;
 
@@ -101,7 +101,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalFreeQSuspensionFrameL87C13 { args }
+        EvalFreeQSuspensionFrame { args }
         },
         )?;
 
@@ -121,7 +121,7 @@ impl Session {
             suspend => {
         let target = target.clone();
                     let args = args.clone();
-        ResumeCountAfterTargetSuspensionFrameL102C13 { target, args }
+        ResumeCountAfterTargetSuspensionFrame { target, args }
         },
         )?;
 
@@ -161,7 +161,7 @@ impl Session {
             suspend => {
         let target = target.clone();
                     let args = args.clone();
-        ResumeMemberQAfterTargetSuspensionFrameL137C13 { target, args }
+        ResumeMemberQAfterTargetSuspensionFrame { target, args }
         },
         )?;
 
@@ -201,7 +201,7 @@ impl Session {
             suspend => {
         let target = target.clone();
                     let args = args.clone();
-        ResumeFreeQAfterTargetSuspensionFrameL172C13 { target, args }
+        ResumeFreeQAfterTargetSuspensionFrame { target, args }
         },
         )?;
 
@@ -250,7 +250,7 @@ impl Session {
             ),
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                crate::resume_or_suspend!(insert self, FinishCountLikeAfterPatternSuspensionFrameL220C44 { builtin_name, target, pattern, args, finish });
+                crate::resume_or_suspend!(insert self, FinishCountLikeAfterPatternSuspensionFrame { builtin_name, target, pattern, args, finish });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -284,7 +284,7 @@ impl Session {
             ok(outcome) => { (|| {
                     Ok(finish.finish(outcome.count))
                 })() },
-            suspend => FinishCountLikeAfterTraversalSuspensionFrameL259C51 { finish },
+            suspend => FinishCountLikeAfterTraversalSuspensionFrame { finish },
         )
     }
 
@@ -418,7 +418,7 @@ impl Session {
                     let exhausted = traversal.limit_reached(seen_before + next_count);
                     Ok(TraversalCountOutcome::new(next_count, depth, exhausted))
                 })() },
-            suspend => FinishCountAtCurrentNodeSuspensionFrameL386C49 { count, traversal, seen_before, depth },
+            suspend => FinishCountAtCurrentNodeSuspensionFrame { count, traversal, seen_before, depth },
         )
     }
 
@@ -492,7 +492,7 @@ impl Session {
                         count,
                         max_child_depth,
                     };
-                    crate::resume_or_suspend!(insert self, CountPatternChildrenSuspensionFrameL463C48 { state });
+                    crate::resume_or_suspend!(insert self, CountPatternChildrenSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -552,7 +552,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, CountPatternChildrenSuspendedSuspensionFrameL528C48 { state });
+                    crate::resume_or_suspend!(insert self, CountPatternChildrenSuspendedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

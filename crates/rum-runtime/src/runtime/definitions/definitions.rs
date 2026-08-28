@@ -40,7 +40,7 @@ impl Session {
                 ok(value) => Ok(value),
                 suspend => {
             let lhs = lhs.clone();
-            EvalSetSuspensionFrameL36C17 { lhs }
+            EvalSetSuspensionFrame { lhs }
             },
             );
             record_profile_runtime_path_timing(
@@ -85,7 +85,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let lhs = lhs.clone();
-        EvalRuleSuspensionFrameL76C13 { lhs }
+        EvalRuleSuspensionFrame { lhs }
         },
         )?;
 

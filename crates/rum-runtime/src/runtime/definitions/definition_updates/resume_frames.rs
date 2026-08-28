@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishHeldUpdateSuspensionFrameL443C44 {
+pub(super) struct FinishHeldUpdateSuspensionFrame {
     pub(super) operator: &'static str,
     pub(super) target: crate::runtime::definitions::definition_updates::SuspendedHeldUpdateTarget,
     pub(super) return_value: crate::runtime::definitions::definition_updates::HeldUpdateReturn,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for FinishHeldUpdateSuspensionFrameL443C44 {
+impl crate::runtime::suspension::SuspensionFrame for FinishHeldUpdateSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

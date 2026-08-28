@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalIfSuspensionFrameL50C13 {
+pub(super) struct EvalIfSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalIfSuspensionFrameL50C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalIfSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -23,11 +23,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalIfSuspensionFrameL50C13
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalSwitchSuspensionFrameL81C13 {
+pub(super) struct EvalSwitchSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalSwitchSuspensionFrameL81C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalSwitchSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -44,11 +44,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalSwitchSuspensionFrameL8
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeWhileLoopSuspensionFrameL150C25 {
+pub(super) struct ResumeWhileLoopSuspensionFrame1 {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeWhileLoopSuspensionFrameL150C25 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeWhileLoopSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -62,11 +62,11 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeWhileLoopSuspensionFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeWhileLoopSuspensionFrameL171C25 {
+pub(super) struct ResumeWhileLoopSuspensionFrame2 {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeWhileLoopSuspensionFrameL171C25 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeWhileLoopSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -80,12 +80,12 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeWhileLoopSuspensionFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeUntilLoopSuspensionFrameL227C17 {
+pub(super) struct ResumeUntilLoopSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) phase: crate::runtime::kernel_data::control_data::branching_loops::UntilPhase,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeUntilLoopSuspensionFrameL227C17 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeUntilLoopSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -101,12 +101,12 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeUntilLoopSuspensionFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeForLoopSuspensionFrameL284C17 {
+pub(super) struct ResumeForLoopSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) phase: crate::runtime::kernel_data::control_data::branching_loops::ForPhase,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeForLoopSuspensionFrameL284C17 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeForLoopSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -122,13 +122,13 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeForLoopSuspensionFram
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCompoundExpressionFromIndexSuspensionFrameL337C13 {
+pub(super) struct ResumeCompoundExpressionFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCompoundExpressionFromIndexSuspensionFrameL337C13
+    for ResumeCompoundExpressionFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -145,12 +145,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeWhichFromIndexSuspensionFrameL377C13 {
+pub(super) struct ResumeWhichFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeWhichFromIndexSuspensionFrameL377C13 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeWhichFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -169,14 +169,14 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeWhichFromIndexSuspens
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSwitchFromIndexSuspensionFrameL431C44 {
+pub(super) struct ResumeSwitchFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) subject: rum_core::Expr,
     pub(super) index: usize,
     pub(super) branch: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeSwitchFromIndexSuspensionFrameL431C44 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeSwitchFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

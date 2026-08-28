@@ -334,7 +334,7 @@ fn resume_map_at_from_index(
                     ok(value) => Ok(value),
                     suspend => {
                 let state = SuspendedMapAtEvalState::freeze(state);
-                ResumeMapAtFromIndexSuspensionFrameL332C25 { state, index, current }
+                ResumeMapAtFromIndexSuspensionFrame { state, index, current }
                 },
                 );
             }
@@ -369,7 +369,7 @@ fn resume_suspended_map_at_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedMapAtFromIndexSuspensionFrameL370C25 { state, index, current },
+                    suspend => ResumeSuspendedMapAtFromIndexSuspensionFrame { state, index, current },
                 );
             }
             Err(error) => return Err(error),
@@ -421,7 +421,7 @@ fn finish_subset_map_from_mapped(
         session,
         evaluated_result,
         ok(value) => Ok(value),
-        suspend => FinishSubsetMapFromMappedSuspensionFrameL423C58,
+        suspend => FinishSubsetMapFromMappedSuspensionFrame,
     )
 }
 
@@ -451,7 +451,7 @@ fn finish_suspended_subset_map_from_mapped(
         session,
         evaluated_result,
         ok(value) => Ok(value),
-        suspend => FinishSuspendedSubsetMapFromMappedSuspensionFrameL448C58,
+        suspend => FinishSuspendedSubsetMapFromMappedSuspensionFrame,
     )
 }
 
@@ -685,7 +685,7 @@ fn apply_subset_map(
                 ok(value) => Ok(value),
                 suspend => {
             let suspended_state = SuspendedSubsetMapEvalState::freeze(state);
-            ApplySubsetMapSuspensionFrameL677C17 { suspended_state }
+            ApplySubsetMapSuspensionFrame { suspended_state }
             },
             )
         }

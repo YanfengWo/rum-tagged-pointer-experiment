@@ -104,7 +104,7 @@ impl Session {
                         saved_state: Arc::new(saved_state),
                         dynamic_depth,
                     };
-                    crate::resume_or_suspend!(insert self, EvalSingleSymbolBlockSuspensionFrameL103C48 { state });
+                    crate::resume_or_suspend!(insert self, EvalSingleSymbolBlockSuspensionFrame { state });
                     crate::resume_or_suspend!(insert self, ContinueSingleBlockInitializerFrame);
                     Err(EvalError::InputRequired { request })
                 }
@@ -309,7 +309,7 @@ impl Session {
                             dynamic_depth,
                             index,
                         };
-                        crate::resume_or_suspend!(insert self, ResumeBlockInitializersSuspensionFrameL309C52 { state });
+                        crate::resume_or_suspend!(insert self, ResumeBlockInitializersSuspensionFrame { state });
                         crate::resume_or_suspend!(insert self, ContinueBlockInitializerFrame);
                         return Err(EvalError::InputRequired { request });
                     }
@@ -388,7 +388,7 @@ impl Session {
                     saved_state: Arc::new(saved_state),
                     dynamic_depth,
                 };
-                crate::resume_or_suspend!(insert self, ResumeSingleSymbolBlockBodySuspensionFrameL448C44 { state });
+                crate::resume_or_suspend!(insert self, ResumeSingleSymbolBlockBodySuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueSingleBlockBodyFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -492,7 +492,7 @@ impl Session {
                     saved_state: Arc::new(saved_state),
                     dynamic_depth,
                 };
-                crate::resume_or_suspend!(insert self, ResumeBlockBodySuspensionFrameL580C44 { state });
+                crate::resume_or_suspend!(insert self, ResumeBlockBodySuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueBlockBodyFrame);
                 Err(EvalError::InputRequired { request })
             }

@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSelectFromIndexSuspensionFrameL161C25 {
+pub(super) struct ResumeSelectFromIndexSuspensionFrame {
     pub(super) source: crate::functional_ops::sequence::select::SuspendedSelectSource,
     pub(super) criterion: rum_core::Expr,
     pub(super) limit: crate::functional_ops::sequence::select::SelectLimit,
@@ -11,7 +11,7 @@ pub(super) struct ResumeSelectFromIndexSuspensionFrameL161C25 {
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectFromIndexSuspensionFrameL161C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -40,7 +40,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectFromIndexSuspensio
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSelectFromIndexSuspensionFrameL205C25 {
+pub(super) struct ResumeSuspendedSelectFromIndexSuspensionFrame {
     pub(super) source: crate::functional_ops::sequence::select::SuspendedSelectSource,
     pub(super) criterion: rum_core::Expr,
     pub(super) limit: crate::functional_ops::sequence::select::SelectLimit,
@@ -49,9 +49,7 @@ pub(super) struct ResumeSuspendedSelectFromIndexSuspensionFrameL205C25 {
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedSelectFromIndexSuspensionFrameL205C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedSelectFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -80,14 +78,14 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSelectFirstFromIndexSuspensionFrameL302C25 {
+pub(super) struct ResumeSelectFirstFromIndexSuspensionFrame {
     pub(super) source: crate::functional_ops::sequence::select::SuspendedSelectSource,
     pub(super) criterion: rum_core::Expr,
     pub(super) default: rum_core::Expr,
     pub(super) index: usize,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectFirstFromIndexSuspensionFrameL302C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectFirstFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -114,7 +112,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectFirstFromIndexSusp
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSelectFirstFromIndexSuspensionFrameL347C25 {
+pub(super) struct ResumeSuspendedSelectFirstFromIndexSuspensionFrame {
     pub(super) source: crate::functional_ops::sequence::select::SuspendedSelectSource,
     pub(super) criterion: rum_core::Expr,
     pub(super) default: rum_core::Expr,
@@ -122,7 +120,7 @@ pub(super) struct ResumeSuspendedSelectFirstFromIndexSuspensionFrameL347C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedSelectFirstFromIndexSuspensionFrameL347C25
+    for ResumeSuspendedSelectFirstFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

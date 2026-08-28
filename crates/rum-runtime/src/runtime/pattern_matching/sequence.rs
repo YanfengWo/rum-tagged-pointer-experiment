@@ -317,7 +317,7 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let rest_patterns = FrozenMatcherSequence::freeze(rest_patterns);
                         let rest_values = SharedArgs::new(rest_values);
-                        crate::resume_or_suspend!(insert self, MatchCompiledArgAndRestOwnedSuspensionFrameL184C52 { rest_patterns, rest_values });
+                        crate::resume_or_suspend!(insert self, MatchCompiledArgAndRestOwnedSuspensionFrame { rest_patterns, rest_values });
                         crate::resume_or_suspend!(insert self, ContinueMatchCompiledArgAndRestFrame);
                         Err(EvalError::InputRequired { request })
                     }
@@ -448,7 +448,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleChoiceState::freeze(state);
                 let rest_values = SharedArgs::new(rest_values);
-                crate::resume_or_suspend!(insert self, MatchFlatSingleChoiceSuspensionFrameL326C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, MatchFlatSingleChoiceSuspensionFrame { state, rest_values });
                 crate::resume_or_suspend!(insert self, ContinueFlatSinglePatternFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -477,7 +477,7 @@ impl Session {
             Ok(outcome) => self.finish_flat_single_rest(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleChoiceState::freeze(state);
-                crate::resume_or_suspend!(insert self, FinishFlatSinglePatternSuspensionFrameL363C44 { state });
+                crate::resume_or_suspend!(insert self, FinishFlatSinglePatternSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueFlatSingleRestFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -575,7 +575,7 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let rest_patterns = FrozenMatcherSequence::freeze(rest_patterns);
                         let rest_values = SharedArgs::new(rest_values);
-                        crate::resume_or_suspend!(insert self, CollectCompiledArgAndRestMatchesOwnedSuspensionFrameL465C52 { rest_patterns, rest_values });
+                        crate::resume_or_suspend!(insert self, CollectCompiledArgAndRestMatchesOwnedSuspensionFrame { rest_patterns, rest_values });
                         crate::resume_or_suspend!(insert self, ContinueCollectCompiledArgAndRestFrame);
                         Err(EvalError::InputRequired { request })
                     }
@@ -716,7 +716,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleCollectionState::freeze(state);
                 let rest_values = SharedArgs::new(rest_values);
-                crate::resume_or_suspend!(insert self, CollectFlatSingleChoiceSuspensionFrameL617C44 { state, rest_values });
+                crate::resume_or_suspend!(insert self, CollectFlatSingleChoiceSuspensionFrame { state, rest_values });
                 crate::resume_or_suspend!(insert self, ContinueFlatSingleCollectionPatternFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -744,7 +744,7 @@ impl Session {
             Ok(matches) => self.finish_flat_single_collection_rest(state, matches),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedFlatSingleCollectionState::freeze(state);
-                crate::resume_or_suspend!(insert self, FinishFlatSingleCollectionPatternSuspensionFrameL653C44 { state });
+                crate::resume_or_suspend!(insert self, FinishFlatSingleCollectionPatternSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueFlatSingleCollectionRestFrame);
                 Err(EvalError::InputRequired { request })
             }

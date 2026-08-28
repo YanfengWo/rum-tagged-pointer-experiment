@@ -201,7 +201,7 @@ impl Session {
             Ok(Some(message)) => Ok(Some(styled_message_expr(message))),
             Ok(None) => Ok(None),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, FailureVirtualStyledMessageValueSuspensionFrameL201C44);
+                crate::resume_or_suspend!(insert self, FailureVirtualStyledMessageValueSuspensionFrame);
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -233,7 +233,7 @@ impl Session {
                 suspend => {
             let status = status.clone();
                             let template = template.clone();
-            FailureMessageFromTemplateSuspensionFrameL232C17 { status, template }
+            FailureMessageFromTemplateSuspensionFrame { status, template }
             },
             )?;
             let params = failure_message_template_parameters_from_expr(&param_value);
@@ -273,7 +273,7 @@ impl Session {
             self,
             rendered,
             ok(text) => { (|| { Ok(Expr::string(text)) })() },
-            suspend => FinishFailureMessageFromTemplateSuspensionFrameL270C64,
+            suspend => FinishFailureMessageFromTemplateSuspensionFrame,
         )
     }
 }

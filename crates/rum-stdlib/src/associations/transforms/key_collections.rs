@@ -323,7 +323,7 @@ fn resume_key_union_missing_values_from_index(
                 let plan = FrozenAssociationValue::freeze(plan);
                                             let missing_keys = FrozenAssociationSequence::freeze(missing_keys);
                                             let fill_values = PersistentAssociationSequence::freeze(fill_values);
-                ResumeKeyUnionMissingValuesFromIndexSuspensionFrameL320C29 { fill_function, plan, missing_keys, index, fill_values, key }
+                ResumeKeyUnionMissingValuesFromIndexSuspensionFrame { fill_function, plan, missing_keys, index, fill_values, key }
                 },
                 );
             }
@@ -360,7 +360,7 @@ fn resume_suspended_key_union_missing_values_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrameL366C29 { fill_function, plan, missing_keys, index, fill_values, key },
+                    suspend => ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrame { fill_function, plan, missing_keys, index, fill_values, key },
                 );
             }
             Err(error) => return Err(error),

@@ -113,7 +113,7 @@ impl Session {
                                         session.evaluate_symbol_after_stored_own_value(symbol)
                                     }
                                 })() },
-                    suspend => EvaluateStoredOwnValueSuspensionFrameL105C57 { symbol, body, delayed },
+                    suspend => EvaluateStoredOwnValueSuspensionFrame { symbol, body, delayed },
                 )
             }
         }
@@ -270,13 +270,13 @@ fn own_value_read(value: &Option<Expr>, guards: &Option<Box<[Expr]>>) -> Option<
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateStoredOwnValueSuspensionFrameL105C57 {
-    pub(super) symbol: rum_core::Symbol,
-    pub(super) body: rum_core::Expr,
-    pub(super) delayed: bool,
+struct EvaluateStoredOwnValueSuspensionFrame {
+    symbol: rum_core::Symbol,
+    body: rum_core::Expr,
+    delayed: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvaluateStoredOwnValueSuspensionFrameL105C57 {
+impl crate::runtime::suspension::SuspensionFrame for EvaluateStoredOwnValueSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -2,15 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalStructuredTraceCaptureExprSuspensionFrameL124C13 {
+pub(super) struct EvalStructuredTraceCaptureExprSuspensionFrame {
     pub(super) suspended_state: crate::runtime::debug_tools::trace::TraceEvalState,
     pub(super) trace_checkpoint: usize,
     pub(super) prior_enabled: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for EvalStructuredTraceCaptureExprSuspensionFrameL124C13
-{
+impl crate::runtime::suspension::SuspensionFrame for EvalStructuredTraceCaptureExprSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

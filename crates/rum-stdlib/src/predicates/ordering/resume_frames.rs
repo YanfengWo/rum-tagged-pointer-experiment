@@ -2,11 +2,11 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeOrderedQComparatorSuspensionFrameL149C25 {
+pub(super) struct ResumeOrderedQComparatorSuspensionFrame {
     pub(super) state: crate::predicates::ordering::SuspendedOrderedQComparatorState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeOrderedQComparatorSuspensionFrameL149C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeOrderedQComparatorSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -25,13 +25,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeOrderedQComparatorSuspen
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedOrderedQComparatorSuspensionFrameL186C25 {
+pub(super) struct ResumeSuspendedOrderedQComparatorSuspensionFrame {
     pub(super) state: crate::predicates::ordering::SuspendedOrderedQComparatorState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedOrderedQComparatorSuspensionFrameL186C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedOrderedQComparatorSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -50,12 +48,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeLexicographicListComparatorSuspensionFrameL283C25 {
+pub(super) struct ResumeLexicographicListComparatorSuspensionFrame1 {
     pub(super) state: crate::predicates::ordering::SuspendedLexicographicListComparatorState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeLexicographicListComparatorSuspensionFrameL283C25
+    for ResumeLexicographicListComparatorSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -77,12 +75,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeLexicographicListComparatorSuspensionFrameL315C25 {
+pub(super) struct ResumeLexicographicListComparatorSuspensionFrame2 {
     pub(super) state: crate::predicates::ordering::SuspendedLexicographicListComparatorState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeLexicographicListComparatorSuspensionFrameL315C25
+    for ResumeLexicographicListComparatorSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -104,12 +102,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedLexicographicListComparatorSuspensionFrameL351C25 {
+pub(super) struct ResumeSuspendedLexicographicListComparatorSuspensionFrame1 {
     pub(super) state: crate::predicates::ordering::SuspendedLexicographicListComparatorState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedLexicographicListComparatorSuspensionFrameL351C25
+    for ResumeSuspendedLexicographicListComparatorSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -131,12 +129,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedLexicographicListComparatorSuspensionFrameL375C25 {
+pub(super) struct ResumeSuspendedLexicographicListComparatorSuspensionFrame2 {
     pub(super) state: crate::predicates::ordering::SuspendedLexicographicListComparatorState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedLexicographicListComparatorSuspensionFrameL375C25
+    for ResumeSuspendedLexicographicListComparatorSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -158,12 +156,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrameL412C21 {
+pub(super) struct ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrame {
     pub(super) state: crate::predicates::ordering::SuspendedLexicographicListComparatorState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrameL412C21
+    for ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -185,13 +183,11 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeLexicographicPairComparatorSuspensionFrameL447C21 {
+pub(super) struct ResumeLexicographicPairComparatorSuspensionFrame {
     pub(super) state: crate::predicates::ordering::LexicographicPairComparatorState,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeLexicographicPairComparatorSuspensionFrameL447C21
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeLexicographicPairComparatorSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -211,12 +207,12 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeLexicographicPairComparatorWithForwardValueSuspensionFrameL476C21 {
+pub(super) struct ResumeLexicographicPairComparatorWithForwardValueSuspensionFrame {
     pub(super) state: crate::predicates::ordering::LexicographicPairComparatorState,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeLexicographicPairComparatorWithForwardValueSuspensionFrameL476C21
+    for ResumeLexicographicPairComparatorWithForwardValueSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

@@ -128,7 +128,7 @@ fn resume_collect_string_cases_from_candidate(
                                                     session, state, index, end, rule_index, matches, bindings, accepted,
                                                 )
                                             })() },
-                        suspend => ResumeCollectStringCasesFromCandidateSuspensionFrameL122C25 { state, index, end, rule_index, matches, bindings },
+                        suspend => ResumeCollectStringCasesFromCandidateSuspensionFrame { state, index, end, rule_index, matches, bindings },
                     )
                 }
                 Err(error) => Err(error),
@@ -197,7 +197,7 @@ fn evaluate_string_cases_output(
                                     session, state, index, end, matches, output,
                                 )
                             })() },
-                suspend => EvaluateStringCasesOutputSuspensionFrameL189C17 { state, index, end, matches },
+                suspend => EvaluateStringCasesOutputSuspensionFrame { state, index, end, matches },
             )
         }
         Err(error) => Err(error),
@@ -261,7 +261,7 @@ fn resume_suspended_collect_string_cases_from_candidate(
                                                     session, state, index, end, rule_index, matches, bindings, accepted,
                                                 )
                                             })() },
-                        suspend => ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrameL251C25 { state, index, end, rule_index, matches, bindings },
+                        suspend => ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrame { state, index, end, rule_index, matches, bindings },
                     )
                 }
                 Err(error) => Err(error),
@@ -358,7 +358,7 @@ fn evaluate_suspended_string_cases_output(
                                 session, state, index, end, matches, output,
                             )
                         })() },
-            suspend => EvaluateSuspendedStringCasesOutputSuspensionFrameL347C17 { state, index, end, matches },
+            suspend => EvaluateSuspendedStringCasesOutputSuspensionFrame { state, index, end, matches },
         ),
         Err(error) => Err(error),
     }
@@ -436,7 +436,7 @@ fn resume_collect_string_cases_values_from_index(
                                             session, state, index, outputs, items,
                                         )
                                     })() },
-                    suspend => ResumeCollectStringCasesValuesFromIndexSuspensionFrameL423C21 { state, index, outputs },
+                    suspend => ResumeCollectStringCasesValuesFromIndexSuspensionFrame { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -476,7 +476,7 @@ fn resume_suspended_collect_string_cases_values_from_index(
                                             session, state, index, outputs, items,
                                         )
                                     })() },
-                    suspend => ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrameL461C21 { state, index, outputs },
+                    suspend => ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrame { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),

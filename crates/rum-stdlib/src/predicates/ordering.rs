@@ -151,7 +151,7 @@ fn resume_ordered_q_comparator(
                                             items: FrozenPredicateSequence::freeze(state.items),
                                             index: state.index,
                                         };
-                ResumeOrderedQComparatorSuspensionFrameL149C25 { state }
+                ResumeOrderedQComparatorSuspensionFrame { state }
                 },
                 );
             }
@@ -187,7 +187,7 @@ fn resume_suspended_ordered_q_comparator(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedOrderedQComparatorSuspensionFrameL186C25 { state },
+                    suspend => ResumeSuspendedOrderedQComparatorSuspensionFrame { state },
                 );
             }
             Err(error) => return Err(error),
@@ -283,7 +283,7 @@ fn resume_lexicographic_list_comparator(
                                             rhs: FrozenPredicateSequence::freeze(state.rhs),
                                             index: state.index,
                                         };
-                ResumeLexicographicListComparatorSuspensionFrameL283C25 { state }
+                ResumeLexicographicListComparatorSuspensionFrame1 { state }
                 },
                 );
             }
@@ -313,7 +313,7 @@ fn resume_lexicographic_list_comparator(
                                             rhs: FrozenPredicateSequence::freeze(state.rhs),
                                             index: state.index,
                                         };
-                ResumeLexicographicListComparatorSuspensionFrameL315C25 { state }
+                ResumeLexicographicListComparatorSuspensionFrame2 { state }
                 },
                 );
             }
@@ -346,7 +346,7 @@ fn resume_suspended_lexicographic_list_comparator(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedLexicographicListComparatorSuspensionFrameL351C25 { state },
+                    suspend => ResumeSuspendedLexicographicListComparatorSuspensionFrame1 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -366,7 +366,7 @@ fn resume_suspended_lexicographic_list_comparator(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedLexicographicListComparatorSuspensionFrameL375C25 { state },
+                    suspend => ResumeSuspendedLexicographicListComparatorSuspensionFrame2 { state },
                 );
             }
             Err(error) => return Err(error),
@@ -399,7 +399,7 @@ fn resume_suspended_lexicographic_list_comparator_with_forward_value(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrameL412C21 { state },
+                suspend => ResumeSuspendedLexicographicListComparatorWithForwardValueSuspensionFrame { state },
             );
         }
         Err(error) => return Err(error),
@@ -430,7 +430,7 @@ fn resume_lexicographic_pair_comparator(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeLexicographicPairComparatorSuspensionFrameL447C21 { state },
+                suspend => ResumeLexicographicPairComparatorSuspensionFrame { state },
             );
         }
         Err(error) => return Err(error),
@@ -455,7 +455,7 @@ fn resume_lexicographic_pair_comparator_with_forward_value(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeLexicographicPairComparatorWithForwardValueSuspensionFrameL476C21 { state },
+                suspend => ResumeLexicographicPairComparatorWithForwardValueSuspensionFrame { state },
             );
         }
         Err(error) => return Err(error),

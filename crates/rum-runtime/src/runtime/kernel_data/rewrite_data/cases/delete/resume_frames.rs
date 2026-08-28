@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalDeleteCasesSuspensionFrameL23C13 {
+pub(super) struct EvalDeleteCasesSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalDeleteCasesSuspensionFrameL23C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalDeleteCasesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -29,14 +29,12 @@ impl crate::runtime::suspension::SuspensionFrame for EvalDeleteCasesSuspensionFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeDeleteCasesAfterTargetSuspensionFrameL56C44 {
+pub(super) struct ResumeDeleteCasesAfterTargetSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeDeleteCasesAfterTargetSuspensionFrameL56C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeDeleteCasesAfterTargetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -59,15 +57,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeDeleteCasesAfterPatternSuspensionFrameL86C44 {
+pub(super) struct ResumeDeleteCasesAfterPatternSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) pattern: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeDeleteCasesAfterPatternSuspensionFrameL86C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeDeleteCasesAfterPatternSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -191,10 +187,10 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueDeleteCasesFrame {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishDeleteCasesAfterResolvedTraversalSuspensionFrameL116C51;
+pub(super) struct FinishDeleteCasesAfterResolvedTraversalSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishDeleteCasesAfterResolvedTraversalSuspensionFrameL116C51
+    for FinishDeleteCasesAfterResolvedTraversalSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -220,16 +216,14 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishDeleteCasesAtCurrentNodeSuspensionFrameL152C49 {
+pub(super) struct FinishDeleteCasesAtCurrentNodeSuspensionFrame {
     pub(super) depth: usize,
     pub(super) traversal: crate::runtime::CasesTraversalConfig,
     pub(super) deleted_before: usize,
     pub(super) expr: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishDeleteCasesAtCurrentNodeSuspensionFrameL152C49
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishDeleteCasesAtCurrentNodeSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -272,13 +266,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DeleteCasesCallChildrenFromQueueSuspensionFrameL351C65 {
+pub(super) struct DeleteCasesCallChildrenFromQueueSuspensionFrame1 {
     pub(super) deleted_before: usize,
     pub(super) subtree_start: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DeleteCasesCallChildrenFromQueueSuspensionFrameL351C65
+    for DeleteCasesCallChildrenFromQueueSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -305,12 +299,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DeleteCasesCallChildrenFromQueueSuspensionFrameL376C48 {
+pub(super) struct DeleteCasesCallChildrenFromQueueSuspensionFrame2 {
     pub(super) state: crate::runtime::kernel_data::rewrite_data::cases::delete::suspended_state::SuspendedDeleteCallChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DeleteCasesCallChildrenFromQueueSuspensionFrameL376C48
+    for DeleteCasesCallChildrenFromQueueSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -331,13 +325,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DeleteCasesAssociationChildrenFromQueueSuspensionFrameL558C65 {
+pub(super) struct DeleteCasesAssociationChildrenFromQueueSuspensionFrame1 {
     pub(super) deleted_before: usize,
     pub(super) subtree_start: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DeleteCasesAssociationChildrenFromQueueSuspensionFrameL558C65
+    for DeleteCasesAssociationChildrenFromQueueSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -364,12 +358,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DeleteCasesAssociationChildrenFromQueueSuspensionFrameL583C48 {
+pub(super) struct DeleteCasesAssociationChildrenFromQueueSuspensionFrame2 {
     pub(super) state: crate::runtime::kernel_data::rewrite_data::cases::delete::suspended_state::SuspendedDeleteAssociationChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DeleteCasesAssociationChildrenFromQueueSuspensionFrameL583C48
+    for DeleteCasesAssociationChildrenFromQueueSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -390,12 +384,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteCallChildrenSuspensionFrameL691C65 {
+pub(super) struct ResumeSuspendedDeleteCallChildrenSuspensionFrame1 {
     pub(super) added: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedDeleteCallChildrenSuspensionFrameL691C65
+    for ResumeSuspendedDeleteCallChildrenSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -420,12 +414,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteCallChildrenSuspensionFrameL707C48 {
+pub(super) struct ResumeSuspendedDeleteCallChildrenSuspensionFrame2 {
     pub(super) state: crate::runtime::kernel_data::rewrite_data::cases::delete::suspended_state::SuspendedDeleteCallChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedDeleteCallChildrenSuspensionFrameL707C48
+    for ResumeSuspendedDeleteCallChildrenSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -446,12 +440,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteAssociationChildrenSuspensionFrameL826C65 {
+pub(super) struct ResumeSuspendedDeleteAssociationChildrenSuspensionFrame1 {
     pub(super) added: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedDeleteAssociationChildrenSuspensionFrameL826C65
+    for ResumeSuspendedDeleteAssociationChildrenSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -476,12 +470,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteAssociationChildrenSuspensionFrameL842C48 {
+pub(super) struct ResumeSuspendedDeleteAssociationChildrenSuspensionFrame2 {
     pub(super) state: crate::runtime::kernel_data::rewrite_data::cases::delete::suspended_state::SuspendedDeleteAssociationChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedDeleteAssociationChildrenSuspensionFrameL842C48
+    for ResumeSuspendedDeleteAssociationChildrenSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,

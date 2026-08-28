@@ -27,7 +27,7 @@ impl Session {
             suspend => {
         let input_string = input_string.clone();
                     let input_expr = input_expr.clone();
-        EvalEvaluationDataSuspensionFrameL25C13 {
+        EvalEvaluationDataSuspensionFrame {
             checkpoint,
             prior_tracing,
             started,
@@ -202,7 +202,7 @@ impl DebugCaptureCheckpoint {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct EvalEvaluationDataSuspensionFrameL25C13 {
+struct EvalEvaluationDataSuspensionFrame {
     pub(super) checkpoint: crate::runtime::debug_tools::evaluation_data::DebugCaptureCheckpoint,
     pub(super) prior_tracing: bool,
     pub(super) started: std::time::Instant,
@@ -210,7 +210,7 @@ struct EvalEvaluationDataSuspensionFrameL25C13 {
     pub(super) input_string: std::sync::Arc<std::string::String>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalEvaluationDataSuspensionFrameL25C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalEvaluationDataSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

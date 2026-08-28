@@ -160,7 +160,7 @@ impl Session {
                                 Ok(session.normalize_match_expr(&resolved))
                             }
                         })() },
-                suspend => ResolveCasesSpecExprForMatchingOwnedSuspensionFrameL150C64,
+                suspend => ResolveCasesSpecExprForMatchingOwnedSuspensionFrame,
             );
         }
 
@@ -188,7 +188,7 @@ impl Session {
             ok(resolved_expr) => { let session = self; let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
                     Ok(session.normalize_rewrite_rule_exprs_from_resolved(&resolved))
                 })() },
-            suspend => ResolveRewriteRuleExprsOwnedSuspensionFrameL180C53,
+            suspend => ResolveRewriteRuleExprsOwnedSuspensionFrame,
         )
     }
 
@@ -204,7 +204,7 @@ impl Session {
             ok(rule_exprs) => { let session = self; (|| {
                     continuation.resume(session, rule_exprs)
                 })() },
-            suspend => DriveRewriteRuleExprsOwnedSuspensionFrameL191C63 { continuation },
+            suspend => DriveRewriteRuleExprsOwnedSuspensionFrame { continuation },
         )
     }
 
@@ -220,7 +220,7 @@ impl Session {
             ok(rule_exprs) => { let session = self; (|| {
                     continuation.resume(session, rule_exprs)
                 })() },
-            suspend => DriveRewriteRuleInfosOwnedSuspensionFrameL202C63,
+            suspend => DriveRewriteRuleInfosOwnedSuspensionFrame,
         )
     }
 
@@ -234,7 +234,7 @@ impl Session {
                 continuation.resume(self, self.compile_rewrite_rules_for_matching(&resolved))
             }
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, DriveRewriteRulesOwnedSuspensionFrameL217C44 { continuation });
+                crate::resume_or_suspend!(insert self, DriveRewriteRulesOwnedSuspensionFrame { continuation });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -325,10 +325,10 @@ fn should_evaluate_single_rule_candidate(expr: &Expr) -> bool {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveCasesSpecExprForMatchingOwnedSuspensionFrameL150C64;
+struct ResolveCasesSpecExprForMatchingOwnedSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResolveCasesSpecExprForMatchingOwnedSuspensionFrameL150C64
+    for ResolveCasesSpecExprForMatchingOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -357,11 +357,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveRewriteRuleExprsOwnedSuspensionFrameL180C53;
+struct ResolveRewriteRuleExprsOwnedSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResolveRewriteRuleExprsOwnedSuspensionFrameL180C53
-{
+impl crate::runtime::suspension::SuspensionFrame for ResolveRewriteRuleExprsOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -382,14 +380,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DriveRewriteRuleExprsOwnedSuspensionFrameL191C63 {
-    pub(super) continuation:
+struct DriveRewriteRuleExprsOwnedSuspensionFrame {
+    continuation:
         crate::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for DriveRewriteRuleExprsOwnedSuspensionFrameL191C63
-{
+impl crate::runtime::suspension::SuspensionFrame for DriveRewriteRuleExprsOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -412,11 +408,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DriveRewriteRuleInfosOwnedSuspensionFrameL202C63;
+struct DriveRewriteRuleInfosOwnedSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for DriveRewriteRuleInfosOwnedSuspensionFrameL202C63
-{
+impl crate::runtime::suspension::SuspensionFrame for DriveRewriteRuleInfosOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -437,11 +431,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DriveRewriteRulesOwnedSuspensionFrameL217C44 {
-    pub(super) continuation: crate::runtime::definitions::definition_catalog::rewrite_rules::CompiledRewriteRuleContinuation,
+struct DriveRewriteRulesOwnedSuspensionFrame {
+    continuation: crate::runtime::definitions::definition_catalog::rewrite_rules::CompiledRewriteRuleContinuation,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for DriveRewriteRulesOwnedSuspensionFrameL217C44 {
+impl crate::runtime::suspension::SuspensionFrame for DriveRewriteRulesOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

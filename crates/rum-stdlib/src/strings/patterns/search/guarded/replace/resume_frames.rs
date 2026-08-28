@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeReplaceStringValueFromCandidateSuspensionFrameL131C25 {
+pub(super) struct ResumeReplaceStringValueFromCandidateSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::replace::GuardedStringReplaceRuleEvalState,
     >,
@@ -21,7 +21,7 @@ pub(super) struct ResumeReplaceStringValueFromCandidateSuspensionFrameL131C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeReplaceStringValueFromCandidateSuspensionFrameL131C25
+    for ResumeReplaceStringValueFromCandidateSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -70,7 +70,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvaluateReplaceStringOutputSuspensionFrameL231C17 {
+pub(super) struct EvaluateReplaceStringOutputSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::replace::GuardedStringReplaceRuleEvalState,
     >,
@@ -80,9 +80,7 @@ pub(super) struct EvaluateReplaceStringOutputSuspensionFrameL231C17 {
     pub(super) output: crate::strings::suspended_state::PersistentStringText,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for EvaluateReplaceStringOutputSuspensionFrameL231C17
-{
+impl rum_runtime::kernel_api::SuspensionFrame for EvaluateReplaceStringOutputSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -121,7 +119,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrameL308C25 {
+pub(super) struct ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::replace::GuardedStringReplaceRuleEvalState,
     >,
@@ -140,7 +138,7 @@ pub(super) struct ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrameL
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrameL308C25
+    for ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -189,7 +187,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvaluateSuspendedReplaceStringOutputSuspensionFrameL438C17 {
+pub(super) struct EvaluateSuspendedReplaceStringOutputSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::replace::GuardedStringReplaceRuleEvalState,
     >,
@@ -200,7 +198,7 @@ pub(super) struct EvaluateSuspendedReplaceStringOutputSuspensionFrameL438C17 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for EvaluateSuspendedReplaceStringOutputSuspensionFrameL438C17
+    for EvaluateSuspendedReplaceStringOutputSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -240,7 +238,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeReplaceStringValuesFromIndexSuspensionFrameL550C21 {
+pub(super) struct ResumeReplaceStringValuesFromIndexSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::replace::GuardedStringReplaceValuesEvalState,
     >,
@@ -250,7 +248,7 @@ pub(super) struct ResumeReplaceStringValuesFromIndexSuspensionFrameL550C21 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeReplaceStringValuesFromIndexSuspensionFrameL550C21
+    for ResumeReplaceStringValuesFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -280,7 +278,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrameL588C21 {
+pub(super) struct ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::replace::GuardedStringReplaceValuesEvalState,
     >,
@@ -290,7 +288,7 @@ pub(super) struct ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrameL588
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrameL588C21
+    for ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

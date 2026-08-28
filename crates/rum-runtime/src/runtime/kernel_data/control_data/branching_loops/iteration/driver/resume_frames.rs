@@ -2,12 +2,12 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeDoAfterSpecEvalSuspensionFrameL77C13 {
+pub(super) struct ResumeDoAfterSpecEvalSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) spec_index: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeDoAfterSpecEvalSuspensionFrameL77C13 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeDoAfterSpecEvalSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -26,11 +26,11 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeDoAfterSpecEvalSuspen
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeDoIterationsSuspensionFrameL140C48 {
+pub(super) struct ResumeDoIterationsSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::control_data::branching_loops::iteration::driver::SuspendedDoIterations,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeDoIterationsSuspensionFrameL140C48 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeDoIterationsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -44,13 +44,11 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeDoIterationsSuspensio
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDoIterationsSuspensionFrameL193C48 {
+pub(super) struct ResumeSuspendedDoIterationsSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::control_data::branching_loops::iteration::driver::SuspendedDoIterations,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedDoIterationsSuspensionFrameL193C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSuspendedDoIterationsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -64,14 +62,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeTableAfterSpecEvalSuspensionFrameL211C13 {
+pub(super) struct ResumeTableAfterSpecEvalSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) spec_index: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeTableAfterSpecEvalSuspensionFrameL211C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeTableAfterSpecEvalSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -90,11 +86,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeTableIterationsSuspensionFrameL299C48 {
+pub(super) struct ResumeTableIterationsSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::control_data::branching_loops::iteration::driver::SuspendedTableIterations,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeTableIterationsSuspensionFrameL299C48 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeTableIterationsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -108,13 +104,11 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeTableIterationsSuspen
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedTableIterationsSuspensionFrameL360C48 {
+pub(super) struct ResumeSuspendedTableIterationsSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::control_data::branching_loops::iteration::driver::SuspendedTableIterations,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedTableIterationsSuspensionFrameL360C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSuspendedTableIterationsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -128,14 +122,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateLoopIteratorBodySuspensionFrameL387C13 {
+pub(super) struct EvaluateLoopIteratorBodySuspensionFrame {
     pub(super) symbol: rum_core::Symbol,
     pub(super) saved_state: crate::runtime::kernel_data::control_data::branching_loops::iteration::driver::SuspendedLoopIteratorSymbolState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateLoopIteratorBodySuspensionFrameL387C13
-{
+impl crate::runtime::suspension::SuspensionFrame for EvaluateLoopIteratorBodySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -182,13 +174,13 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueLoopIteratorScopeFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateLoopIteratorBodyWithDynamicValueSuspensionFrameL407C13 {
+pub(super) struct EvaluateLoopIteratorBodyWithDynamicValueSuspensionFrame {
     pub(super) symbol: rum_core::Symbol,
     pub(super) dynamic_depth: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateLoopIteratorBodyWithDynamicValueSuspensionFrameL407C13
+    for EvaluateLoopIteratorBodyWithDynamicValueSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

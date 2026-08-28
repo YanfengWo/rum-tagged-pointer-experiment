@@ -2,12 +2,12 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateWithRandomStateRestoredSuspensionFrameL536C13 {
+pub(super) struct EvaluateWithRandomStateRestoredSuspensionFrame {
     pub(super) saved: crate::runtime::random::PrngState,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateWithRandomStateRestoredSuspensionFrameL536C13
+    for EvaluateWithRandomStateRestoredSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

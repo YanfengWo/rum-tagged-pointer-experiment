@@ -184,7 +184,7 @@ pub(crate) fn eval_mean(
         session,
         evaluated,
         ok(value) => Ok(value),
-        suspend => EvalMeanSuspensionFrameL182C51,
+        suspend => EvalMeanSuspensionFrame,
     )
 }
 
@@ -269,9 +269,9 @@ pub(crate) fn eval_min_max(
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalMeanSuspensionFrameL182C51;
+struct EvalMeanSuspensionFrame;
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalMeanSuspensionFrameL182C51 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalMeanSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

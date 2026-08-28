@@ -27,7 +27,7 @@ impl Session {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
                         let args = args.clone();
-                        crate::resume_or_suspend!(insert self, EvalReplaceListSuspensionFrameL28C21 { args });
+                        crate::resume_or_suspend!(insert self, EvalReplaceListSuspensionFrame { args });
                         crate::resume_or_suspend!(insert self, ContinueReplaceListSetupFrame);
                         return Err(EvalError::InputRequired { request });
                     }
@@ -63,7 +63,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let call_args = SharedArgs::new(call_args);
-                crate::resume_or_suspend!(insert self, ResumeReplaceListAfterTargetSuspensionFrameL67C44 { target, rules_expr, call_args });
+                crate::resume_or_suspend!(insert self, ResumeReplaceListAfterTargetSuspensionFrame { target, rules_expr, call_args });
                 crate::resume_or_suspend!(insert self, ContinueReplaceListSetupFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -140,7 +140,7 @@ impl Session {
             ok(results) => { (|| {
                     Ok(Expr::call(system_expr("List"), results))
                 })() },
-            suspend => ResumeReplaceListAfterRuleExprsSuspensionFrameL144C51,
+            suspend => ResumeReplaceListAfterRuleExprsSuspensionFrame,
         )
     }
 
@@ -213,7 +213,7 @@ impl Session {
                             max_results: state.max_results,
                             index: state.index,
                         };
-                        crate::resume_or_suspend!(insert self, CollectReplaceListResultsWithPendingSuspensionFrameL211C52 { state });
+                        crate::resume_or_suspend!(insert self, CollectReplaceListResultsWithPendingSuspensionFrame { state });
                         crate::resume_or_suspend!(insert self, next);
                         return Err(EvalError::InputRequired { request });
                     }
@@ -265,11 +265,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReplaceListSuspensionFrameL28C21 {
-    pub(super) args: rum_core::SharedArgs,
+struct EvalReplaceListSuspensionFrame {
+    args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReplaceListSuspensionFrameL28C21 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceListSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -292,15 +292,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalReplaceListSuspensionFr
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceListAfterTargetSuspensionFrameL67C44 {
-    pub(super) target: rum_core::Expr,
-    pub(super) rules_expr: rum_core::Expr,
-    pub(super) call_args: rum_core::SharedArgs,
+struct ResumeReplaceListAfterTargetSuspensionFrame {
+    target: rum_core::Expr,
+    rules_expr: rum_core::Expr,
+    call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceListAfterTargetSuspensionFrameL67C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReplaceListAfterTargetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -417,10 +415,10 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceListSetupFra
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceListAfterRuleExprsSuspensionFrameL144C51;
+struct ResumeReplaceListAfterRuleExprsSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceListAfterRuleExprsSuspensionFrameL144C51
+    for ResumeReplaceListAfterRuleExprsSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -442,13 +440,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectReplaceListResultsWithPendingSuspensionFrameL211C52 {
-    pub(super) state:
-        crate::runtime::kernel_data::rewrite_data::replace::list::SuspendedReplaceListScan,
+struct CollectReplaceListResultsWithPendingSuspensionFrame {
+    state: crate::runtime::kernel_data::rewrite_data::replace::list::SuspendedReplaceListScan,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectReplaceListResultsWithPendingSuspensionFrameL211C52
+    for CollectReplaceListResultsWithPendingSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

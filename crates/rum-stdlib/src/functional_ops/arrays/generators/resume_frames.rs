@@ -2,14 +2,14 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeArrayFromIndexSuspensionFrameL244C25 {
+pub(super) struct ResumeArrayFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::arrays::generators::SuspendedArrayEvalState,
     pub(super) index: usize,
     pub(super) outputs:
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeArrayFromIndexSuspensionFrameL244C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeArrayFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -32,16 +32,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeArrayFromIndexSuspension
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedArrayFromIndexSuspensionFrameL283C25 {
+pub(super) struct ResumeSuspendedArrayFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::arrays::generators::SuspendedArrayEvalState,
     pub(super) index: usize,
     pub(super) outputs:
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedArrayFromIndexSuspensionFrameL283C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedArrayFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -64,14 +62,14 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeOuterFromIndexSuspensionFrameL332C25 {
+pub(super) struct ResumeOuterFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::arrays::generators::SuspendedOuterEvalState,
     pub(super) index: usize,
     pub(super) outputs:
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeOuterFromIndexSuspensionFrameL332C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeOuterFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -94,16 +92,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeOuterFromIndexSuspension
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedOuterFromIndexSuspensionFrameL371C25 {
+pub(super) struct ResumeSuspendedOuterFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::arrays::generators::SuspendedOuterEvalState,
     pub(super) index: usize,
     pub(super) outputs:
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedOuterFromIndexSuspensionFrameL371C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedOuterFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

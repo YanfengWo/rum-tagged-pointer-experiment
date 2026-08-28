@@ -60,13 +60,11 @@ impl crate::runtime::suspension::PureFrameFinalizer for PrepareOrderlessOptional
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchOrderlessOptionalChoicesSuspensionFrameL105C44 {
+pub(super) struct MatchOrderlessOptionalChoicesSuspensionFrame {
     pub(super) state: SuspendedOrderlessOptionalState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchOrderlessOptionalChoicesSuspensionFrameL105C44
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchOrderlessOptionalChoicesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -81,13 +79,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchOrderlessOptionalOmissionSuspensionFrameL138C44 {
+pub(super) struct MatchOrderlessOptionalOmissionSuspensionFrame {
     pub(super) state: SuspendedOrderlessOptionalState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for MatchOrderlessOptionalOmissionSuspensionFrameL138C44
-{
+impl crate::runtime::suspension::SuspensionFrame for MatchOrderlessOptionalOmissionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -102,13 +98,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishOrderlessOptionalDefaultSuspensionFrameL177C44 {
+pub(super) struct FinishOrderlessOptionalDefaultSuspensionFrame {
     pub(super) state: SuspendedOrderlessOptionalState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishOrderlessOptionalDefaultSuspensionFrameL177C44
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishOrderlessOptionalDefaultSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -123,12 +117,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectOrderlessOptionalMatchesSuspensionFrameL273C44 {
+pub(super) struct CollectOrderlessOptionalMatchesSuspensionFrame {
     pub(super) state: SuspendedOrderlessOptionalState,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectOrderlessOptionalMatchesSuspensionFrameL273C44
+    for CollectOrderlessOptionalMatchesSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -144,12 +138,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishOrderlessOptionalPresentCollectionSuspensionFrameL295C44 {
+pub(super) struct FinishOrderlessOptionalPresentCollectionSuspensionFrame {
     pub(super) present: PersistentMatchResults,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishOrderlessOptionalPresentCollectionSuspensionFrameL295C44
+    for FinishOrderlessOptionalPresentCollectionSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -181,12 +175,12 @@ impl crate::runtime::suspension::PureFrameFinalizer for FinishOrderlessOptionalC
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectOrderlessOptionalOmissionSuspensionFrameL316C44 {
+pub(super) struct CollectOrderlessOptionalOmissionSuspensionFrame {
     pub(super) state: SuspendedOrderlessOptionalState,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectOrderlessOptionalOmissionSuspensionFrameL316C44
+    for CollectOrderlessOptionalOmissionSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -202,12 +196,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishOrderlessOptionalCollectionDefaultSuspensionFrameL358C44 {
+pub(super) struct FinishOrderlessOptionalCollectionDefaultSuspensionFrame {
     pub(super) state: SuspendedOrderlessOptionalState,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishOrderlessOptionalCollectionDefaultSuspensionFrameL358C44
+    for FinishOrderlessOptionalCollectionDefaultSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

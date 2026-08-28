@@ -29,7 +29,7 @@ impl Session {
                 let matcher = FrozenMatcherValue::freeze(matcher_for_next);
                 let values = SharedArgs::new(values_for_next);
                 let bindings = FrozenMatchBindings::freeze(bindings_for_next);
-                crate::resume_or_suspend!(insert self, MatchCompiledSequenceItemsOwnedSuspensionFrameL31C44 { matcher, values, bindings, index });
+                crate::resume_or_suspend!(insert self, MatchCompiledSequenceItemsOwnedSuspensionFrame { matcher, values, bindings, index });
                 crate::resume_or_suspend!(insert self, ContinueCompiledSequenceItemsFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -80,7 +80,7 @@ impl Session {
                 let spec = FrozenMatcherValue::freeze(spec);
                 let values = SharedArgs::new(values);
                 let snapshot = FrozenMatchBindings::freeze(snapshot);
-                crate::resume_or_suspend!(insert self, MatchCompiledSequencePatternOwnedSuspensionFrameL92C44 { spec, values, snapshot });
+                crate::resume_or_suspend!(insert self, MatchCompiledSequencePatternOwnedSuspensionFrame { spec, values, snapshot });
                 crate::resume_or_suspend!(insert self, ContinueCompiledSequencePatternFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -123,17 +123,17 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledSequenceItemsOwnedSuspensionFrameL31C44 {
-    pub(super) matcher: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
+struct MatchCompiledSequenceItemsOwnedSuspensionFrame {
+    matcher: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
         crate::runtime::session::session_state::MatcherNode,
     >,
-    pub(super) values: rum_core::SharedArgs,
-    pub(super) bindings: crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
-    pub(super) index: usize,
+    values: rum_core::SharedArgs,
+    bindings: crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
+    index: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledSequenceItemsOwnedSuspensionFrameL31C44
+    for MatchCompiledSequenceItemsOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -222,16 +222,16 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueCompiledSequenceIte
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledSequencePatternOwnedSuspensionFrameL92C44 {
-    pub(super) spec: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
+struct MatchCompiledSequencePatternOwnedSuspensionFrame {
+    spec: crate::runtime::pattern_matching::suspended_state::FrozenMatcherValue<
         crate::runtime::session::session_state::CompiledSequencePattern,
     >,
-    pub(super) values: rum_core::SharedArgs,
-    pub(super) snapshot: crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
+    values: rum_core::SharedArgs,
+    snapshot: crate::runtime::pattern_matching::suspended_state::FrozenMatchBindings,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledSequencePatternOwnedSuspensionFrameL92C44
+    for MatchCompiledSequencePatternOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

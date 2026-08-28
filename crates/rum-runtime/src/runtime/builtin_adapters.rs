@@ -939,7 +939,7 @@ pub(in crate::runtime) fn builtin_evaluate(
             session,
             evaluated_result,
             ok(value) => Ok(value),
-            suspend => BuiltinEvaluateSuspensionFrameL935C62,
+            suspend => BuiltinEvaluateSuspensionFrame,
         )?
     } else {
         Expr::call(head.clone(), args.to_vec())

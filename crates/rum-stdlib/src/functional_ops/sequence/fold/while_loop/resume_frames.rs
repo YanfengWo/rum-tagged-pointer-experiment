@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeFoldWhileFromIndexSuspensionFrameL58C25 {
+pub(super) struct ResumeFoldWhileFromIndexSuspensionFrame1 {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) index: usize,
@@ -10,7 +10,7 @@ pub(super) struct ResumeFoldWhileFromIndexSuspensionFrameL58C25 {
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileFromIndexSuspensionFrameL58C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileFromIndexSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -33,7 +33,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileFromIndexSuspen
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeFoldWhileFromIndexSuspensionFrameL83C25 {
+pub(super) struct ResumeFoldWhileFromIndexSuspensionFrame2 {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) next_index: usize,
@@ -42,7 +42,7 @@ pub(super) struct ResumeFoldWhileFromIndexSuspensionFrameL83C25 {
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileFromIndexSuspensionFrameL83C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileFromIndexSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -69,7 +69,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileFromIndexSuspen
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedFoldWhileFromIndexSuspensionFrameL133C25 {
+pub(super) struct ResumeSuspendedFoldWhileFromIndexSuspensionFrame1 {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) index: usize,
@@ -78,7 +78,7 @@ pub(super) struct ResumeSuspendedFoldWhileFromIndexSuspensionFrameL133C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedFoldWhileFromIndexSuspensionFrameL133C25
+    for ResumeSuspendedFoldWhileFromIndexSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -102,7 +102,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedFoldWhileFromIndexSuspensionFrameL156C25 {
+pub(super) struct ResumeSuspendedFoldWhileFromIndexSuspensionFrame2 {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) next_index: usize,
@@ -112,7 +112,7 @@ pub(super) struct ResumeSuspendedFoldWhileFromIndexSuspensionFrameL156C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedFoldWhileFromIndexSuspensionFrameL156C25
+    for ResumeSuspendedFoldWhileFromIndexSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -140,7 +140,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedFoldWhileWithStepValueSuspensionFrameL198C21 {
+pub(super) struct ResumeSuspendedFoldWhileWithStepValueSuspensionFrame {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) next_index: usize,
@@ -150,7 +150,7 @@ pub(super) struct ResumeSuspendedFoldWhileWithStepValueSuspensionFrameL198C21 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedFoldWhileWithStepValueSuspensionFrameL198C21
+    for ResumeSuspendedFoldWhileWithStepValueSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -178,7 +178,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeFoldWhileTailFromIndexSuspensionFrameL282C25 {
+pub(super) struct ResumeFoldWhileTailFromIndexSuspensionFrame {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) index: usize,
@@ -187,9 +187,7 @@ pub(super) struct ResumeFoldWhileTailFromIndexSuspensionFrameL282C25 {
     pub(super) remaining: usize,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeFoldWhileTailFromIndexSuspensionFrameL282C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldWhileTailFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -216,7 +214,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedFoldWhileTailFromIndexSuspensionFrameL360C25 {
+pub(super) struct ResumeSuspendedFoldWhileTailFromIndexSuspensionFrame {
     pub(super) state:
         crate::functional_ops::sequence::fold::while_loop::SuspendedFoldWhileEvalState,
     pub(super) index: usize,
@@ -226,7 +224,7 @@ pub(super) struct ResumeSuspendedFoldWhileTailFromIndexSuspensionFrameL360C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedFoldWhileTailFromIndexSuspensionFrameL360C25
+    for ResumeSuspendedFoldWhileTailFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

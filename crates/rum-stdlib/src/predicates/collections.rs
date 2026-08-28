@@ -414,7 +414,7 @@ fn resume_duplicate_free_same_test(
                                             lhs_index: state.lhs_index,
                                             rhs_index: state.rhs_index,
                                         };
-                ResumeDuplicateFreeSameTestSuspensionFrameL412C25 { state }
+                ResumeDuplicateFreeSameTestSuspensionFrame { state }
                 },
                 );
             }
@@ -455,7 +455,7 @@ fn resume_suspended_duplicate_free_same_test(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedDuplicateFreeSameTestSuspensionFrameL456C25 { state },
+                    suspend => ResumeSuspendedDuplicateFreeSameTestSuspensionFrame { state },
                 );
             }
             Err(error) => return Err(error),
@@ -543,7 +543,7 @@ fn resume_same_test_matrix(
                                             matches: PersistentPredicateMatches::freeze(state.matches),
                                             kind: state.kind,
                                         };
-                ResumeSameTestMatrixSuspensionFrameL547C25 { state }
+                ResumeSameTestMatrixSuspensionFrame { state }
                 },
                 );
             }
@@ -590,7 +590,7 @@ fn resume_suspended_same_test_matrix(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedSameTestMatrixSuspensionFrameL595C25 { state },
+                    suspend => ResumeSuspendedSameTestMatrixSuspensionFrame { state },
                 );
             }
             Err(error) => return Err(error),

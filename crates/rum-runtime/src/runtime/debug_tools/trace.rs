@@ -128,7 +128,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let suspended_state = state.clone();
-        EvalStructuredTraceCaptureExprSuspensionFrameL124C13 { suspended_state, trace_checkpoint, prior_enabled }
+        EvalStructuredTraceCaptureExprSuspensionFrame { suspended_state, trace_checkpoint, prior_enabled }
         },
         );
 

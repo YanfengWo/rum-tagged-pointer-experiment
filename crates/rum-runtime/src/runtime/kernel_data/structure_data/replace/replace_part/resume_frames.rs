@@ -2,13 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ApplyReplacePartRulesOwnedSuspensionFrameL139C48 {
+pub(super) struct ApplyReplacePartRulesOwnedSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::structure_data::replace::replace_part::SuspendedReplacePartRules,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ApplyReplacePartRulesOwnedSuspensionFrameL139C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ApplyReplacePartRulesOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -25,11 +23,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectRuleTargetsOwnedSuspensionFrameL210C44 {
+pub(super) struct CollectRuleTargetsOwnedSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::structure_data::replace::replace_part::SuspendedReplacePartRuleTargets,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for CollectRuleTargetsOwnedSuspensionFrameL210C44 {
+impl crate::runtime::suspension::SuspensionFrame for CollectRuleTargetsOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -46,7 +44,7 @@ impl crate::runtime::suspension::SuspensionFrame for CollectRuleTargetsOwnedSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectPatternPositionTargetsOwnedSuspensionFrameL265C44 {
+pub(super) struct CollectPatternPositionTargetsOwnedSuspensionFrame {
     pub(super) expr: rum_core::Expr,
     pub(super) rhs: rum_core::Expr,
     pub(super) delayed: bool,
@@ -54,7 +52,7 @@ pub(super) struct CollectPatternPositionTargetsOwnedSuspensionFrameL265C44 {
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectPatternPositionTargetsOwnedSuspensionFrameL265C44
+    for CollectPatternPositionTargetsOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -80,13 +78,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrameL319C44 {
+pub(super) struct CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::structure_data::replace::replace_part::SuspendedReplacePartPatternCandidates,
     pub(super) path: std::sync::Arc<[isize]>,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrameL319C44
+    for CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -108,12 +106,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReplacePartRulesSuspensionFrameL393C48 {
+pub(super) struct ResumeSuspendedReplacePartRulesSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::structure_data::replace::replace_part::SuspendedReplacePartRules,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedReplacePartRulesSuspensionFrameL393C48
+    for ResumeSuspendedReplacePartRulesSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -132,12 +130,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReplacePartRuleTargetsSuspensionFrameL429C48 {
+pub(super) struct ResumeSuspendedReplacePartRuleTargetsSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::structure_data::replace::replace_part::SuspendedReplacePartRuleTargets,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedReplacePartRuleTargetsSuspensionFrameL429C48
+    for ResumeSuspendedReplacePartRuleTargetsSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -155,13 +153,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReplacePartPatternCandidatesSuspensionFrameL475C48 {
+pub(super) struct ResumeSuspendedReplacePartPatternCandidatesSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::structure_data::replace::replace_part::SuspendedReplacePartPatternCandidates,
     pub(super) path: std::sync::Arc<[isize]>,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedReplacePartPatternCandidatesSuspensionFrameL475C48
+    for ResumeSuspendedReplacePartPatternCandidatesSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

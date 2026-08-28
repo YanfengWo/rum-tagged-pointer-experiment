@@ -141,7 +141,7 @@ fn resume_merge_nested_from_index(
                     suspend => {
                 let grouped = FrozenAssociationSequence::freeze(grouped);
                                         let merged = PersistentAssociationSequence::freeze(merged);
-                ResumeMergeNestedFromIndexSuspensionFrameL139C25 { combiner, grouped, index, merged, key }
+                ResumeMergeNestedFromIndexSuspensionFrame { combiner, grouped, index, merged, key }
                 },
                 );
             }
@@ -172,7 +172,7 @@ fn resume_suspended_merge_nested_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedMergeNestedFromIndexSuspensionFrameL173C25 { combiner, grouped, index, merged, key },
+                    suspend => ResumeSuspendedMergeNestedFromIndexSuspensionFrame { combiner, grouped, index, merged, key },
                 );
             }
             Err(error) => return Err(error),
@@ -246,7 +246,7 @@ fn resume_merge_from_index(
                     suspend => {
                 let grouped = FrozenAssociationSequence::freeze(grouped);
                                         let merged = PersistentAssociationSequence::freeze(merged);
-                ResumeMergeFromIndexSuspensionFrameL250C25 { combiner, grouped, index, merged, key }
+                ResumeMergeFromIndexSuspensionFrame { combiner, grouped, index, merged, key }
                 },
                 );
             }
@@ -292,7 +292,7 @@ fn resume_suspended_merge_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedMergeFromIndexSuspensionFrameL299C25 { combiner, grouped, index, merged, key },
+                    suspend => ResumeSuspendedMergeFromIndexSuspensionFrame { combiner, grouped, index, merged, key },
                 );
             }
             Err(error) => return Err(error),
@@ -344,7 +344,7 @@ fn resume_counts_by_from_index(
                     suspend => {
                 let items = FrozenAssociationSequence::freeze(items);
                                         let counts = PersistentAssociationGroups::freeze(counts);
-                ResumeCountsByFromIndexSuspensionFrameL354C25 { function, items, index, counts }
+                ResumeCountsByFromIndexSuspensionFrame { function, items, index, counts }
                 },
                 );
             }
@@ -382,7 +382,7 @@ fn resume_suspended_counts_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedCountsByFromIndexSuspensionFrameL395C25 { function, items, index, counts },
+                    suspend => ResumeSuspendedCountsByFromIndexSuspensionFrame { function, items, index, counts },
                 );
             }
             Err(error) => return Err(error),

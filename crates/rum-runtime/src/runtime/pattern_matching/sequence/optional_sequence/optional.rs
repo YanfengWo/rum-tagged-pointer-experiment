@@ -243,7 +243,7 @@ impl Session {
             Ok(outcome) => self.finish_optional_present(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalChoiceState::freeze(state);
-                crate::resume_or_suspend!(insert self, MatchOptionalChoicesSuspensionFrameL149C44 { state });
+                crate::resume_or_suspend!(insert self, MatchOptionalChoicesSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOptionalPresentFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -344,7 +344,7 @@ impl Session {
             Ok(present) => self.finish_optional_present_collection(state, present),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalChoiceState::freeze(state);
-                crate::resume_or_suspend!(insert self, CollectOptionalMatchesSuspensionFrameL254C44 { state });
+                crate::resume_or_suspend!(insert self, CollectOptionalMatchesSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOptionalPresentCollectionFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -381,7 +381,7 @@ impl Session {
                 };
                 crate::resume_or_suspend!(
                     insert self,
-                    FinishOptionalPresentCollectionSuspensionFrameL293C44 {
+                    FinishOptionalPresentCollectionSuspensionFrame {
                         present: state.present,
                     },
                 );
@@ -455,7 +455,7 @@ impl Session {
             Ok(default_expr) => self.finish_optional_default(state, default_expr),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalOmissionState::freeze(state);
-                crate::resume_or_suspend!(insert self, ResolveOptionalOmissionSuspensionFrameL370C44 { state });
+                crate::resume_or_suspend!(insert self, ResolveOptionalOmissionSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOptionalDefaultFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -492,7 +492,7 @@ impl Session {
             Ok(outcome) => self.finish_optional_default_match(state, outcome),
             Err(EvalError::InputRequired { request }) => {
                 let state = SuspendedOptionalOmissionState::freeze(state);
-                crate::resume_or_suspend!(insert self, FinishOptionalDefaultSuspensionFrameL411C44 { state });
+                crate::resume_or_suspend!(insert self, FinishOptionalDefaultSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, ContinueOptionalDefaultMatchFrame);
                 Err(EvalError::InputRequired { request })
             }

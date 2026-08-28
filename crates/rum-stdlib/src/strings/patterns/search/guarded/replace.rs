@@ -173,7 +173,7 @@ fn suspend_replace_string_value_after_guard(
     let state = FrozenStringValue::freeze(state);
     let output = PersistentStringText::freeze(output);
     let bindings = FrozenStringValue::freeze(bindings);
-    rum_runtime::resume_or_suspend!(insert session, ResumeReplaceStringValueFromCandidateSuspensionFrameL131C25 { state, index, end, replacements, rule_index, output, bindings });
+    rum_runtime::resume_or_suspend!(insert session, ResumeReplaceStringValueFromCandidateSuspensionFrame { state, index, end, replacements, rule_index, output, bindings });
     Err(EvalError::InputRequired { request })
 }
 
@@ -261,7 +261,7 @@ fn suspend_replace_string_output(
 ) -> Result<String, EvalError> {
     let state = FrozenStringValue::freeze(state);
     let output = PersistentStringText::freeze(output);
-    rum_runtime::resume_or_suspend!(insert session, EvaluateReplaceStringOutputSuspensionFrameL231C17 { state, index, end, replacements, output });
+    rum_runtime::resume_or_suspend!(insert session, EvaluateReplaceStringOutputSuspensionFrame { state, index, end, replacements, output });
     Err(EvalError::InputRequired { request })
 }
 
@@ -339,7 +339,7 @@ fn resume_suspended_replace_string_value_from_candidate(
                                                     accepted,
                                                 )
                                             })() },
-                        suspend => ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrameL308C25 { state, index, end, replacements, rule_index, output, bindings },
+                        suspend => ResumeSuspendedReplaceStringValueFromCandidateSuspensionFrame { state, index, end, replacements, rule_index, output, bindings },
                     )
                 }
                 Err(error) => Err(error),
@@ -468,7 +468,7 @@ fn evaluate_suspended_replace_string_output(
                                 rendered_expr,
                             )
                         })() },
-            suspend => EvaluateSuspendedReplaceStringOutputSuspensionFrameL438C17 { state, index, end, replacements, output },
+            suspend => EvaluateSuspendedReplaceStringOutputSuspensionFrame { state, index, end, replacements, output },
         ),
         Err(error) => Err(error),
     }
@@ -576,7 +576,7 @@ fn resume_replace_string_values_from_index(
                                             session, state, index, rendered, value,
                                         )
                                     })() },
-                    suspend => ResumeReplaceStringValuesFromIndexSuspensionFrameL550C21 { state, index, rendered },
+                    suspend => ResumeReplaceStringValuesFromIndexSuspensionFrame { state, index, rendered },
                 );
             }
             Err(error) => return Err(error),
@@ -616,7 +616,7 @@ fn resume_suspended_replace_string_values_from_index(
                                             session, state, index, rendered, value,
                                         )
                                     })() },
-                    suspend => ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrameL588C21 { state, index, rendered },
+                    suspend => ResumeSuspendedReplaceStringValuesFromIndexSuspensionFrame { state, index, rendered },
                 );
             }
             Err(error) => return Err(error),

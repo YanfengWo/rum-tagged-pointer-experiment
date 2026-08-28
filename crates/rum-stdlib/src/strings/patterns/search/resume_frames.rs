@@ -2,9 +2,9 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalStringReplaceSuspensionFrameL233C72;
+pub(super) struct EvalStringReplaceSuspensionFrame;
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalStringReplaceSuspensionFrameL233C72 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalStringReplaceSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -25,9 +25,9 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalStringReplaceSuspensionFra
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalStringCasesSuspensionFrameL296C80;
+pub(super) struct EvalStringCasesSuspensionFrame1;
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrameL296C80 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -48,9 +48,9 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalStringCasesSuspensionFrameL316C76;
+pub(super) struct EvalStringCasesSuspensionFrame2;
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrameL316C76 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalStringCasesSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

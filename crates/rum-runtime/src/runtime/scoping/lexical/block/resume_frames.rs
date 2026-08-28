@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalSingleSymbolBlockSuspensionFrameL103C48 {
+pub(super) struct EvalSingleSymbolBlockSuspensionFrame {
     pub(super) state: SuspendedSingleBlockScope,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalSingleSymbolBlockSuspensionFrameL103C48 {
+impl crate::runtime::suspension::SuspensionFrame for EvalSingleSymbolBlockSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -55,11 +55,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueSingleBlockInitiali
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeBlockInitializersSuspensionFrameL309C52 {
+pub(super) struct ResumeBlockInitializersSuspensionFrame {
     pub(super) state: SuspendedBlockInitializers,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeBlockInitializersSuspensionFrameL309C52 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeBlockInitializersSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -109,13 +109,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueBlockInitializerFra
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSingleSymbolBlockBodySuspensionFrameL448C44 {
+pub(super) struct ResumeSingleSymbolBlockBodySuspensionFrame {
     pub(super) state: SuspendedSingleBlockScope,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSingleSymbolBlockBodySuspensionFrameL448C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSingleSymbolBlockBodySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -163,11 +161,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueSingleBlockBodyFram
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeBlockBodySuspensionFrameL580C44 {
+pub(super) struct ResumeBlockBodySuspensionFrame {
     pub(super) state: SuspendedBlockScope,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeBlockBodySuspensionFrameL580C44 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeBlockBodySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

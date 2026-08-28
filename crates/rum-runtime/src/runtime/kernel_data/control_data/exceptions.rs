@@ -181,7 +181,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let handlers = handlers.take().map(Arc::<[ExceptionHandler]>::from);
-        EvalCatchExceptionsSuspensionFrameL177C13 { handlers }
+        EvalCatchExceptionsSuspensionFrame { handlers }
         },
         );
 
@@ -317,7 +317,7 @@ impl Session {
                                 handler_index,
                                 ancestor_index,
                             };
-                            crate::resume_or_suspend!(insert self, DispatchExceptionHandlersOwnedSuspensionFrameL314C56 { state });
+                            crate::resume_or_suspend!(insert self, DispatchExceptionHandlersOwnedSuspensionFrame1 { state });
                             return Err(EvalError::InputRequired { request });
                         }
                         Err(error) => return Err(error),
@@ -332,7 +332,7 @@ impl Session {
                         handler_index,
                         ancestor_index,
                     };
-                    crate::resume_or_suspend!(insert self, DispatchExceptionHandlersOwnedSuspensionFrameL331C48 { state });
+                    crate::resume_or_suspend!(insert self, DispatchExceptionHandlersOwnedSuspensionFrame2 { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -367,7 +367,7 @@ impl Session {
                     return self.resume_suspended_exception_match_outcome(state, outcome);
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, DispatchSuspendedExceptionHandlersSuspensionFrameL368C48 { state });
+                    crate::resume_or_suspend!(insert self, DispatchSuspendedExceptionHandlersSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -409,7 +409,7 @@ impl Session {
         match guard_result {
             Ok(outcome) => self.resume_suspended_exception_guard_outcome(state, outcome),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, ResumeSuspendedExceptionMatchOutcomeSuspensionFrameL412C44 { state });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedExceptionMatchOutcomeSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -454,7 +454,7 @@ impl Session {
             self,
             rhs_result,
             ok(value) => Ok(value),
-            suspend => EvaluateExceptionHandlerRhsSuspensionFrameL455C53,
+            suspend => EvaluateExceptionHandlerRhsSuspensionFrame,
         )
     }
 }

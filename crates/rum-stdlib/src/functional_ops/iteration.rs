@@ -275,7 +275,7 @@ fn resume_nest_from_iteration(
             ok(value) => Ok(value),
             suspend => {
         let items = PersistentFunctionalSequence::freeze(items);
-        ResumeNestFromIterationSuspensionFrameL271C13 { state, iteration, items }
+        ResumeNestFromIterationSuspensionFrame { state, iteration, items }
         },
         ),
     }
@@ -308,7 +308,7 @@ fn resume_suspended_nest_from_iteration(
             session,
             Err(error),
             ok(value) => Ok(value),
-            suspend => ResumeSuspendedNestFromIterationSuspensionFrameL302C13 { state, iteration, items },
+            suspend => ResumeSuspendedNestFromIterationSuspensionFrame { state, iteration, items },
         ),
     }
 }
@@ -365,7 +365,7 @@ fn resume_fixed_point_from_iteration(
             suspend => {
         let seen = PersistentFunctionalSequence::freeze(seen);
                     let items = PersistentFunctionalSequence::freeze(items);
-        ResumeFixedPointFromIterationSuspensionFrameL357C13 { state, iteration, current, seen, items }
+        ResumeFixedPointFromIterationSuspensionFrame { state, iteration, current, seen, items }
         },
         ),
     }
@@ -392,7 +392,7 @@ fn resume_suspended_fixed_point_from_iteration(
             session,
             Err(error),
             ok(value) => Ok(value),
-            suspend => ResumeSuspendedFixedPointFromIterationSuspensionFrameL384C13 { state, iteration, current, seen, items },
+            suspend => ResumeSuspendedFixedPointFromIterationSuspensionFrame { state, iteration, current, seen, items },
         ),
     }
 }
@@ -488,7 +488,7 @@ fn resume_nest_while_test_from_iteration(
             ok(value) => Ok(value),
             suspend => {
         let history = PersistentFunctionalSequence::freeze(history);
-        ResumeNestWhileTestFromIterationSuspensionFrameL480C13 { state, iteration, history }
+        ResumeNestWhileTestFromIterationSuspensionFrame { state, iteration, history }
         },
         ),
     }
@@ -510,7 +510,7 @@ fn resume_suspended_nest_while_test_from_iteration(
             session,
             Err(error),
             ok(value) => Ok(value),
-            suspend => ResumeSuspendedNestWhileTestFromIterationSuspensionFrameL502C13 { state, iteration, history },
+            suspend => ResumeSuspendedNestWhileTestFromIterationSuspensionFrame { state, iteration, history },
         ),
     }
 }
@@ -547,7 +547,7 @@ fn resume_nest_while_with_test_value(
             ok(value) => Ok(value),
             suspend => {
         let history = PersistentFunctionalSequence::freeze(history);
-        ResumeNestWhileWithTestValueSuspensionFrameL539C13 { state, iteration, history }
+        ResumeNestWhileWithTestValueSuspensionFrame { state, iteration, history }
         },
         ),
     }
@@ -591,7 +591,7 @@ fn resume_suspended_nest_while_with_test_value(
             session,
             Err(error),
             ok(value) => Ok(value),
-            suspend => ResumeSuspendedNestWhileWithTestValueSuspensionFrameL583C13 { state, iteration, history },
+            suspend => ResumeSuspendedNestWhileWithTestValueSuspensionFrame { state, iteration, history },
         ),
     }
 }

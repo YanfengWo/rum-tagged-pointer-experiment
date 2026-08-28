@@ -2,13 +2,13 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalAssociateToSuspensionFrameL189C9 {
+pub(super) struct EvalAssociateToSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) target_expr: rum_core::Expr,
     pub(super) spec: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalAssociateToSuspensionFrameL189C9 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalAssociateToSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -29,13 +29,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalAssociateToSuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalKeyDropFromSuspensionFrameL320C9 {
+pub(super) struct EvalKeyDropFromSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) target_expr: rum_core::Expr,
     pub(super) key_spec: rum_core::Expr,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalKeyDropFromSuspensionFrameL320C9 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalKeyDropFromSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalEncloseSuspensionFrameL26C13 {
+pub(super) struct EvalEncloseSuspensionFrame {
     pub(super) handler: std::option::Option<rum_core::Expr>,
     pub(super) form: std::option::Option<rum_core::Expr>,
     pub(super) lexical_tag: std::option::Option<rum_core::Expr>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalEncloseSuspensionFrameL26C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalEncloseSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -26,11 +26,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalEncloseSuspensionFrameL
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalConfirmSuspensionFrameL49C13 {
+pub(super) struct EvalConfirmSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalConfirmSuspensionFrameL49C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalConfirmSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -47,11 +47,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalConfirmSuspensionFrameL
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalConfirmBySuspensionFrameL67C13 {
+pub(super) struct EvalConfirmBySuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalConfirmBySuspensionFrameL67C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalConfirmBySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -68,11 +68,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalConfirmBySuspensionFram
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalConfirmMatchSuspensionFrameL85C13 {
+pub(super) struct EvalConfirmMatchSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalConfirmMatchSuspensionFrameL85C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalConfirmMatchSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -89,14 +89,14 @@ impl crate::runtime::suspension::SuspensionFrame for EvalConfirmMatchSuspensionF
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalConfirmQuietSuspensionFrameL120C13 {
+pub(super) struct EvalConfirmQuietSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) selectors:
         crate::runtime::kernel_data::control_data::confirmation::SuspendedConfirmQuietSelectors,
     pub(super) message_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalConfirmQuietSuspensionFrameL120C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalConfirmQuietSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -121,11 +121,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalConfirmQuietSuspensionF
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalConfirmAssertSuspensionFrameL156C13 {
+pub(super) struct EvalConfirmAssertSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalConfirmAssertSuspensionFrameL156C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalConfirmAssertSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -142,14 +142,14 @@ impl crate::runtime::suspension::SuspensionFrame for EvalConfirmAssertSuspension
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeEncloseForFailureSuspensionFrameL217C49 {
+pub(super) struct ResumeEncloseForFailureSuspensionFrame {
     pub(super) handler: std::option::Option<rum_core::Expr>,
     pub(super) value: rum_core::Expr,
     pub(super) tag: rum_core::Expr,
     pub(super) explicit_tag: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeEncloseForFailureSuspensionFrameL217C49 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeEncloseForFailureSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -186,13 +186,13 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeEncloseForFailureSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmAfterValueSuspensionFrameL256C48 {
+pub(super) struct ResumeConfirmAfterValueSuspensionFrame {
     pub(super) raw_expr: rum_core::Expr,
     pub(super) value: rum_core::Expr,
     pub(super) tag: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmAfterValueSuspensionFrameL256C48 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmAfterValueSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -219,13 +219,13 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmAfterValueSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishConfirmFailureSuspensionFrameL270C62 {
+pub(super) struct FinishConfirmFailureSuspensionFrame {
     pub(super) raw_expr: rum_core::Expr,
     pub(super) info: std::option::Option<rum_core::Expr>,
     pub(super) tag: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for FinishConfirmFailureSuspensionFrameL270C62 {
+impl crate::runtime::suspension::SuspensionFrame for FinishConfirmFailureSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -256,14 +256,12 @@ impl crate::runtime::suspension::SuspensionFrame for FinishConfirmFailureSuspens
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmByAfterValueSuspensionFrameL296C13 {
+pub(super) struct ResumeConfirmByAfterValueSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) value: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeConfirmByAfterValueSuspensionFrameL296C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmByAfterValueSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -282,15 +280,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmByAfterTestSuspensionFrameL316C48 {
+pub(super) struct ResumeConfirmByAfterTestSuspensionFrame {
     pub(super) raw_expr: rum_core::Expr,
     pub(super) raw_function: rum_core::Expr,
     pub(super) tag: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeConfirmByAfterTestSuspensionFrameL316C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmByAfterTestSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -317,7 +313,7 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmMatchAfterValueSuspensionFrameL349C49 {
+pub(super) struct ResumeConfirmMatchAfterValueSuspensionFrame1 {
     pub(super) value: rum_core::Expr,
     pub(super) info_expr: std::option::Option<rum_core::Expr>,
     pub(super) raw_expr: rum_core::Expr,
@@ -325,9 +321,7 @@ pub(super) struct ResumeConfirmMatchAfterValueSuspensionFrameL349C49 {
     pub(super) tag: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeConfirmMatchAfterValueSuspensionFrameL349C49
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmMatchAfterValueSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -357,7 +351,7 @@ impl crate::runtime::suspension::SuspensionFrame
     ok(info) => { (|| {
                     session.finish_confirm_match_failure(raw_expr, raw_pattern, info, tag)
                 })() },
-    suspend => ResumeConfirmMatchAfterValueSuspensionFrameL354C59 { raw_expr, raw_pattern, tag },
+    suspend => ResumeConfirmMatchAfterValueSuspensionFrame2 { raw_expr, raw_pattern, tag },
 )
             }
         })()
@@ -370,15 +364,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmMatchAfterValueSuspensionFrameL354C59 {
+pub(super) struct ResumeConfirmMatchAfterValueSuspensionFrame2 {
     pub(super) raw_expr: rum_core::Expr,
     pub(super) raw_pattern: rum_core::Expr,
     pub(super) tag: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeConfirmMatchAfterValueSuspensionFrameL354C59
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmMatchAfterValueSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -405,15 +397,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmQuietAfterBodySuspensionFrameL396C48 {
+pub(super) struct ResumeConfirmQuietAfterBodySuspensionFrame {
     pub(super) raw_expr: rum_core::Expr,
     pub(super) tag: rum_core::Expr,
     pub(super) message: crate::runtime::RuntimeMessage,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeConfirmQuietAfterBodySuspensionFrameL396C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmQuietAfterBodySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -440,14 +430,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeConfirmAssertAfterTestSuspensionFrameL439C48 {
+pub(super) struct ResumeConfirmAssertAfterTestSuspensionFrame {
     pub(super) raw_test: rum_core::Expr,
     pub(super) tag: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeConfirmAssertAfterTestSuspensionFrameL439C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeConfirmAssertAfterTestSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

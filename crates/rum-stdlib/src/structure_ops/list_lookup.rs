@@ -184,7 +184,7 @@ fn resume_select_positions_from_index(
                                             limit: state.limit,
                                         };
                                         let positions = PersistentStructureSequence::freeze(state.positions);
-                ResumeSelectPositionsFromIndexSuspensionFrameL185C25 { suspended, state__index: state.index, positions }
+                ResumeSelectPositionsFromIndexSuspensionFrame { suspended, state_index: state.index, positions }
                 },
                 );
             }
@@ -220,7 +220,7 @@ fn resume_suspended_select_positions_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedSelectPositionsFromIndexSuspensionFrameL228C25 { state, index, positions },
+                    suspend => ResumeSuspendedSelectPositionsFromIndexSuspensionFrame { state, index, positions },
                 );
             }
             Err(error) => return Err(error),
@@ -305,16 +305,13 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSelectPositionsFromIndexSuspensionFrameL185C25 {
-    pub(super) suspended: crate::structure_ops::list_lookup::SuspendedSelectPositionsState,
-    pub(super) state__index: usize,
-    pub(super) positions:
-        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+struct ResumeSelectPositionsFromIndexSuspensionFrame {
+    suspended: crate::structure_ops::list_lookup::SuspendedSelectPositionsState,
+    state_index: usize,
+    positions: crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSelectPositionsFromIndexSuspensionFrameL185C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSelectPositionsFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -323,7 +320,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
         #[allow(unused_mut)]
         let mut suspended = self.suspended.clone();
         #[allow(unused_mut)]
-        let mut state__index = self.state__index.clone();
+        let mut state_index = self.state_index.clone();
         #[allow(unused_mut)]
         let mut positions = self.positions.clone();
         let resumed = match outcome {
@@ -331,7 +328,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
                 resume_suspended_select_positions_with_value(
                     session,
                     suspended,
-                    state__index,
+                    state_index,
                     positions,
                     value,
                 )
@@ -343,15 +340,14 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedSelectPositionsFromIndexSuspensionFrameL228C25 {
-    pub(super) state: crate::structure_ops::list_lookup::SuspendedSelectPositionsState,
-    pub(super) index: usize,
-    pub(super) positions:
-        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+struct ResumeSuspendedSelectPositionsFromIndexSuspensionFrame {
+    state: crate::structure_ops::list_lookup::SuspendedSelectPositionsState,
+    index: usize,
+    positions: crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedSelectPositionsFromIndexSuspensionFrameL228C25
+    for ResumeSuspendedSelectPositionsFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

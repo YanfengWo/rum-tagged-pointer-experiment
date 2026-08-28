@@ -27,7 +27,7 @@ impl Session {
             self,
             released_result,
             ok(value) => Ok(value),
-            suspend => EvalReleaseHoldSuspensionFrameL25C58,
+            suspend => EvalReleaseHoldSuspensionFrame,
         )
     }
 
@@ -112,9 +112,9 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReleaseHoldSuspensionFrameL25C58;
+struct EvalReleaseHoldSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReleaseHoldSuspensionFrameL25C58 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReleaseHoldSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

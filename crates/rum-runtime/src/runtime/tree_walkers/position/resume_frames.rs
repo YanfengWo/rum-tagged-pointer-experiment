@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalPositionSuspensionFrameL113C13 {
+pub(super) struct EvalPositionSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalPositionSuspensionFrameL113C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalPositionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -23,14 +23,12 @@ impl crate::runtime::suspension::SuspensionFrame for EvalPositionSuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumePositionAfterTargetSuspensionFrameL128C13 {
+pub(super) struct ResumePositionAfterTargetSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumePositionAfterTargetSuspensionFrameL128C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumePositionAfterTargetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -49,15 +47,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumePositionAfterPatternSuspensionFrameL149C44 {
+pub(super) struct ResumePositionAfterPatternSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) pattern: rum_core::Expr,
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumePositionAfterPatternSuspensionFrameL149C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumePositionAfterPatternSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -78,10 +74,10 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishPositionAfterResolvedTraversalSuspensionFrameL180C53;
+pub(super) struct FinishPositionAfterResolvedTraversalSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishPositionAfterResolvedTraversalSuspensionFrameL180C53
+    for FinishPositionAfterResolvedTraversalSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -103,13 +99,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishPositionsAtCurrentNodeSuspensionFrameL344C44 {
+pub(super) struct FinishPositionsAtCurrentNodeSuspensionFrame {
     pub(super) state: crate::runtime::tree_walkers::position::SuspendedPositionNode,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishPositionsAtCurrentNodeSuspensionFrameL344C44
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishPositionsAtCurrentNodeSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -127,11 +121,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectPositionChildrenSuspensionFrameL461C48 {
+pub(super) struct CollectPositionChildrenSuspensionFrame {
     pub(super) state: crate::runtime::tree_walkers::position::SuspendedPositionChildren,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for CollectPositionChildrenSuspensionFrameL461C48 {
+impl crate::runtime::suspension::SuspensionFrame for CollectPositionChildrenSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -151,12 +145,12 @@ impl crate::runtime::suspension::SuspensionFrame for CollectPositionChildrenSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectPositionChildrenSuspendedSuspensionFrameL532C48 {
+pub(super) struct CollectPositionChildrenSuspendedSuspensionFrame {
     pub(super) state: crate::runtime::tree_walkers::position::SuspendedPositionChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectPositionChildrenSuspendedSuspensionFrameL532C48
+    for CollectPositionChildrenSuspendedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -177,12 +171,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishPositionsAtCurrentNodeSuspendedSuspensionFrameL574C44 {
+pub(super) struct FinishPositionsAtCurrentNodeSuspendedSuspensionFrame {
     pub(super) state: crate::runtime::tree_walkers::position::SuspendedPositionNode,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishPositionsAtCurrentNodeSuspendedSuspensionFrameL574C44
+    for FinishPositionsAtCurrentNodeSuspendedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

@@ -80,7 +80,7 @@ impl Session {
         args_for_resume: SharedArgs,
         request: RuntimeInputRequest,
     ) -> Result<Expr, EvalError> {
-        crate::resume_or_suspend!(insert self, EvaluateCallSuspensionFrameL55C25 { args_for_resume });
+        crate::resume_or_suspend!(insert self, EvaluateCallSuspensionFrame { args_for_resume });
         Err(EvalError::InputRequired { request })
     }
 
@@ -192,7 +192,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let unevaluated_restore = unevaluated_restore
                     .map(|restore| SuspendedUnevaluatedRestorePlan::freeze(*restore));
-                crate::resume_or_suspend!(insert self, ResumeCallWithDispatchPlanSuspensionFrameL190C44 { evaluated_head, plan: plan.into_suspended(), state, stage_index, unevaluated_restore });
+                crate::resume_or_suspend!(insert self, ResumeCallWithDispatchPlanSuspensionFrame { evaluated_head, plan: plan.into_suspended(), state, stage_index, unevaluated_restore });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -281,7 +281,7 @@ impl Session {
                 unevaluated_restore,
             ),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44 { evaluated_head, plan, state, stage_index, unevaluated_restore });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedCallWithDispatchPlanSuspensionFrame { evaluated_head, plan, state, stage_index, unevaluated_restore });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -358,11 +358,11 @@ fn call_dispatch_stage_profile_name(stage: CallDispatchStage) -> &'static str {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateCallSuspensionFrameL55C25 {
-    pub(super) args_for_resume: rum_core::SharedArgs,
+struct EvaluateCallSuspensionFrame {
+    args_for_resume: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvaluateCallSuspensionFrameL55C25 {
+impl crate::runtime::suspension::SuspensionFrame for EvaluateCallSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -381,7 +381,7 @@ impl crate::runtime::suspension::SuspensionFrame for EvaluateCallSuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeCallWithDispatchPlanSuspensionFrameL190C44 {
+struct ResumeCallWithDispatchPlanSuspensionFrame {
     pub(super) evaluated_head: rum_core::SharedExpr,
     pub(super) plan: crate::runtime::session::session_state::SuspendedCallDispatchPlan,
     pub(super) state: crate::runtime::session::session_state::CallDispatchState,
@@ -390,9 +390,7 @@ struct ResumeCallWithDispatchPlanSuspensionFrameL190C44 {
         std::option::Option<crate::runtime::eval_core::call::SuspendedUnevaluatedRestorePlan>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCallWithDispatchPlanSuspensionFrameL190C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeCallWithDispatchPlanSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -421,7 +419,7 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44 {
+struct ResumeSuspendedCallWithDispatchPlanSuspensionFrame {
     pub(super) evaluated_head: rum_core::SharedExpr,
     pub(super) plan: crate::runtime::session::session_state::SuspendedCallDispatchPlan,
     pub(super) state: crate::runtime::session::session_state::CallDispatchState,
@@ -431,7 +429,7 @@ struct ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44 {
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedCallWithDispatchPlanSuspensionFrameL291C44
+    for ResumeSuspendedCallWithDispatchPlanSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

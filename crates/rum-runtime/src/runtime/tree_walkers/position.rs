@@ -117,7 +117,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalPositionSuspensionFrameL113C13 { args }
+        EvalPositionSuspensionFrame { args }
         },
         )?;
 
@@ -137,7 +137,7 @@ impl Session {
             suspend => {
         let target = target.clone();
                     let args = args.clone();
-        ResumePositionAfterTargetSuspensionFrameL128C13 { target, args }
+        ResumePositionAfterTargetSuspensionFrame { target, args }
         },
         )?;
 
@@ -159,7 +159,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                crate::resume_or_suspend!(insert self, ResumePositionAfterPatternSuspensionFrameL149C44 { target, pattern, args });
+                crate::resume_or_suspend!(insert self, ResumePositionAfterPatternSuspensionFrame { target, pattern, args });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -192,7 +192,7 @@ impl Session {
             ok(outcome) => { (|| {
                     Ok(Expr::call(system_expr("List"), outcome.positions))
                 })() },
-            suspend => FinishPositionAfterResolvedTraversalSuspensionFrameL180C53,
+            suspend => FinishPositionAfterResolvedTraversalSuspensionFrame,
         )
     }
 
@@ -355,7 +355,7 @@ impl Session {
                     seen_before,
                     positions: PersistentPositionAccumulator::freeze(positions),
                 };
-                crate::resume_or_suspend!(insert self, FinishPositionsAtCurrentNodeSuspensionFrameL344C44 { state });
+                crate::resume_or_suspend!(insert self, FinishPositionsAtCurrentNodeSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -468,7 +468,7 @@ impl Session {
                         positions: PersistentPositionAccumulator::freeze(positions),
                         max_child_depth,
                     };
-                    crate::resume_or_suspend!(insert self, CollectPositionChildrenSuspensionFrameL461C48 { state });
+                    crate::resume_or_suspend!(insert self, CollectPositionChildrenSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -534,7 +534,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, CollectPositionChildrenSuspendedSuspensionFrameL532C48 { state });
+                    crate::resume_or_suspend!(insert self, CollectPositionChildrenSuspendedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -571,7 +571,7 @@ impl Session {
         match match_result {
             Ok(outcome) => self.finish_suspended_position_node_outcome(state, outcome),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, FinishPositionsAtCurrentNodeSuspendedSuspensionFrameL574C44 { state });
+                crate::resume_or_suspend!(insert self, FinishPositionsAtCurrentNodeSuspendedSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

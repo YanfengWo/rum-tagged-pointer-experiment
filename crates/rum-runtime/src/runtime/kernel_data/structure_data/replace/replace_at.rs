@@ -26,7 +26,7 @@ impl Session {
                     Ok(value) => value,
                     Err(EvalError::InputRequired { request }) => {
                         let args = args.clone();
-                        crate::resume_or_suspend!(insert self, EvalReplaceAtSuspensionFrameL27C21 { args });
+                        crate::resume_or_suspend!(insert self, EvalReplaceAtSuspensionFrame { args });
                         crate::resume_or_suspend!(insert self, ContinueReplaceAtSetupFrame);
                         return Err(EvalError::InputRequired { request });
                     }
@@ -57,7 +57,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let call_args = SharedArgs::new(call_args);
-                crate::resume_or_suspend!(insert self, ResumeReplaceAtAfterTargetSuspensionFrameL61C44 { target, rules_expr, call_args });
+                crate::resume_or_suspend!(insert self, ResumeReplaceAtAfterTargetSuspensionFrame { target, rules_expr, call_args });
                 crate::resume_or_suspend!(insert self, ContinueReplaceAtSetupFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -157,7 +157,7 @@ impl Session {
                     rule_plan,
                     index,
                 };
-                crate::resume_or_suspend!(insert self, ReplaceAtPathsOwnedSuspensionFrameL167C44 {
+                crate::resume_or_suspend!(insert self, ReplaceAtPathsOwnedSuspensionFrame {
                     state,
                     path: std::sync::Arc::from(path),
                 });
@@ -197,7 +197,7 @@ impl Session {
                 }
                 Ok(None) => state.index += 1,
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplaceAtPathsSuspensionFrameL207C48 {
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplaceAtPathsSuspensionFrame {
                         state,
                         path: std::sync::Arc::from(path),
                     });
@@ -230,11 +230,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReplaceAtSuspensionFrameL27C21 {
-    pub(super) args: rum_core::SharedArgs,
+struct EvalReplaceAtSuspensionFrame {
+    args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAtSuspensionFrameL27C21 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAtSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -257,15 +257,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAtSuspensionFram
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceAtAfterTargetSuspensionFrameL61C44 {
-    pub(super) target: rum_core::Expr,
-    pub(super) rules_expr: rum_core::Expr,
-    pub(super) call_args: rum_core::SharedArgs,
+struct ResumeReplaceAtAfterTargetSuspensionFrame {
+    target: rum_core::Expr,
+    rules_expr: rum_core::Expr,
+    call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceAtAfterTargetSuspensionFrameL61C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReplaceAtAfterTargetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -382,13 +380,13 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceAtSetupFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ReplaceAtPathsOwnedSuspensionFrameL167C44 {
+struct ReplaceAtPathsOwnedSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::structure_data::replace::replace_at::SuspendedReplaceAtPaths,
     pub(super) path: std::sync::Arc<[isize]>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ReplaceAtPathsOwnedSuspensionFrameL167C44 {
+impl crate::runtime::suspension::SuspensionFrame for ReplaceAtPathsOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -408,15 +406,13 @@ impl crate::runtime::suspension::SuspensionFrame for ReplaceAtPathsOwnedSuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeSuspendedReplaceAtPathsSuspensionFrameL207C48 {
+struct ResumeSuspendedReplaceAtPathsSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::structure_data::replace::replace_at::SuspendedReplaceAtPaths,
     pub(super) path: std::sync::Arc<[isize]>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedReplaceAtPathsSuspensionFrameL207C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSuspendedReplaceAtPathsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

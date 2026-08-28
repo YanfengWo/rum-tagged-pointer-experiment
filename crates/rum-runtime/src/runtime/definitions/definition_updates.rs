@@ -443,7 +443,7 @@ impl Session {
             Ok(updated) => self.store_held_update(operator, target, updated, return_value),
             Err(EvalError::InputRequired { request }) => {
                 let target = SuspendedHeldUpdateTarget::freeze(target);
-                crate::resume_or_suspend!(insert self, FinishHeldUpdateSuspensionFrameL443C44 { operator, target, return_value });
+                crate::resume_or_suspend!(insert self, FinishHeldUpdateSuspensionFrame { operator, target, return_value });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

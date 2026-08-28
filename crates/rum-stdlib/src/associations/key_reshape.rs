@@ -167,7 +167,7 @@ fn resume_key_group_by_from_index(
                     suspend => {
                 let entries = FrozenAssociationSequence::freeze(entries);
                                             let grouped = PersistentAssociationGroups::freeze(grouped);
-                ResumeKeyGroupByFromIndexSuspensionFrameL164C29 { function, reducer, entries, index, grouped, entry }
+                ResumeKeyGroupByFromIndexSuspensionFrame { function, reducer, entries, index, grouped, entry }
                 },
                 );
             }
@@ -201,7 +201,7 @@ fn resume_suspended_key_group_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedKeyGroupByFromIndexSuspensionFrameL201C29 { function, reducer, entries, index, grouped, entry },
+                    suspend => ResumeSuspendedKeyGroupByFromIndexSuspensionFrame { function, reducer, entries, index, grouped, entry },
                 );
             }
             Err(error) => return Err(error),
@@ -269,7 +269,7 @@ fn resume_key_group_by_reduce_from_index(
                     suspend => {
                 let grouped = FrozenAssociationSequence::freeze(grouped);
                                         let reduced = PersistentAssociationSequence::freeze(reduced);
-                ResumeKeyGroupByReduceFromIndexSuspensionFrameL273C25 { reducer, grouped, index, reduced, group_key }
+                ResumeKeyGroupByReduceFromIndexSuspensionFrame { reducer, grouped, index, reduced, group_key }
                 },
                 );
             }
@@ -301,7 +301,7 @@ fn resume_suspended_key_group_by_reduce_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedKeyGroupByReduceFromIndexSuspensionFrameL308C25 { reducer, grouped, index, reduced, group_key },
+                    suspend => ResumeSuspendedKeyGroupByReduceFromIndexSuspensionFrame { reducer, grouped, index, reduced, group_key },
                 );
             }
             Err(error) => return Err(error),

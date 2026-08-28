@@ -134,7 +134,7 @@ impl Session {
         &mut self,
         request: RuntimeInputRequest,
     ) -> Result<Option<Expr>, EvalError> {
-        crate::resume_or_suspend!(insert self, RunCallDispatchStageSuspensionFrameL97C74);
+        crate::resume_or_suspend!(insert self, RunCallDispatchStageSuspensionFrame);
         Err(EvalError::InputRequired { request })
     }
 
@@ -232,9 +232,9 @@ impl CallBuiltinSpec for SuspendedBuiltinSpec {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct RunCallDispatchStageSuspensionFrameL97C74;
+struct RunCallDispatchStageSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for RunCallDispatchStageSuspensionFrameL97C74 {
+impl crate::runtime::suspension::SuspensionFrame for RunCallDispatchStageSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

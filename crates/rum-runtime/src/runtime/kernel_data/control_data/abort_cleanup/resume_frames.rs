@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalCheckAbortSuspensionFrameL121C17 {
+pub(super) struct EvalCheckAbortSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalCheckAbortSuspensionFrameL121C17 {
+impl crate::runtime::suspension::SuspensionFrame for EvalCheckAbortSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -28,7 +28,7 @@ impl crate::runtime::suspension::SuspensionFrame for EvalCheckAbortSuspensionFra
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCheckAbortWithPropagationSuspensionFrameL161C13 {
+pub(super) struct ResumeCheckAbortWithPropagationSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) propagate:
         crate::runtime::kernel_data::control_data::abort_cleanup::PropagateAbortsMode,
@@ -36,7 +36,7 @@ pub(super) struct ResumeCheckAbortWithPropagationSuspensionFrameL161C13 {
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCheckAbortWithPropagationSuspensionFrameL161C13
+    for ResumeCheckAbortWithPropagationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -57,11 +57,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalAbortProtectSuspensionFrameL191C13 {
+pub(super) struct EvalAbortProtectSuspensionFrame {
     pub(super) pending_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalAbortProtectSuspensionFrameL191C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalAbortProtectSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -75,15 +75,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalAbortProtectSuspensionF
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCheckAbortAfterPrimarySuspensionFrameL213C21 {
+pub(super) struct ResumeCheckAbortAfterPrimarySuspensionFrame1 {
     pub(super) propagate:
         crate::runtime::kernel_data::control_data::abort_cleanup::PropagateAbortsMode,
     pub(super) pending_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCheckAbortAfterPrimarySuspensionFrameL213C21
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeCheckAbortAfterPrimarySuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -101,16 +99,14 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCheckAbortAfterPrimarySuspensionFrameL240C21 {
+pub(super) struct ResumeCheckAbortAfterPrimarySuspensionFrame2 {
     pub(super) propagate:
         crate::runtime::kernel_data::control_data::abort_cleanup::PropagateAbortsMode,
     pub(super) protected: bool,
     pub(super) pending_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCheckAbortAfterPrimarySuspensionFrameL240C21
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeCheckAbortAfterPrimarySuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

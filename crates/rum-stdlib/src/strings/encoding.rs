@@ -127,7 +127,7 @@ pub(crate) fn eval_uncompress(
             session,
             wrapped_result,
             ok(value) => Ok(value),
-            suspend => EvalUncompressSuspensionFrameL125C67,
+            suspend => EvalUncompressSuspensionFrame,
         );
     }
 
@@ -374,9 +374,9 @@ fn nibble_to_hex(nibble: u8) -> char {
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalUncompressSuspensionFrameL125C67;
+struct EvalUncompressSuspensionFrame;
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalUncompressSuspensionFrameL125C67 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalUncompressSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

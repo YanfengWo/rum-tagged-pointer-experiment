@@ -145,7 +145,7 @@ impl Session {
                         cursor: index,
                         evaluated: EvaluatedSelectorAccumulator::freeze(evaluated_selectors),
                     };
-                    crate::resume_or_suspend!(insert self, ResumePositionalPartSelectorEvaluationSuspensionFrameL145C48 { suspended });
+                    crate::resume_or_suspend!(insert self, ResumePositionalPartSelectorEvaluationSuspensionFrame { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -176,7 +176,7 @@ impl Session {
                     state.cursor += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedPositionalPartAssignmentSuspensionFrameL179C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedPositionalPartAssignmentSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

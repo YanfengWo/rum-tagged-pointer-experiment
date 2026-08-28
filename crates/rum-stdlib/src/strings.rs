@@ -234,7 +234,7 @@ fn resume_string_apply_from_index(
                     suspend => {
                 let state = SuspendedStringApplyEvalState::freeze(state);
                                         let outputs = PersistentStringSequence::freeze(outputs);
-                ResumeStringApplyFromIndexSuspensionFrameL235C25 { state, index, outputs }
+                ResumeStringApplyFromIndexSuspensionFrame { state, index, outputs }
                 },
                 );
             }
@@ -300,7 +300,7 @@ fn resume_suspended_string_apply_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedStringApplyFromIndexSuspensionFrameL304C25 { state, index, outputs },
+                    suspend => ResumeSuspendedStringApplyFromIndexSuspensionFrame { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -405,13 +405,13 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeStringApplyFromIndexSuspensionFrameL235C25 {
-    pub(super) state: crate::strings::SuspendedStringApplyEvalState,
-    pub(super) index: usize,
-    pub(super) outputs: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
+struct ResumeStringApplyFromIndexSuspensionFrame {
+    state: crate::strings::SuspendedStringApplyEvalState,
+    index: usize,
+    outputs: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeStringApplyFromIndexSuspensionFrameL235C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeStringApplyFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -434,14 +434,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeStringApplyFromIndexSusp
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedStringApplyFromIndexSuspensionFrameL304C25 {
-    pub(super) state: crate::strings::SuspendedStringApplyEvalState,
-    pub(super) index: usize,
-    pub(super) outputs: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
+struct ResumeSuspendedStringApplyFromIndexSuspensionFrame {
+    state: crate::strings::SuspendedStringApplyEvalState,
+    index: usize,
+    outputs: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedStringApplyFromIndexSuspensionFrameL304C25
+    for ResumeSuspendedStringApplyFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

@@ -783,7 +783,7 @@ impl Session {
                         index,
                         evaluated_selectors,
                     );
-                    crate::resume_or_suspend!(insert self, ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrameL783C48 { suspended });
+                    crate::resume_or_suspend!(insert self, ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrame { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -816,7 +816,7 @@ impl Session {
                     state.cursor += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedAssociationSetLvalueSuspensionFrameL819C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedAssociationSetLvalueSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

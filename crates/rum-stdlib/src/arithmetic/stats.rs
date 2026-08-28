@@ -198,7 +198,7 @@ fn average_pair(session: &mut Session, lhs: Expr, rhs: Expr) -> Result<Expr, Eva
         session,
         evaluated,
         ok(value) => Ok(value),
-        suspend => AveragePairSuspensionFrameL196C51,
+        suspend => AveragePairSuspensionFrame,
     )
 }
 
@@ -227,9 +227,9 @@ fn ceiling_div_non_negative(numerator: &BigInt, denominator: &BigInt) -> BigInt 
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct AveragePairSuspensionFrameL196C51;
+struct AveragePairSuspensionFrame;
 
-impl rum_runtime::kernel_api::SuspensionFrame for AveragePairSuspensionFrameL196C51 {
+impl rum_runtime::kernel_api::SuspensionFrame for AveragePairSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

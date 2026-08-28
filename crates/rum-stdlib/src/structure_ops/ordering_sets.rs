@@ -544,7 +544,7 @@ fn resume_set_same_test(
                                 ok(value) => Ok(value),
                                 suspend => {
                             let state = SuspendedSetSameTestState::freeze(state);
-                            ResumeSetSameTestSuspensionFrameL542C37 { state }
+                            ResumeSetSameTestSuspensionFrame1 { state }
                             },
                             );
                         }
@@ -581,7 +581,7 @@ fn resume_set_same_test(
                             ok(value) => Ok(value),
                             suspend => {
                         let state = SuspendedSetSameTestState::freeze(state);
-                        ResumeSetSameTestSuspensionFrameL581C33 { state }
+                        ResumeSetSameTestSuspensionFrame2 { state }
                         },
                         );
                     }
@@ -611,7 +611,7 @@ fn resume_set_same_test(
                             ok(value) => Ok(value),
                             suspend => {
                         let state = SuspendedSetSameTestState::freeze(state);
-                        ResumeSetSameTestSuspensionFrameL611C33 { state }
+                        ResumeSetSameTestSuspensionFrame3 { state }
                         },
                         );
                     }
@@ -718,7 +718,7 @@ fn resume_sort_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSortByFromIndexSuspensionFrameL719C25 {
+                    suspend => ResumeSortByFromIndexSuspensionFrame {
                         expr_head,
                         function,
                         items: FrozenStructureSequence::freeze(items),
@@ -763,7 +763,7 @@ fn resume_suspended_sort_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSortByFromIndexSuspensionFrameL719C25 {
+                    suspend => ResumeSortByFromIndexSuspensionFrame {
                         expr_head,
                         function,
                         items,
@@ -823,7 +823,7 @@ fn resume_sort_by_ordering_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSortByOrderingFromIndexSuspensionFrameL776C25 {
+                    suspend => ResumeSortByOrderingFromIndexSuspensionFrame {
                         expr_head,
                         function,
                         ordering,
@@ -870,7 +870,7 @@ fn resume_suspended_sort_by_ordering_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSortByOrderingFromIndexSuspensionFrameL776C25 {
+                    suspend => ResumeSortByOrderingFromIndexSuspensionFrame {
                         expr_head,
                         function,
                         ordering,

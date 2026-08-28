@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeKeyUnionMissingValuesFromIndexSuspensionFrameL320C29 {
+pub(super) struct ResumeKeyUnionMissingValuesFromIndexSuspensionFrame {
     pub(super) fill_function: rum_core::Expr,
     pub(super) plan: crate::associations::suspended_state::FrozenAssociationValue<
         crate::associations::transforms::key_collections::KeyUnionPlan,
@@ -18,7 +18,7 @@ pub(super) struct ResumeKeyUnionMissingValuesFromIndexSuspensionFrameL320C29 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeKeyUnionMissingValuesFromIndexSuspensionFrameL320C29
+    for ResumeKeyUnionMissingValuesFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -57,7 +57,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrameL366C29 {
+pub(super) struct ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrame {
     pub(super) fill_function: rum_core::Expr,
     pub(super) plan: crate::associations::suspended_state::FrozenAssociationValue<
         crate::associations::transforms::key_collections::KeyUnionPlan,
@@ -73,7 +73,7 @@ pub(super) struct ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrameL3
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrameL366C29
+    for ResumeSuspendedKeyUnionMissingValuesFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

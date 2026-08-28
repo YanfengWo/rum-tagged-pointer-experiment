@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalCasesSuspensionFrameL43C13 {
+pub(super) struct EvalCasesSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalCasesSuspensionFrameL43C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalCasesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -28,12 +28,12 @@ impl crate::runtime::suspension::SuspensionFrame for EvalCasesSuspensionFrameL43
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCasesAfterTargetSuspensionFrameL79C44 {
+pub(super) struct ResumeCasesAfterTargetSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeCasesAfterTargetSuspensionFrameL79C44 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeCasesAfterTargetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -145,7 +145,7 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueCasesFrame {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCasesAfterResolvedSpecSuspensionFrameL111C44 {
+pub(super) struct ResumeCasesAfterResolvedSpecSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) spec: crate::runtime::kernel_data::rewrite_data::suspended_state::FrozenRewriteValue<
         crate::runtime::CasesSpec,
@@ -153,9 +153,7 @@ pub(super) struct ResumeCasesAfterResolvedSpecSuspensionFrameL111C44 {
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCasesAfterResolvedSpecSuspensionFrameL111C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeCasesAfterResolvedSpecSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -176,11 +174,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCasesWithTraversalSuspensionFrameL154C51;
+pub(super) struct FinishCasesWithTraversalSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishCasesWithTraversalSuspensionFrameL154C51
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishCasesWithTraversalSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -201,14 +197,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCasesAtCurrentNodeSuspensionFrameL282C44 {
+pub(super) struct FinishCasesAtCurrentNodeSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::cases::collect::SuspendedCasesNodeFinish,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishCasesAtCurrentNodeSuspensionFrameL282C44
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishCasesAtCurrentNodeSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -225,12 +219,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectCasesChildrenSuspensionFrameL366C48 {
+pub(super) struct CollectCasesChildrenSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::cases::collect::SuspendedCasesChildren,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for CollectCasesChildrenSuspensionFrameL366C48 {
+impl crate::runtime::suspension::SuspensionFrame for CollectCasesChildrenSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -255,14 +249,12 @@ impl crate::runtime::suspension::SuspensionFrame for CollectCasesChildrenSuspens
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectCasesChildrenSuspendedSuspensionFrameL437C48 {
+pub(super) struct CollectCasesChildrenSuspendedSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::cases::collect::SuspendedCasesChildren,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for CollectCasesChildrenSuspendedSuspensionFrameL437C48
-{
+impl crate::runtime::suspension::SuspensionFrame for CollectCasesChildrenSuspendedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -287,13 +279,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCasesAtCurrentNodeSuspendedSuspensionFrameL588C44 {
+pub(super) struct FinishCasesAtCurrentNodeSuspendedSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::cases::collect::SuspendedCasesNodeFinish,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishCasesAtCurrentNodeSuspendedSuspensionFrameL588C44
+    for FinishCasesAtCurrentNodeSuspendedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -321,12 +313,12 @@ impl crate::runtime::suspension::PureFrameFinalizer for FinishCasesCollectionFin
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct TryCollectCaseOwnedSuspensionFrameL623C52 {
+pub(super) struct TryCollectCaseOwnedSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::cases::collect::SuspendedCasesRuleMatch,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for TryCollectCaseOwnedSuspensionFrameL623C52 {
+impl crate::runtime::suspension::SuspensionFrame for TryCollectCaseOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -346,12 +338,12 @@ impl crate::runtime::suspension::SuspensionFrame for TryCollectCaseOwnedSuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct TryCollectCaseSuspendedSuspensionFrameL659C52 {
+pub(super) struct TryCollectCaseSuspendedSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::cases::collect::SuspendedCasesRuleMatch,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for TryCollectCaseSuspendedSuspensionFrameL659C52 {
+impl crate::runtime::suspension::SuspensionFrame for TryCollectCaseSuspendedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -371,11 +363,11 @@ impl crate::runtime::suspension::SuspensionFrame for TryCollectCaseSuspendedSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCasesPatternMatchSuspensionFrameL681C44 {
+pub(super) struct FinishCasesPatternMatchSuspensionFrame {
     pub(super) expr: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for FinishCasesPatternMatchSuspensionFrameL681C44 {
+impl crate::runtime::suspension::SuspensionFrame for FinishCasesPatternMatchSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -393,9 +385,9 @@ impl crate::runtime::suspension::SuspensionFrame for FinishCasesPatternMatchSusp
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCasesRuleMatchSuspensionFrameL717C61;
+pub(super) struct FinishCasesRuleMatchSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for FinishCasesRuleMatchSuspensionFrameL717C61 {
+impl crate::runtime::suspension::SuspensionFrame for FinishCasesRuleMatchSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

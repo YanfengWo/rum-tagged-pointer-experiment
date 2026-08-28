@@ -55,7 +55,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalIfSuspensionFrameL50C13 { args }
+        EvalIfSuspensionFrame { args }
         },
         )?;
 
@@ -91,7 +91,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalSwitchSuspensionFrameL81C13 { args }
+        EvalSwitchSuspensionFrame { args }
         },
         )?;
 
@@ -165,7 +165,7 @@ impl Session {
                         ok(value) => Ok(value),
                         suspend => {
                     let args = args.clone();
-                    ResumeWhileLoopSuspensionFrameL150C25 { args }
+                    ResumeWhileLoopSuspensionFrame1 { args }
                     },
                     );
                     record_profile_runtime_path_timing(
@@ -189,7 +189,7 @@ impl Session {
                         ok(value) => Ok(value),
                         suspend => {
                     let args = args.clone();
-                    ResumeWhileLoopSuspensionFrameL171C25 { args }
+                    ResumeWhileLoopSuspensionFrame2 { args }
                     },
                     );
                     record_profile_runtime_path_timing(
@@ -248,7 +248,7 @@ impl Session {
                 ok(value) => Ok(value),
                 suspend => {
             let args = args.clone();
-            ResumeUntilLoopSuspensionFrameL227C17 { args, phase }
+            ResumeUntilLoopSuspensionFrame { args, phase }
             },
             );
 
@@ -310,7 +310,7 @@ impl Session {
                 ok(value) => Ok(value),
                 suspend => {
             let args = args.clone();
-            ResumeForLoopSuspensionFrameL284C17 { args, phase }
+            ResumeForLoopSuspensionFrame { args, phase }
             },
             );
 
@@ -368,7 +368,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        ResumeCompoundExpressionFromIndexSuspensionFrameL337C13 { args, index }
+        ResumeCompoundExpressionFromIndexSuspensionFrame { args, index }
         },
         );
         record_profile_runtime_path_timing(
@@ -411,7 +411,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        ResumeWhichFromIndexSuspensionFrameL377C13 { args, index }
+        ResumeWhichFromIndexSuspensionFrame { args, index }
         },
         )?;
 
@@ -466,7 +466,7 @@ impl Session {
             }
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                crate::resume_or_suspend!(insert self, ResumeSwitchFromIndexSuspensionFrameL431C44 { args, subject, index, branch });
+                crate::resume_or_suspend!(insert self, ResumeSwitchFromIndexSuspensionFrame { args, subject, index, branch });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),

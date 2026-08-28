@@ -161,7 +161,7 @@ fn resume_tally_test_from_count(
                     suspend => {
                 let items = FrozenStructureSequence::freeze(state.items);
                                         let counts = PersistentStructureCounts::freeze(state.counts);
-                ResumeTallyTestFromCountSuspensionFrameL159C25 { state__test: state.test, state__index: state.index, items, counts, count_index }
+                ResumeTallyTestFromCountSuspensionFrame { state_test: state.test, state_index: state.index, items, counts, count_index }
                 },
                 );
             }
@@ -210,7 +210,7 @@ fn resume_suspended_tally_test_from_count(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedTallyTestFromCountSuspensionFrameL217C25 { test, items, index, counts, count_index },
+                    suspend => ResumeSuspendedTallyTestFromCountSuspensionFrame { test, items, index, counts, count_index },
                 );
             }
             Err(error) => return Err(error),
@@ -499,7 +499,7 @@ fn resume_gather_by_function_list_from_position(
                                         let functions = FrozenStructureSequence::freeze(state.functions);
                                         let keys =
                                             PersistentStructureSequence::freeze(flatten_gather_keys(state.keys));
-                ResumeGatherByFunctionListFromPositionSuspensionFrameL515C25 { items, functions, item_index, function_index, keys }
+                ResumeGatherByFunctionListFromPositionSuspensionFrame { items, functions, item_index, function_index, keys }
                 },
                 );
             }
@@ -564,7 +564,7 @@ fn resume_suspended_gather_by_function_list_from_position(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrameL589C25 { items, functions, item_index, function_index, keys },
+                    suspend => ResumeSuspendedGatherByFunctionListFromPositionSuspensionFrame { items, functions, item_index, function_index, keys },
                 );
             }
             Err(error) => return Err(error),
@@ -759,7 +759,7 @@ fn resume_decorate_by_from_index(
                     suspend => {
                 let state = SuspendedDecorateByState::freeze(state);
                                         let decorated = PersistentStructureSequence::freeze(decorated);
-                ResumeDecorateByFromIndexSuspensionFrameL793C25 { state, index, decorated, item }
+                ResumeDecorateByFromIndexSuspensionFrame { state, index, decorated, item }
                 },
                 );
             }
@@ -788,7 +788,7 @@ fn resume_suspended_decorate_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedDecorateByFromIndexSuspensionFrameL825C25 { state, index, decorated, item },
+                    suspend => ResumeSuspendedDecorateByFromIndexSuspensionFrame { state, index, decorated, item },
                 );
             }
             Err(error) => return Err(error),

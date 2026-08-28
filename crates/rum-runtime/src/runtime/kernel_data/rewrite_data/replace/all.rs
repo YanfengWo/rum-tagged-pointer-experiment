@@ -20,7 +20,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let rules_expr = args[1].clone();
-        EvalReplaceAllSuspensionFrameL18C13 { rules_expr }
+        EvalReplaceAllSuspensionFrame { rules_expr }
         },
         )?;
 
@@ -65,7 +65,7 @@ impl Session {
             self,
             replaced_result,
             ok(value) => Ok(value),
-            suspend => ResumeReplaceAllAfterRulesSuspensionFrameL58C58,
+            suspend => ResumeReplaceAllAfterRulesSuspensionFrame,
         )
     }
 
@@ -87,7 +87,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let rules_expr = args[1].clone();
-        EvalReplaceAllUnheldSuspensionFrameL75C13 { rules_expr }
+        EvalReplaceAllUnheldSuspensionFrame { rules_expr }
         },
         )?;
 
@@ -133,17 +133,17 @@ impl Session {
             self,
             replaced_result,
             ok(value) => Ok(value),
-            suspend => ResumeReplaceAllUnheldAfterRulesSuspensionFrameL118C58,
+            suspend => ResumeReplaceAllUnheldAfterRulesSuspensionFrame,
         )
     }
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReplaceAllSuspensionFrameL18C13 {
-    pub(super) rules_expr: rum_core::Expr,
+struct EvalReplaceAllSuspensionFrame {
+    rules_expr: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllSuspensionFrameL18C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -160,11 +160,9 @@ impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllSuspensionFra
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceAllAfterRulesSuspensionFrameL58C58;
+struct ResumeReplaceAllAfterRulesSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceAllAfterRulesSuspensionFrameL58C58
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReplaceAllAfterRulesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -179,11 +177,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReplaceAllUnheldSuspensionFrameL75C13 {
-    pub(super) rules_expr: rum_core::Expr,
+struct EvalReplaceAllUnheldSuspensionFrame {
+    rules_expr: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllUnheldSuspensionFrameL75C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllUnheldSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -200,10 +198,10 @@ impl crate::runtime::suspension::SuspensionFrame for EvalReplaceAllUnheldSuspens
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceAllUnheldAfterRulesSuspensionFrameL118C58;
+struct ResumeReplaceAllUnheldAfterRulesSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceAllUnheldAfterRulesSuspensionFrameL118C58
+    for ResumeReplaceAllUnheldAfterRulesSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

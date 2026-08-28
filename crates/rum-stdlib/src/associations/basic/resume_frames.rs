@@ -2,7 +2,51 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationKeyEvaluationSuspensionFrameL56C25 {
+pub(super) struct ResumeAssociationKeyEvaluationSuspensionFrame {
+    pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
+        rum_runtime::kernel_api::AssociationEntryForm,
+    >,
+    pub(super) evaluated_entries:
+        crate::associations::suspended_state::PersistentAssociationSequence<
+            rum_runtime::kernel_api::AssociationEntryForm,
+        >,
+    pub(super) index: usize,
+    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeAssociationKeyEvaluationSuspensionFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut entries = self.entries.clone();
+        #[allow(unused_mut)]
+        let mut evaluated_entries = self.evaluated_entries.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut entry = self.entry.clone();
+        let resumed = match outcome {
+            Ok(key) => (|| {
+                resume_suspended_association_key_evaluation_with_key(
+                    session,
+                    entries,
+                    evaluated_entries,
+                    index,
+                    entry,
+                    key,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedAssociationKeyEvaluationSuspensionFrame {
     pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
@@ -15,7 +59,7 @@ pub(super) struct ResumeAssociationKeyEvaluationSuspensionFrameL56C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationKeyEvaluationSuspensionFrameL56C25
+    for ResumeSuspendedAssociationKeyEvaluationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -48,59 +92,13 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationKeyEvaluationSuspensionFrameL97C25 {
-    pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
-        rum_runtime::kernel_api::AssociationEntryForm,
-    >,
-    pub(super) evaluated_entries:
-        crate::associations::suspended_state::PersistentAssociationSequence<
-            rum_runtime::kernel_api::AssociationEntryForm,
-        >,
-    pub(super) index: usize,
-    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
-}
-
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationKeyEvaluationSuspensionFrameL97C25
-{
-    fn resume(
-        self: std::sync::Arc<Self>,
-        session: &mut Session,
-        outcome: Result<Expr, EvalError>,
-    ) -> rum_runtime::kernel_api::FrameAction {
-        #[allow(unused_mut)]
-        let mut entries = self.entries.clone();
-        #[allow(unused_mut)]
-        let mut evaluated_entries = self.evaluated_entries.clone();
-        #[allow(unused_mut)]
-        let mut index = self.index.clone();
-        #[allow(unused_mut)]
-        let mut entry = self.entry.clone();
-        let resumed = match outcome {
-            Ok(key) => (|| {
-                resume_suspended_association_key_evaluation_with_key(
-                    session,
-                    entries,
-                    evaluated_entries,
-                    index,
-                    entry,
-                    key,
-                )
-            })(),
-            Err(error) => Err(error),
-        };
-        rum_runtime::kernel_api::FrameAction::complete(resumed)
-    }
-}
-
-#[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalLookupSuspensionFrameL180C9 {
+pub(super) struct EvalLookupSuspensionFrame {
     pub(super) head: rum_core::Expr,
     pub(super) key: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalLookupSuspensionFrameL180C9 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalLookupSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -121,13 +119,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalLookupSuspensionFrameL180C
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalLookupWithEvaluatedDataSuspensionFrameL198C9 {
+pub(super) struct EvalLookupWithEvaluatedDataSuspensionFrame {
     pub(super) head: rum_core::Expr,
     pub(super) expr: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalLookupWithEvaluatedDataSuspensionFrameL198C9 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalLookupWithEvaluatedDataSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -148,14 +146,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalLookupWithEvaluatedDataSus
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct FinishEvalLookupSuspensionFrameL233C29 {
+pub(super) struct FinishEvalLookupSuspensionFrame {
     pub(super) lookup: crate::associations::suspended_state::FrozenAssociationValue<
         crate::associations::basic::PreparedLookup,
     >,
     pub(super) wrapper: std::option::Option<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for FinishEvalLookupSuspensionFrameL233C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for FinishEvalLookupSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -176,14 +174,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for FinishEvalLookupSuspensionFram
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct FinishPreparedLookupSuspensionFrameL271C29 {
+pub(super) struct FinishPreparedLookupSuspensionFrame {
     pub(super) lookup: crate::associations::suspended_state::FrozenAssociationValue<
         crate::associations::basic::PreparedLookup,
     >,
     pub(super) default: std::option::Option<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for FinishPreparedLookupSuspensionFrameL271C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for FinishPreparedLookupSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -207,16 +205,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for FinishPreparedLookupSuspension
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct FinishSuspendedPreparedLookupSuspensionFrameL306C29 {
+pub(super) struct FinishSuspendedPreparedLookupSuspensionFrame {
     pub(super) lookup: crate::associations::suspended_state::FrozenAssociationValue<
         crate::associations::basic::PreparedLookup,
     >,
     pub(super) default: std::option::Option<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for FinishSuspendedPreparedLookupSuspensionFrameL306C29
-{
+impl rum_runtime::kernel_api::SuspensionFrame for FinishSuspendedPreparedLookupSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

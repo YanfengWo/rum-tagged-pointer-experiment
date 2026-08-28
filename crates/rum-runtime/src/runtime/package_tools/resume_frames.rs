@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalOnceBuiltinSuspensionFrameL134C44 {
+pub(super) struct EvalOnceBuiltinSuspensionFrame {
     pub(super) cache_key: std::sync::Arc<std::string::String>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalOnceBuiltinSuspensionFrameL134C44 {
+impl crate::runtime::suspension::SuspensionFrame for EvalOnceBuiltinSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

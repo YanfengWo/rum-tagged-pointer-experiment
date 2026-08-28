@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchOptionalChoicesSuspensionFrameL149C44 {
+pub(super) struct MatchOptionalChoicesSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::optional_sequence::optional::SuspendedOptionalChoiceState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for MatchOptionalChoicesSuspensionFrameL149C44 {
+impl crate::runtime::suspension::SuspensionFrame for MatchOptionalChoicesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -70,11 +70,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueOptionalPresentFram
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectOptionalMatchesSuspensionFrameL254C44 {
+pub(super) struct CollectOptionalMatchesSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::optional_sequence::optional::SuspendedOptionalChoiceState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for CollectOptionalMatchesSuspensionFrameL254C44 {
+impl crate::runtime::suspension::SuspensionFrame for CollectOptionalMatchesSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -139,12 +139,12 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueOptionalPresentColl
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishOptionalPresentCollectionSuspensionFrameL293C44 {
+pub(super) struct FinishOptionalPresentCollectionSuspensionFrame {
     pub(super) present: crate::runtime::pattern_matching::suspended_state::PersistentMatchResults,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishOptionalPresentCollectionSuspensionFrameL293C44
+    for FinishOptionalPresentCollectionSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -178,11 +178,11 @@ impl crate::runtime::suspension::PureFrameFinalizer for FinishOptionalPresentCol
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveOptionalOmissionSuspensionFrameL370C44 {
+pub(super) struct ResolveOptionalOmissionSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::optional_sequence::optional::SuspendedOptionalOmissionState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResolveOptionalOmissionSuspensionFrameL370C44 {
+impl crate::runtime::suspension::SuspensionFrame for ResolveOptionalOmissionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -246,11 +246,11 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueOptionalDefaultFram
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishOptionalDefaultSuspensionFrameL411C44 {
+pub(super) struct FinishOptionalDefaultSuspensionFrame {
     pub(super) state: crate::runtime::pattern_matching::sequence::optional_sequence::optional::SuspendedOptionalOmissionState,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for FinishOptionalDefaultSuspensionFrameL411C44 {
+impl crate::runtime::suspension::SuspensionFrame for FinishOptionalDefaultSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

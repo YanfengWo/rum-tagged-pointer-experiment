@@ -249,7 +249,7 @@ fn resume_delete_missing_list_at_target_level(
                     suspend => {
                 let items = FrozenAssociationSequence::freeze(items);
                                     let kept = PersistentAssociationSequence::freeze(kept);
-                ResumeDeleteMissingListAtTargetLevelSuspensionFrameL244C21 { items, level, scan, index, kept }
+                ResumeDeleteMissingListAtTargetLevelSuspensionFrame1 { items, level, scan, index, kept }
                 },
                 )
             }
@@ -284,7 +284,7 @@ fn resume_delete_missing_list_at_target_level(
                     suspend => {
                 let items = FrozenAssociationSequence::freeze(items);
                                     let kept = PersistentAssociationSequence::freeze(kept);
-                ResumeDeleteMissingListAtTargetLevelSuspensionFrameL278C21 { items, level, scan, index, kept }
+                ResumeDeleteMissingListAtTargetLevelSuspensionFrame2 { items, level, scan, index, kept }
                 },
                 )
             }
@@ -380,7 +380,7 @@ fn resume_suspended_delete_missing_list_at_target_level(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrameL374C17 { items, level, scan, index, kept },
+                suspend => ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrame { items, level, scan, index, kept },
             )
         }
         Err(error) => Err(error),
@@ -454,7 +454,7 @@ fn resume_delete_missing_association_at_target_level(
                     suspend => {
                 let entries = FrozenAssociationSequence::freeze(entries);
                                     let kept = PersistentAssociationSequence::freeze(kept);
-                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL448C21 { entries, level, scan, index, kept, entry }
+                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame1 { entries, level, scan, index, kept, entry }
                 },
                 )
             }
@@ -509,7 +509,7 @@ fn resume_delete_missing_association_at_target_level(
                     suspend => {
                 let entries = FrozenAssociationSequence::freeze(entries);
                                     let kept = PersistentAssociationSequence::freeze(kept);
-                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL502C21 { entries, level, scan, index, kept, entry }
+                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame2 { entries, level, scan, index, kept, entry }
                 },
                 )
             }
@@ -545,7 +545,7 @@ fn resume_delete_missing_association_at_target_level(
                     suspend => {
                 let entries = FrozenAssociationSequence::freeze(entries);
                                     let kept = PersistentAssociationSequence::freeze(kept);
-                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL537C21 { entries, level, scan, index, kept, entry }
+                ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame3 { entries, level, scan, index, kept, entry }
                 },
                 )
             }
@@ -652,7 +652,7 @@ fn resume_suspended_delete_missing_association_at_target_level(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL644C21 { entries, level, scan, index, kept, entry },
+                    suspend => ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrame1 { entries, level, scan, index, kept, entry },
                 )
             }
             Err(error) => Err(error),
@@ -719,7 +719,7 @@ fn resume_suspended_delete_missing_association_at_target_level(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL712C17 { entries, level, scan, index, kept, entry },
+                suspend => ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrame2 { entries, level, scan, index, kept, entry },
             )
         }
         Err(error) => Err(error),

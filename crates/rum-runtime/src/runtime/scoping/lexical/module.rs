@@ -129,7 +129,7 @@ impl Session {
                     self,
                     result,
                     ok(value) => Ok(value),
-                    suspend => ResumeModuleInitializersSuspensionFrameL129C21 { activation_depth },
+                    suspend => ResumeModuleInitializersSuspensionFrame1 { activation_depth },
                 );
 
                 let result = match outcome {
@@ -169,7 +169,7 @@ impl Session {
                             activation_depth,
                             index,
                         };
-                        crate::resume_or_suspend!(insert self, ResumeModuleInitializersSuspensionFrameL169C52 { state });
+                        crate::resume_or_suspend!(insert self, ResumeModuleInitializersSuspensionFrame2 { state });
                         let result = Err(EvalError::InputRequired { request });
                         record_profile_runtime_path_timing(
                             runtime_profile_resume,
@@ -233,7 +233,7 @@ impl Session {
                     ok(value) => Ok(value),
                     suspend => {
                 let activation_depth = state.activation_depth;
-                ResumeSuspendedModuleInitializersSuspensionFrameL231C21 { activation_depth }
+                ResumeSuspendedModuleInitializersSuspensionFrame1 { activation_depth }
                 },
                 );
 
@@ -268,7 +268,7 @@ impl Session {
                 );
                 match init_result {
                     Err(EvalError::InputRequired { request }) => {
-                        crate::resume_or_suspend!(insert self, ResumeSuspendedModuleInitializersSuspensionFrameL265C52 { state });
+                        crate::resume_or_suspend!(insert self, ResumeSuspendedModuleInitializersSuspensionFrame2 { state });
                         let result = Err(EvalError::InputRequired { request });
                         record_profile_runtime_path_timing(
                             runtime_profile_resume,
@@ -393,13 +393,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeModuleInitializersSuspensionFrameL129C21 {
-    pub(super) activation_depth: usize,
+struct ResumeModuleInitializersSuspensionFrame1 {
+    activation_depth: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeModuleInitializersSuspensionFrameL129C21
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeModuleInitializersSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -413,13 +411,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeModuleInitializersSuspensionFrameL169C52 {
+struct ResumeModuleInitializersSuspensionFrame2 {
     pub(super) state: crate::runtime::scoping::lexical::module::SuspendedModuleInitializers,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeModuleInitializersSuspensionFrameL169C52
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeModuleInitializersSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -433,12 +429,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedModuleInitializersSuspensionFrameL231C21 {
-    pub(super) activation_depth: usize,
+struct ResumeSuspendedModuleInitializersSuspensionFrame1 {
+    activation_depth: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedModuleInitializersSuspensionFrameL231C21
+    for ResumeSuspendedModuleInitializersSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -453,12 +449,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeSuspendedModuleInitializersSuspensionFrameL265C52 {
+struct ResumeSuspendedModuleInitializersSuspensionFrame2 {
     pub(super) state: crate::runtime::scoping::lexical::module::SuspendedModuleInitializers,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedModuleInitializersSuspensionFrameL265C52
+    for ResumeSuspendedModuleInitializersSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,

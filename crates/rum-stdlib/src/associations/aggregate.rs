@@ -183,7 +183,7 @@ fn resume_counts_association_entries_from_index(
                     let entries = FrozenAssociationSequence::freeze(entries);
                                                 let values = PersistentAssociationSequence::freeze(values);
                                                 let spec_keys = spec_keys.map(FrozenAssociationSequence::freeze);
-                    ResumeCountsAssociationEntriesFromIndexSuspensionFrameL181C29 { entries, index, values, spec_keys }
+                    ResumeCountsAssociationEntriesFromIndexSuspensionFrame { entries, index, values, spec_keys }
                     },
                     );
                 }
@@ -221,7 +221,7 @@ fn resume_suspended_counts_association_entries_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedCountsAssociationEntriesFromIndexSuspensionFrameL222C29 { entries, index, values, spec_keys },
+                        suspend => ResumeSuspendedCountsAssociationEntriesFromIndexSuspensionFrame { entries, index, values, spec_keys },
                     );
                 }
                 Err(error) => return Err(error),
@@ -276,7 +276,7 @@ fn resume_catenate_direct_association_entries_from_index(
                         suspend => {
                     let entries = FrozenAssociationSequence::freeze(entries);
                                                 let values = PersistentAssociationSequence::freeze(values);
-                    ResumeCatenateDirectAssociationEntriesFromIndexSuspensionFrameL280C29 { call_args, entries, index, values }
+                    ResumeCatenateDirectAssociationEntriesFromIndexSuspensionFrame { call_args, entries, index, values }
                     },
                     );
                 }
@@ -311,7 +311,7 @@ fn resume_suspended_catenate_direct_association_entries_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedCatenateDirectAssociationEntriesFromIndexSuspensionFrameL318C29 { call_args, entries, index, values },
+                        suspend => ResumeSuspendedCatenateDirectAssociationEntriesFromIndexSuspensionFrame { call_args, entries, index, values },
                     );
                 }
                 Err(error) => return Err(error),
@@ -406,7 +406,7 @@ fn resume_catenate_steps_from_index(
                             let steps = FrozenAssociationSequence::freeze(steps);
                                                                 let flattened =
                                                                     PersistentAssociationSequence::freeze(flattened);
-                            ResumeCatenateStepsFromIndexSuspensionFrameL416C37 { call_args, steps, index, flattened }
+                            ResumeCatenateStepsFromIndexSuspensionFrame { call_args, steps, index, flattened }
                             },
                             );
                         }
@@ -458,7 +458,7 @@ fn resume_suspended_catenate_steps_from_index(
                                 session,
                                 Err(EvalError::InputRequired { request }),
                                 ok(value) => Ok(value),
-                                suspend => ResumeSuspendedCatenateStepsFromIndexSuspensionFrameL471C37 { call_args, steps, index, flattened },
+                                suspend => ResumeSuspendedCatenateStepsFromIndexSuspensionFrame { call_args, steps, index, flattened },
                             );
                         }
                         Err(error) => return Err(error),

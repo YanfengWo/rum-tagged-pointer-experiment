@@ -182,7 +182,7 @@ fn resume_and_from_index(
                         ok(value) => Ok(value),
                         suspend => {
                     let residual = PersistentLogicSequence::freeze(residual);
-                    ResumeAndFromIndexSuspensionFrameL180C29 { args, index, residual }
+                    ResumeAndFromIndexSuspensionFrame { args, index, residual }
                     },
                     );
                 }
@@ -219,7 +219,7 @@ fn resume_suspended_and_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedAndFromIndexSuspensionFrameL220C29 { args, index, residual },
+                        suspend => ResumeSuspendedAndFromIndexSuspensionFrame { args, index, residual },
                     );
                 }
                 Err(error) => return Err(error),
@@ -274,7 +274,7 @@ fn resume_or_from_index(
                         ok(value) => Ok(value),
                         suspend => {
                     let residual = PersistentLogicSequence::freeze(residual);
-                    ResumeOrFromIndexSuspensionFrameL278C29 { args, index, residual }
+                    ResumeOrFromIndexSuspensionFrame { args, index, residual }
                     },
                     );
                 }
@@ -311,7 +311,7 @@ fn resume_suspended_or_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedOrFromIndexSuspensionFrameL318C29 { args, index, residual },
+                        suspend => ResumeSuspendedOrFromIndexSuspensionFrame { args, index, residual },
                     );
                 }
                 Err(error) => return Err(error),
@@ -366,7 +366,7 @@ fn resume_nand_from_index(
                         ok(value) => Ok(value),
                         suspend => {
                     let residual = PersistentLogicSequence::freeze(residual);
-                    ResumeNandFromIndexSuspensionFrameL376C29 { args, index, residual }
+                    ResumeNandFromIndexSuspensionFrame { args, index, residual }
                     },
                     );
                 }
@@ -403,7 +403,7 @@ fn resume_suspended_nand_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedNandFromIndexSuspensionFrameL416C29 { args, index, residual },
+                        suspend => ResumeSuspendedNandFromIndexSuspensionFrame { args, index, residual },
                     );
                 }
                 Err(error) => return Err(error),
@@ -459,7 +459,7 @@ fn resume_nor_from_index(
                         ok(value) => Ok(value),
                         suspend => {
                     let residual = PersistentLogicSequence::freeze(residual);
-                    ResumeNorFromIndexSuspensionFrameL475C29 { args, index, residual }
+                    ResumeNorFromIndexSuspensionFrame { args, index, residual }
                     },
                     );
                 }
@@ -496,7 +496,7 @@ fn resume_suspended_nor_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedNorFromIndexSuspensionFrameL515C29 { args, index, residual },
+                        suspend => ResumeSuspendedNorFromIndexSuspensionFrame { args, index, residual },
                     );
                 }
                 Err(error) => return Err(error),

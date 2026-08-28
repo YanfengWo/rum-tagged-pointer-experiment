@@ -61,7 +61,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let symbol = std::sync::Arc::new(symbol.to_string());
-        EvalTimingLikeSuspensionFrameL60C13 { symbol, started }
+        EvalTimingLikeSuspensionFrame { symbol, started }
         },
         )?;
 
@@ -105,7 +105,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let suspended_state = state.clone();
-        ResumeRepeatedTimingFromSampleSuspensionFrameL99C13 { suspended_state, sample, best_elapsed, started }
+        ResumeRepeatedTimingFromSampleSuspensionFrame { suspended_state, sample, best_elapsed, started }
         },
         )?;
 
@@ -154,12 +154,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalTimingLikeSuspensionFrameL60C13 {
-    pub(super) symbol: std::sync::Arc<std::string::String>,
-    pub(super) started: std::time::Instant,
+struct EvalTimingLikeSuspensionFrame {
+    symbol: std::sync::Arc<std::string::String>,
+    started: std::time::Instant,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalTimingLikeSuspensionFrameL60C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalTimingLikeSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -178,16 +178,14 @@ impl crate::runtime::suspension::SuspensionFrame for EvalTimingLikeSuspensionFra
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeRepeatedTimingFromSampleSuspensionFrameL99C13 {
+struct ResumeRepeatedTimingFromSampleSuspensionFrame {
     pub(super) suspended_state: crate::runtime::debug_tools::timing::RepeatedTimingEvalState,
     pub(super) sample: usize,
     pub(super) best_elapsed: std::option::Option<std::time::Duration>,
     pub(super) started: std::time::Instant,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeRepeatedTimingFromSampleSuspensionFrameL99C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeRepeatedTimingFromSampleSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -79,7 +79,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let heads_option_exprs = SharedArgs::new(heads_option_exprs);
                 let args = args.clone();
-                crate::resume_or_suspend!(insert self, EvalReplaceSuspensionFrameL62C44 { args, levels_expr, heads_option_exprs });
+                crate::resume_or_suspend!(insert self, EvalReplaceSuspensionFrame { args, levels_expr, heads_option_exprs });
                 crate::resume_or_suspend!(insert self, ContinueReplaceSetupFrame { rule_plan: None });
                 Err(EvalError::InputRequired { request })
             }
@@ -143,7 +143,7 @@ impl Session {
                 let next = ContinueReplaceSetupFrame {
                     rule_plan: Some(rule_plan.clone()),
                 };
-                crate::resume_or_suspend!(insert self, ResumeReplaceAfterRuleExprsSuspensionFrameL130C44 { target, rule_plan, levels_expr, call_args });
+                crate::resume_or_suspend!(insert self, ResumeReplaceAfterRuleExprsSuspensionFrame { target, rule_plan, levels_expr, call_args });
                 crate::resume_or_suspend!(insert self, next);
                 Err(EvalError::InputRequired { request })
             }
@@ -181,7 +181,7 @@ impl Session {
                 let next = ContinueReplaceSetupFrame {
                     rule_plan: Some(rule_plan.clone()),
                 };
-                crate::resume_or_suspend!(insert self, FinishReplaceHeadsResolutionSuspensionFrameL173C44 { target, rule_plan, call_args, include_heads });
+                crate::resume_or_suspend!(insert self, FinishReplaceHeadsResolutionSuspensionFrame { target, rule_plan, call_args, include_heads });
                 crate::resume_or_suspend!(insert self, next);
                 Err(EvalError::InputRequired { request })
             }
@@ -214,10 +214,10 @@ impl Session {
             session,
             evaluated_result,
             ok(value) => Ok(value),
-            suspend => FinishReplaceLevelsResolutionSuspensionFrameL207C66,
+            suspend => FinishReplaceLevelsResolutionSuspensionFrame2,
         )
                 })() },
-            suspend => FinishReplaceLevelsResolutionSuspensionFrameL205C52,
+            suspend => FinishReplaceLevelsResolutionSuspensionFrame1,
         )
     }
 
@@ -244,7 +244,7 @@ impl Session {
                     }
                     Ok(Some(bool_expr(include_heads)))
                 })() },
-            suspend => ResolveReplaceHeadsOptionsOwnedSuspensionFrameL221C52 { default },
+            suspend => ResolveReplaceHeadsOptionsOwnedSuspensionFrame { default },
         )
     }
 
@@ -263,7 +263,7 @@ impl Session {
             ok(resolved_expr) => { let resolved = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(resolved_expr); (|| {
                     Ok(parse_standard_level_spec(&resolved))
                 })() },
-            suspend => ResolveReplaceLevelSpecOwnedSuspensionFrameL242C53,
+            suspend => ResolveReplaceLevelSpecOwnedSuspensionFrame,
         )
     }
 
@@ -311,7 +311,7 @@ impl Session {
                                 )
                             }
                         })() },
-                suspend => ReplaceOwnedSuspensionFrameL266C63 { include_heads, expr, rule_plan, levels, level },
+                suspend => ReplaceOwnedSuspensionFrame { include_heads, expr, rule_plan, levels, level },
             );
         }
 
@@ -359,7 +359,7 @@ impl Session {
                         ),
                         Err(EvalError::InputRequired { request }) => {
                             let args = FrozenRewriteQueue::freeze(args);
-                            crate::resume_or_suspend!(insert self, ReplaceChildrenOwnedSuspensionFrameL334C56 { args, rule_plan, levels, child_level, include_heads });
+                            crate::resume_or_suspend!(insert self, ReplaceChildrenOwnedSuspensionFrame1 { args, rule_plan, levels, child_level, include_heads });
                             Err(EvalError::InputRequired { request })
                         }
                         Err(error) => Err(error),
@@ -407,7 +407,7 @@ impl Session {
                         ),
                         Err(EvalError::InputRequired { request }) => {
                             let args = FrozenRewriteQueue::freeze(args);
-                            crate::resume_or_suspend!(insert self, ReplaceChildrenOwnedSuspensionFrameL394C56 { args, rule_plan, levels, child_level, include_heads });
+                            crate::resume_or_suspend!(insert self, ReplaceChildrenOwnedSuspensionFrame2 { args, rule_plan, levels, child_level, include_heads });
                             Err(EvalError::InputRequired { request })
                         }
                         Err(error) => Err(error),
@@ -504,7 +504,7 @@ impl Session {
                         max_child_depth,
                         changed,
                     };
-                    crate::resume_or_suspend!(insert self, ReplaceCallChildrenOwnedSuspensionFrameL503C48 { state });
+                    crate::resume_or_suspend!(insert self, ReplaceCallChildrenOwnedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -587,7 +587,7 @@ impl Session {
                         max_child_depth,
                         changed,
                     };
-                    crate::resume_or_suspend!(insert self, ReplaceAssociationChildrenOwnedSuspensionFrameL591C48 { state });
+                    crate::resume_or_suspend!(insert self, ReplaceAssociationChildrenOwnedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -685,7 +685,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, DriveSuspendedReplaceCallChildrenSuspensionFrameL693C48 { state });
+                    crate::resume_or_suspend!(insert self, DriveSuspendedReplaceCallChildrenSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -782,7 +782,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, DriveSuspendedReplaceAssociationChildrenSuspensionFrameL794C48 { state });
+                    crate::resume_or_suspend!(insert self, DriveSuspendedReplaceAssociationChildrenSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

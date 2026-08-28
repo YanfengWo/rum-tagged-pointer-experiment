@@ -75,7 +75,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        ResumeDoAfterSpecEvalSuspensionFrameL77C13 { args, spec_index }
+        ResumeDoAfterSpecEvalSuspensionFrame { args, spec_index }
         },
         )?;
 
@@ -139,7 +139,7 @@ impl Session {
                         spec: spec.into(),
                         iteration,
                     };
-                    crate::resume_or_suspend!(insert self, ResumeDoIterationsSuspensionFrameL140C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeDoIterationsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -190,7 +190,7 @@ impl Session {
                 Ok(_) | Err(EvalError::Continue) => state.iteration += 1,
                 Err(EvalError::Break) => return Ok(system_expr("Null")),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedDoIterationsSuspensionFrameL193C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedDoIterationsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -210,7 +210,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        ResumeTableAfterSpecEvalSuspensionFrameL211C13 { args, spec_index }
+        ResumeTableAfterSpecEvalSuspensionFrame { args, spec_index }
         },
         )?;
 
@@ -299,7 +299,7 @@ impl Session {
                         iteration,
                         collected: PersistentExprAccumulator::freeze(collected),
                     };
-                    crate::resume_or_suspend!(insert self, ResumeTableIterationsSuspensionFrameL299C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeTableIterationsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -358,7 +358,7 @@ impl Session {
                     state.iteration += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedTableIterationsSuspensionFrameL360C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedTableIterationsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -387,7 +387,7 @@ impl Session {
             suspend => {
         let saved_state =
                         SuspendedLoopIteratorSymbolState::freeze(std::mem::take(&mut saved_state));
-        EvaluateLoopIteratorBodySuspensionFrameL387C13 { symbol, saved_state }
+        EvaluateLoopIteratorBodySuspensionFrame { symbol, saved_state }
         },
         );
 
@@ -412,7 +412,7 @@ impl Session {
             self,
             body_result,
             ok(value) => Ok(value),
-            suspend => EvaluateLoopIteratorBodyWithDynamicValueSuspensionFrameL407C13 { symbol, dynamic_depth },
+            suspend => EvaluateLoopIteratorBodyWithDynamicValueSuspensionFrame { symbol, dynamic_depth },
         );
 
         match outcome {

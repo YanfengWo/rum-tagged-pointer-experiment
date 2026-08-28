@@ -163,7 +163,7 @@ fn resume_select_from_index(
                     suspend => {
                 let source = SuspendedSelectSource::freeze(source);
                                         let selected = PersistentFunctionalSequence::freeze(selected);
-                ResumeSelectFromIndexSuspensionFrameL161C25 { source, criterion, limit, index, selected }
+                ResumeSelectFromIndexSuspensionFrame { source, criterion, limit, index, selected }
                 },
                 );
             }
@@ -204,7 +204,7 @@ fn resume_suspended_select_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedSelectFromIndexSuspensionFrameL205C25 { source, criterion, limit, index, selected },
+                    suspend => ResumeSuspendedSelectFromIndexSuspensionFrame { source, criterion, limit, index, selected },
                 );
             }
             Err(error) => return Err(error),
@@ -298,7 +298,7 @@ fn resume_select_first_from_index(
                     ok(value) => Ok(value),
                     suspend => {
                 let source = SuspendedSelectSource::freeze(source);
-                ResumeSelectFirstFromIndexSuspensionFrameL302C25 { source, criterion, default, index }
+                ResumeSelectFirstFromIndexSuspensionFrame { source, criterion, default, index }
                 },
                 );
             }
@@ -340,7 +340,7 @@ fn resume_suspended_select_first_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedSelectFirstFromIndexSuspensionFrameL347C25 { source, criterion, default, index },
+                    suspend => ResumeSuspendedSelectFirstFromIndexSuspensionFrame { source, criterion, default, index },
                 );
             }
             Err(error) => return Err(error),

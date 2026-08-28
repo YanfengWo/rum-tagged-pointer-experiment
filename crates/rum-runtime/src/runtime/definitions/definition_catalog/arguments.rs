@@ -91,7 +91,7 @@ impl Session {
                         cursor,
                         resolved: ResolvedArgumentAccumulator::freeze(resolved),
                     };
-                    crate::resume_or_suspend!(insert self, ResolveArgumentExprsFromCursorSuspensionFrameL94C48 { suspended });
+                    crate::resume_or_suspend!(insert self, ResolveArgumentExprsFromCursorSuspensionFrame { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -121,7 +121,7 @@ impl Session {
                         cursor,
                         resolved: ResolvedArgumentAccumulator::freeze(resolved),
                     };
-                    crate::resume_or_suspend!(insert self, ResolveArgumentExprsFromCursorSuspensionFrameL94C48 { suspended });
+                    crate::resume_or_suspend!(insert self, ResolveArgumentExprsFromCursorSuspensionFrame { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -148,7 +148,7 @@ impl Session {
                     state.cursor += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedArgumentResolutionSuspensionFrameL126C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedArgumentResolutionSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -165,14 +165,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResolveArgumentExprsFromCursorSuspensionFrameL94C48 {
+struct ResolveArgumentExprsFromCursorSuspensionFrame {
     pub(super) suspended:
         crate::runtime::definitions::definition_catalog::arguments::SuspendedArgumentResolution,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResolveArgumentExprsFromCursorSuspensionFrameL94C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResolveArgumentExprsFromCursorSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -194,13 +192,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct ResumeSuspendedArgumentResolutionSuspensionFrameL126C48 {
+struct ResumeSuspendedArgumentResolutionSuspensionFrame {
     pub(super) state:
         crate::runtime::definitions::definition_catalog::arguments::SuspendedArgumentResolution,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedArgumentResolutionSuspensionFrameL126C48
+    for ResumeSuspendedArgumentResolutionSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

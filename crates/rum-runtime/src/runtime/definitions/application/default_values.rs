@@ -195,7 +195,7 @@ impl Session {
         state: SuspendedExactDefaultValueScan,
         request: RuntimeInputRequest,
     ) -> Result<Option<Expr>, EvalError> {
-        crate::resume_or_suspend!(insert self, EvaluateFirstExactDefaultValueFromCursorSuspensionFrameL161C48 { state });
+        crate::resume_or_suspend!(insert self, EvaluateFirstExactDefaultValueFromCursorSuspensionFrame { state });
         Err(EvalError::InputRequired { request })
     }
 
@@ -268,13 +268,13 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct EvaluateFirstExactDefaultValueFromCursorSuspensionFrameL161C48 {
+struct EvaluateFirstExactDefaultValueFromCursorSuspensionFrame {
     pub(super) state:
         crate::runtime::definitions::application::default_values::SuspendedExactDefaultValueScan,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateFirstExactDefaultValueFromCursorSuspensionFrameL161C48
+    for EvaluateFirstExactDefaultValueFromCursorSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

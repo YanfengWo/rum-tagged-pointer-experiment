@@ -2,10 +2,10 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FailureVirtualStyledMessageValueSuspensionFrameL201C44;
+pub(super) struct FailureVirtualStyledMessageValueSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FailureVirtualStyledMessageValueSuspensionFrameL201C44
+    for FailureVirtualStyledMessageValueSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -21,14 +21,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FailureMessageFromTemplateSuspensionFrameL232C17 {
+pub(super) struct FailureMessageFromTemplateSuspensionFrame {
     pub(super) status: rum_core::Expr,
     pub(super) template: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FailureMessageFromTemplateSuspensionFrameL232C17
-{
+impl crate::runtime::suspension::SuspensionFrame for FailureMessageFromTemplateSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -50,10 +48,10 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishFailureMessageFromTemplateSuspensionFrameL270C64;
+pub(super) struct FinishFailureMessageFromTemplateSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishFailureMessageFromTemplateSuspensionFrameL270C64
+    for FinishFailureMessageFromTemplateSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

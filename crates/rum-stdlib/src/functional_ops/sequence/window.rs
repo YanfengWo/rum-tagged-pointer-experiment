@@ -232,7 +232,7 @@ fn resume_while_sequence_from_index(
                     ok(value) => Ok(value),
                     suspend => {
                 let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
-                ResumeWhileSequenceFromIndexSuspensionFrameL230C25 { sequence, criterion, index, mode }
+                ResumeWhileSequenceFromIndexSuspensionFrame { sequence, criterion, index, mode }
                 },
                 );
             }
@@ -268,7 +268,7 @@ fn resume_suspended_while_sequence_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedWhileSequenceFromIndexSuspensionFrameL269C25 { sequence, criterion, index, mode },
+                    suspend => ResumeSuspendedWhileSequenceFromIndexSuspensionFrame { sequence, criterion, index, mode },
                 );
             }
             Err(error) => return Err(error),
@@ -321,7 +321,7 @@ fn resume_accumulate_from_index(
                     suspend => {
                 let sequence = SuspendedSequenceLikeExpr::freeze(sequence);
                                         let accumulated = PersistentFunctionalSequence::freeze(accumulated);
-                ResumeAccumulateFromIndexSuspensionFrameL325C25 { sequence, index, accumulated }
+                ResumeAccumulateFromIndexSuspensionFrame { sequence, index, accumulated }
                 },
                 );
             }
@@ -356,7 +356,7 @@ fn resume_suspended_accumulate_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAccumulateFromIndexSuspensionFrameL367C25 { sequence, index, accumulated },
+                    suspend => ResumeSuspendedAccumulateFromIndexSuspensionFrame { sequence, index, accumulated },
                 );
             }
             Err(error) => return Err(error),
@@ -404,7 +404,7 @@ fn resume_block_map_from_index(
                     suspend => {
                 let state = SuspendedBlockMapEvalState::freeze(state);
                                         let results = PersistentFunctionalSequence::freeze(results);
-                ResumeBlockMapFromIndexSuspensionFrameL422C25 { state, index, results }
+                ResumeBlockMapFromIndexSuspensionFrame { state, index, results }
                 },
                 );
             }
@@ -438,7 +438,7 @@ fn resume_suspended_block_map_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedBlockMapFromIndexSuspensionFrameL459C25 { state, index, results },
+                    suspend => ResumeSuspendedBlockMapFromIndexSuspensionFrame { state, index, results },
                 );
             }
             Err(error) => return Err(error),

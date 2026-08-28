@@ -2,7 +2,37 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeTensorCallbackFromIndexSuspensionFrameL292C25 {
+pub(super) struct ResumeTensorCallbackFromIndexSuspensionFrame {
+    pub(super) state: crate::functional_ops::arrays::tensor::SuspendedTensorCallbackEvalState,
+    pub(super) index: usize,
+    pub(super) outputs:
+        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeTensorCallbackFromIndexSuspensionFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut state = self.state.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut outputs = self.outputs.clone();
+        let resumed = match outcome {
+            Ok(value) => (|| {
+                resume_suspended_tensor_callback_with_value(session, state, index, outputs, value)
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+pub(super) struct ResumeSuspendedTensorCallbackFromIndexSuspensionFrame {
     pub(super) state: crate::functional_ops::arrays::tensor::SuspendedTensorCallbackEvalState,
     pub(super) index: usize,
     pub(super) outputs:
@@ -10,7 +40,7 @@ pub(super) struct ResumeTensorCallbackFromIndexSuspensionFrameL292C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeTensorCallbackFromIndexSuspensionFrameL292C25
+    for ResumeSuspendedTensorCallbackFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -34,39 +64,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedTensorCallbackFromIndexSuspensionFrameL329C25 {
-    pub(super) state: crate::functional_ops::arrays::tensor::SuspendedTensorCallbackEvalState,
-    pub(super) index: usize,
-    pub(super) outputs:
-        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
-}
-
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedTensorCallbackFromIndexSuspensionFrameL329C25
-{
-    fn resume(
-        self: std::sync::Arc<Self>,
-        session: &mut Session,
-        outcome: Result<Expr, EvalError>,
-    ) -> rum_runtime::kernel_api::FrameAction {
-        #[allow(unused_mut)]
-        let mut state = self.state.clone();
-        #[allow(unused_mut)]
-        let mut index = self.index.clone();
-        #[allow(unused_mut)]
-        let mut outputs = self.outputs.clone();
-        let resumed = match outcome {
-            Ok(value) => (|| {
-                resume_suspended_tensor_callback_with_value(session, state, index, outputs, value)
-            })(),
-            Err(error) => Err(error),
-        };
-        rum_runtime::kernel_api::FrameAction::complete(resumed)
-    }
-}
-
-#[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeInnerFromIndicesSuspensionFrameL426C29 {
+pub(super) struct ResumeInnerFromIndicesSuspensionFrame1 {
     pub(super) state: crate::functional_ops::arrays::tensor::SuspendedInnerEvalState,
     pub(super) output_index: usize,
     pub(super) contract_index: usize,
@@ -76,7 +74,7 @@ pub(super) struct ResumeInnerFromIndicesSuspensionFrameL426C29 {
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeInnerFromIndicesSuspensionFrameL426C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeInnerFromIndicesSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -111,14 +109,14 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeInnerFromIndicesSuspensi
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeInnerFromIndicesSuspensionFrameL455C25 {
+pub(super) struct ResumeInnerFromIndicesSuspensionFrame2 {
     pub(super) state: crate::functional_ops::arrays::tensor::SuspendedInnerEvalState,
     pub(super) output_index: usize,
     pub(super) output_scalars:
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeInnerFromIndicesSuspensionFrameL455C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeInnerFromIndicesSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -147,7 +145,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeInnerFromIndicesSuspensi
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedInnerFromIndicesSuspensionFrameL540C29 {
+pub(super) struct ResumeSuspendedInnerFromIndicesSuspensionFrame1 {
     pub(super) state: crate::functional_ops::arrays::tensor::SuspendedInnerEvalState,
     pub(super) output_index: usize,
     pub(super) contract_index: usize,
@@ -157,9 +155,7 @@ pub(super) struct ResumeSuspendedInnerFromIndicesSuspensionFrameL540C29 {
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedInnerFromIndicesSuspensionFrameL540C29
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedInnerFromIndicesSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -194,16 +190,14 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedInnerFromIndicesSuspensionFrameL567C25 {
+pub(super) struct ResumeSuspendedInnerFromIndicesSuspensionFrame2 {
     pub(super) state: crate::functional_ops::arrays::tensor::SuspendedInnerEvalState,
     pub(super) output_index: usize,
     pub(super) output_scalars:
         crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedInnerFromIndicesSuspensionFrameL567C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedInnerFromIndicesSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

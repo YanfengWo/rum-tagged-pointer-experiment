@@ -123,7 +123,7 @@ impl Session {
         request: RuntimeInputRequest,
     ) -> Result<CompiledMatchOutcome, EvalError> {
         let guards = SharedArgs::new(guards.into_vec());
-        crate::resume_or_suspend!(insert self, MatchCompiledDefinitionConditionOwnedSuspensionFrameL109C44 { guards, option_scope });
+        crate::resume_or_suspend!(insert self, MatchCompiledDefinitionConditionOwnedSuspensionFrame { guards, option_scope });
         Err(EvalError::InputRequired { request })
     }
 
@@ -245,7 +245,7 @@ impl Session {
             option_scope,
             index,
         };
-        crate::resume_or_suspend!(insert self, EvaluateOwnedGuardsSuspensionFrameL251C44 { state });
+        crate::resume_or_suspend!(insert self, EvaluateOwnedGuardsSuspensionFrame { state });
         Err(EvalError::InputRequired { request })
     }
 
@@ -281,7 +281,7 @@ impl Session {
         match guard_result {
             Ok(result) => self.resume_suspended_guard_deferred(state, result),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, EvaluateOwnedGuardsSuspensionFrameL251C44 { state });
+                crate::resume_or_suspend!(insert self, EvaluateOwnedGuardsSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -305,7 +305,7 @@ impl Session {
             }
             Ok(_) => Ok(false),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, EvaluateReadonlySuspendedGuardsSuspensionFrameL318C44 { state });
+                crate::resume_or_suspend!(insert self, EvaluateReadonlySuspendedGuardsSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -395,7 +395,7 @@ pub fn evaluate_definition_rhs_guards_for_match(
         session,
         guard_result,
         ok(outcome) => { (|| { Ok(outcome.matched) })() },
-        suspend => EvaluateDefinitionRhsGuardsForMatchSuspensionFrameL450C48,
+        suspend => EvaluateDefinitionRhsGuardsForMatchSuspensionFrame,
     )
 }
 #[cfg(test)]

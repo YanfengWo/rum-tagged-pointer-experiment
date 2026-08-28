@@ -164,7 +164,7 @@ fn resume_key_sort_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeKeySortByFromIndexSuspensionFrameL150C25 {
+                    suspend => ResumeKeySortByFromIndexSuspensionFrame {
                         state: SuspendedKeySortByState {
                             function,
                             entries: FrozenAssociationSequence::freeze(entries),
@@ -214,7 +214,7 @@ fn resume_suspended_key_sort_by_from_index(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeKeySortByFromIndexSuspensionFrameL150C25 { state, entry },
+                        suspend => ResumeKeySortByFromIndexSuspensionFrame { state, entry },
                     );
                 }
                 Err(error) => return Err(error),
@@ -247,7 +247,7 @@ fn resume_key_sort_by_ordering(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeKeySortByOrderingSuspensionFrameL201C29 {
+                        suspend => ResumeKeySortByOrderingSuspensionFrame {
                             state: SuspendedKeySortByOrderingState {
                                 function: state.function,
                                 ordering: state.ordering,
@@ -294,7 +294,7 @@ fn resume_suspended_key_sort_by_ordering(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeKeySortByOrderingSuspensionFrameL201C29 { state, entry },
+                        suspend => ResumeKeySortByOrderingSuspensionFrame { state, entry },
                     );
                 }
                 Err(error) => return Err(error),
@@ -336,12 +336,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeKeySortByFromIndexSuspensionFrameL150C25 {
-    pub(super) state: crate::associations::resumable::key_sort::SuspendedKeySortByState,
-    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+struct ResumeKeySortByFromIndexSuspensionFrame {
+    state: crate::associations::resumable::key_sort::SuspendedKeySortByState,
+    entry: rum_runtime::kernel_api::AssociationEntryForm,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByFromIndexSuspensionFrameL150C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -362,12 +362,12 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByFromIndexSuspen
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeKeySortByOrderingSuspensionFrameL201C29 {
-    pub(super) state: crate::associations::resumable::key_sort::SuspendedKeySortByOrderingState,
-    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+struct ResumeKeySortByOrderingSuspensionFrame {
+    state: crate::associations::resumable::key_sort::SuspendedKeySortByOrderingState,
+    entry: rum_runtime::kernel_api::AssociationEntryForm,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByOrderingSuspensionFrameL201C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySortByOrderingSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -53,7 +53,7 @@ impl Session {
             suspend => {
         let targets = Arc::<[Symbol]>::from(std::mem::take(&mut targets));
                     let args = args.clone();
-        EvalSetOptionsSuspensionFrameL52C13 { targets, preserve_target_list_shape, args }
+        EvalSetOptionsSuspensionFrame { targets, preserve_target_list_shape, args }
         },
         )?;
 
@@ -142,7 +142,7 @@ impl Session {
                                             .expect("option query is frozen only after input suspension"),
                                     );
                                     let args = args.clone();
-                EvalOptionValueSuspensionFrameL143C21 { target, query, args }
+                EvalOptionValueSuspensionFrame { target, query, args }
                 },
                 )?;
 
@@ -411,13 +411,13 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalSetOptionsSuspensionFrameL52C13 {
-    pub(super) targets: std::sync::Arc<[rum_core::Symbol]>,
-    pub(super) preserve_target_list_shape: bool,
-    pub(super) args: rum_core::SharedArgs,
+struct EvalSetOptionsSuspensionFrame {
+    targets: std::sync::Arc<[rum_core::Symbol]>,
+    preserve_target_list_shape: bool,
+    args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalSetOptionsSuspensionFrameL52C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalSetOptionsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -445,13 +445,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalSetOptionsSuspensionFra
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-struct EvalOptionValueSuspensionFrameL143C21 {
+struct EvalOptionValueSuspensionFrame {
     pub(super) target: rum_core::Symbol,
     pub(super) query: std::sync::Arc<crate::runtime::options::builtins::OptionValueQuery>,
     pub(super) args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalOptionValueSuspensionFrameL143C21 {
+impl crate::runtime::suspension::SuspensionFrame for EvalOptionValueSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

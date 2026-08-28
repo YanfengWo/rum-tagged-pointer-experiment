@@ -464,7 +464,7 @@ pub(crate) fn eval_to_expression(
         session,
         evaluated,
         ok(value) => Ok(value),
-        suspend => EvalToExpressionSuspensionFrameL460C63,
+        suspend => EvalToExpressionSuspensionFrame1,
     )?;
 
     if let Some(wrapper) = args.get(2) {
@@ -474,7 +474,7 @@ pub(crate) fn eval_to_expression(
             session,
             wrapped_result,
             ok(value) => Ok(value),
-            suspend => EvalToExpressionSuspensionFrameL465C67,
+            suspend => EvalToExpressionSuspensionFrame2,
         );
     }
 

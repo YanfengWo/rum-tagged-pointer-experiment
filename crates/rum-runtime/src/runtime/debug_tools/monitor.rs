@@ -54,7 +54,7 @@ impl Session {
             self,
             body_result,
             ok(value) => Ok(value),
-            suspend => EvalMonitorSuspensionFrameL53C13,
+            suspend => EvalMonitorSuspensionFrame,
         );
 
         match outcome {
@@ -150,9 +150,9 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalMonitorSuspensionFrameL53C13;
+struct EvalMonitorSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for EvalMonitorSuspensionFrameL53C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalMonitorSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

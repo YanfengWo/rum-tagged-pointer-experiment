@@ -19,7 +19,7 @@ impl Session {
         let parent_budget = self.iteration_product_budget.get();
         match evaluate(self) {
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, WithIterationProductScopeSuspensionFrameL22C44 { parent_budget });
+                crate::resume_or_suspend!(insert self, WithIterationProductScopeSuspensionFrame { parent_budget });
                 Err(EvalError::InputRequired { request })
             }
             outcome => {
@@ -149,13 +149,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct WithIterationProductScopeSuspensionFrameL22C44 {
-    pub(super) parent_budget: (usize, u8),
+struct WithIterationProductScopeSuspensionFrame {
+    parent_budget: (usize, u8),
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for WithIterationProductScopeSuspensionFrameL22C44
-{
+impl crate::runtime::suspension::SuspensionFrame for WithIterationProductScopeSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

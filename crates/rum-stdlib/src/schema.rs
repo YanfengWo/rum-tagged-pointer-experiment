@@ -68,7 +68,7 @@ pub(crate) fn eval_schema_errors(
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalSchemaErrorsSuspensionFrameL66C13 { args }
+        EvalSchemaErrorsSuspensionFrame { args }
         },
         )?;
         return eval_schema_errors_with_value(session, value, &args_slice[1..]);
@@ -119,7 +119,7 @@ pub(crate) fn eval_conform_schema(
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        EvalConformSchemaSuspensionFrameL112C13 { args }
+        EvalConformSchemaSuspensionFrame { args }
         },
         )?;
         return eval_conform_schema_with_value(session, value, &args_slice[1..]);
@@ -582,11 +582,11 @@ fn empty_path_label(path: &str) -> &str {
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalSchemaErrorsSuspensionFrameL66C13 {
-    pub(super) args: rum_core::SharedArgs,
+struct EvalSchemaErrorsSuspensionFrame {
+    args: rum_core::SharedArgs,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalSchemaErrorsSuspensionFrameL66C13 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalSchemaErrorsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -603,11 +603,11 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvalSchemaErrorsSuspensionFram
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvalConformSchemaSuspensionFrameL112C13 {
-    pub(super) args: rum_core::SharedArgs,
+struct EvalConformSchemaSuspensionFrame {
+    args: rum_core::SharedArgs,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvalConformSchemaSuspensionFrameL112C13 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvalConformSchemaSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

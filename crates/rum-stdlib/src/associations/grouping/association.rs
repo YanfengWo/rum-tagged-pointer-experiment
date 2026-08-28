@@ -67,7 +67,7 @@ fn resume_association_group_by_from_index_with_groups(
                 let specs = FrozenAssociationSequence::freeze(specs);
                                         let entries = FrozenAssociationSequence::freeze(entries);
                                         let grouped = PersistentAssociationGroups::freeze(grouped);
-                ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL65C25 { head, call_args, specs, spec_index, reducer, entries, index, grouped, entry }
+                ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrame1 { head, call_args, specs, spec_index, reducer, entries, index, grouped, entry }
                 },
                 );
             }
@@ -90,7 +90,7 @@ fn resume_association_group_by_from_index_with_groups(
                         let specs = FrozenAssociationSequence::freeze(specs);
                                                         let entries = FrozenAssociationSequence::freeze(entries);
                                                         let grouped = PersistentAssociationGroups::freeze(grouped);
-                        ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL91C33 { entry__key: entry.key, entry__delayed: entry.delayed, head, call_args, specs, spec_index, reducer, entries, index, grouped, key }
+                        ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrame2 { entry_key: entry.key, entry_delayed: entry.delayed, head, call_args, specs, spec_index, reducer, entries, index, grouped, key }
                         },
                         );
                     }
@@ -144,7 +144,7 @@ fn resume_suspended_association_group_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL159C25 { head, call_args, specs, spec_index, reducer, entries, index, grouped, entry },
+                    suspend => ResumeSuspendedAssociationGroupByFromIndexSuspensionFrame1 { head, call_args, specs, spec_index, reducer, entries, index, grouped, entry },
                 );
             }
             Err(error) => return Err(error),
@@ -162,7 +162,7 @@ fn resume_suspended_association_group_by_from_index(
                             session,
                             Err(EvalError::InputRequired { request }),
                             ok(value) => Ok(value),
-                            suspend => ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL182C33 { entry__key: entry.key, entry__delayed: entry.delayed, head, call_args, specs, spec_index, reducer, entries, index, grouped, key },
+                            suspend => ResumeSuspendedAssociationGroupByFromIndexSuspensionFrame2 { entry_key: entry.key, entry_delayed: entry.delayed, head, call_args, specs, spec_index, reducer, entries, index, grouped, key },
                         );
                     }
                     Err(error) => return Err(error),
@@ -208,7 +208,7 @@ fn resume_suspended_association_group_by_with_key(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeSuspendedAssociationGroupByWithKeySuspensionFrameL243C21 { entry__key: entry.key, entry__delayed: entry.delayed, head, call_args, specs, spec_index, reducer, entries, index, grouped, key },
+                suspend => ResumeSuspendedAssociationGroupByWithKeySuspensionFrame { entry_key: entry.key, entry_delayed: entry.delayed, head, call_args, specs, spec_index, reducer, entries, index, grouped, key },
             );
         }
         Err(error) => return Err(error),
@@ -352,7 +352,7 @@ fn resume_association_group_by_nested_from_index(
                 let specs = FrozenAssociationSequence::freeze(specs);
                                         let grouped = FrozenAssociationSequence::freeze(grouped);
                                         let nested = PersistentAssociationSequence::freeze(nested);
-                ResumeAssociationGroupByNestedFromIndexSuspensionFrameL401C25 { head, call_args, specs, spec_index, reducer, grouped, index, nested, key }
+                ResumeAssociationGroupByNestedFromIndexSuspensionFrame { head, call_args, specs, spec_index, reducer, grouped, index, nested, key }
                 },
                 );
             }
@@ -399,7 +399,7 @@ fn resume_suspended_association_group_by_nested_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFrameL452C25 { head, call_args, specs, spec_index, reducer, grouped, index, nested, key },
+                    suspend => ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFrame { head, call_args, specs, spec_index, reducer, grouped, index, nested, key },
                 );
             }
             Err(error) => return Err(error),
@@ -464,7 +464,7 @@ fn resume_association_group_by_reduce_from_index(
                     suspend => {
                 let grouped = FrozenAssociationSequence::freeze(grouped);
                                         let reduced = PersistentAssociationSequence::freeze(reduced);
-                ResumeAssociationGroupByReduceFromIndexSuspensionFrameL521C25 { head, call_args, reducer, grouped, index, reduced, key }
+                ResumeAssociationGroupByReduceFromIndexSuspensionFrame { head, call_args, reducer, grouped, index, reduced, key }
                 },
                 );
             }
@@ -499,7 +499,7 @@ fn resume_suspended_association_group_by_reduce_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFrameL560C25 { head, call_args, reducer, grouped, index, reduced, key },
+                    suspend => ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFrame { head, call_args, reducer, grouped, index, reduced, key },
                 );
             }
             Err(error) => return Err(error),

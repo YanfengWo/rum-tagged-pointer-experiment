@@ -2,13 +2,13 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAndFromIndexSuspensionFrameL180C29 {
+pub(super) struct ResumeAndFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeAndFromIndexSuspensionFrameL180C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeAndFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -31,15 +31,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeAndFromIndexSuspensionFr
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAndFromIndexSuspensionFrameL220C29 {
+pub(super) struct ResumeSuspendedAndFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAndFromIndexSuspensionFrameL220C29
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedAndFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -62,13 +60,13 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeOrFromIndexSuspensionFrameL278C29 {
+pub(super) struct ResumeOrFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeOrFromIndexSuspensionFrameL278C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeOrFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -91,13 +89,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeOrFromIndexSuspensionFra
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedOrFromIndexSuspensionFrameL318C29 {
+pub(super) struct ResumeSuspendedOrFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedOrFromIndexSuspensionFrameL318C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedOrFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -120,13 +118,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedOrFromIndexSusp
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeNandFromIndexSuspensionFrameL376C29 {
+pub(super) struct ResumeNandFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeNandFromIndexSuspensionFrameL376C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeNandFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -149,15 +147,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeNandFromIndexSuspensionF
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedNandFromIndexSuspensionFrameL416C29 {
+pub(super) struct ResumeSuspendedNandFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedNandFromIndexSuspensionFrameL416C29
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedNandFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -180,13 +176,13 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeNorFromIndexSuspensionFrameL475C29 {
+pub(super) struct ResumeNorFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeNorFromIndexSuspensionFrameL475C29 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeNorFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -209,15 +205,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeNorFromIndexSuspensionFr
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedNorFromIndexSuspensionFrameL515C29 {
+pub(super) struct ResumeSuspendedNorFromIndexSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) index: usize,
     pub(super) residual: crate::logic::suspended_state::PersistentLogicSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedNorFromIndexSuspensionFrameL515C29
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedNorFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

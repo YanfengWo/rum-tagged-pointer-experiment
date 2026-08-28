@@ -25,13 +25,13 @@ fn continuation_args(expr: Expr, tag: &'static str) -> std::vec::IntoIter<Expr> 
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectReplaceListRuleBindingsOwnedSuspensionFrameL39C60 {
+pub(super) struct CollectReplaceListRuleBindingsOwnedSuspensionFrame1 {
     pub(super) guards: SharedArgs,
     pub(super) option_scope: Option<FrozenRewriteValue<OptionValueScope>>,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectReplaceListRuleBindingsOwnedSuspensionFrameL39C60
+    for CollectReplaceListRuleBindingsOwnedSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -114,12 +114,12 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceListInitialG
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectReplaceListRuleBindingsOwnedSuspensionFrameL77C60 {
+pub(super) struct CollectReplaceListRuleBindingsOwnedSuspensionFrame2 {
     pub(super) state: SuspendedReplaceListCallMatch,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectReplaceListRuleBindingsOwnedSuspensionFrameL77C60
+    for CollectReplaceListRuleBindingsOwnedSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -214,10 +214,10 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceListCallMatc
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectReplaceListRuleBindingsOwnedSuspensionFrameL112C57;
+pub(super) struct CollectReplaceListRuleBindingsOwnedSuspensionFrame3;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectReplaceListRuleBindingsOwnedSuspensionFrameL112C57
+    for CollectReplaceListRuleBindingsOwnedSuspensionFrame3
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -238,12 +238,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FilterReplaceListGuardBindingsOwnedSuspensionFrameL217C48 {
+pub(super) struct FilterReplaceListGuardBindingsOwnedSuspensionFrame {
     pub(super) state: SuspendedReplaceListGuardFilter,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FilterReplaceListGuardBindingsOwnedSuspensionFrameL217C48
+    for FilterReplaceListGuardBindingsOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -334,12 +334,12 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceListGuardFil
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct CollectReplaceListRuleResultsOwnedSuspensionFrameL333C44 {
+pub(super) struct CollectReplaceListRuleResultsOwnedSuspensionFrame {
     pub(super) state: SuspendedReplaceListRuleResults,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for CollectReplaceListRuleResultsOwnedSuspensionFrameL333C44
+    for CollectReplaceListRuleResultsOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

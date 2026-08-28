@@ -246,7 +246,7 @@ fn resume_array_from_index(
                     suspend => {
                 let state = SuspendedArrayEvalState::freeze(state);
                                         let outputs = PersistentFunctionalSequence::freeze(outputs);
-                ResumeArrayFromIndexSuspensionFrameL244C25 { state, index, outputs }
+                ResumeArrayFromIndexSuspensionFrame { state, index, outputs }
                 },
                 );
             }
@@ -284,7 +284,7 @@ fn resume_suspended_array_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedArrayFromIndexSuspensionFrameL283C25 { state, index, outputs },
+                    suspend => ResumeSuspendedArrayFromIndexSuspensionFrame { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -332,7 +332,7 @@ fn resume_outer_from_index(
                     suspend => {
                 let state = SuspendedOuterEvalState::freeze(state);
                                         let outputs = PersistentFunctionalSequence::freeze(outputs);
-                ResumeOuterFromIndexSuspensionFrameL332C25 { state, index, outputs }
+                ResumeOuterFromIndexSuspensionFrame { state, index, outputs }
                 },
                 );
             }
@@ -370,7 +370,7 @@ fn resume_suspended_outer_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedOuterFromIndexSuspensionFrameL371C25 { state, index, outputs },
+                    suspend => ResumeSuspendedOuterFromIndexSuspensionFrame { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),

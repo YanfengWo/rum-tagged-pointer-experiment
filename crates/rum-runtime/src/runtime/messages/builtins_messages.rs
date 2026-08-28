@@ -30,7 +30,7 @@ impl Session {
                     session.push_message_unchecked(&symbol_name, &tag, text);
                     Ok(system_expr("Null"))
                 })() },
-            suspend => EvalMessageSuspensionFrameL25C69 {
+            suspend => EvalMessageSuspensionFrame {
                 symbol_name: std::sync::Arc::new(symbol_name),
                 tag: std::sync::Arc::new(tag),
             },
@@ -138,12 +138,12 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalMessageSuspensionFrameL25C69 {
-    pub(super) symbol_name: std::sync::Arc<std::string::String>,
-    pub(super) tag: std::sync::Arc<std::string::String>,
+struct EvalMessageSuspensionFrame {
+    symbol_name: std::sync::Arc<std::string::String>,
+    tag: std::sync::Arc<std::string::String>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalMessageSuspensionFrameL25C69 {
+impl crate::runtime::suspension::SuspensionFrame for EvalMessageSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

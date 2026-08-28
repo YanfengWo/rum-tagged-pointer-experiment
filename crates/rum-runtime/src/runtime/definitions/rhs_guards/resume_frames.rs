@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct MatchCompiledDefinitionConditionOwnedSuspensionFrameL109C44 {
+pub(super) struct MatchCompiledDefinitionConditionOwnedSuspensionFrame {
     pub(super) guards: rum_core::SharedArgs,
     pub(super) option_scope: std::option::Option<crate::runtime::options::OptionValueScope>,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for MatchCompiledDefinitionConditionOwnedSuspensionFrameL109C44
+    for MatchCompiledDefinitionConditionOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -39,11 +39,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateOwnedGuardsSuspensionFrameL251C44 {
+pub(super) struct EvaluateOwnedGuardsSuspensionFrame {
     pub(super) state: crate::runtime::definitions::rhs_guards::SuspendedGuardEvaluation,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvaluateOwnedGuardsSuspensionFrameL251C44 {
+impl crate::runtime::suspension::SuspensionFrame for EvaluateOwnedGuardsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -54,12 +54,12 @@ impl crate::runtime::suspension::SuspensionFrame for EvaluateOwnedGuardsSuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateReadonlySuspendedGuardsSuspensionFrameL318C44 {
+pub(super) struct EvaluateReadonlySuspendedGuardsSuspensionFrame {
     pub(super) state: crate::runtime::definitions::rhs_guards::SuspendedReadonlyGuardEvaluation,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateReadonlySuspendedGuardsSuspensionFrameL318C44
+    for EvaluateReadonlySuspendedGuardsSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -126,10 +126,10 @@ impl crate::runtime::suspension::PureFrameFinalizer for GuardOutcomeFinalizer {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateDefinitionRhsGuardsForMatchSuspensionFrameL450C48;
+pub(super) struct EvaluateDefinitionRhsGuardsForMatchSuspensionFrame;
 
 impl crate::runtime::suspension::SuspensionFrame
-    for EvaluateDefinitionRhsGuardsForMatchSuspensionFrameL450C48
+    for EvaluateDefinitionRhsGuardsForMatchSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

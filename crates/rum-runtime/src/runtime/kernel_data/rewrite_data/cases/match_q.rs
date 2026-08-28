@@ -28,7 +28,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let pattern_expr = args[1].clone();
-        EvalMatchQSuspensionFrameL26C13 { pattern_expr }
+        EvalMatchQSuspensionFrame { pattern_expr }
         },
         )?;
 
@@ -96,7 +96,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let value = value.clone();
-        ResumeMatchQAfterValueSuspensionFrameL89C13 { value }
+        ResumeMatchQAfterValueSuspensionFrame { value }
         },
         )?;
 
@@ -119,7 +119,7 @@ impl Session {
             ok(outcome) => { (|| {
                     Ok(system_expr(if outcome.matched { "True" } else { "False" }))
                 })() },
-            suspend => FinishMatchQWithPatternSuspensionFrameL105C49,
+            suspend => FinishMatchQWithPatternSuspensionFrame,
         )
     }
     fn fast_match_q_resolved_pattern(&self, pattern: &Expr, value: &Expr) -> Option<bool> {
@@ -211,11 +211,11 @@ fn matches_pattern_head(head: &Expr) -> bool {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalMatchQSuspensionFrameL26C13 {
-    pub(super) pattern_expr: rum_core::Expr,
+struct EvalMatchQSuspensionFrame {
+    pattern_expr: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalMatchQSuspensionFrameL26C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalMatchQSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -232,11 +232,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalMatchQSuspensionFrameL2
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeMatchQAfterValueSuspensionFrameL89C13 {
-    pub(super) value: rum_core::Expr,
+struct ResumeMatchQAfterValueSuspensionFrame {
+    value: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeMatchQAfterValueSuspensionFrameL89C13 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeMatchQAfterValueSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -253,9 +253,9 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeMatchQAfterValueSuspe
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishMatchQWithPatternSuspensionFrameL105C49;
+struct FinishMatchQWithPatternSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for FinishMatchQWithPatternSuspensionFrameL105C49 {
+impl crate::runtime::suspension::SuspensionFrame for FinishMatchQWithPatternSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

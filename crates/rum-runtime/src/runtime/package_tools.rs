@@ -141,7 +141,7 @@ impl Session {
                     session.once_values.insert(cache_key, value.clone());
                     Ok(value)
                 })() },
-            suspend => EvalOnceBuiltinSuspensionFrameL134C44 {
+            suspend => EvalOnceBuiltinSuspensionFrame {
                 cache_key: std::sync::Arc::new(cache_key),
             },
         )

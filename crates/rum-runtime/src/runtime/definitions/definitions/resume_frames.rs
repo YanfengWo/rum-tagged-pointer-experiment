@@ -2,11 +2,11 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalSetSuspensionFrameL36C17 {
+pub(super) struct EvalSetSuspensionFrame {
     pub(super) lhs: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalSetSuspensionFrameL36C17 {
+impl crate::runtime::suspension::SuspensionFrame for EvalSetSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -23,11 +23,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalSetSuspensionFrameL36C1
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalRuleSuspensionFrameL76C13 {
+pub(super) struct EvalRuleSuspensionFrame {
     pub(super) lhs: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalRuleSuspensionFrameL76C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalRuleSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -321,7 +321,7 @@ impl Session {
                         },
                     )
                 })() },
-            suspend => ResolveCasesTraversalOwnedSuspensionFrameL311C58 { defaults },
+            suspend => ResolveCasesTraversalOwnedSuspensionFrame { defaults },
         )
     }
 
@@ -344,7 +344,7 @@ impl Session {
                         },
                     )
                 })() },
-            suspend => ResolveCasesTraversalOwnedSuspensionFrameL311C58 { defaults },
+            suspend => ResolveCasesTraversalOwnedSuspensionFrame { defaults },
         )
     }
 
@@ -367,7 +367,7 @@ impl Session {
                         },
                     )
                 })() },
-            suspend => ResolvePositionTraversalOwnedSuspensionFrameL328C58 { defaults },
+            suspend => ResolvePositionTraversalOwnedSuspensionFrame { defaults },
         )
     }
 
@@ -390,19 +390,17 @@ impl Session {
                         },
                     )
                 })() },
-            suspend => ResolveTraversalWithoutLimitOwnedSuspensionFrameL346C58 { defaults },
+            suspend => ResolveTraversalWithoutLimitOwnedSuspensionFrame { defaults },
         )
     }
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveCasesTraversalOwnedSuspensionFrameL311C58 {
-    pub(super) defaults: crate::runtime::CasesTraversalConfig,
+struct ResolveCasesTraversalOwnedSuspensionFrame {
+    defaults: crate::runtime::CasesTraversalConfig,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResolveCasesTraversalOwnedSuspensionFrameL311C58
-{
+impl crate::runtime::suspension::SuspensionFrame for ResolveCasesTraversalOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -431,13 +429,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolvePositionTraversalOwnedSuspensionFrameL328C58 {
-    pub(super) defaults: crate::runtime::CasesTraversalConfig,
+struct ResolvePositionTraversalOwnedSuspensionFrame {
+    defaults: crate::runtime::CasesTraversalConfig,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResolvePositionTraversalOwnedSuspensionFrameL328C58
-{
+impl crate::runtime::suspension::SuspensionFrame for ResolvePositionTraversalOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -467,12 +463,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveTraversalWithoutLimitOwnedSuspensionFrameL346C58 {
-    pub(super) defaults: crate::runtime::CasesTraversalConfig,
+struct ResolveTraversalWithoutLimitOwnedSuspensionFrame {
+    defaults: crate::runtime::CasesTraversalConfig,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResolveTraversalWithoutLimitOwnedSuspensionFrameL346C58
+    for ResolveTraversalWithoutLimitOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

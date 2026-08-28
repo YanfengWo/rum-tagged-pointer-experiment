@@ -404,7 +404,7 @@ impl Session {
             self,
             result,
             ok(_value_expr) => { let _session = self; let _value = <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(_value_expr); (|| { Ok(system_expr("Null")) })() },
-            suspend => EvalRestoreSealedReferencesSuspensionFrameL236C44,
+            suspend => EvalRestoreSealedReferencesSuspensionFrame,
         )
     }
 
@@ -446,7 +446,7 @@ impl Session {
                         plan: Arc::new(plan),
                         index,
                     };
-                    crate::resume_or_suspend!(insert self, ResumePackageInstallSuspensionFrameL277C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumePackageInstallSuspensionFrame { state });
                     crate::resume_or_suspend!(insert self, ContinuePackageInstallFrame);
                     return Err(EvalError::InputRequired { request });
                 }

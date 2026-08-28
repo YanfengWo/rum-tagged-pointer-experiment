@@ -72,7 +72,7 @@ impl Session {
             self,
             body_result,
             ok(value) => Ok(value),
-            suspend => EvalReapSuspensionFrameL72C13,
+            suspend => EvalReapSuspensionFrame,
         );
 
         match outcome {
@@ -99,7 +99,7 @@ impl Session {
                     ok(value) => Ok(value),
                     suspend => {
                 let suspended_value = value.clone();
-                ResumeReapAfterBodySuspensionFrameL95C21 { suspended_value }
+                ResumeReapAfterBodySuspensionFrame { suspended_value }
                 },
                 )?;
                 Ok(finish_reap_result(value, rendered))
@@ -155,7 +155,7 @@ impl Session {
                 Err(EvalError::InputRequired { request }) => {
                     let suspended =
                         SuspendedReapScopeRender::freeze(state, group_index, rendered_groups);
-                    crate::resume_or_suspend!(insert self, ResumeReapScopeGroupsFromIndexSuspensionFrameL150C48 { suspended });
+                    crate::resume_or_suspend!(insert self, ResumeReapScopeGroupsFromIndexSuspensionFrame { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -199,7 +199,7 @@ impl Session {
                     state.group_index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedReapScopeGroupsSuspensionFrameL200C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReapScopeGroupsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -239,7 +239,7 @@ impl Session {
                 Err(EvalError::InputRequired { request }) => {
                     let suspended =
                         SuspendedReapBucketRender::freeze(state, bucket_index, rendered);
-                    crate::resume_or_suspend!(insert self, ResumeReapBucketsFromIndexSuspensionFrameL243C48 { suspended });
+                    crate::resume_or_suspend!(insert self, ResumeReapBucketsFromIndexSuspensionFrame { suspended });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -280,7 +280,7 @@ impl Session {
                     state.bucket_index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedReapBucketsSuspensionFrameL287C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReapBucketsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -382,9 +382,9 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReapSuspensionFrameL72C13;
+struct EvalReapSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReapSuspensionFrameL72C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReapSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -396,11 +396,11 @@ impl crate::runtime::suspension::SuspensionFrame for EvalReapSuspensionFrameL72C
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReapAfterBodySuspensionFrameL95C21 {
-    pub(super) suspended_value: rum_core::Expr,
+struct ResumeReapAfterBodySuspensionFrame {
+    suspended_value: rum_core::Expr,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeReapAfterBodySuspensionFrameL95C21 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeReapAfterBodySuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -417,13 +417,11 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeReapAfterBodySuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReapScopeGroupsFromIndexSuspensionFrameL150C48 {
-    pub(super) suspended: crate::runtime::debug_tools::reap_state::SuspendedReapScopeRender,
+struct ResumeReapScopeGroupsFromIndexSuspensionFrame {
+    suspended: crate::runtime::debug_tools::reap_state::SuspendedReapScopeRender,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReapScopeGroupsFromIndexSuspensionFrameL150C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReapScopeGroupsFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -442,13 +440,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReapScopeGroupsSuspensionFrameL200C48 {
-    pub(super) state: crate::runtime::debug_tools::reap_state::SuspendedReapScopeRender,
+struct ResumeSuspendedReapScopeGroupsSuspensionFrame {
+    state: crate::runtime::debug_tools::reap_state::SuspendedReapScopeRender,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedReapScopeGroupsSuspensionFrameL200C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSuspendedReapScopeGroupsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -465,13 +461,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReapBucketsFromIndexSuspensionFrameL243C48 {
-    pub(super) suspended: crate::runtime::debug_tools::reap_state::SuspendedReapBucketRender,
+struct ResumeReapBucketsFromIndexSuspensionFrame {
+    suspended: crate::runtime::debug_tools::reap_state::SuspendedReapBucketRender,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReapBucketsFromIndexSuspensionFrameL243C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReapBucketsFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -488,13 +482,11 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedReapBucketsSuspensionFrameL287C48 {
-    pub(super) state: crate::runtime::debug_tools::reap_state::SuspendedReapBucketRender,
+struct ResumeSuspendedReapBucketsSuspensionFrame {
+    state: crate::runtime::debug_tools::reap_state::SuspendedReapBucketRender,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedReapBucketsSuspensionFrameL287C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeSuspendedReapBucketsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL65C25 {
+pub(super) struct ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrame1 {
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -21,7 +21,7 @@ pub(super) struct ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL65C
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL65C25
+    for ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -60,9 +60,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL91C33 {
-    pub(super) entry__key: rum_core::Expr,
-    pub(super) entry__delayed: bool,
+pub(super) struct ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrame2 {
+    pub(super) entry_key: rum_core::Expr,
+    pub(super) entry_delayed: bool,
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -81,7 +81,7 @@ pub(super) struct ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL91C
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrameL91C33
+    for ResumeAssociationGroupByFromIndexWithGroupsSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -89,9 +89,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
         outcome: Result<Expr, EvalError>,
     ) -> rum_runtime::kernel_api::FrameAction {
         #[allow(unused_mut)]
-        let mut entry__key = self.entry__key.clone();
+        let mut entry_key = self.entry_key.clone();
         #[allow(unused_mut)]
-        let mut entry__delayed = self.entry__delayed.clone();
+        let mut entry_delayed = self.entry_delayed.clone();
         #[allow(unused_mut)]
         let mut head = self.head.clone();
         #[allow(unused_mut)]
@@ -113,9 +113,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
         let resumed = match outcome {
             Ok(value) => (|| {
                 let transformed_entry = AssociationEntryForm {
-                    key: entry__key,
+                    key: entry_key,
                     value,
-                    delayed: entry__delayed,
+                    delayed: entry_delayed,
                 };
                 resume_suspended_association_group_by_with_entry(
                     session,
@@ -138,7 +138,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL159C25 {
+pub(super) struct ResumeSuspendedAssociationGroupByFromIndexSuspensionFrame1 {
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -157,7 +157,7 @@ pub(super) struct ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL159C
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL159C25
+    for ResumeSuspendedAssociationGroupByFromIndexSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -196,9 +196,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL182C33 {
-    pub(super) entry__key: rum_core::Expr,
-    pub(super) entry__delayed: bool,
+pub(super) struct ResumeSuspendedAssociationGroupByFromIndexSuspensionFrame2 {
+    pub(super) entry_key: rum_core::Expr,
+    pub(super) entry_delayed: bool,
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -217,7 +217,7 @@ pub(super) struct ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL182C
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationGroupByFromIndexSuspensionFrameL182C33
+    for ResumeSuspendedAssociationGroupByFromIndexSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -225,9 +225,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
         outcome: Result<Expr, EvalError>,
     ) -> rum_runtime::kernel_api::FrameAction {
         #[allow(unused_mut)]
-        let mut entry__key = self.entry__key.clone();
+        let mut entry_key = self.entry_key.clone();
         #[allow(unused_mut)]
-        let mut entry__delayed = self.entry__delayed.clone();
+        let mut entry_delayed = self.entry_delayed.clone();
         #[allow(unused_mut)]
         let mut head = self.head.clone();
         #[allow(unused_mut)]
@@ -249,9 +249,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
         let resumed = match outcome {
             Ok(value) => (|| {
                 let transformed_entry = AssociationEntryForm {
-                    key: entry__key,
+                    key: entry_key,
                     value,
-                    delayed: entry__delayed,
+                    delayed: entry_delayed,
                 };
                 resume_suspended_association_group_by_with_entry(
                     session,
@@ -274,9 +274,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationGroupByWithKeySuspensionFrameL243C21 {
-    pub(super) entry__key: rum_core::Expr,
-    pub(super) entry__delayed: bool,
+pub(super) struct ResumeSuspendedAssociationGroupByWithKeySuspensionFrame {
+    pub(super) entry_key: rum_core::Expr,
+    pub(super) entry_delayed: bool,
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -295,7 +295,7 @@ pub(super) struct ResumeSuspendedAssociationGroupByWithKeySuspensionFrameL243C21
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationGroupByWithKeySuspensionFrameL243C21
+    for ResumeSuspendedAssociationGroupByWithKeySuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -303,9 +303,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
         outcome: Result<Expr, EvalError>,
     ) -> rum_runtime::kernel_api::FrameAction {
         #[allow(unused_mut)]
-        let mut entry__key = self.entry__key.clone();
+        let mut entry_key = self.entry_key.clone();
         #[allow(unused_mut)]
-        let mut entry__delayed = self.entry__delayed.clone();
+        let mut entry_delayed = self.entry_delayed.clone();
         #[allow(unused_mut)]
         let mut head = self.head.clone();
         #[allow(unused_mut)]
@@ -327,9 +327,9 @@ impl rum_runtime::kernel_api::SuspensionFrame
         let resumed = match outcome {
             Ok(value) => (|| {
                 let transformed_entry = AssociationEntryForm {
-                    key: entry__key,
+                    key: entry_key,
                     value,
-                    delayed: entry__delayed,
+                    delayed: entry_delayed,
                 };
                 resume_suspended_association_group_by_with_entry(
                     session,
@@ -352,7 +352,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationGroupByNestedFromIndexSuspensionFrameL401C25 {
+pub(super) struct ResumeAssociationGroupByNestedFromIndexSuspensionFrame {
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -373,7 +373,7 @@ pub(super) struct ResumeAssociationGroupByNestedFromIndexSuspensionFrameL401C25 
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationGroupByNestedFromIndexSuspensionFrameL401C25
+    for ResumeAssociationGroupByNestedFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -412,7 +412,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFrameL452C25 {
+pub(super) struct ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFrame {
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) specs: crate::associations::suspended_state::FrozenAssociationSequence<
@@ -433,7 +433,7 @@ pub(super) struct ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFram
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFrameL452C25
+    for ResumeSuspendedAssociationGroupByNestedFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -472,7 +472,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeAssociationGroupByReduceFromIndexSuspensionFrameL521C25 {
+pub(super) struct ResumeAssociationGroupByReduceFromIndexSuspensionFrame {
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) reducer: rum_core::Expr,
@@ -489,7 +489,7 @@ pub(super) struct ResumeAssociationGroupByReduceFromIndexSuspensionFrameL521C25 
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeAssociationGroupByReduceFromIndexSuspensionFrameL521C25
+    for ResumeAssociationGroupByReduceFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -523,7 +523,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFrameL560C25 {
+pub(super) struct ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFrame {
     pub(super) head: rum_core::Expr,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) reducer: rum_core::Expr,
@@ -540,7 +540,7 @@ pub(super) struct ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFram
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFrameL560C25
+    for ResumeSuspendedAssociationGroupByReduceFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

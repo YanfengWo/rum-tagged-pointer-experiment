@@ -13,7 +13,7 @@ impl Session {
             suspend => {
         let test = test.clone();
                     let args = args.clone();
-        EvalAssertSuspensionFrameL11C13 { test, args }
+        EvalAssertSuspensionFrame { test, args }
         },
         )?;
 
@@ -90,7 +90,7 @@ impl Session {
         let test = test.clone();
                     let assert_args = assert_args.clone();
                     let assert_function = assert_function.clone();
-        ResumeAssertAfterFunctionSuspensionFrameL83C13 { test, assert_args, assert_function }
+        ResumeAssertAfterFunctionSuspensionFrame { test, assert_args, assert_function }
         },
         );
 
@@ -117,7 +117,7 @@ impl Session {
             self,
             result,
             ok(_) => { (|| { Ok(system_expr("Null")) })() },
-            suspend => FinishAssertFunctionSuspensionFrameL107C43,
+            suspend => FinishAssertFunctionSuspensionFrame,
         )
     }
 }
@@ -154,12 +154,12 @@ fn assert_failure_messages(test: &Expr, assert_args: &[Expr]) -> Vec<(&'static s
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalAssertSuspensionFrameL11C13 {
-    pub(super) test: std::option::Option<rum_core::Expr>,
-    pub(super) args: rum_core::SharedArgs,
+struct EvalAssertSuspensionFrame {
+    test: std::option::Option<rum_core::Expr>,
+    args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalAssertSuspensionFrameL11C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalAssertSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -178,15 +178,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalAssertSuspensionFrameL1
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeAssertAfterFunctionSuspensionFrameL83C13 {
-    pub(super) test: rum_core::Expr,
-    pub(super) assert_args: rum_core::SharedArgs,
-    pub(super) assert_function: std::option::Option<rum_core::Expr>,
+struct ResumeAssertAfterFunctionSuspensionFrame {
+    test: rum_core::Expr,
+    assert_args: rum_core::SharedArgs,
+    assert_function: std::option::Option<rum_core::Expr>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeAssertAfterFunctionSuspensionFrameL83C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeAssertAfterFunctionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -205,9 +203,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishAssertFunctionSuspensionFrameL107C43;
+struct FinishAssertFunctionSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for FinishAssertFunctionSuspensionFrameL107C43 {
+impl crate::runtime::suspension::SuspensionFrame for FinishAssertFunctionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

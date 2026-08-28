@@ -51,7 +51,7 @@ fn resume_fold_from_index(
                     suspend => {
                 let state = SuspendedFoldEvalState::freeze(state);
                                         let history = PersistentFunctionalSequence::freeze(history);
-                ResumeFoldFromIndexSuspensionFrameL52C25 { state, index, history }
+                ResumeFoldFromIndexSuspensionFrame { state, index, history }
                 },
                 );
             }
@@ -100,7 +100,7 @@ fn resume_suspended_fold_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedFoldFromIndexSuspensionFrameL102C25 { state, index, history },
+                    suspend => ResumeSuspendedFoldFromIndexSuspensionFrame { state, index, history },
                 );
             }
             Err(error) => return Err(error),
@@ -196,14 +196,13 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeFoldFromIndexSuspensionFrameL52C25 {
-    pub(super) state: crate::functional_ops::sequence::fold::plain::SuspendedFoldEvalState,
-    pub(super) index: usize,
-    pub(super) history:
-        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+struct ResumeFoldFromIndexSuspensionFrame {
+    state: crate::functional_ops::sequence::fold::plain::SuspendedFoldEvalState,
+    index: usize,
+    history: crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldFromIndexSuspensionFrameL52C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -226,16 +225,13 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeFoldFromIndexSuspensionF
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedFoldFromIndexSuspensionFrameL102C25 {
-    pub(super) state: crate::functional_ops::sequence::fold::plain::SuspendedFoldEvalState,
-    pub(super) index: usize,
-    pub(super) history:
-        crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
+struct ResumeSuspendedFoldFromIndexSuspensionFrame {
+    state: crate::functional_ops::sequence::fold::plain::SuspendedFoldEvalState,
+    index: usize,
+    history: crate::functional_ops::suspended_state::PersistentFunctionalSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedFoldFromIndexSuspensionFrameL102C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedFoldFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

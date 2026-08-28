@@ -58,7 +58,7 @@ fn resume_association_key_evaluation(
                 let entries = FrozenAssociationSequence::freeze(entries);
                                         let evaluated_entries =
                                             PersistentAssociationSequence::freeze(evaluated_entries);
-                ResumeAssociationKeyEvaluationSuspensionFrameL56C25 { entries, evaluated_entries, index, entry }
+                ResumeAssociationKeyEvaluationSuspensionFrame { entries, evaluated_entries, index, entry }
                 },
                 );
             }
@@ -91,7 +91,7 @@ fn resume_suspended_association_key_evaluation(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedAssociationKeyEvaluationSuspensionFrameL97C25 { entries, evaluated_entries, index, entry },
+                    suspend => ResumeSuspendedAssociationKeyEvaluationSuspensionFrame { entries, evaluated_entries, index, entry },
                 );
             }
             Err(error) => return Err(error),
@@ -168,7 +168,7 @@ pub(crate) fn eval_lookup(
     let head = head.clone();
             let key = key.clone();
             let call_args = args.clone();
-    EvalLookupSuspensionFrameL180C9 { head, key, call_args }
+    EvalLookupSuspensionFrame { head, key, call_args }
     },
     )?;
 
@@ -191,7 +191,7 @@ fn eval_lookup_with_evaluated_data(
     let head = head.clone();
             let expr = expr.clone();
             let call_args = call_args.clone();
-    EvalLookupWithEvaluatedDataSuspensionFrameL198C9 { head, expr, call_args }
+    EvalLookupWithEvaluatedDataSuspensionFrame { head, expr, call_args }
     },
     )?;
 
@@ -229,7 +229,7 @@ fn finish_eval_lookup(
                         ok(value) => Ok(value),
                         suspend => {
                     let lookup = FrozenAssociationValue::freeze(lookup);
-                    FinishEvalLookupSuspensionFrameL233C29 { lookup, wrapper }
+                    FinishEvalLookupSuspensionFrame { lookup, wrapper }
                     },
                     );
                 }
@@ -262,7 +262,7 @@ fn finish_prepared_lookup(
                         ok(value) => Ok(value),
                         suspend => {
                     let lookup = FrozenAssociationValue::freeze(lookup);
-                    FinishPreparedLookupSuspensionFrameL271C29 { lookup, default }
+                    FinishPreparedLookupSuspensionFrame { lookup, default }
                     },
                     );
                 }
@@ -293,7 +293,7 @@ fn finish_suspended_prepared_lookup(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => FinishSuspendedPreparedLookupSuspensionFrameL306C29 { lookup, default },
+                        suspend => FinishSuspendedPreparedLookupSuspensionFrame { lookup, default },
                     );
                 }
                 Err(error) => return Err(error),

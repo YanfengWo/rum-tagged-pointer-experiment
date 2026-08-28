@@ -147,7 +147,7 @@ impl Session {
                         rules: FrozenReplaceSequence::freeze(rules),
                         rule_index,
                     };
-                    crate::resume_or_suspend!(insert self, ApplyReplacePartRulesOwnedSuspensionFrameL139C48 { state });
+                    crate::resume_or_suspend!(insert self, ApplyReplacePartRulesOwnedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -215,7 +215,7 @@ impl Session {
                     collected: PersistentReplacePartTargets::freeze(collected),
                     index,
                 };
-                crate::resume_or_suspend!(insert self, CollectRuleTargetsOwnedSuspensionFrameL210C44 { state });
+                crate::resume_or_suspend!(insert self, CollectRuleTargetsOwnedSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -265,7 +265,7 @@ impl Session {
                 resolved_pattern,
             ),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, CollectPatternPositionTargetsOwnedSuspensionFrameL265C44 { expr, rhs, delayed, heads });
+                crate::resume_or_suspend!(insert self, CollectPatternPositionTargetsOwnedSuspensionFrame { expr, rhs, delayed, heads });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -315,7 +315,7 @@ impl Session {
                     collected: PersistentReplacePartTargets::freeze(collected),
                     index,
                 };
-                crate::resume_or_suspend!(insert self, CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrameL319C44 {
+                crate::resume_or_suspend!(insert self, CollectPatternPositionTargetsFromCandidatesOwnedSuspensionFrame {
                     state,
                     path: std::sync::Arc::from(path),
                 });
@@ -387,7 +387,7 @@ impl Session {
                     merged_plan = ReplacePlanNode::default();
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartRulesSuspensionFrameL393C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartRulesSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -420,7 +420,7 @@ impl Session {
                     state.index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartRuleTargetsSuspensionFrameL429C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartRuleTargetsSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -461,7 +461,7 @@ impl Session {
                     state.index += 1;
                 }
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartPatternCandidatesSuspensionFrameL475C48 {
+                    crate::resume_or_suspend!(insert self, ResumeSuspendedReplacePartPatternCandidatesSuspensionFrame {
                         state,
                         path: std::sync::Arc::from(path),
                     });

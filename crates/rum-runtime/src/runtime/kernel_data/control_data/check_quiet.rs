@@ -31,7 +31,7 @@ impl Session {
             suspend => {
         let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
                     let fallback = fallback.clone();
-        EvalCheckSuspensionFrameL29C13 { selectors, fallback, message_checkpoint, handled_error_checkpoint }
+        EvalCheckSuspensionFrame { selectors, fallback, message_checkpoint, handled_error_checkpoint }
         },
         );
 
@@ -73,7 +73,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let selectors = selectors.take().map(Arc::<[MessageSelector]>::from);
-        EvalQuietSuspensionFrameL74C13 { selectors, message_checkpoint, handled_error_checkpoint }
+        EvalQuietSuspensionFrame { selectors, message_checkpoint, handled_error_checkpoint }
         },
         );
 
@@ -160,14 +160,14 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalCheckSuspensionFrameL29C13 {
-    pub(super) selectors: std::option::Option<std::sync::Arc<[crate::runtime::MessageSelector]>>,
-    pub(super) fallback: rum_core::Expr,
-    pub(super) message_checkpoint: usize,
-    pub(super) handled_error_checkpoint: usize,
+struct EvalCheckSuspensionFrame {
+    selectors: std::option::Option<std::sync::Arc<[crate::runtime::MessageSelector]>>,
+    fallback: rum_core::Expr,
+    message_checkpoint: usize,
+    handled_error_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalCheckSuspensionFrameL29C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalCheckSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -195,13 +195,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalCheckSuspensionFrameL29
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalQuietSuspensionFrameL74C13 {
-    pub(super) selectors: std::option::Option<std::sync::Arc<[crate::runtime::MessageSelector]>>,
-    pub(super) message_checkpoint: usize,
-    pub(super) handled_error_checkpoint: usize,
+struct EvalQuietSuspensionFrame {
+    selectors: std::option::Option<std::sync::Arc<[crate::runtime::MessageSelector]>>,
+    message_checkpoint: usize,
+    handled_error_checkpoint: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalQuietSuspensionFrameL74C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalQuietSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

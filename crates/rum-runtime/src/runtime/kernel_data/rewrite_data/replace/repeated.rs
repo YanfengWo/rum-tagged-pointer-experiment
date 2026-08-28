@@ -30,7 +30,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
                 let max_iterations_expr = max_iterations_expr.clone();
-                crate::resume_or_suspend!(insert self, EvalReplaceRepeatedSuspensionFrameL30C13 { args, max_iterations_expr });
+                crate::resume_or_suspend!(insert self, EvalReplaceRepeatedSuspensionFrame { args, max_iterations_expr });
                 crate::resume_or_suspend!(insert self, ContinueReplaceRepeatedTargetFrame);
                 return Err(EvalError::InputRequired { request });
             }
@@ -101,7 +101,7 @@ impl Session {
 
                     session.resume_replace_repeated_loop(current, rules, 0, effective_limit)
                 })() },
-            suspend => ResumeReplaceRepeatedAfterRuleExprsSuspensionFrameL88C49 {
+            suspend => ResumeReplaceRepeatedAfterRuleExprsSuspensionFrame {
                 call_args: SharedArgs::new(call_args),
                 current,
                 rules,
@@ -129,7 +129,7 @@ impl Session {
                     Ok(parse_replace_repeated_max_iterations_value(value, ceiling)
                         .map(|limit| Expr::integer(BigInt::from(limit))))
                 })() },
-            suspend => ResolveReplaceRepeatedLimitOwnedSuspensionFrameL113C53 { ceiling },
+            suspend => ResolveReplaceRepeatedLimitOwnedSuspensionFrame { ceiling },
         )
     }
 
@@ -159,7 +159,7 @@ impl Session {
             suspend => {
         let current = current.clone();
                     let rules = rules.clone();
-        ResumeReplaceRepeatedLoopSuspensionFrameL144C13 { current, rules, iteration, effective_limit }
+        ResumeReplaceRepeatedLoopSuspensionFrame { current, rules, iteration, effective_limit }
         },
         )?;
 
@@ -219,12 +219,12 @@ fn parse_replace_repeated_max_iterations_value(value: &Expr, ceiling: usize) -> 
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReplaceRepeatedSuspensionFrameL30C13 {
-    pub(super) args: rum_core::SharedArgs,
-    pub(super) max_iterations_expr: std::option::Option<rum_core::Expr>,
+struct EvalReplaceRepeatedSuspensionFrame {
+    args: rum_core::SharedArgs,
+    max_iterations_expr: std::option::Option<rum_core::Expr>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReplaceRepeatedSuspensionFrameL30C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceRepeatedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -304,14 +304,14 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceRepeatedTarg
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceRepeatedAfterRuleExprsSuspensionFrameL88C49 {
-    pub(super) call_args: rum_core::SharedArgs,
-    pub(super) current: rum_core::Expr,
-    pub(super) rules: crate::runtime::RewriteRulePlan,
+struct ResumeReplaceRepeatedAfterRuleExprsSuspensionFrame {
+    call_args: rum_core::SharedArgs,
+    current: rum_core::Expr,
+    rules: crate::runtime::RewriteRulePlan,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceRepeatedAfterRuleExprsSuspensionFrameL88C49
+    for ResumeReplaceRepeatedAfterRuleExprsSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -349,12 +349,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveReplaceRepeatedLimitOwnedSuspensionFrameL113C53 {
-    pub(super) ceiling: usize,
+struct ResolveReplaceRepeatedLimitOwnedSuspensionFrame {
+    ceiling: usize,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResolveReplaceRepeatedLimitOwnedSuspensionFrameL113C53
+    for ResolveReplaceRepeatedLimitOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -382,16 +382,14 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceRepeatedLoopSuspensionFrameL144C13 {
-    pub(super) current: rum_core::Expr,
-    pub(super) rules: crate::runtime::RewriteRulePlan,
-    pub(super) iteration: usize,
-    pub(super) effective_limit: usize,
+struct ResumeReplaceRepeatedLoopSuspensionFrame {
+    current: rum_core::Expr,
+    rules: crate::runtime::RewriteRulePlan,
+    iteration: usize,
+    effective_limit: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceRepeatedLoopSuspensionFrameL144C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReplaceRepeatedLoopSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

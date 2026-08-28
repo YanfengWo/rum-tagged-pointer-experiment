@@ -290,7 +290,7 @@ impl Session {
         application: SuspendedSubValueApplication,
         request: RuntimeInputRequest,
     ) -> Result<Option<Expr>, EvalError> {
-        crate::resume_or_suspend!(insert self, TryApplySubValuesFromSymbolSuspensionFrameL279C48 { application });
+        crate::resume_or_suspend!(insert self, TryApplySubValuesFromSymbolSuspensionFrame { application });
         Err(EvalError::InputRequired { request })
     }
 
@@ -364,14 +364,12 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct TryApplySubValuesFromSymbolSuspensionFrameL279C48 {
+struct TryApplySubValuesFromSymbolSuspensionFrame {
     pub(super) application:
         crate::runtime::definitions::application::sub_values::SuspendedSubValueApplication,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for TryApplySubValuesFromSymbolSuspensionFrameL279C48
-{
+impl crate::runtime::suspension::SuspensionFrame for TryApplySubValuesFromSymbolSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

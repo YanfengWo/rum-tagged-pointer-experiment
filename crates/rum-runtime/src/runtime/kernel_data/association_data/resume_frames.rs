@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrameL783C48 {
+pub(super) struct ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrame {
     pub(super) suspended:
         crate::runtime::kernel_data::association_data::SuspendedAssociationSetLValue,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrameL783C48
+    for ResumeAssociationSetLvalueSelectorEvaluationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -26,12 +26,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedAssociationSetLvalueSuspensionFrameL819C48 {
+pub(super) struct ResumeSuspendedAssociationSetLvalueSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::association_data::SuspendedAssociationSetLValue,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedAssociationSetLvalueSuspensionFrameL819C48
+    for ResumeSuspendedAssociationSetLvalueSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

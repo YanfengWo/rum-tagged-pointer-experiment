@@ -539,7 +539,7 @@ impl Session {
             self,
             result,
             ok(value) => Ok(value),
-            suspend => EvaluateWithRandomStateRestoredSuspensionFrameL536C13 { saved },
+            suspend => EvaluateWithRandomStateRestoredSuspensionFrame { saved },
         );
 
         match outcome {

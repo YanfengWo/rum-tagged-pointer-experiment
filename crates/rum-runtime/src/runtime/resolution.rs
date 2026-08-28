@@ -414,7 +414,7 @@ impl Session {
                         evaluation_passes,
                         seen: FixedPointHistory::freeze(fixed_point_seen),
                     };
-                    crate::resume_or_suspend!(insert self, EvaluateProfiledFixedPointSuspensionFrameL414C48 { state });
+                    crate::resume_or_suspend!(insert self, EvaluateProfiledFixedPointSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -477,7 +477,7 @@ impl Session {
             let next = match next_result {
                 Ok(value) => value,
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, ResumeFixedPointFromSuspensionFrameL480C48 { state });
+                    crate::resume_or_suspend!(insert self, ResumeFixedPointFromSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),

@@ -31,7 +31,7 @@ impl Session {
         let args = args.clone();
                     let suspended_body = body.clone();
                     let suspended_fallback = fallback.clone();
-        EvalTimeConstrainedSuspensionFrameL29C13 { suspended_body, suspended_fallback, args }
+        EvalTimeConstrainedSuspensionFrame { suspended_body, suspended_fallback, args }
         },
         )?;
         self.resume_time_constrained_with_limit(body, fallback, args_slice, resolved_limit)
@@ -63,7 +63,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let fallback = fallback.clone();
-        ResumeTimeConstrainedWithLimitSuspensionFrameL63C13 { prior_deadline, fallback }
+        ResumeTimeConstrainedWithLimitSuspensionFrame { prior_deadline, fallback }
         },
         );
 
@@ -95,7 +95,7 @@ impl Session {
         let args = args.clone();
                     let suspended_body = body.clone();
                     let suspended_fallback = fallback.clone();
-        EvalMemoryConstrainedSuspensionFrameL92C13 { suspended_body, suspended_fallback, args }
+        EvalMemoryConstrainedSuspensionFrame { suspended_body, suspended_fallback, args }
         },
         )?;
         self.resume_memory_constrained_with_limit(body, fallback, args_slice, resolved_limit)
@@ -126,7 +126,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let fallback = fallback.clone();
-        ResumeMemoryConstrainedWithLimitSuspensionFrameL125C13 { prior_limit, fallback }
+        ResumeMemoryConstrainedWithLimitSuspensionFrame { prior_limit, fallback }
         },
         );
 
@@ -239,7 +239,7 @@ impl Session {
                         self,
                         fallback_result,
                         ok(value) => Ok(value),
-                        suspend => FinishTimeConstrainedSuspensionFrameL235C70,
+                        suspend => FinishTimeConstrainedSuspensionFrame,
                     )
                 }
                 None => Ok(system_expr("$Aborted")),
@@ -265,7 +265,7 @@ impl Session {
                         self,
                         fallback_result,
                         ok(value) => Ok(value),
-                        suspend => FinishMemoryConstrainedSuspensionFrameL256C70,
+                        suspend => FinishMemoryConstrainedSuspensionFrame,
                     )
                 }
                 None => Ok(system_expr("$Aborted")),
@@ -299,13 +299,13 @@ fn combine_time_deadlines(prior: Option<Instant>, limit: Duration) -> Instant {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalTimeConstrainedSuspensionFrameL29C13 {
-    pub(super) suspended_body: rum_core::Expr,
-    pub(super) suspended_fallback: std::option::Option<rum_core::Expr>,
-    pub(super) args: rum_core::SharedArgs,
+struct EvalTimeConstrainedSuspensionFrame {
+    suspended_body: rum_core::Expr,
+    suspended_fallback: std::option::Option<rum_core::Expr>,
+    args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalTimeConstrainedSuspensionFrameL29C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalTimeConstrainedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -333,14 +333,12 @@ impl crate::runtime::suspension::SuspensionFrame for EvalTimeConstrainedSuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeTimeConstrainedWithLimitSuspensionFrameL63C13 {
-    pub(super) prior_deadline: std::option::Option<std::time::Instant>,
-    pub(super) fallback: std::option::Option<rum_core::Expr>,
+struct ResumeTimeConstrainedWithLimitSuspensionFrame {
+    prior_deadline: std::option::Option<std::time::Instant>,
+    fallback: std::option::Option<rum_core::Expr>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeTimeConstrainedWithLimitSuspensionFrameL63C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeTimeConstrainedWithLimitSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -356,13 +354,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalMemoryConstrainedSuspensionFrameL92C13 {
-    pub(super) suspended_body: rum_core::Expr,
-    pub(super) suspended_fallback: std::option::Option<rum_core::Expr>,
-    pub(super) args: rum_core::SharedArgs,
+struct EvalMemoryConstrainedSuspensionFrame {
+    suspended_body: rum_core::Expr,
+    suspended_fallback: std::option::Option<rum_core::Expr>,
+    args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalMemoryConstrainedSuspensionFrameL92C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalMemoryConstrainedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -390,13 +388,13 @@ impl crate::runtime::suspension::SuspensionFrame for EvalMemoryConstrainedSuspen
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeMemoryConstrainedWithLimitSuspensionFrameL125C13 {
-    pub(super) prior_limit: std::option::Option<usize>,
-    pub(super) fallback: std::option::Option<rum_core::Expr>,
+struct ResumeMemoryConstrainedWithLimitSuspensionFrame {
+    prior_limit: std::option::Option<usize>,
+    fallback: std::option::Option<rum_core::Expr>,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeMemoryConstrainedWithLimitSuspensionFrameL125C13
+    for ResumeMemoryConstrainedWithLimitSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -413,9 +411,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishTimeConstrainedSuspensionFrameL235C70;
+struct FinishTimeConstrainedSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for FinishTimeConstrainedSuspensionFrameL235C70 {
+impl crate::runtime::suspension::SuspensionFrame for FinishTimeConstrainedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -430,9 +428,9 @@ impl crate::runtime::suspension::SuspensionFrame for FinishTimeConstrainedSuspen
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishMemoryConstrainedSuspensionFrameL256C70;
+struct FinishMemoryConstrainedSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for FinishMemoryConstrainedSuspensionFrameL256C70 {
+impl crate::runtime::suspension::SuspensionFrame for FinishMemoryConstrainedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

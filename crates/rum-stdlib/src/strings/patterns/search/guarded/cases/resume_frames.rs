@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeCollectStringCasesFromCandidateSuspensionFrameL122C25 {
+pub(super) struct ResumeCollectStringCasesFromCandidateSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::cases::GuardedStringCasesRuleEvalState,
     >,
@@ -20,7 +20,7 @@ pub(super) struct ResumeCollectStringCasesFromCandidateSuspensionFrameL122C25 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeCollectStringCasesFromCandidateSuspensionFrameL122C25
+    for ResumeCollectStringCasesFromCandidateSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -59,7 +59,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvaluateStringCasesOutputSuspensionFrameL189C17 {
+pub(super) struct EvaluateStringCasesOutputSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::cases::GuardedStringCasesRuleEvalState,
     >,
@@ -68,7 +68,7 @@ pub(super) struct EvaluateStringCasesOutputSuspensionFrameL189C17 {
     pub(super) matches: crate::strings::suspended_state::PersistentStringSequence<rum_core::Expr>,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvaluateStringCasesOutputSuspensionFrameL189C17 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvaluateStringCasesOutputSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -99,7 +99,7 @@ impl rum_runtime::kernel_api::SuspensionFrame for EvaluateStringCasesOutputSuspe
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrameL251C25 {
+pub(super) struct ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::cases::GuardedStringCasesRuleEvalState,
     >,
@@ -117,7 +117,7 @@ pub(super) struct ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrameL
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrameL251C25
+    for ResumeSuspendedCollectStringCasesFromCandidateSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -156,7 +156,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvaluateSuspendedStringCasesOutputSuspensionFrameL347C17 {
+pub(super) struct EvaluateSuspendedStringCasesOutputSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::cases::GuardedStringCasesRuleEvalState,
     >,
@@ -166,7 +166,7 @@ pub(super) struct EvaluateSuspendedStringCasesOutputSuspensionFrameL347C17 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for EvaluateSuspendedStringCasesOutputSuspensionFrameL347C17
+    for EvaluateSuspendedStringCasesOutputSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -198,7 +198,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeCollectStringCasesValuesFromIndexSuspensionFrameL423C21 {
+pub(super) struct ResumeCollectStringCasesValuesFromIndexSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::cases::GuardedStringCasesValuesEvalState,
     >,
@@ -207,7 +207,7 @@ pub(super) struct ResumeCollectStringCasesValuesFromIndexSuspensionFrameL423C21 
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeCollectStringCasesValuesFromIndexSuspensionFrameL423C21
+    for ResumeCollectStringCasesValuesFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -237,7 +237,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrameL461C21 {
+pub(super) struct ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrame {
     pub(super) state: crate::strings::suspended_state::FrozenStringValue<
         crate::strings::patterns::search::guarded::cases::GuardedStringCasesValuesEvalState,
     >,
@@ -246,7 +246,7 @@ pub(super) struct ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFram
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrameL461C21
+    for ResumeSuspendedCollectStringCasesValuesFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

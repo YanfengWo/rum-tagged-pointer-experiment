@@ -57,7 +57,7 @@ impl Session {
             Ok(value) => value,
             Err(EvalError::InputRequired { request }) => {
                 let args = args.clone();
-                crate::resume_or_suspend!(insert self, EvalCasesSuspensionFrameL43C13 { args });
+                crate::resume_or_suspend!(insert self, EvalCasesSuspensionFrame { args });
                 crate::resume_or_suspend!(insert self, ContinueCasesFrame);
                 return Err(EvalError::InputRequired { request });
             }
@@ -89,7 +89,7 @@ impl Session {
             ),
             Err(EvalError::InputRequired { request }) => {
                 let call_args = SharedArgs::new(call_args);
-                crate::resume_or_suspend!(insert self, ResumeCasesAfterTargetSuspensionFrameL79C44 { target, call_args });
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterTargetSuspensionFrame { target, call_args });
                 crate::resume_or_suspend!(insert self, ContinueCasesFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -112,7 +112,7 @@ impl Session {
                 self.resume_cases_after_resolved_spec_suspended(target, resolved_spec, call_args)
             }
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, ResumeCasesAfterTargetSuspensionFrameL79C44 { target, call_args });
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterTargetSuspensionFrame { target, call_args });
                 crate::resume_or_suspend!(insert self, ContinueCasesFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -137,7 +137,7 @@ impl Session {
                 target, spec, traversal, call_args,
             ),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, ResumeCasesAfterResolvedSpecSuspensionFrameL111C44 { target, spec, call_args });
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterResolvedSpecSuspensionFrame { target, spec, call_args });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -162,7 +162,7 @@ impl Session {
             Err(EvalError::InputRequired { request }) => {
                 let spec = FrozenRewriteValue::freeze(spec);
                 let call_args = SharedArgs::new(call_args);
-                crate::resume_or_suspend!(insert self, ResumeCasesAfterResolvedSpecSuspensionFrameL111C44 { target, spec, call_args });
+                crate::resume_or_suspend!(insert self, ResumeCasesAfterResolvedSpecSuspensionFrame { target, spec, call_args });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -211,7 +211,7 @@ impl Session {
                 let outcome = outcome.into_owned();
                 Ok(Expr::call(system_expr("List"), outcome.matches))
             },
-            suspend => FinishCasesWithTraversalSuspensionFrameL154C51,
+            suspend => FinishCasesWithTraversalSuspensionFrame,
         )
     }
 
@@ -232,7 +232,7 @@ impl Session {
             ok(outcome) => { (|| {
                     Ok(Expr::call(system_expr("List"), outcome.matches))
                 })() },
-            suspend => FinishCasesWithTraversalSuspensionFrameL154C51,
+            suspend => FinishCasesWithTraversalSuspensionFrame,
         )
     }
 
@@ -359,7 +359,7 @@ impl Session {
                     depth,
                     seen_before,
                 };
-                crate::resume_or_suspend!(insert self, FinishCasesAtCurrentNodeSuspensionFrameL282C44 { state });
+                crate::resume_or_suspend!(insert self, FinishCasesAtCurrentNodeSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -440,7 +440,7 @@ impl Session {
                         matches: PersistentRewriteExprs::freeze(matches),
                         max_child_depth,
                     };
-                    crate::resume_or_suspend!(insert self, CollectCasesChildrenSuspensionFrameL366C48 { state });
+                    crate::resume_or_suspend!(insert self, CollectCasesChildrenSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -506,7 +506,7 @@ impl Session {
             match child_result {
                 Ok(outcome) => pending = Some(outcome.into_owned()),
                 Err(EvalError::InputRequired { request }) => {
-                    crate::resume_or_suspend!(insert self, CollectCasesChildrenSuspendedSuspensionFrameL437C48 { state });
+                    crate::resume_or_suspend!(insert self, CollectCasesChildrenSuspendedSuspensionFrame { state });
                     return Err(EvalError::InputRequired { request });
                 }
                 Err(error) => return Err(error),
@@ -656,7 +656,7 @@ impl Session {
                     depth,
                     seen_before,
                 };
-                crate::resume_or_suspend!(insert self, FinishCasesAtCurrentNodeSuspendedSuspensionFrameL588C44 { state });
+                crate::resume_or_suspend!(insert self, FinishCasesAtCurrentNodeSuspendedSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -688,7 +688,7 @@ impl Session {
                         let state = SuspendedCasesRuleMatch {
                             spec: FrozenRewriteValue::freeze(CasesSpec::Rule(rule)),
                         };
-                        crate::resume_or_suspend!(insert self, TryCollectCaseOwnedSuspensionFrameL623C52 { state });
+                        crate::resume_or_suspend!(insert self, TryCollectCaseOwnedSuspensionFrame { state });
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -719,7 +719,7 @@ impl Session {
                     Ok(outcome) => self.finish_cases_rule_match(rule, outcome),
                     Err(EvalError::InputRequired { request }) => {
                         let state = SuspendedCasesRuleMatch { spec };
-                        crate::resume_or_suspend!(insert self, TryCollectCaseSuspendedSuspensionFrameL659C52 { state });
+                        crate::resume_or_suspend!(insert self, TryCollectCaseSuspendedSuspensionFrame { state });
                         Err(EvalError::InputRequired { request })
                     }
                     Err(error) => Err(error),
@@ -736,7 +736,7 @@ impl Session {
         match match_result {
             Ok(outcome) => Ok(outcome.matched.then_some(expr)),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, FinishCasesPatternMatchSuspensionFrameL681C44 { expr });
+                crate::resume_or_suspend!(insert self, FinishCasesPatternMatchSuspensionFrame { expr });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -773,7 +773,7 @@ impl Session {
             self,
             transformed_result,
             ok(value) => Ok(value),
-            suspend => FinishCasesRuleMatchSuspensionFrameL717C61,
+            suspend => FinishCasesRuleMatchSuspensionFrame,
         )
         .map(Some)
     }

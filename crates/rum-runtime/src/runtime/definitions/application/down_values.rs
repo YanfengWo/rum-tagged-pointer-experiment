@@ -326,7 +326,7 @@ impl Session {
         scan: Scan,
         request: RuntimeInputRequest,
     ) -> Result<Option<Expr>, EvalError> {
-        crate::resume_or_suspend!(insert self, TryApplyDownValuesFromSymbolSuspensionFrameL315C44 { application, scan });
+        crate::resume_or_suspend!(insert self, TryApplyDownValuesFromSymbolSuspensionFrame { application, scan });
         Err(EvalError::InputRequired { request })
     }
 
@@ -400,14 +400,14 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct TryApplyDownValuesFromSymbolSuspensionFrameL315C44<Scan> {
+struct TryApplyDownValuesFromSymbolSuspensionFrame<Scan> {
     pub(super) application:
         crate::runtime::definitions::application::down_values::SuspendedDownValueApplication,
     pub(super) scan: Scan,
 }
 
 impl<Scan> crate::runtime::suspension::SuspensionFrame
-    for TryApplyDownValuesFromSymbolSuspensionFrameL315C44<Scan>
+    for TryApplyDownValuesFromSymbolSuspensionFrame<Scan>
 where
     Scan: DownValueScan,
 {

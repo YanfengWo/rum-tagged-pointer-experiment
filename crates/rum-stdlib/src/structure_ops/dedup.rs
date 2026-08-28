@@ -177,7 +177,7 @@ fn resume_delete_duplicates_by_from_index(
                 let items = FrozenStructureSequence::freeze(items);
                                         let keys = PersistentStructureSet::freeze(keys.into_hash_set());
                                         let kept = PersistentStructureSequence::freeze(kept);
-                ResumeDeleteDuplicatesByFromIndexSuspensionFrameL178C25 { expr_head, function, items, index, keys, kept, item }
+                ResumeDeleteDuplicatesByFromIndexSuspensionFrame { expr_head, function, items, index, keys, kept, item }
                 },
                 );
             }
@@ -212,7 +212,7 @@ fn resume_suspended_delete_duplicates_by_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedDeleteDuplicatesByFromIndexSuspensionFrameL216C25 { expr_head, function, items, index, keys, kept, item },
+                    suspend => ResumeSuspendedDeleteDuplicatesByFromIndexSuspensionFrame { expr_head, function, items, index, keys, kept, item },
                 );
             }
             Err(error) => return Err(error),
@@ -285,7 +285,7 @@ fn resume_delete_duplicates_test_from_kept(
                     suspend => {
                 let items = FrozenStructureSequence::freeze(state.items);
                                         let kept = PersistentStructureSequence::freeze(state.kept);
-                ResumeDeleteDuplicatesTestFromKeptSuspensionFrameL292C25 { state__expr_head: state.expr_head, state__test: state.test, state__index: state.index, items, kept, kept_index }
+                ResumeDeleteDuplicatesTestFromKeptSuspensionFrame { state_expr_head: state.expr_head, state_test: state.test, state_index: state.index, items, kept, kept_index }
                 },
                 );
             }
@@ -335,7 +335,7 @@ fn resume_suspended_delete_duplicates_test_from_kept(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedDeleteDuplicatesTestFromKeptSuspensionFrameL352C25 { expr_head, test, items, index, kept, kept_index },
+                    suspend => ResumeSuspendedDeleteDuplicatesTestFromKeptSuspensionFrame { expr_head, test, items, index, kept, kept_index },
                 );
             }
             Err(error) => return Err(error),
@@ -424,20 +424,61 @@ const _: fn() = || {
 };
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteDuplicatesByFromIndexSuspensionFrameL178C25 {
-    pub(super) expr_head: rum_core::Expr,
-    pub(super) function: rum_core::Expr,
-    pub(super) items:
-        crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) keys: crate::structure_ops::suspended_state::PersistentStructureSet<rum_core::Expr>,
-    pub(super) kept:
-        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
-    pub(super) item: rum_core::Expr,
+struct ResumeDeleteDuplicatesByFromIndexSuspensionFrame {
+    expr_head: rum_core::Expr,
+    function: rum_core::Expr,
+    items: crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
+    index: usize,
+    keys: crate::structure_ops::suspended_state::PersistentStructureSet<rum_core::Expr>,
+    kept: crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+    item: rum_core::Expr,
+}
+
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeDeleteDuplicatesByFromIndexSuspensionFrame {
+    fn resume(
+        self: std::sync::Arc<Self>,
+        session: &mut Session,
+        outcome: Result<Expr, EvalError>,
+    ) -> rum_runtime::kernel_api::FrameAction {
+        #[allow(unused_mut)]
+        let mut expr_head = self.expr_head.clone();
+        #[allow(unused_mut)]
+        let mut function = self.function.clone();
+        #[allow(unused_mut)]
+        let mut items = self.items.clone();
+        #[allow(unused_mut)]
+        let mut index = self.index.clone();
+        #[allow(unused_mut)]
+        let mut keys = self.keys.clone();
+        #[allow(unused_mut)]
+        let mut kept = self.kept.clone();
+        #[allow(unused_mut)]
+        let mut item = self.item.clone();
+        let resumed = match outcome {
+            Ok(key) => (|| {
+                resume_suspended_delete_duplicates_by_with_key(
+                    session, expr_head, function, items, index, keys, kept, item, key,
+                )
+            })(),
+            Err(error) => Err(error),
+        };
+        rum_runtime::kernel_api::FrameAction::complete(resumed)
+    }
+}
+
+#[derive(rum_runtime::kernel_api::FrameRootTrace)]
+struct ResumeSuspendedDeleteDuplicatesByFromIndexSuspensionFrame {
+    expr_head: rum_core::Expr,
+    function: rum_core::Expr,
+    items: crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
+    index: usize,
+    keys: crate::structure_ops::suspended_state::PersistentStructureSet<rum_core::Expr>,
+    kept: crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+    item: rum_core::Expr,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteDuplicatesByFromIndexSuspensionFrameL178C25
+    for ResumeSuspendedDeleteDuplicatesByFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -471,20 +512,17 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteDuplicatesByFromIndexSuspensionFrameL216C25 {
-    pub(super) expr_head: rum_core::Expr,
-    pub(super) function: rum_core::Expr,
-    pub(super) items:
-        crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) keys: crate::structure_ops::suspended_state::PersistentStructureSet<rum_core::Expr>,
-    pub(super) kept:
-        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
-    pub(super) item: rum_core::Expr,
+struct ResumeDeleteDuplicatesTestFromKeptSuspensionFrame {
+    state_expr_head: rum_core::Expr,
+    state_test: rum_core::Expr,
+    state_index: usize,
+    items: crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
+    kept: crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+    kept_index: usize,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedDeleteDuplicatesByFromIndexSuspensionFrameL216C25
+    for ResumeDeleteDuplicatesTestFromKeptSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -492,57 +530,11 @@ impl rum_runtime::kernel_api::SuspensionFrame
         outcome: Result<Expr, EvalError>,
     ) -> rum_runtime::kernel_api::FrameAction {
         #[allow(unused_mut)]
-        let mut expr_head = self.expr_head.clone();
+        let mut state_expr_head = self.state_expr_head.clone();
         #[allow(unused_mut)]
-        let mut function = self.function.clone();
+        let mut state_test = self.state_test.clone();
         #[allow(unused_mut)]
-        let mut items = self.items.clone();
-        #[allow(unused_mut)]
-        let mut index = self.index.clone();
-        #[allow(unused_mut)]
-        let mut keys = self.keys.clone();
-        #[allow(unused_mut)]
-        let mut kept = self.kept.clone();
-        #[allow(unused_mut)]
-        let mut item = self.item.clone();
-        let resumed = match outcome {
-            Ok(key) => (|| {
-                resume_suspended_delete_duplicates_by_with_key(
-                    session, expr_head, function, items, index, keys, kept, item, key,
-                )
-            })(),
-            Err(error) => Err(error),
-        };
-        rum_runtime::kernel_api::FrameAction::complete(resumed)
-    }
-}
-
-#[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteDuplicatesTestFromKeptSuspensionFrameL292C25 {
-    pub(super) state__expr_head: rum_core::Expr,
-    pub(super) state__test: rum_core::Expr,
-    pub(super) state__index: usize,
-    pub(super) items:
-        crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
-    pub(super) kept:
-        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
-    pub(super) kept_index: usize,
-}
-
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteDuplicatesTestFromKeptSuspensionFrameL292C25
-{
-    fn resume(
-        self: std::sync::Arc<Self>,
-        session: &mut Session,
-        outcome: Result<Expr, EvalError>,
-    ) -> rum_runtime::kernel_api::FrameAction {
-        #[allow(unused_mut)]
-        let mut state__expr_head = self.state__expr_head.clone();
-        #[allow(unused_mut)]
-        let mut state__test = self.state__test.clone();
-        #[allow(unused_mut)]
-        let mut state__index = self.state__index.clone();
+        let mut state_index = self.state_index.clone();
         #[allow(unused_mut)]
         let mut items = self.items.clone();
         #[allow(unused_mut)]
@@ -553,10 +545,10 @@ impl rum_runtime::kernel_api::SuspensionFrame
             Ok(value) => (|| {
                 resume_suspended_delete_duplicates_test_with_value(
                     session,
-                    state__expr_head,
-                    state__test,
+                    state_expr_head,
+                    state_test,
                     items,
-                    state__index,
+                    state_index,
                     kept,
                     kept_index,
                     value,
@@ -569,19 +561,17 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteDuplicatesTestFromKeptSuspensionFrameL352C25 {
-    pub(super) expr_head: rum_core::Expr,
-    pub(super) test: rum_core::Expr,
-    pub(super) items:
-        crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
-    pub(super) index: usize,
-    pub(super) kept:
-        crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
-    pub(super) kept_index: usize,
+struct ResumeSuspendedDeleteDuplicatesTestFromKeptSuspensionFrame {
+    expr_head: rum_core::Expr,
+    test: rum_core::Expr,
+    items: crate::structure_ops::suspended_state::FrozenStructureSequence<rum_core::Expr>,
+    index: usize,
+    kept: crate::structure_ops::suspended_state::PersistentStructureSequence<rum_core::Expr>,
+    kept_index: usize,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedDeleteDuplicatesTestFromKeptSuspensionFrameL352C25
+    for ResumeSuspendedDeleteDuplicatesTestFromKeptSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

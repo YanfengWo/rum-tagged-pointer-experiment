@@ -453,7 +453,7 @@ pub(super) fn evaluate_scan_parts(
             session,
             result,
             ok(value) => Ok(value),
-            suspend => EvaluateScanPartsSuspensionFrameL451C52,
+            suspend => EvaluateScanPartsSuspensionFrame,
         )?;
     }
 
@@ -461,9 +461,9 @@ pub(super) fn evaluate_scan_parts(
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct EvaluateScanPartsSuspensionFrameL451C52;
+struct EvaluateScanPartsSuspensionFrame;
 
-impl rum_runtime::kernel_api::SuspensionFrame for EvaluateScanPartsSuspensionFrameL451C52 {
+impl rum_runtime::kernel_api::SuspensionFrame for EvaluateScanPartsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,

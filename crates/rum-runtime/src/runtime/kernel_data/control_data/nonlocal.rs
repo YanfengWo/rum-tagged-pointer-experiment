@@ -100,7 +100,7 @@ impl Session {
             suspend => {
         let form = form.clone();
                     let handler = handler.clone();
-        EvalCatchSuspensionFrameL98C13 { form, handler }
+        EvalCatchSuspensionFrame { form, handler }
         },
         );
 
@@ -173,7 +173,7 @@ impl Session {
         let handler = handler.clone();
                     let value = value.clone();
                     let tag = tag.clone();
-        ResumeCatchForThrowSuspensionFrameL166C13 { handler, value, tag, explicit_tag }
+        ResumeCatchForThrowSuspensionFrame { handler, value, tag, explicit_tag }
         },
         )?;
 
@@ -215,7 +215,7 @@ impl Session {
                         })
                     }
                 })() },
-            suspend => FinishCatchForThrowWithFormSuspensionFrameL195C49 { handler, value, tag, explicit_tag },
+            suspend => FinishCatchForThrowWithFormSuspensionFrame { handler, value, tag, explicit_tag },
         )
     }
 
@@ -247,7 +247,7 @@ impl Session {
                     let tag = tag.clone();
                     let cleanup_value = cleanup_value.clone();
                     let cleanup_tag = cleanup_tag.clone();
-        ResumeCatchForBypassingThrowSuspensionFrameL232C13 { value, tag, explicit_tag, cleanup_value, cleanup_tag, cleanup_explicit_tag }
+        ResumeCatchForBypassingThrowSuspensionFrame { value, tag, explicit_tag, cleanup_value, cleanup_tag, cleanup_explicit_tag }
         },
         )?;
 
@@ -313,7 +313,7 @@ impl Session {
                         })
                     }
                 })() },
-            suspend => FinishCatchForBypassingThrowWithFormSuspensionFrameL286C49 { value, tag, explicit_tag, cleanup_value, cleanup_tag, cleanup_explicit_tag },
+            suspend => FinishCatchForBypassingThrowWithFormSuspensionFrame { value, tag, explicit_tag, cleanup_value, cleanup_tag, cleanup_explicit_tag },
         )
     }
 
@@ -349,12 +349,12 @@ fn runtime_profile_outcome_for_expr_result(
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalCatchSuspensionFrameL98C13 {
-    pub(super) form: std::option::Option<rum_core::Expr>,
-    pub(super) handler: std::option::Option<rum_core::Expr>,
+struct EvalCatchSuspensionFrame {
+    form: std::option::Option<rum_core::Expr>,
+    handler: std::option::Option<rum_core::Expr>,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalCatchSuspensionFrameL98C13 {
+impl crate::runtime::suspension::SuspensionFrame for EvalCatchSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -370,14 +370,14 @@ impl crate::runtime::suspension::SuspensionFrame for EvalCatchSuspensionFrameL98
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCatchForThrowSuspensionFrameL166C13 {
-    pub(super) handler: std::option::Option<rum_core::Expr>,
-    pub(super) value: rum_core::Expr,
-    pub(super) tag: rum_core::Expr,
-    pub(super) explicit_tag: bool,
+struct ResumeCatchForThrowSuspensionFrame {
+    handler: std::option::Option<rum_core::Expr>,
+    value: rum_core::Expr,
+    tag: rum_core::Expr,
+    explicit_tag: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ResumeCatchForThrowSuspensionFrameL166C13 {
+impl crate::runtime::suspension::SuspensionFrame for ResumeCatchForThrowSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -402,16 +402,14 @@ impl crate::runtime::suspension::SuspensionFrame for ResumeCatchForThrowSuspensi
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCatchForThrowWithFormSuspensionFrameL195C49 {
-    pub(super) handler: std::option::Option<rum_core::Expr>,
-    pub(super) value: rum_core::Expr,
-    pub(super) tag: rum_core::Expr,
-    pub(super) explicit_tag: bool,
+struct FinishCatchForThrowWithFormSuspensionFrame {
+    handler: std::option::Option<rum_core::Expr>,
+    value: rum_core::Expr,
+    tag: rum_core::Expr,
+    explicit_tag: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishCatchForThrowWithFormSuspensionFrameL195C49
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishCatchForThrowWithFormSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -448,18 +446,16 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCatchForBypassingThrowSuspensionFrameL232C13 {
-    pub(super) value: rum_core::Expr,
-    pub(super) tag: rum_core::Expr,
-    pub(super) explicit_tag: bool,
-    pub(super) cleanup_value: rum_core::Expr,
-    pub(super) cleanup_tag: rum_core::Expr,
-    pub(super) cleanup_explicit_tag: bool,
+struct ResumeCatchForBypassingThrowSuspensionFrame {
+    value: rum_core::Expr,
+    tag: rum_core::Expr,
+    explicit_tag: bool,
+    cleanup_value: rum_core::Expr,
+    cleanup_tag: rum_core::Expr,
+    cleanup_explicit_tag: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCatchForBypassingThrowSuspensionFrameL232C13
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeCatchForBypassingThrowSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -496,17 +492,17 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishCatchForBypassingThrowWithFormSuspensionFrameL286C49 {
-    pub(super) value: rum_core::Expr,
-    pub(super) tag: rum_core::Expr,
-    pub(super) explicit_tag: bool,
-    pub(super) cleanup_value: rum_core::Expr,
-    pub(super) cleanup_tag: rum_core::Expr,
-    pub(super) cleanup_explicit_tag: bool,
+struct FinishCatchForBypassingThrowWithFormSuspensionFrame {
+    value: rum_core::Expr,
+    tag: rum_core::Expr,
+    explicit_tag: bool,
+    cleanup_value: rum_core::Expr,
+    cleanup_tag: rum_core::Expr,
+    cleanup_explicit_tag: bool,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for FinishCatchForBypassingThrowWithFormSuspensionFrameL286C49
+    for FinishCatchForBypassingThrowWithFormSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

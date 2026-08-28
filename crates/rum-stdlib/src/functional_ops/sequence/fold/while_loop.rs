@@ -60,7 +60,7 @@ fn resume_fold_while_from_index(
                     suspend => {
                 let state = SuspendedFoldWhileEvalState::freeze(state);
                                         let history = PersistentFunctionalSequence::freeze(history);
-                ResumeFoldWhileFromIndexSuspensionFrameL58C25 { state, index, history }
+                ResumeFoldWhileFromIndexSuspensionFrame1 { state, index, history }
                 },
                 );
             }
@@ -83,7 +83,7 @@ fn resume_fold_while_from_index(
                     suspend => {
                 let state = SuspendedFoldWhileEvalState::freeze(state);
                                         let history = PersistentFunctionalSequence::freeze(history);
-                ResumeFoldWhileFromIndexSuspensionFrameL83C25 { state, next_index, value, history }
+                ResumeFoldWhileFromIndexSuspensionFrame2 { state, next_index, value, history }
                 },
                 );
             }
@@ -130,7 +130,7 @@ fn resume_suspended_fold_while_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedFoldWhileFromIndexSuspensionFrameL133C25 { state, index, history },
+                    suspend => ResumeSuspendedFoldWhileFromIndexSuspensionFrame1 { state, index, history },
                 );
             }
             Err(error) => return Err(error),
@@ -149,7 +149,7 @@ fn resume_suspended_fold_while_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedFoldWhileFromIndexSuspensionFrameL156C25 { state, next_index, value, history },
+                    suspend => ResumeSuspendedFoldWhileFromIndexSuspensionFrame2 { state, next_index, value, history },
                 );
             }
             Err(error) => return Err(error),
@@ -187,7 +187,7 @@ fn resume_suspended_fold_while_with_step_value(
                 session,
                 Err(EvalError::InputRequired { request }),
                 ok(value) => Ok(value),
-                suspend => ResumeSuspendedFoldWhileWithStepValueSuspensionFrameL198C21 { state, next_index, value, history },
+                suspend => ResumeSuspendedFoldWhileWithStepValueSuspensionFrame { state, next_index, value, history },
             );
         }
         Err(error) => return Err(error),
@@ -268,7 +268,7 @@ fn resume_fold_while_tail_from_index(
                     suspend => {
                 let state = SuspendedFoldWhileEvalState::freeze(state);
                                         let history = PersistentFunctionalSequence::freeze(history);
-                ResumeFoldWhileTailFromIndexSuspensionFrameL282C25 { state, index, history, remaining }
+                ResumeFoldWhileTailFromIndexSuspensionFrame { state, index, history, remaining }
                 },
                 );
             }
@@ -343,7 +343,7 @@ fn resume_suspended_fold_while_tail_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedFoldWhileTailFromIndexSuspensionFrameL360C25 { state, index, history, remaining },
+                    suspend => ResumeSuspendedFoldWhileTailFromIndexSuspensionFrame { state, index, history, remaining },
                 );
             }
             Err(error) => return Err(error),

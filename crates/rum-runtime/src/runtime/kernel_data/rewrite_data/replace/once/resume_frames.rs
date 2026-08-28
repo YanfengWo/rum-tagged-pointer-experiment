@@ -2,13 +2,13 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvalReplaceSuspensionFrameL62C44 {
+pub(super) struct EvalReplaceSuspensionFrame {
     pub(super) args: rum_core::SharedArgs,
     pub(super) levels_expr: std::option::Option<rum_core::Expr>,
     pub(super) heads_option_exprs: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for EvalReplaceSuspensionFrameL62C44 {
+impl crate::runtime::suspension::SuspensionFrame for EvalReplaceSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -33,16 +33,14 @@ impl crate::runtime::suspension::SuspensionFrame for EvalReplaceSuspensionFrameL
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeReplaceAfterRuleExprsSuspensionFrameL130C44 {
+pub(super) struct ResumeReplaceAfterRuleExprsSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) rule_plan: crate::runtime::RewriteRulePlan,
     pub(super) levels_expr: std::option::Option<rum_core::Expr>,
     pub(super) call_args: rum_core::SharedArgs,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeReplaceAfterRuleExprsSuspensionFrameL130C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeReplaceAfterRuleExprsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -67,16 +65,14 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishReplaceHeadsResolutionSuspensionFrameL173C44 {
+pub(super) struct FinishReplaceHeadsResolutionSuspensionFrame {
     pub(super) target: rum_core::Expr,
     pub(super) rule_plan: crate::runtime::RewriteRulePlan,
     pub(super) call_args: rum_core::SharedArgs,
     pub(super) include_heads: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishReplaceHeadsResolutionSuspensionFrameL173C44
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishReplaceHeadsResolutionSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -231,11 +227,9 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueReplaceSetupFrame {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishReplaceLevelsResolutionSuspensionFrameL205C52;
+pub(super) struct FinishReplaceLevelsResolutionSuspensionFrame1;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishReplaceLevelsResolutionSuspensionFrameL205C52
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishReplaceLevelsResolutionSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -250,7 +244,7 @@ impl crate::runtime::suspension::SuspensionFrame
     session,
     evaluated_result,
     ok(value) => Ok(value),
-    suspend => FinishReplaceLevelsResolutionSuspensionFrameL207C66,
+    suspend => FinishReplaceLevelsResolutionSuspensionFrame2,
 )
         })()
                     .map(|value| <rum_core::Expr as crate::runtime::suspension::ContinuationValue>::into_continuation_expr(value))
@@ -262,11 +256,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct FinishReplaceLevelsResolutionSuspensionFrameL207C66;
+pub(super) struct FinishReplaceLevelsResolutionSuspensionFrame2;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for FinishReplaceLevelsResolutionSuspensionFrameL207C66
-{
+impl crate::runtime::suspension::SuspensionFrame for FinishReplaceLevelsResolutionSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -281,12 +273,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveReplaceHeadsOptionsOwnedSuspensionFrameL221C52 {
+pub(super) struct ResolveReplaceHeadsOptionsOwnedSuspensionFrame {
     pub(super) default: bool,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResolveReplaceHeadsOptionsOwnedSuspensionFrameL221C52
+    for ResolveReplaceHeadsOptionsOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -317,11 +309,9 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResolveReplaceLevelSpecOwnedSuspensionFrameL242C53;
+pub(super) struct ResolveReplaceLevelSpecOwnedSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResolveReplaceLevelSpecOwnedSuspensionFrameL242C53
-{
+impl crate::runtime::suspension::SuspensionFrame for ResolveReplaceLevelSpecOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         _session: &mut Session,
@@ -342,7 +332,7 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ReplaceOwnedSuspensionFrameL266C63 {
+pub(super) struct ReplaceOwnedSuspensionFrame {
     pub(super) include_heads: bool,
     pub(super) expr: rum_core::Expr,
     pub(super) rule_plan: crate::runtime::RewriteRulePlan,
@@ -350,7 +340,7 @@ pub(super) struct ReplaceOwnedSuspensionFrameL266C63 {
     pub(super) level: usize,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ReplaceOwnedSuspensionFrameL266C63 {
+impl crate::runtime::suspension::SuspensionFrame for ReplaceOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -400,7 +390,7 @@ impl crate::runtime::suspension::SuspensionFrame for ReplaceOwnedSuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ReplaceChildrenOwnedSuspensionFrameL334C56 {
+pub(super) struct ReplaceChildrenOwnedSuspensionFrame1 {
     pub(super) args: crate::runtime::kernel_data::rewrite_data::suspended_state::FrozenRewriteQueue<
         rum_core::Expr,
     >,
@@ -410,7 +400,7 @@ pub(super) struct ReplaceChildrenOwnedSuspensionFrameL334C56 {
     pub(super) include_heads: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ReplaceChildrenOwnedSuspensionFrameL334C56 {
+impl crate::runtime::suspension::SuspensionFrame for ReplaceChildrenOwnedSuspensionFrame1 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -432,7 +422,7 @@ impl crate::runtime::suspension::SuspensionFrame for ReplaceChildrenOwnedSuspens
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ReplaceChildrenOwnedSuspensionFrameL394C56 {
+pub(super) struct ReplaceChildrenOwnedSuspensionFrame2 {
     pub(super) args: crate::runtime::kernel_data::rewrite_data::suspended_state::FrozenRewriteQueue<
         rum_core::Expr,
     >,
@@ -442,7 +432,7 @@ pub(super) struct ReplaceChildrenOwnedSuspensionFrameL394C56 {
     pub(super) include_heads: bool,
 }
 
-impl crate::runtime::suspension::SuspensionFrame for ReplaceChildrenOwnedSuspensionFrameL394C56 {
+impl crate::runtime::suspension::SuspensionFrame for ReplaceChildrenOwnedSuspensionFrame2 {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -464,14 +454,12 @@ impl crate::runtime::suspension::SuspensionFrame for ReplaceChildrenOwnedSuspens
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ReplaceCallChildrenOwnedSuspensionFrameL503C48 {
+pub(super) struct ReplaceCallChildrenOwnedSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::replace::once::SuspendedReplaceCallChildren,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ReplaceCallChildrenOwnedSuspensionFrameL503C48
-{
+impl crate::runtime::suspension::SuspensionFrame for ReplaceCallChildrenOwnedSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -488,12 +476,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ReplaceAssociationChildrenOwnedSuspensionFrameL591C48 {
+pub(super) struct ReplaceAssociationChildrenOwnedSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::rewrite_data::replace::once::SuspendedReplaceAssociationChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ReplaceAssociationChildrenOwnedSuspensionFrameL591C48
+    for ReplaceAssociationChildrenOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -511,13 +499,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DriveSuspendedReplaceCallChildrenSuspensionFrameL693C48 {
+pub(super) struct DriveSuspendedReplaceCallChildrenSuspensionFrame {
     pub(super) state:
         crate::runtime::kernel_data::rewrite_data::replace::once::SuspendedReplaceCallChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DriveSuspendedReplaceCallChildrenSuspensionFrameL693C48
+    for DriveSuspendedReplaceCallChildrenSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -535,12 +523,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct DriveSuspendedReplaceAssociationChildrenSuspensionFrameL794C48 {
+pub(super) struct DriveSuspendedReplaceAssociationChildrenSuspensionFrame {
     pub(super) state: crate::runtime::kernel_data::rewrite_data::replace::once::SuspendedReplaceAssociationChildren,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for DriveSuspendedReplaceAssociationChildrenSuspensionFrameL794C48
+    for DriveSuspendedReplaceAssociationChildrenSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

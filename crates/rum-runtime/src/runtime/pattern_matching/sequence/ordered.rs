@@ -55,7 +55,7 @@ impl Session {
             EvalError::InputRequired { request } => {
                 let pattern_args = FrozenMatcherSequence::freeze(pattern_args.collect());
                 let value_args = SharedArgs::new(value_args.collect());
-                crate::resume_or_suspend!(insert self, ResumeMatchCompiledOrderedArgsIterOwnedSuspensionFrameL57C44 { pattern_args, value_args });
+                crate::resume_or_suspend!(insert self, ResumeMatchCompiledOrderedArgsIterOwnedSuspensionFrame { pattern_args, value_args });
                 crate::resume_or_suspend!(insert self, ContinueMatchCompiledOrderedArgsFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -117,7 +117,7 @@ impl Session {
             EvalError::InputRequired { request } => {
                 let pattern_args = FrozenMatcherSequence::freeze(pattern_args.collect());
                 let value_args = SharedArgs::new(value_args.collect());
-                crate::resume_or_suspend!(insert self, ResumeCollectCompiledOrderedArgsIterOwnedSuspensionFrameL131C44 { pattern_args, value_args });
+                crate::resume_or_suspend!(insert self, ResumeCollectCompiledOrderedArgsIterOwnedSuspensionFrame { pattern_args, value_args });
                 crate::resume_or_suspend!(insert self, ContinueCollectCompiledOrderedArgsFrame);
                 Err(EvalError::InputRequired { request })
             }
@@ -127,16 +127,15 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeMatchCompiledOrderedArgsIterOwnedSuspensionFrameL57C44 {
-    pub(super) pattern_args:
-        crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
-            crate::runtime::session::session_state::MatcherArg,
-        >,
-    pub(super) value_args: rum_core::SharedArgs,
+struct ResumeMatchCompiledOrderedArgsIterOwnedSuspensionFrame {
+    pattern_args: crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
+        crate::runtime::session::session_state::MatcherArg,
+    >,
+    value_args: rum_core::SharedArgs,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeMatchCompiledOrderedArgsIterOwnedSuspensionFrameL57C44
+    for ResumeMatchCompiledOrderedArgsIterOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -221,16 +220,15 @@ impl crate::runtime::suspension::SuspensionFrame for ContinueMatchCompiledOrdere
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeCollectCompiledOrderedArgsIterOwnedSuspensionFrameL131C44 {
-    pub(super) pattern_args:
-        crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
-            crate::runtime::session::session_state::MatcherArg,
-        >,
-    pub(super) value_args: rum_core::SharedArgs,
+struct ResumeCollectCompiledOrderedArgsIterOwnedSuspensionFrame {
+    pattern_args: crate::runtime::pattern_matching::suspended_state::FrozenMatcherSequence<
+        crate::runtime::session::session_state::MatcherArg,
+    >,
+    value_args: rum_core::SharedArgs,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeCollectCompiledOrderedArgsIterOwnedSuspensionFrameL131C44
+    for ResumeCollectCompiledOrderedArgsIterOwnedSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

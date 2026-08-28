@@ -66,7 +66,7 @@ impl Session {
                     Err(EvalError::InputRequired { request }) => {
                         let guards = SharedArgs::new(guards.into_vec());
                         let option_scope = option_scope.map(FrozenRewriteValue::freeze);
-                        crate::resume_or_suspend!(insert self, CollectReplaceListRuleBindingsOwnedSuspensionFrameL39C60 { guards, option_scope });
+                        crate::resume_or_suspend!(insert self, CollectReplaceListRuleBindingsOwnedSuspensionFrame1 { guards, option_scope });
                         crate::resume_or_suspend!(insert self, ContinueReplaceListInitialGuardFilterFrame);
                         Err(EvalError::InputRequired { request })
                     }
@@ -100,7 +100,7 @@ impl Session {
                                     orderless,
                                     flat,
                                 };
-                                crate::resume_or_suspend!(insert self, CollectReplaceListRuleBindingsOwnedSuspensionFrameL77C60 { state });
+                                crate::resume_or_suspend!(insert self, CollectReplaceListRuleBindingsOwnedSuspensionFrame2 { state });
                                 crate::resume_or_suspend!(insert self, ContinueReplaceListCallMatchFrame);
                                 Err(EvalError::InputRequired { request })
                             }
@@ -138,7 +138,7 @@ impl Session {
                                         Vec::new()
                                     })
                                 })() },
-                    suspend => CollectReplaceListRuleBindingsOwnedSuspensionFrameL112C57,
+                    suspend => CollectReplaceListRuleBindingsOwnedSuspensionFrame3,
                 )
             }
         }
@@ -223,7 +223,7 @@ impl Session {
                         option_scope: option_scope.map(FrozenRewriteValue::freeze),
                         accepted: PersistentMatchResults::freeze(accepted),
                     };
-                    crate::resume_or_suspend!(insert self, FilterReplaceListGuardBindingsOwnedSuspensionFrameL217C48 { state });
+                    crate::resume_or_suspend!(insert self, FilterReplaceListGuardBindingsOwnedSuspensionFrame { state });
                     crate::resume_or_suspend!(insert self, ContinueReplaceListGuardFilterFrame);
                     return Err(EvalError::InputRequired { request });
                 }
@@ -307,7 +307,7 @@ impl Session {
                     max_results: state.scan.max_results,
                     rule_index: state.scan.index,
                 };
-                crate::resume_or_suspend!(insert self, CollectReplaceListRuleResultsOwnedSuspensionFrameL333C44 { state });
+                crate::resume_or_suspend!(insert self, CollectReplaceListRuleResultsOwnedSuspensionFrame { state });
                 crate::resume_or_suspend!(insert self, next);
                 Err(EvalError::InputRequired { request })
             }

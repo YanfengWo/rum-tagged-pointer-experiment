@@ -126,7 +126,7 @@ impl Session {
                 ok(value) => Ok(value),
                 suspend => {
             let args = args.clone();
-            EvalCheckAbortSuspensionFrameL121C17 { args }
+            EvalCheckAbortSuspensionFrame { args }
             },
             )?;
 
@@ -166,7 +166,7 @@ impl Session {
             ok(value) => Ok(value),
             suspend => {
         let args = args.clone();
-        ResumeCheckAbortWithPropagationSuspensionFrameL161C13 { args, propagate, pending_checkpoint }
+        ResumeCheckAbortWithPropagationSuspensionFrame { args, propagate, pending_checkpoint }
         },
         );
 
@@ -193,7 +193,7 @@ impl Session {
             self,
             body_result,
             ok(value) => Ok(value),
-            suspend => EvalAbortProtectSuspensionFrameL191C13 { pending_checkpoint },
+            suspend => EvalAbortProtectSuspensionFrame { pending_checkpoint },
         );
 
         match outcome {
@@ -216,7 +216,7 @@ impl Session {
                     self,
                     fallback_result,
                     ok(value) => Ok(value),
-                    suspend => ResumeCheckAbortAfterPrimarySuspensionFrameL213C21 { propagate, pending_checkpoint },
+                    suspend => ResumeCheckAbortAfterPrimarySuspensionFrame1 { propagate, pending_checkpoint },
                 );
 
                 match outcome {
@@ -239,7 +239,7 @@ impl Session {
                     self,
                     fallback_result,
                     ok(value) => Ok(value),
-                    suspend => ResumeCheckAbortAfterPrimarySuspensionFrameL240C21 { propagate, protected, pending_checkpoint },
+                    suspend => ResumeCheckAbortAfterPrimarySuspensionFrame2 { propagate, protected, pending_checkpoint },
                 );
 
                 match outcome {

@@ -57,7 +57,7 @@ fn resume_key_select_from_index(
                     suspend => {
                 let entries = FrozenAssociationSequence::freeze(entries);
                                         let selected = PersistentAssociationSequence::freeze(selected);
-                ResumeKeySelectFromIndexSuspensionFrameL57C25 { entries, criterion, index, selected, entry }
+                ResumeKeySelectFromIndexSuspensionFrame { entries, criterion, index, selected, entry }
                 },
                 );
             }
@@ -93,7 +93,7 @@ fn resume_suspended_key_select_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedKeySelectFromIndexSuspensionFrameL96C25 { entries, criterion, index, selected, entry },
+                    suspend => ResumeSuspendedKeySelectFromIndexSuspensionFrame { entries, criterion, index, selected, entry },
                 );
             }
             Err(error) => return Err(error),
@@ -125,19 +125,19 @@ fn resume_suspended_key_select_with_value(
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeKeySelectFromIndexSuspensionFrameL57C25 {
-    pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
+struct ResumeKeySelectFromIndexSuspensionFrame {
+    entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
-    pub(super) criterion: rum_core::Expr,
-    pub(super) index: usize,
-    pub(super) selected: crate::associations::suspended_state::PersistentAssociationSequence<
+    criterion: rum_core::Expr,
+    index: usize,
+    selected: crate::associations::suspended_state::PersistentAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
-    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+    entry: rum_runtime::kernel_api::AssociationEntryForm,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySelectFromIndexSuspensionFrameL57C25 {
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySelectFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -166,21 +166,19 @@ impl rum_runtime::kernel_api::SuspensionFrame for ResumeKeySelectFromIndexSuspen
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedKeySelectFromIndexSuspensionFrameL96C25 {
-    pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
+struct ResumeSuspendedKeySelectFromIndexSuspensionFrame {
+    entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
-    pub(super) criterion: rum_core::Expr,
-    pub(super) index: usize,
-    pub(super) selected: crate::associations::suspended_state::PersistentAssociationSequence<
+    criterion: rum_core::Expr,
+    index: usize,
+    selected: crate::associations::suspended_state::PersistentAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
-    pub(super) entry: rum_runtime::kernel_api::AssociationEntryForm,
+    entry: rum_runtime::kernel_api::AssociationEntryForm,
 }
 
-impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedKeySelectFromIndexSuspensionFrameL96C25
-{
+impl rum_runtime::kernel_api::SuspensionFrame for ResumeSuspendedKeySelectFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

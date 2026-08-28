@@ -2,7 +2,7 @@ use super::*;
 use rum_runtime::kernel_api::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteMissingListAtTargetLevelSuspensionFrameL244C21 {
+pub(super) struct ResumeDeleteMissingListAtTargetLevelSuspensionFrame1 {
     pub(super) items:
         crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
     pub(super) level: usize,
@@ -13,7 +13,7 @@ pub(super) struct ResumeDeleteMissingListAtTargetLevelSuspensionFrameL244C21 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteMissingListAtTargetLevelSuspensionFrameL244C21
+    for ResumeDeleteMissingListAtTargetLevelSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -43,7 +43,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteMissingListAtTargetLevelSuspensionFrameL278C21 {
+pub(super) struct ResumeDeleteMissingListAtTargetLevelSuspensionFrame2 {
     pub(super) items:
         crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
     pub(super) level: usize,
@@ -54,7 +54,7 @@ pub(super) struct ResumeDeleteMissingListAtTargetLevelSuspensionFrameL278C21 {
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteMissingListAtTargetLevelSuspensionFrameL278C21
+    for ResumeDeleteMissingListAtTargetLevelSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -84,7 +84,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrameL374C17 {
+pub(super) struct ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrame {
     pub(super) items:
         crate::associations::suspended_state::FrozenAssociationSequence<rum_core::Expr>,
     pub(super) level: usize,
@@ -95,7 +95,7 @@ pub(super) struct ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrameL3
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrameL374C17
+    for ResumeSuspendedDeleteMissingListAtTargetLevelSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -125,7 +125,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL448C21 {
+pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame1 {
     pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
@@ -139,7 +139,7 @@ pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL448
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL448C21
+    for ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -171,7 +171,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL502C21 {
+pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame2 {
     pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
@@ -185,7 +185,7 @@ pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL502
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL502C21
+    for ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -217,7 +217,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL537C21 {
+pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame3 {
     pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
@@ -231,7 +231,7 @@ pub(super) struct ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL537
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrameL537C21
+    for ResumeDeleteMissingAssociationAtTargetLevelSuspensionFrame3
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -263,7 +263,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL644C21 {
+pub(super) struct ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrame1 {
     pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
@@ -277,7 +277,7 @@ pub(super) struct ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspension
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL644C21
+    for ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrame1
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -309,7 +309,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
 }
 
 #[derive(rum_runtime::kernel_api::FrameRootTrace)]
-pub(super) struct ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL712C17 {
+pub(super) struct ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrame2 {
     pub(super) entries: crate::associations::suspended_state::FrozenAssociationSequence<
         rum_runtime::kernel_api::AssociationEntryForm,
     >,
@@ -323,7 +323,7 @@ pub(super) struct ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspension
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
-    for ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrameL712C17
+    for ResumeSuspendedDeleteMissingAssociationAtTargetLevelSuspensionFrame2
 {
     fn resume(
         self: std::sync::Arc<Self>,

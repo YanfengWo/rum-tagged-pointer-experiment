@@ -253,7 +253,7 @@ impl Session {
         state: SuspendedUpValueScan,
         request: RuntimeInputRequest,
     ) -> Result<Option<Expr>, EvalError> {
-        crate::resume_or_suspend!(insert self, TryApplyUpValuesFromListSuspensionFrameL221C48 { state });
+        crate::resume_or_suspend!(insert self, TryApplyUpValuesFromListSuspensionFrame { state });
         Err(EvalError::InputRequired { request })
     }
 
@@ -402,13 +402,11 @@ const _: fn() = || {
 };
 
 #[derive(rum_derive::FrameRootTrace)]
-struct TryApplyUpValuesFromListSuspensionFrameL221C48 {
+struct TryApplyUpValuesFromListSuspensionFrame {
     pub(super) state: crate::runtime::definitions::application::up_values::SuspendedUpValueScan,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for TryApplyUpValuesFromListSuspensionFrameL221C48
-{
+impl crate::runtime::suspension::SuspensionFrame for TryApplyUpValuesFromListSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

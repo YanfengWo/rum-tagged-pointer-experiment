@@ -294,7 +294,7 @@ pub(super) fn resume_tensor_callback_from_index(
                     suspend => {
                 let state = SuspendedTensorCallbackEvalState::freeze(state);
                                         let outputs = PersistentFunctionalSequence::freeze(outputs);
-                ResumeTensorCallbackFromIndexSuspensionFrameL292C25 { state, index, outputs }
+                ResumeTensorCallbackFromIndexSuspensionFrame { state, index, outputs }
                 },
                 );
             }
@@ -328,7 +328,7 @@ fn resume_suspended_tensor_callback_from_index(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedTensorCallbackFromIndexSuspensionFrameL329C25 { state, index, outputs },
+                    suspend => ResumeSuspendedTensorCallbackFromIndexSuspensionFrame { state, index, outputs },
                 );
             }
             Err(error) => return Err(error),
@@ -422,7 +422,7 @@ fn resume_inner_from_indices(
                                                 let terms = PersistentFunctionalSequence::freeze(terms);
                                                 let output_scalars =
                                                     PersistentFunctionalSequence::freeze(output_scalars);
-                    ResumeInnerFromIndicesSuspensionFrameL426C29 { state, output_index, contract_index, terms, output_scalars }
+                    ResumeInnerFromIndicesSuspensionFrame1 { state, output_index, contract_index, terms, output_scalars }
                     },
                     );
                 }
@@ -443,7 +443,7 @@ fn resume_inner_from_indices(
                     suspend => {
                 let state = SuspendedInnerEvalState::freeze(state);
                                         let output_scalars = PersistentFunctionalSequence::freeze(output_scalars);
-                ResumeInnerFromIndicesSuspensionFrameL455C25 { state, output_index, output_scalars }
+                ResumeInnerFromIndicesSuspensionFrame2 { state, output_index, output_scalars }
                 },
                 );
             }
@@ -521,7 +521,7 @@ fn resume_suspended_inner_from_indices(
                         session,
                         Err(EvalError::InputRequired { request }),
                         ok(value) => Ok(value),
-                        suspend => ResumeSuspendedInnerFromIndicesSuspensionFrameL540C29 { state, output_index, contract_index, terms, output_scalars },
+                        suspend => ResumeSuspendedInnerFromIndicesSuspensionFrame1 { state, output_index, contract_index, terms, output_scalars },
                     );
                 }
                 Err(error) => return Err(error),
@@ -538,7 +538,7 @@ fn resume_suspended_inner_from_indices(
                     session,
                     Err(EvalError::InputRequired { request }),
                     ok(value) => Ok(value),
-                    suspend => ResumeSuspendedInnerFromIndicesSuspensionFrameL567C25 { state, output_index, output_scalars },
+                    suspend => ResumeSuspendedInnerFromIndicesSuspensionFrame2 { state, output_index, output_scalars },
                 );
             }
             Err(error) => return Err(error),

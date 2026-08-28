@@ -2,14 +2,12 @@ use super::*;
 use crate::runtime::suspension::trace::{FrameRootTrace, FrameRootVisitor};
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeTestReportFromIndexSuspensionFrameL266C44 {
+pub(super) struct ResumeTestReportFromIndexSuspensionFrame {
     pub(super) case_state:
         crate::runtime::debug_tools::test_report::report::SuspendedTestReportCase,
 }
 
-impl crate::runtime::suspension::SuspensionFrame
-    for ResumeTestReportFromIndexSuspensionFrameL266C44
-{
+impl crate::runtime::suspension::SuspensionFrame for ResumeTestReportFromIndexSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,
@@ -26,13 +24,13 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeTestReportAfterEvaluationSuspensionFrameL312C44 {
+pub(super) struct ResumeTestReportAfterEvaluationSuspensionFrame {
     pub(super) output_state:
         crate::runtime::debug_tools::test_report::report::SuspendedTestReportOutput,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeTestReportAfterEvaluationSuspensionFrameL312C44
+    for ResumeTestReportAfterEvaluationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -50,12 +48,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedTestReportAfterEvaluationSuspensionFrameL392C44 {
+pub(super) struct ResumeSuspendedTestReportAfterEvaluationSuspensionFrame {
     pub(super) output: crate::runtime::debug_tools::test_report::report::SuspendedTestReportOutput,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedTestReportAfterEvaluationSuspensionFrameL392C44
+    for ResumeSuspendedTestReportAfterEvaluationSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,
@@ -73,12 +71,12 @@ impl crate::runtime::suspension::SuspensionFrame
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct ResumeSuspendedTestReportFromIndexSuspensionFrameL484C44 {
+pub(super) struct ResumeSuspendedTestReportFromIndexSuspensionFrame {
     pub(super) state: crate::runtime::debug_tools::test_report::report::SuspendedTestReportCase,
 }
 
 impl crate::runtime::suspension::SuspensionFrame
-    for ResumeSuspendedTestReportFromIndexSuspensionFrameL484C44
+    for ResumeSuspendedTestReportFromIndexSuspensionFrame
 {
     fn resume(
         self: std::sync::Arc<Self>,

@@ -50,7 +50,7 @@ impl Session {
         &mut self,
         request: RuntimeInputRequest,
     ) -> Result<Expr, EvalError> {
-        crate::resume_or_suspend!(insert self, EvaluateDefinitionRhsSuspensionFrameL23C17);
+        crate::resume_or_suspend!(insert self, EvaluateDefinitionRhsSuspensionFrame);
         Err(EvalError::InputRequired { request })
     }
 
@@ -71,9 +71,9 @@ impl Session {
 }
 
 #[derive(rum_derive::FrameRootTrace)]
-pub(super) struct EvaluateDefinitionRhsSuspensionFrameL23C17;
+struct EvaluateDefinitionRhsSuspensionFrame;
 
-impl crate::runtime::suspension::SuspensionFrame for EvaluateDefinitionRhsSuspensionFrameL23C17 {
+impl crate::runtime::suspension::SuspensionFrame for EvaluateDefinitionRhsSuspensionFrame {
     fn resume(
         self: std::sync::Arc<Self>,
         session: &mut Session,

@@ -266,7 +266,7 @@ impl Session {
             Ok(evaluation) => self.resume_test_report_after_evaluation(case_state, evaluation),
             Err(EvalError::InputRequired { request }) => {
                 let case_state = SuspendedTestReportCase::freeze(case_state);
-                crate::resume_or_suspend!(insert self, ResumeTestReportFromIndexSuspensionFrameL266C44 { case_state });
+                crate::resume_or_suspend!(insert self, ResumeTestReportFromIndexSuspensionFrame { case_state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -309,7 +309,7 @@ impl Session {
                     evaluation: SuspendedEvalCapturedOutcome::freeze(evaluation),
                     messages_match,
                 };
-                crate::resume_or_suspend!(insert self, ResumeTestReportAfterEvaluationSuspensionFrameL312C44 { output_state });
+                crate::resume_or_suspend!(insert self, ResumeTestReportAfterEvaluationSuspensionFrame { output_state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -385,7 +385,7 @@ impl Session {
                     evaluation: SuspendedEvalCapturedOutcome::freeze(evaluation),
                     messages_match,
                 };
-                crate::resume_or_suspend!(insert self, ResumeSuspendedTestReportAfterEvaluationSuspensionFrameL392C44 { output });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedTestReportAfterEvaluationSuspensionFrame { output });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
@@ -474,7 +474,7 @@ impl Session {
         match evaluation_result {
             Ok(evaluation) => self.resume_suspended_test_report_after_evaluation(state, evaluation),
             Err(EvalError::InputRequired { request }) => {
-                crate::resume_or_suspend!(insert self, ResumeSuspendedTestReportFromIndexSuspensionFrameL484C44 { state });
+                crate::resume_or_suspend!(insert self, ResumeSuspendedTestReportFromIndexSuspensionFrame { state });
                 Err(EvalError::InputRequired { request })
             }
             Err(error) => Err(error),
