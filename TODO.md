@@ -90,6 +90,29 @@ what the batch was looking for, and both have their own entries above:
 `Do[f[i] = i, …]` installing one raw definition, and rule right-hand-side
 `Condition` guards never being evaluated.
 
+## Next up — scheduled 2026-08-28
+
+Ordered after re-probing everything below. Silent defects outrank loud ones,
+and the instrument outranks nothing here because the instrument turned out to
+be fixed already.
+
+1. **The assignment-target normalization family** (the three defects under
+   "the same matrix exposed three defects" below). Two of the three are
+   silent and one of those installs a definition that nothing can ever reach.
+   Plan-first: one design-only brief covering all three, since they share a
+   shape — the target expression is not normalized before the definition is
+   installed — but reach it by three different mechanisms, so the brief has to
+   argue whether that is one repair or three rather than assume either.
+2. **The `rum-jupyter` ZeroMQ ordering flake.** Third occurrence reached, which
+   is what the standing agreement said to wait for. Diagnostic brief.
+3. **`ValueQ` session-clone cost** and the remaining batch-7 performance items,
+   as scheduled below.
+
+Not scheduled, and why: the call-stability-proof flake stands at one recorded
+occurrence against the same three-occurrence agreement, and association keyed
+reads are sublinear by a standing cache-admission decision that needs its
+memory tradeoff stated before it can be reopened.
+
 ## Opened by batch 7, not yet scheduled
 
 - **Gensyms held only by an opaque continuation frame — CLOSED 2026-08-28**
@@ -260,30 +283,62 @@ resolves definitions then that frame, and the held-lhs normalizer stopped
 after definitions. It now takes the same third step in the same order. The
 `Do[With[{k = i}, f[k] = k], …]` workaround in the test suite is gone.
 
-**The same matrix exposed two defects that have nothing to do with
-iterators** — both reproduce with a plain global symbol, neither is fixed:
+**The same matrix exposed three defects that have nothing to do with
+iterators** — all reproduce with a plain global symbol. **Re-probed
+2026-08-28 against the release CLI at `65c03870`: all three are still
+present**, each probe carrying a liveness assertion and a working control.
+They are one family — the assignment target is not normalized before the
+definition is installed — but by three different mechanisms, so whether
+they are one repair or three is a question for the design brief.
 
 - **`AssociateTo`/`KeyDropFrom` write back to the raw target.** `ii = 2;
-  AssociateTo[af[ii], "k" -> 7]` reads `af[2]` and then installs a third
-  definition `HoldPattern[af[ii]] :> <|"k" -> 7|>`, leaving `af[2]` empty.
-  Silent.
-- **None of the eleven compound assignment heads evaluate a `Part`
-  selector.** `kk = 1; lst[[kk]] += 5` reports `Part::pkspec1` and changes
-  nothing, while `lst[[kk]] = 99` works. Loud, so it ranks below the silent
-  one.
-- `TagSet`/`UpSet` never normalize lhs arguments either (`h /: h[tag1, tg] = 7`
-  stores `h[tag1, tg]` with `tg = 5`). That one is a standing contract
-  question, not a regression — decide it before touching it.
+  af[2] = <|"a" -> 1|>; AssociateTo[af[ii], "k" -> 7]` reads `af[2]`
+  correctly, applies the update correctly, then installs the result under a
+  second definition `HoldPattern[af[ii]] :> <|"a" -> 1, "k" -> 7|>` and
+  leaves `af[2]` untouched. Silent — no message. `KeyDropFrom` behaves the
+  same way. Mechanism: the fallback path evaluates `target_expr` to read
+  the current value but hands the *unevaluated* `target_expr` to
+  `store_association_lvalue_update`
+  (`crates/rum-stdlib/src/associations/mutation.rs:196-225`).
+- **The compound assignment heads do not evaluate a `Part` selector.**
+  `kk = 1; lst[[kk]] += 5` reports `Part::pkspec1` and changes nothing,
+  while `lst[[kk]] = 99` works and `lst[[1]] += 5` works — a clean
+  three-point control that isolates the defect to compound-assignment ×
+  symbol-selector. Confirmed on nine heads (`AddTo`, `SubtractFrom`,
+  `TimesBy`, `DivideBy`, `Increment`, `Decrement`, `PreIncrement`,
+  `PreDecrement`, `AppendTo`). Loud, so it ranks below the silent ones.
+  **The repair model is one call site**: `part_assignment.rs:228` passes
+  `evaluated_selectors` to
+  `exact_position_paths_from_part_target_selector_exprs`, while
+  `definition_updates.rs:389` passes the raw `selector_exprs` to the same
+  function.
+- **`TagSet`/`UpSet` never normalize lhs arguments, and the definition they
+  install is unreachable.** Worse than recorded: `tg = 5; h /: h[tag1, tg] =
+  7` stores `HoldPattern[h[tag1, tg]] :> 7`, so `h[tag1, 5]` does not match
+  and neither does `h[tag1, tg]` — the lhs evaluates to `h[tag1, 5]` before
+  lookup, so the definition can never fire from any input. Same for the true
+  up-value form (`vv = 5; g /: k[g, vv] = 11` leaves `k[g, 5]` unevaluated)
+  and the tagless form (`ww = 5; m[ww] ^= 22`). A clean symbol works
+  (`m3[qq] ^= 44` then `m3[qq]` is 44), and `m2[7] ^= 33` correctly reports
+  `UpSet::nosym`. Silent in every failing case. Whether the lhs *should*
+  normalize is still the standing contract question — but "writes a
+  definition that nothing can reach, without a message" is a defect under
+  either answer, so decide the contract, then fix at least the silence.
 
-**The microbench cannot run above `--scale 1`.** `--scale 5` dies on
-`evaluation exceeded iteration work limit (100000)` and writes a
-header-only `timings.tsv`, while the script still exits 0 with a warning —
-the same silent-empty shape as the stdin defect fixed in `dd4bdefc`. The
-cause is the deliberately conservative product propagation recorded below:
-the harness nests its repetition loop around each label's own loop. Two
-things are wrong and both matter, because this is the instrument every A/B
-depends on: the harness has no headroom above scale 1, and it fails
-quietly when it has none.
+**The microbench scale ceiling — FIXED `d9c713e1` (brief-344), verified
+2026-08-28.** Both halves are closed: the harness has headroom, and it fails
+loudly when it does not. `--scale 5` at the default `--reps 7` now completes
+and writes 112 measured labels with an empty stderr, and the scale is proved
+live — 100 of the 112 labels carry exactly 5x the scale-1 iteration count,
+the other 12 being fixed-width labels that scale does not touch. The script
+now exits non-zero on both failure shapes (`core-language-microbench.sh:1084`
+for a non-zero engine exit, `:1090` for zero measurement rows), so the
+header-only `timings.tsv` can no longer pass for a run. The record above of a
+scale-1 ceiling was written before brief-344 and was never retired.
+
+Note for whoever re-checks this: `--reps 1` is not a valid probe of the
+ceiling. The repetition loop is the layer that nests around each label's own
+loop, so lowering it hides the very defect being tested.
 
 **Deferred, with evidence, from the second sweep:**
 
