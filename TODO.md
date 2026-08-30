@@ -655,6 +655,29 @@ regressions and space-for-time tradeoffs.
 
 ## Opened by the 2026-08-31 consistency review (briefs 389-392)
 
+- **HIGH — preparation evaluates inside pattern regions it does not recognize.**
+  The pattern-region policy enumerates the wrappers it protects and omits
+  `Verbatim`, `PatternSequence`, `OrderlessPatternSequence`, `KeyValuePattern`,
+  `Longest`, `Shortest`, and `OptionsPattern`, all of which the matcher
+  supports. Director-reproduced: `typeAlias = Integer; fV[Verbatim[Blank[
+  typeAlias]]] = 7` stores `fV[Verbatim[_Integer]]` — **`Verbatim` means
+  verbatim, and its contents were evaluated** — and
+  `fP[PatternSequence[sideCall[], b_]] = 8` runs `sideCall[]` once and stores
+  its result. An ordinary binder `x_` is correctly left raw, so the policy's
+  shape is right and only its list is short. **User-reachable, no external
+  crate needed.** This is family B's own invariant failing on the forms nobody
+  enumerated.
+
+- **HIGH — `install_system_down_value` stores a raw lhs from outside the
+  crate.** It is `pub`, takes an arbitrary `Expr`, and mints the trusted token
+  internally, so preparation never runs (`session_api.rs:225`,
+  `prepared_store.rs:385`). `#[doc(hidden)]` does not restrain a downstream
+  Rust caller. brief-391 compiled an external crate and installed
+  `ExternalRaw391[i391]` with `i391 = 2`; the stored identity is unreachable by
+  ordinary lookup — exactly the defect class family B closed, reintroduced
+  through a public API. The sealing inventory test only scans in-repository
+  callers (`definition_store_sealing.rs:130`) and structurally cannot see this.
+
 - **`EvaluatedPartSelectors` can be forged through the kernel API.** brief-390
   compiled an external crate that built the wrapper from raw expressions via
   the exported continuation decoder (`kernel_api.rs:18` and `:100`,
