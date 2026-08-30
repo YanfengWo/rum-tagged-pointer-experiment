@@ -274,8 +274,29 @@ be fixed already.
    worth keeping: under the settled contract the rule is stored ready for
    lookup and is reachable immediately. The "preserve raw plus a warning"
    option, and the diagnostic question that depended on it, are both closed.
-2. **The `rum-jupyter` ZeroMQ ordering flake.** Third occurrence reached, which
-   is what the standing agreement said to wait for. Diagnostic brief.
+2. **The `rum-jupyter` ZeroMQ ordering flake — DIAGNOSED 2026-08-28, fix in
+   brief-384.** It reproduces on demand in **release** mode: thirty runs of
+   `cargo test -p rum-jupyter zeromq::tests::native --release` fail 22 times,
+   always the same single test
+   (`native_zeromq_backend_shutdown_stops_shell_work_and_reports_pending_shell_messages`,
+   `control.rs:166`, `left: Channel(Shell)` against `right: Channel(Control)`).
+
+   The test sends a shutdown on control, sleeps, sends an execute on shell, and
+   asserts the *next* event is `Channel(Control)`. The poller's priority is
+   correct — `PriorityKernelSocketPoller` lists `Control` first in every branch
+   (`socket.rs:191-229`) — but it chooses among channels **already pending**,
+   and native transport buffers on background workers, so "sent first" is not
+   "buffered first". The test asserts a timing property while the
+   implementation promises a priority one. It is the only place with this
+   shape: `wait_for_next_socket_event` is used exactly once in the suite; the
+   other twenty-one waits loop until their expected event and are
+   order-insensitive.
+
+   **Carry this forward beyond the fix: the test gate runs debug, and this
+   defect is nearly invisible there.** Three years of sightings were all
+   incidental workspace runs; this line's own six-plus workspace runs never hit
+   it. Where a defect is timing-shaped, a release-mode repetition run is a
+   different instrument from the debug gate, not a slower version of it.
 3. **`ValueQ` session-clone cost** and the remaining batch-7 performance items,
    as scheduled below.
 
