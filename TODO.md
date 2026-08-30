@@ -577,12 +577,23 @@ loop, so lowering it hides the very defect being tested.
   into one pass would reorder user-visible evaluation or change association-key
   semantics. Their outer walk is iterative, so wide rule lists no longer
   consume a native frame per rule.
-- **Parentheses are transparent to comparison-chain collection.** `1 == (1 ==
-  1)` is True while the `1 == True` it should reduce to stays unevaluated, so
-  rum disagrees with itself. The right-hand cases are fixable — a left chain
-  only extends through its lhs, so a comparison on the rhs came from explicit
-  grouping — while `(a == b) == c` and `a == b == c` share one AST and cannot
-  be told apart after parsing. Recorded in the lowering golden with a comment.
+- **Comparison chains — FIXED 2026-08-31** (brief-386, `8b93dffb`). This entry
+  was wrong in both directions: `a == (b == c)` flattened too, so the
+  right-hand cases were not already fine, and the shared AST was not a fact
+  about chains but a consequence of parsing comparisons as associative
+  binaries. **These operators have no associativity.** Chains are now collected
+  in the parser, so a parenthesised operand is a boundary by construction:
+  `(a==b)==c` is `Equal[Equal[a,b],c]` and `(1==1)==1` is `Equal[True, 1]`.
+
+  The same repair closed a second defect in the same machinery: mixed chains
+  lowered to `And`, repeating the middle operand, so it evaluated twice and the
+  chain short-circuited. They now lower to `Inequality[e1, op1, e2, op2, …]`
+  (user ruling 2026-08-30), which carries exactly `{Protected}` — no hold
+  attribute, which is why each operand evaluates exactly once and nothing is
+  skipped. The missing short-circuit is deliberate: undetermined comparisons
+  are routine, and a chain retained symbolically needs every part in evaluated
+  form, so early exit has no well-defined meaning. A short-circuiting variant,
+  if ever wanted, belongs in an option or a rum-native sibling.
 - **Product propagation is decided from construct nesting, not data flow.**
   `Table[Length[Table[...1000...]], {i,1,200}]` is refused although the outer
   `Table` retains only integers. Distinguishing that statically is not
