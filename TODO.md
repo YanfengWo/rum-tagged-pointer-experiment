@@ -310,8 +310,12 @@ be fixed already.
    incidental workspace runs; this line's own six-plus workspace runs never hit
    it. Where a defect is timing-shaped, a release-mode repetition run is a
    different instrument from the debug gate, not a slower version of it.
-3. **`ValueQ` session-clone cost** and the remaining batch-7 performance items,
-   as scheduled below.
+**Batch 7's performance items are all landed** — `ValueQ` (`e67715f1`),
+association `Part`/`Extract` (`4e045135`), `StringTrim` (`ada528c4`), symbol
+ordering (`64f6200f`), the gensym sweep (`3732615a`), and the REPL/Jupyter
+spin (`21569ddb`). An earlier revision of this section listed them as still
+scheduled; that was a stale entry written without checking, the same failure
+this line keeps finding elsewhere.
 
 Not scheduled, and why: the call-stability-proof flake stands at one recorded
 occurrence against the same three-occurrence agreement, and association keyed
