@@ -352,9 +352,19 @@ memory tradeoff stated before it can be reopened.
   after the third occurrence were all green. The standing agreement was to
   brief it on a third occurrence; it is unrelated to the 10 ms idle sleep,
   which landed after the flake's first two appearances.
-- **The call-stability-proof flake — DIAGNOSED 2026-08-31** (brief-387), and
-  **all three recorded sightings are one cause**, so the standing
-  three-occurrence threshold is met.
+- **The call-stability-proof flake — CLOSED 2026-08-31** (briefs 387-388,
+  `232ff567`). **All three recorded sightings were one cause.** The repair is
+  in the tests, and removes the collision by construction: `StabilityBloom`
+  compares its regular and generated lanes independently, so an
+  identity-bearing target paired with an Association of `System` symbols and
+  integer keys makes `intersects` reduce to `(0 & X) || (Y & 0)` for any
+  interner order. Semantic assertions stayed on ordinary symbols; only the
+  optimization assertions moved. Verified by sweeping preintern counts 0..256
+  at 257/257 for both tests, after first reproducing the failures at 36 and 142
+  to calibrate the harness.
+
+  The diagnosis follows, and is worth keeping for the method as much as the
+  finding.
 
   `symbol_stability_bloom_bit` derives one of 128 bits from
   `symbol.interned_id()`, assigned by the process-global `SYMBOL_INTERNER` that
@@ -390,7 +400,7 @@ memory tradeoff stated before it can be reopened.
   Bloom is rejected outright; it lowers a probability without establishing a
   guarantee.
 
-- **Second occurrence of the call-stability-proof flake, 2026-08-31.** One
+- **Superseded by the entry above; kept for the sighting record.** One
   workspace run during brief-385 failed
   `association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof`
   again, on `valid_call_stability_proof(&session, &key).is_some()`; it passed
