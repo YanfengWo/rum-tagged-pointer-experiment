@@ -1,4 +1,11 @@
-# brief-385 — syntax error locations are computed per form and rendered per file
+# brief-385 — syntax error locations are computed per form and rendered per file (revision 1)
+
+**Revision 1.** The first dispatch stopped correctly: it found a pinned
+assertion the brief had missed and, as instructed, reported it instead of
+updating it. The director has now ruled on that pin — see **The pinned
+assertion, ruled** — and authorizes exactly that one change. Every other
+pinned location that moves is still a stop.
+
 
 `TODO.md` has carried this since the second sweep, deliberately excluded from
 the splitter work because fixing it changes user-visible output and would have
@@ -44,13 +51,44 @@ Measured surface:
 So there are two distinct problems: a wrong location where one is rendered, and
 a missing location on the `Get` path.
 
+**The pinned assertion, ruled.**
+`eval_script_pins_the_second_form_syntax_error_message`
+(`crates/rum-runtime/src/runtime/tests/context_and_loader.rs:882`) asserts
+`trailing input at bytes 6..7` for `eval_script("x = 1\nw = 2 !")`, and its
+comment calls the form-relative span a contract. **It is not a contract; it is
+a regression guard whose anchor happens to be the defect.** Its stated purpose
+is that brief-308's two-state form handling "cannot *silently* alter
+diagnostics" — this change alters them loudly and with a reason, which is the
+opposite case. And the decisive argument is on the rendering side:
+`render_syntax_error` resolves that span against a `Document` over the whole
+file, so the renderer already assumes file coordinates. The two systems
+disagree and the span is the wrong one.
+
+**You are authorized to update this one assertion** to the file-coordinate
+value, and required to:
+
+- keep its other assertion — that the first form still ran before the error
+  surfaced — which is the actual two-state contract and is independent of
+  spans;
+- rewrite its comment to say the span is in file coordinates as of brief-385,
+  and why, so the next reader does not restore the old anchor;
+- leave every other pinned location alone. **If any other one moves, that is
+  still a stop-loss** — this authorization covers this single assertion.
+
 **A finding about the tests, which you must act on.** Ten assertions in the
-repository pin `--> N:M`, and **every one of them is `1:x`**
+repository pin `--> N:M`, and **all of the ones this brief's grep found are
+`1:x`**
 (`document.rs:497`, `cli.rs:178`, `terminal/src/lib.rs:289`,
 `session_requests/api.rs:38`, `input_resume.rs:217`, `repl/src/tests.rs:363`
-and `:455`, `left_chain_limits.rs:97`). Not one uses a multi-form script with a
-failure after the first form. That shape is why the defect survived. Your new
-tests must cover it; do not let the suite keep its blind spot.
+and `:455`, `left_chain_limits.rs:97`). That grep was incomplete — the first
+dispatch found a REPL assertion at `2:4` (`rum-repl/src/tests.rs:946`) that it
+missed, covering a multi-line **single** form. Confirm that one is unaffected
+rather than assuming it: a single form's coordinates coincide with the input's,
+so it should not move, and if it does that is a finding.
+
+Still, not one existing assertion uses a multi-form script with a failure after
+the first form. That shape is why the defect survived. Your new tests must
+cover it; do not let the suite keep its blind spot.
 
 ## Goal
 
@@ -154,8 +192,8 @@ is right — the excerpt uses the same span and would be wrong in the same way.
   measured run of the same shape.
 - **Stop-loss** — report rather than improvise if: spans cannot carry file
   coordinates without changing a public type the brief does not list; an
-  existing pinned location moves; or `Get`'s message structure cannot gain a
-  location without changing its tag.
+  existing pinned location **other than the one authorized above** moves; or
+  `Get`'s message structure cannot gain a location without changing its tag.
 - Paste real verbatim output. If a run did not reach green, say so.
 
 ## Report format
