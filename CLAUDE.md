@@ -221,11 +221,27 @@ Consequences for how I present and pick work:
   reach is narrower than "one route" suggests. It also removed a 63.8 KiB per-call
   ordinary-path capture. Detail in `TODO.md`, the 2026-08-28 `PROGRESS.md`
   entry, and memory `suspension-frame-roots-line.md`.
-- **Still open, with the decision stated in `TODO.md`:** the `rum-jupyter`
-  ZeroMQ ordering flake has reached the third occurrence that the standing
-  agreement said to brief on; a call-stability-proof flake has its first
-  recorded occurrence; association keyed reads remain sublinear rather than
-  flat because cache admission is a standing decision.
+- **The assignment-target normalization line is COMPLETE (2026-08-28/31,
+  briefs 376-388).** Eight defects across two repair families, all from one
+  bidirectional invariant: the identity a definition is stored under must come
+  from the same attribute-aware preparation as the identity a lookup
+  constructs. Four failed to prepare, two prepared a position that had to stay
+  raw, one needed `Flat`/`Orderless` match normalization. Storage and removal
+  now travel as tokens whose constructors are private, so a raw lhs from
+  source-language evaluation does not compile. Then three long-standing items
+  closed in one day: the `rum-jupyter` ZeroMQ flake (a test asserting a timing
+  property where the poller promises a priority one — reproduces at ~70% in
+  release, near-invisible in the debug gate), syntax error locations (spans were
+  form-local and rendered against the whole file), and comparison-chain
+  associativity (parentheses were transparent; `Inequality` introduced by user
+  ruling). The call-stability-proof flake is also closed: all three sightings
+  were one Bloom collision driven by a process-global interner id, and the
+  repair makes the collision structurally impossible rather than rare.
+- **`TODO.md` currently has no known-and-worth-fixing item.** What remains is
+  deliberate conservatism (`ReplacePart` sequencing, product propagation),
+  something with no practical impact (trailing-operator re-parsing), and
+  association keyed reads, which are sublinear by a standing cache-admission
+  decision that needs its memory tradeoff stated before it can be reopened.
 - **The gate lesson from batch 7, now in memory as
   `gate-assert-after-invalidation`:** six green gates missed a guard that
   stopped being enforced after any `SetAttributes`, because every gate — and
