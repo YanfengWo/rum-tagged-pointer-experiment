@@ -137,9 +137,10 @@ Before changing anything, enumerate and report:
   `--eval`, `Get`/`Needs`, the REPL, the host `session_requests` surface — and
   for each: does it render a location, is that location currently right, and
   against which coordinate system.
-- Every existing assertion that pins a location, and whether your change moves
-  it. The ten listed above are all `1:x` and should be unaffected; if any of
-  them moves, that is a finding to report before you proceed, not a snapshot to
+- Every existing assertion that pins a location — grep more thoroughly than
+  this brief did, which missed the REPL `2:4` — and whether your change moves
+  it. Report the complete list. Apart from the one assertion authorized above,
+  a pin that moves is a finding to report before you proceed, not a snapshot to
   update.
 
 If a path turns out already correct, say so and leave it alone.
