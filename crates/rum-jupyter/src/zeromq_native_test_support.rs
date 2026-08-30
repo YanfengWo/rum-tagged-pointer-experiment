@@ -96,6 +96,26 @@ pub(super) fn wait_for_socket_event(
     }
 }
 
+pub(super) fn wait_for_pending_socket_channels(
+    transport: &ZeroMqSocketSession<NativeZeroMqSocket>,
+    channels: &[KernelChannel],
+) {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        if channels
+            .iter()
+            .all(|&channel| transport.has_pending_channel(channel))
+        {
+            return;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "timed out waiting for pending socket channels {channels:?}"
+        );
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
 pub(super) fn wait_for_next_socket_event(
     driver: &mut KernelSocketDriver,
     transport: &mut ZeroMqSocketSession<NativeZeroMqSocket>,

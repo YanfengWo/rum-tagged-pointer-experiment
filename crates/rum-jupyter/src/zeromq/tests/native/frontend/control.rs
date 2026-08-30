@@ -152,16 +152,18 @@ fn native_zeromq_backend_shutdown_stops_shell_work_and_reports_pending_shell_mes
             ))
             .await
             .expect("control dealer should send shutdown request");
-        tokio::time::sleep(Duration::from_millis(30)).await;
         shell
             .send(frames_to_zmq_message(
                 wire_message_to_frames(execute_request).frames,
             ))
             .await
             .expect("shell dealer should send queued execute request");
-        tokio::time::sleep(Duration::from_millis(70)).await;
     });
 
+    wait_for_pending_socket_channels(
+        backend.transport(),
+        &[KernelChannel::Control, KernelChannel::Shell],
+    );
     let first_event = wait_for_next_socket_event(&mut driver, backend.transport_mut());
     assert_eq!(
         first_event,
