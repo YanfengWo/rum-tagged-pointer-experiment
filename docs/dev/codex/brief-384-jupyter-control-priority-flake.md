@@ -10,9 +10,9 @@ the director then verifies in an environment where the flake does reproduce.
 
 
 The flake `TODO.md` has tracked since brief-165 is diagnosed. This brief fixes
-it. The diagnosis below is the director's, reproduced on the current tree; you
-do not need to re-derive it, but you **do** need to confirm the reproduction
-before and after your change.
+it. The diagnosis below is the director's, reproduced on the current tree. You
+do not need to re-derive it, and you are not expected to reproduce it — see
+**Acceptance is a structural argument** below for what does decide this brief.
 
 ## The diagnosis
 
