@@ -1,4 +1,5 @@
 use super::super::*;
+use rum_syntax::SourceText;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
@@ -390,6 +391,27 @@ impl Session {
     }
 
     pub(in crate::runtime) fn emit_loader_message(&mut self, symbol: &str, error: &EvalError) {
+        self.emit_loader_message_with_source(symbol, error, None);
+    }
+
+    pub(in crate::runtime) fn emit_loader_message_for_path(
+        &mut self,
+        symbol: &str,
+        error: &EvalError,
+        path: &Path,
+    ) {
+        let source = self
+            .file_io()
+            .and_then(|file_io| file_io.read_to_string(path).ok());
+        self.emit_loader_message_with_source(symbol, error, source.as_deref());
+    }
+
+    fn emit_loader_message_with_source(
+        &mut self,
+        symbol: &str,
+        error: &EvalError,
+        source: Option<&str>,
+    ) {
         match error {
             EvalError::LoadPathNotFound { target, searched } => {
                 let detail = if searched.is_empty() {
@@ -403,7 +425,10 @@ impl Session {
                 self.push_message(symbol, "io", format!("could not read `{path}`: {source}"));
             }
             EvalError::Syntax(err) => {
-                self.push_message(symbol, "syntax", err.to_string());
+                let detail = source
+                    .and_then(|source| syntax_error_message_for_source(source, err))
+                    .unwrap_or_else(|| err.to_string());
+                self.push_message(symbol, "syntax", detail);
             }
             EvalError::NoFileIoProvider => {
                 self.emit_no_file_io_message();
@@ -508,6 +533,19 @@ impl Session {
             }
         }
     }
+}
+
+fn syntax_error_message_for_source(source: &str, error: &SyntaxError) -> Option<String> {
+    let span = error.span()?;
+    let location = SourceText::new(source).location(span.start)?;
+    let rendered = error.to_string();
+    let byte_location = format!(" at bytes {span}");
+    let description = rendered.replacen(&byte_location, "", 1);
+
+    Some(format!(
+        "{description} at line {}, column {} (bytes {span})",
+        location.line, location.column
+    ))
 }
 
 fn uncaught_throw_message_expr(value: &Expr, tag: &Expr, explicit_tag: bool) -> String {

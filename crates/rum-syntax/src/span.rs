@@ -40,6 +40,13 @@ impl Span {
             },
         }
     }
+
+    pub(crate) const fn offset_by(self, offset: usize) -> Self {
+        Self {
+            start: self.start.saturating_add(offset),
+            end: self.end.saturating_add(offset),
+        }
+    }
 }
 
 impl fmt::Display for Span {

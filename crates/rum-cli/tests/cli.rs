@@ -307,8 +307,32 @@ fn file_flag_renders_source_aware_syntax_diagnostics() {
     assert!(!output.status.success());
     let stderr = stderr(&output);
     assert!(stderr.contains("error: expected expression"));
+    assert!(stderr.contains("--> 1:5"));
     assert!(stderr.contains("1 | f[1,]"));
     assert!(stderr.contains("error: file evaluation failed"));
+}
+
+#[test]
+fn file_and_stdin_scripts_render_later_error_at_the_written_character() {
+    let source = "a = 1\nb = 2\nc = 3\nd = 1 ! 2\n";
+    let file = TempFile::new(source);
+    let path = file.path().to_string_lossy().into_owned();
+    let file_output = run_cli(&["--file", &path]);
+    let stdin_output = run_cli_with_stdin(&[], source);
+
+    for (path, output) in [("--file", file_output), ("stdin", stdin_output)] {
+        assert!(!output.status.success(), "{path} should reject the script");
+        let stderr = stderr(&output);
+        assert!(
+            stderr.contains("error: trailing input at bytes 24..25"),
+            "{path}: {stderr}"
+        );
+        assert!(stderr.contains("--> 4:7"), "{path}: {stderr}");
+        assert!(
+            stderr.contains("4 | d = 1 ! 2\n  |       ^"),
+            "{path}: {stderr}"
+        );
+    }
 }
 
 #[test]

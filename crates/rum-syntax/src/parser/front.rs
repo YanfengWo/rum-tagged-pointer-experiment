@@ -31,6 +31,24 @@ pub fn parse_expr(input: &str) -> Result<SyntaxExpr, SyntaxError> {
     super::parse_tokens(tokens)
 }
 
+/// Parses a source slice whose byte zero starts at `source_offset` in its
+/// containing file. Every returned syntax or error span uses file coordinates.
+#[doc(hidden)]
+pub fn parse_expr_with_offset(
+    input: &str,
+    source_offset: usize,
+) -> Result<SyntaxExpr, SyntaxError> {
+    if source_offset == 0 {
+        return parse_expr(input);
+    }
+
+    let mut tokens = lex(input).map_err(|error| error.offset_by(source_offset))?;
+    for token in &mut tokens {
+        token.span = token.span.offset_by(source_offset);
+    }
+    super::parse_tokens(tokens)
+}
+
 pub(super) struct Parser<'a, const SPLIT_FORMS: bool = false> {
     pub(super) tokens: &'a [Token],
     pub(super) index: usize,

@@ -42,11 +42,13 @@ pub enum ScriptForm {
     /// The splitter parsed this form; `syntax` is the tree its parse built
     /// (spans are whole-source offsets).
     Parsed { text: String, syntax: SyntaxExpr },
-    /// Text only. Produced for a form the splitter could not parse (a form
-    /// poisoned by a hard error is emitted as text precisely so the error
-    /// surfaces downstream when evaluation parses it) and for every form the
-    /// legacy line-driven fallback yields.
-    Unparsed { text: String },
+    /// Text plus its exact range in the whole source. Produced for a form the
+    /// splitter could not parse (a form poisoned by a hard error is emitted as
+    /// text precisely so the error surfaces downstream when evaluation parses
+    /// it) and for every form the legacy line-driven fallback yields. The
+    /// range lets that later parse produce file-coordinate spans even though
+    /// [`text`](ScriptForm::text) retains its legacy trimmed/LF-normalized view.
+    Unparsed { text: String, source_span: Span },
 }
 
 impl ScriptForm {
@@ -54,7 +56,7 @@ impl ScriptForm {
     pub fn text(&self) -> &str {
         match self {
             ScriptForm::Parsed { text, .. } => text,
-            ScriptForm::Unparsed { text } => text,
+            ScriptForm::Unparsed { text, .. } => text,
         }
     }
 }
@@ -70,6 +72,48 @@ pub enum ScriptFormsError {
     /// accumulated tail text produces, so message and span are byte-identical
     /// to the line-driven splitter's final parse.
     IncompleteTail(SyntaxError),
+}
+
+/// Re-parses an [`Unparsed`](ScriptForm::Unparsed) form's legacy text while
+/// mapping every span back through its exact raw source slice. The caller must
+/// pass the text and source range stored on the same form.
+#[doc(hidden)]
+pub fn parse_script_form_with_source(
+    text: &str,
+    raw_source: &str,
+    source_offset: usize,
+) -> Result<SyntaxExpr, SyntaxError> {
+    parse_normalized_script_text_with_source(text, raw_source, source_offset, true)
+}
+
+fn parse_normalized_script_text_with_source(
+    text: &str,
+    raw_source: &str,
+    source_offset: usize,
+    trim: bool,
+) -> Result<SyntaxExpr, SyntaxError> {
+    let (normalized, offsets) = normalize_script_form_with_offsets(raw_source, source_offset);
+    let (text_start, text_end) = if trim {
+        (
+            normalized.len() - normalized.trim_start().len(),
+            normalized.trim_end().len(),
+        )
+    } else {
+        (0, normalized.len())
+    };
+    assert_eq!(
+        &normalized[text_start..text_end],
+        text,
+        "script form text must match its raw source range: {raw_source:?}"
+    );
+    let offsets = &offsets[text_start..=text_end];
+    let map_span = |span: Span| Span::new(offsets[span.start], offsets[span.end]);
+
+    let mut tokens = lex(text).map_err(|error| error.map_spans(map_span))?;
+    for token in &mut tokens {
+        token.span = map_span(token.span);
+    }
+    super::parse_tokens(tokens)
 }
 
 /// Splits `source` into script forms in one lex plus one parse pass.
@@ -110,17 +154,20 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<ScriptForm>, ScriptFormsEr
             }
             Err(err) if err.is_incomplete() => {
                 // Reachable only at the stream's End token: the tail form.
-                // Re-parse the legacy-shaped accumulation (every line from
-                // the form's first line to EOF, `\n`-joined the way
-                // `lines()`-based accumulation joins them — no trailing
-                // newline survives) so the error's message and span stay
-                // byte-identical at O(tail) cost.
-                let tail = source[form_start(source, &lexed, start)..]
-                    .lines()
-                    .collect::<Vec<_>>()
-                    .join("\n");
+                // Re-parse the same line range the legacy accumulation used,
+                // excluding its final line terminator. Parsing the exact raw
+                // slice preserves CRLF byte offsets; its base offset makes the
+                // resulting syntax or error spans whole-source coordinates.
+                let tail_start = form_start(source, &lexed, start);
+                let tail_end = legacy_tail_end(source);
+                let tail = source[tail_start..].lines().collect::<Vec<_>>().join("\n");
 
-                return match parse_expr(&tail) {
+                return match parse_normalized_script_text_with_source(
+                    &tail,
+                    &source[tail_start..tail_end],
+                    tail_start,
+                    false,
+                ) {
                     Ok(syntax) => {
                         forms.push(ScriptForm::Parsed {
                             text: tail.trim().to_string(),
@@ -135,6 +182,7 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<ScriptForm>, ScriptFormsEr
                     Err(_) => {
                         forms.push(ScriptForm::Unparsed {
                             text: tail.trim().to_string(),
+                            source_span: Span::new(tail_start, tail_end),
                         });
                         Ok(forms)
                     }
@@ -177,8 +225,10 @@ pub fn parse_script_forms(source: &str) -> Result<Vec<ScriptForm>, ScriptFormsEr
                     }
                 }
 
+                let from_byte = form_start(source, &lexed, start);
                 forms.push(ScriptForm::Unparsed {
-                    text: form_text(source, form_start(source, &lexed, start), boundary),
+                    text: form_text(source, from_byte, boundary),
+                    source_span: Span::new(from_byte, boundary),
                 });
                 start = end;
             }
@@ -276,6 +326,57 @@ fn joined_lines(slice: &str) -> String {
     }
 }
 
+/// Produces the line-normalized text used by legacy script forms plus a map
+/// from each normalized byte boundary to its whole-source byte coordinate.
+fn normalize_script_form_with_offsets(
+    raw_source: &str,
+    source_offset: usize,
+) -> (String, Vec<usize>) {
+    let mut normalized = String::with_capacity(raw_source.len());
+    let mut offsets = Vec::with_capacity(raw_source.len() + 1);
+    offsets.push(source_offset);
+    let mut raw_offset = 0;
+
+    while raw_offset < raw_source.len() {
+        if raw_source[raw_offset..].starts_with("\r\n") {
+            normalized.push('\n');
+            raw_offset += 2;
+            offsets.push(source_offset.saturating_add(raw_offset));
+            continue;
+        }
+
+        let ch = raw_source[raw_offset..]
+            .chars()
+            .next()
+            .expect("raw offset is before end of source");
+        let char_len = ch.len_utf8();
+        normalized.push(ch);
+        for byte_offset in 1..=char_len {
+            offsets.push(
+                source_offset
+                    .saturating_add(raw_offset)
+                    .saturating_add(byte_offset),
+            );
+        }
+        raw_offset += char_len;
+    }
+
+    (normalized, offsets)
+}
+
+/// End of the raw slice represented by `source.lines().collect().join("\n")`:
+/// `lines()` removes one final LF or CRLF terminator, while internal line
+/// endings remain part of the source-coordinate range.
+fn legacy_tail_end(source: &str) -> usize {
+    if source.ends_with("\r\n") {
+        source.len() - 2
+    } else if source.ends_with('\n') {
+        source.len() - 1
+    } else {
+        source.len()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,9 +452,16 @@ mod tests {
 
     #[test]
     fn incomplete_tail_reports_the_legacy_shaped_error() {
+        // As of brief-385, syntax-error spans use file coordinates: the
+        // later-form point includes `x = 1\n`, while the single-form point is
+        // unchanged. The message shape and offending positions stay pinned.
         assert_eq!(
             tail_error("x = 1\ny +"),
-            "incomplete input: expected expression at bytes 3..3"
+            "incomplete input: expected expression at bytes 9..9"
+        );
+        assert_eq!(
+            tail_error("x = 1\r\ny +"),
+            "incomplete input: expected expression at bytes 10..10"
         );
         assert_eq!(
             tail_error("data = {"),
@@ -393,7 +501,13 @@ mod tests {
         assert_eq!(forms[0].text(), "a = 1");
         // `2 !` is a hard error (trailing `!`), so the form is text only and
         // the error surfaces downstream when evaluation parses it.
-        assert!(matches!(forms[1], ScriptForm::Unparsed { .. }));
+        assert!(matches!(
+            forms[1],
+            ScriptForm::Unparsed {
+                source_span: Span { start: 6, end: 9 },
+                ..
+            }
+        ));
         assert_eq!(forms[1].text(), "2 !");
     }
 }

@@ -49,6 +49,70 @@ fn parse_request_returns_structured_syntax_diagnostics() {
 }
 
 #[test]
+fn script_requests_report_file_coordinates_for_every_form_shape() {
+    let cases = [
+        ("x = 1\nw = 2 !", 12..13, 2, 7, "!"),
+        ("a = 1\nb = 2\nc = 3\nd = 1 ! 2", 24..25, 4, 7, "!"),
+        ("a = 1\nf[\n  1 ! 2\n]", 13..14, 3, 5, "!"),
+        ("a = 1\r\nb = 2\r\nc = 3\r\nd = 1 ! 2", 27..28, 4, 7, "!"),
+        ("f[1,]\nb = 2", 4..5, 1, 5, "]"),
+        ("x = 1\ny +", 9..9, 2, 4, ""),
+        ("x = 1\n\\", 6..7, 2, 1, "\\"),
+        ("x = 1\ns = \"", 10..11, 2, 5, "\""),
+    ];
+
+    for (source, span, line, column, text) in cases {
+        let mut session = Session::new();
+        let failure = session
+            .eval_script_request(source)
+            .expect_err("malformed script should return a syntax diagnostic");
+        let SessionRequestError::Syntax(diagnostic) = failure.error else {
+            panic!("expected syntax diagnostic for {source:?}")
+        };
+
+        assert_eq!(diagnostic.spans.len(), 1, "source: {source:?}");
+        assert_eq!(diagnostic.spans[0].span.start, span.start, "{source:?}");
+        assert_eq!(diagnostic.spans[0].span.end, span.end, "{source:?}");
+        assert_eq!(diagnostic.spans[0].start.line, line, "{source:?}");
+        assert_eq!(diagnostic.spans[0].start.column, column, "{source:?}");
+        assert_eq!(diagnostic.spans[0].text, text, "{source:?}");
+        assert!(
+            diagnostic
+                .rendered
+                .contains(&format!("--> {line}:{column}")),
+            "{}",
+            diagnostic.rendered
+        );
+    }
+
+    let mut session = Session::new();
+    let failure = session
+        .eval_script_request("a = 1\nb = 2\nc = 3\nd = 1 ! 2")
+        .expect_err("the fourth form should fail");
+    let SessionRequestError::Syntax(diagnostic) = failure.error else {
+        panic!("expected a syntax diagnostic")
+    };
+    assert!(
+        diagnostic.rendered.contains("4 | d = 1 ! 2\n  |       ^"),
+        "{}",
+        diagnostic.rendered
+    );
+
+    let mut session = Session::new();
+    let failure = session
+        .eval_script_request("a = 1\nf[\n  1 ! 2\n]")
+        .expect_err("the multiline second form should fail");
+    let SessionRequestError::Syntax(diagnostic) = failure.error else {
+        panic!("expected a syntax diagnostic")
+    };
+    assert!(
+        diagnostic.rendered.contains("3 |   1 ! 2\n  |     ^"),
+        "{}",
+        diagnostic.rendered
+    );
+}
+
+#[test]
 fn complete_request_returns_transport_friendly_matches() {
     let mut session = Session::new();
     session.eval_text("localName = 1").unwrap();

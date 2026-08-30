@@ -80,4 +80,63 @@ impl SyntaxError {
             _ => None,
         }
     }
+
+    pub(crate) fn offset_by(self, offset: usize) -> Self {
+        self.map_spans(|span| span.offset_by(offset))
+    }
+
+    pub(crate) fn map_spans(self, mut map_span: impl FnMut(Span) -> Span) -> Self {
+        match self {
+            Self::EmptyInput => Self::EmptyInput,
+            Self::UnexpectedToken {
+                expected,
+                found,
+                span,
+            } => Self::UnexpectedToken {
+                expected,
+                found,
+                span: map_span(span),
+            },
+            Self::Incomplete { expected, span } => Self::Incomplete {
+                expected,
+                span: map_span(span),
+            },
+            Self::UnclosedDelimiter {
+                expected,
+                span,
+                opening_span,
+                opening,
+            } => Self::UnclosedDelimiter {
+                expected,
+                span: map_span(span),
+                opening_span: map_span(opening_span),
+                opening,
+            },
+            Self::TrailingInput { span } => Self::TrailingInput {
+                span: map_span(span),
+            },
+            Self::ParseDepthExceeded { max, span } => Self::ParseDepthExceeded {
+                max,
+                span: map_span(span),
+            },
+            Self::StatementChainTooLong { max, span } => Self::StatementChainTooLong {
+                max,
+                span: map_span(span),
+            },
+            Self::LeftAssociativeChainTooLong { max, span } => Self::LeftAssociativeChainTooLong {
+                max,
+                span: map_span(span),
+            },
+            Self::UnexpectedCharacter { found, span } => Self::UnexpectedCharacter {
+                found,
+                span: map_span(span),
+            },
+            Self::UnterminatedString { span } => Self::UnterminatedString {
+                span: map_span(span),
+            },
+            Self::UnterminatedComment { span } => Self::UnterminatedComment {
+                span: map_span(span),
+            },
+        }
+    }
 }

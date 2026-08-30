@@ -1,5 +1,5 @@
 use super::*;
-use rum_syntax::{ScriptForm, ScriptFormsError, parse_script_forms};
+use rum_syntax::{ScriptForm, ScriptFormsError, Span, parse_expr_with_offset, parse_script_forms};
 
 pub(super) fn normalize_context_name(context: impl Into<String>) -> String {
     let mut context = context.into();
@@ -112,24 +112,48 @@ pub(super) fn split_script_into_forms(source: &str) -> Result<Vec<ScriptForm>, E
     match parse_script_forms(source) {
         Ok(forms) => Ok(forms),
         Err(ScriptFormsError::IncompleteTail(err)) => Err(err.into()),
-        Err(ScriptFormsError::LexFailed(_)) => Ok(split_script_into_forms_line_driven(source)?
-            .into_iter()
-            .map(|text| ScriptForm::Unparsed { text })
-            .collect()),
+        Err(ScriptFormsError::LexFailed(_)) => split_script_into_forms_line_driven_forms(source),
     }
 }
 
-/// Legacy line-driven splitter: accumulate lines, flush at the first line
-/// whose accumulated parse succeeds or fails hard, and report an incomplete
-/// tail. Retained as the lex-failure fallback above and as the
-/// differential-test oracle for `parse_script_forms`.
+/// Text-only view of the legacy line-driven splitter retained as the
+/// differential-test oracle for `parse_script_forms`; the underlying form
+/// builder remains the lex-failure fallback above.
+#[cfg(test)]
 pub(super) fn split_script_into_forms_line_driven(source: &str) -> Result<Vec<String>, EvalError> {
+    split_script_into_forms_line_driven_forms(source).map(|forms| {
+        forms
+            .into_iter()
+            .map(|form| form.text().to_string())
+            .collect()
+    })
+}
+
+fn split_script_into_forms_line_driven_forms(source: &str) -> Result<Vec<ScriptForm>, EvalError> {
     let mut forms = Vec::new();
     let mut current = String::new();
+    let mut current_start = None;
+    let mut current_end = 0;
+    let mut next_line_start = 0;
 
     for raw_line in source.lines() {
+        let line_start = next_line_start;
+        let line_end = line_start + raw_line.len();
+        next_line_start = line_end
+            + if source[line_end..].starts_with("\r\n") {
+                2
+            } else if source[line_end..].starts_with('\n') {
+                1
+            } else {
+                0
+            };
+
         if current.is_empty() && raw_line.trim().is_empty() {
             continue;
+        }
+
+        if current.is_empty() {
+            current_start = Some(line_start);
         }
 
         if !current.is_empty() {
@@ -137,37 +161,68 @@ pub(super) fn split_script_into_forms_line_driven(source: &str) -> Result<Vec<St
         }
 
         current.push_str(raw_line);
+        current_end = line_end;
 
         if current.trim().is_empty() {
             current.clear();
+            current_start = None;
             continue;
         }
 
-        match parse_expr(&current) {
+        let source_span = Span::new(
+            current_start.expect("nonempty accumulation has a source start"),
+            current_end,
+        );
+        match parse_expr_with_offset(
+            &source[source_span.start..source_span.end],
+            source_span.start,
+        ) {
             Ok(_) => {
-                forms.push(current.trim().to_string());
+                forms.push(ScriptForm::Unparsed {
+                    text: current.trim().to_string(),
+                    source_span,
+                });
                 current.clear();
+                current_start = None;
             }
             Err(SyntaxError::EmptyInput) => {
                 current.clear();
+                current_start = None;
             }
             Err(err) if err.is_incomplete() => {}
             Err(_) => {
-                forms.push(current.trim().to_string());
+                forms.push(ScriptForm::Unparsed {
+                    text: current.trim().to_string(),
+                    source_span,
+                });
                 current.clear();
+                current_start = None;
             }
         }
     }
 
     if !current.trim().is_empty() {
-        match parse_expr(&current) {
+        let source_span = Span::new(
+            current_start.expect("nonempty tail has a source start"),
+            current_end,
+        );
+        match parse_expr_with_offset(
+            &source[source_span.start..source_span.end],
+            source_span.start,
+        ) {
             Ok(_) => {
-                forms.push(current.trim().to_string());
+                forms.push(ScriptForm::Unparsed {
+                    text: current.trim().to_string(),
+                    source_span,
+                });
             }
             Err(SyntaxError::EmptyInput) => {}
             Err(err) if err.is_incomplete() => return Err(err.into()),
             Err(_) => {
-                forms.push(current.trim().to_string());
+                forms.push(ScriptForm::Unparsed {
+                    text: current.trim().to_string(),
+                    source_span,
+                });
             }
         }
     }

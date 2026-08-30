@@ -279,7 +279,7 @@ impl Session {
             }
         };
 
-        match self.eval_file(path) {
+        match self.eval_file(&path) {
             Ok(outcome) => {
                 self.messages.extend(outcome.messages);
                 self.prints.extend(outcome.prints);
@@ -289,7 +289,7 @@ impl Session {
                 if matches!(err, EvalError::Exit { .. }) {
                     return Err(err);
                 }
-                self.emit_loader_message("Get", &err);
+                self.emit_loader_message_for_path("Get", &err, &path);
                 Ok(system_expr("$Failed"))
             }
         }

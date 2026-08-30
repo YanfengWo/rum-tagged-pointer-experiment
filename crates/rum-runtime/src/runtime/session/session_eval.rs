@@ -1,5 +1,5 @@
 use super::super::*;
-use rum_syntax::ScriptForm;
+use rum_syntax::{ScriptForm, parse_script_form_with_source};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TerminatedEvaluationHandling {
@@ -13,6 +13,11 @@ enum TerminatedEvaluationHandling {
 /// every other entry point evaluates text and parses exactly as before.
 enum TopLevelEvalInput<'a> {
     Text(&'a str),
+    ScriptForm {
+        text: &'a str,
+        source: &'a str,
+        source_offset: usize,
+    },
     Parsed(SyntaxExpr),
 }
 
@@ -219,6 +224,11 @@ impl Session {
         let result = (|| {
             let syntax = match input {
                 TopLevelEvalInput::Text(text) => parse_expr(text)?,
+                TopLevelEvalInput::ScriptForm {
+                    text,
+                    source,
+                    source_offset,
+                } => parse_script_form_with_source(text, source, source_offset)?,
                 TopLevelEvalInput::Parsed(syntax) => syntax,
             };
             let expr = self.lower_syntax_expr(&syntax)?;
@@ -288,14 +298,29 @@ impl Session {
         let mut prints = Vec::new();
 
         for form in forms {
-            // A parsed form lowers its carried syntax directly; a text-only
-            // form (hard error or lex-failure fallback) is parsed here,
-            // exactly as every form was before forms carried their syntax.
-            let input = match form {
-                ScriptForm::Parsed { syntax, .. } => TopLevelEvalInput::Parsed(syntax),
-                ScriptForm::Unparsed { ref text } => TopLevelEvalInput::Text(text),
+            // A parsed form lowers its carried syntax directly. A text-only
+            // form (hard error or lex-failure fallback) reparses its exact raw
+            // source range so every resulting span is a file coordinate.
+            let result = match form {
+                ScriptForm::Parsed { syntax, .. } => self.eval_input_with_terminated_handling(
+                    TopLevelEvalInput::Parsed(syntax),
+                    terminated_handling,
+                ),
+                ScriptForm::Unparsed { text, source_span } => {
+                    let form_source = source
+                        .get(source_span.start..source_span.end)
+                        .expect("script form source span belongs to its source");
+                    self.eval_input_with_terminated_handling(
+                        TopLevelEvalInput::ScriptForm {
+                            text: &text,
+                            source: form_source,
+                            source_offset: source_span.start,
+                        },
+                        terminated_handling,
+                    )
+                }
             };
-            match self.eval_input_with_terminated_handling(input, terminated_handling) {
+            match result {
                 Ok(outcome) => {
                     value = outcome.value;
                     termination = outcome.termination;

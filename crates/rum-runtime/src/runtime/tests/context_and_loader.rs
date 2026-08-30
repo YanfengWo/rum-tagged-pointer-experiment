@@ -880,10 +880,10 @@ fn parse_script_forms_matches_the_line_driven_splitter_over_the_corpus() {
 
 #[test]
 fn eval_script_pins_the_second_form_syntax_error_message() {
-    // brief-308 constraint 4: a hard-error form stays text-only, so
-    // evaluation parses it exactly as it always did — same token, same
-    // message, same form-relative span. Pinned so the two-state form
-    // handling cannot silently alter diagnostics.
+    // A hard-error form stays text-only, so evaluation still fails at the
+    // same token with the same message. As of brief-385, its span is the
+    // token's file coordinate; pin it so two-state form handling cannot
+    // silently alter diagnostics or restore the former form-local anchor.
     let mut session = session_with_test_control_builtins();
 
     let error = session
@@ -891,9 +891,24 @@ fn eval_script_pins_the_second_form_syntax_error_message() {
         .expect_err("the second form has a trailing-input syntax error");
 
     assert!(matches!(error, EvalError::Syntax(_)));
-    assert_eq!(error.to_string(), "trailing input at bytes 6..7");
+    assert_eq!(error.to_string(), "trailing input at bytes 12..13");
     // The first form still ran before the error surfaced.
     assert_eq!(session.eval_text("x").unwrap().value.to_string(), "1");
+}
+
+#[test]
+fn lex_fallback_preserves_normalized_crlf_values_and_file_error_spans() {
+    let mut session = session_with_test_control_builtins();
+
+    let error = session
+        .eval_script("s = \"a\r\nb\"\r\n\\")
+        .expect_err("the final form contains an unexpected character");
+
+    assert_eq!(
+        error.to_string(),
+        "unexpected character `\\` at bytes 12..13"
+    );
+    assert_eq!(session.eval_text("s").unwrap().value, Expr::string("a\nb"));
 }
 
 #[test]
@@ -911,6 +926,30 @@ fn eval_script_preserves_messages_emitted_before_a_later_error() {
             .iter()
             .any(|message| message.symbol == "FindFile" && message.tag == "notfound")
     );
+}
+
+#[test]
+fn get_and_needs_syntax_messages_report_the_loaded_file_location() {
+    let dir = TempDirGuard::new("get-syntax-location");
+    let file = dir.write("broken.rum", "a = 1\nb = 2\nc = 3\nd = 1 ! 2");
+    for request in [
+        format!("Get[\"{}\"]", rum_path(&file)),
+        format!("Needs[\"Broken`\", \"{}\"]", rum_path(&file)),
+    ] {
+        let mut session = session_with_test_control_builtins();
+        let outcome = session.eval_text(&request).unwrap();
+
+        assert_eq!(outcome.value.to_string(), "$Failed");
+        let message = outcome
+            .messages
+            .iter()
+            .find(|message| message.symbol == "Get" && message.tag == "syntax")
+            .expect("the loader should emit Get's syntax message");
+        assert_eq!(
+            message.text,
+            "trailing input at line 4, column 7 (bytes 24..25)"
+        );
+    }
 }
 
 #[test]

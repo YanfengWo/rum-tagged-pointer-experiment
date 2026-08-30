@@ -8,8 +8,8 @@ mod helpers;
 mod script;
 
 use front::Parser;
-pub use front::parse_expr;
-pub use script::{ScriptForm, ScriptFormsError, parse_script_forms};
+pub use front::{parse_expr, parse_expr_with_offset};
+pub use script::{ScriptForm, ScriptFormsError, parse_script_form_with_source, parse_script_forms};
 
 pub(crate) fn parse_tokens(tokens: Vec<Token>) -> Result<SyntaxExpr, SyntaxError> {
     let mut parser = Parser::new(&tokens);

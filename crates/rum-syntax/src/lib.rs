@@ -26,6 +26,9 @@ pub use error::SyntaxError;
 pub use format_request::{parse_format_cli_args, parse_format_command};
 pub use formatter::{FormatterOptions, format_parsed_source, format_source};
 pub use lexer::{lex_with_trivia, raw_string_operand_position_after};
-pub use parser::{ScriptForm, ScriptFormsError, parse_expr, parse_script_forms};
+pub use parser::{
+    ScriptForm, ScriptFormsError, parse_expr, parse_expr_with_offset,
+    parse_script_form_with_source, parse_script_forms,
+};
 pub use span::Span;
 pub use trivia::{LexedSource, SyntaxToken, SyntaxTokenKind, TriviaKind, TriviaPiece};

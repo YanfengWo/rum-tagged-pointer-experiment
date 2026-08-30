@@ -19,6 +19,53 @@ fn reports_incomplete_call_input() {
 }
 
 #[test]
+fn source_offset_applies_to_syntax_parser_and_lexer_error_spans() {
+    let syntax = parse_expr_with_offset("f[x]", 10).unwrap();
+    assert_eq!(syntax.span(), Span::new(10, 14));
+
+    let parser_error = parse_expr_with_offset("f[1", 10).unwrap_err();
+    assert_eq!(
+        parser_error,
+        SyntaxError::UnclosedDelimiter {
+            expected: "]",
+            span: Span::point(13),
+            opening_span: Span::new(11, 12),
+            opening: "[",
+        }
+    );
+
+    let lexer_error = parse_expr_with_offset("\\", 10).unwrap_err();
+    assert_eq!(
+        lexer_error,
+        SyntaxError::UnexpectedCharacter {
+            found: '\\',
+            span: Span::new(10, 11),
+        }
+    );
+}
+
+#[test]
+fn script_form_source_map_preserves_normalized_text_and_raw_file_offsets() {
+    let syntax = parse_script_form_with_source("\"a\nb\"", "\"a\r\nb\"", 10).unwrap();
+    assert_eq!(syntax.span(), Span::new(10, 16));
+    assert!(matches!(
+        syntax.kind,
+        SyntaxExprKind::String(value) if value == "a\nb"
+    ));
+
+    let error =
+        parse_script_form_with_source("f[\n  1 ! 2\n]", "f[\r\n  1 ! 2\r\n]", 10).unwrap_err();
+    assert_eq!(
+        error,
+        SyntaxError::UnexpectedToken {
+            expected: ",",
+            found: "!".to_string(),
+            span: Span::new(18, 19),
+        }
+    );
+}
+
+#[test]
 fn reports_incomplete_double_bracket_input() {
     let err = parse_expr("expr[[1").unwrap_err();
 
