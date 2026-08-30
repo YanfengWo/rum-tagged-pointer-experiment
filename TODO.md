@@ -653,6 +653,34 @@ Every item remains subject to the performance gate in
 versus candidate timing plus counters and memory, and reject or report
 regressions and space-for-time tradeoffs.
 
+## Opened by the 2026-08-31 consistency review (briefs 389-392)
+
+- **`EvaluatedPartSelectors` can be forged through the kernel API.** brief-390
+  compiled an external crate that built the wrapper from raw expressions via
+  the exported continuation decoder (`kernel_api.rs:18` and `:100`,
+  `evaluated_part_selectors.rs:68`) and reached the parser with it. The typed
+  seam brief-377 introduced is therefore not the compiler-enforced
+  two-constructor boundary it was described as. Impact today is limited — the
+  forged value failed to parse, and only a kernel-API consumer could construct
+  one — but the guarantee is the point of that design, so the export surface
+  should be narrowed. Worth fixing; not urgent.
+
+- **The selector order contract is stated unconditionally and is not.**
+  `docs/guide/evaluation.md:168` says selectors evaluate exactly once, but
+  `AssociateTo` returns before selector handling when its update specification
+  is invalid (`mutation.rs:166`), so they evaluate zero times on that branch.
+  **The code is right and the document is wrong**: the specification is an
+  ordinary evaluated argument, and a call that fails validation should not
+  produce partial selector side effects. Reword the contract to say the
+  selectors evaluate once *when the mutation reaches target selection*.
+
+- **The frame-queue guard reaches less far than claimed.** brief-389 found
+  `insert_suspension_frame` public, the resume driver pushing directly, and the
+  invariant exempting `suspension/core.rs` and test directories. No current
+  path bypasses `SuspensionFrame`, so the traversal guarantee holds; a future
+  non-macro insertion in either exempt area would not be caught. `CLAUDE.md`
+  has been corrected; whether to narrow the exemption is open.
+
 ## Decision-gated or deferred
 
 - **Custom `Sort` / `KeySort` comparisons — settled 2026-08-26.** The ordering
