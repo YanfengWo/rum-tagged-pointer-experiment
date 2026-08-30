@@ -1,10 +1,14 @@
 # brief-385 — syntax error locations are computed per form and rendered per file (revision 1)
 
-**Revision 1.** The first dispatch stopped correctly: it found a pinned
-assertion the brief had missed and, as instructed, reported it instead of
-updating it. The director has now ruled on that pin — see **The pinned
-assertion, ruled** — and authorizes exactly that one change. Every other
-pinned location that moves is still a stop.
+**Revision 2.** Two dispatches have now stopped, each on a different pinned
+byte span, because revision 1 authorized them one at a time. That was the
+director's mistake: a single-instance authorization turns every further pin
+into another round trip. Revision 2 replaces it with a **criterion** you can
+apply yourself — see **Pinned spans: the criterion**.
+
+The surface inventory from the second dispatch is accepted and need not be
+redone. So is its proposed `Get` wording, with one edit; see **The `Get`
+wording, settled**.
 
 
 `TODO.md` has carried this since the second sweep, deliberately excluded from
@@ -64,16 +68,56 @@ opposite case. And the decisive argument is on the rendering side:
 file, so the renderer already assumes file coordinates. The two systems
 disagree and the span is the wrong one.
 
-**You are authorized to update this one assertion** to the file-coordinate
-value, and required to:
+### Pinned spans: the criterion
 
-- keep its other assertion — that the first form still ran before the error
-  surfaced — which is the actual two-state contract and is independent of
-  spans;
-- rewrite its comment to say the span is in file coordinates as of brief-385,
-  and why, so the next reader does not restore the old anchor;
-- leave every other pinned location alone. **If any other one moves, that is
-  still a stop-loss** — this authorization covers this single assertion.
+The same reasoning covers `incomplete_tail_reports_the_legacy_shaped_error`
+(`crates/rum-syntax/src/parser/script.rs:353`), which the second dispatch
+found, and any further one of the same shape. **Apply this test yourself
+rather than stopping again:**
+
+A pinned span or location MAY be updated when **all** of these hold:
+
+1. its current value is form-local, and the new value is the same position
+   expressed in file coordinates — the position itself does not move, only the
+   coordinate system;
+2. the span reaches a rendered diagnostic or a user-visible message, so the
+   file coordinate is the one a reader would need;
+3. the test's comment does not give an independent reason to want form-local
+   coordinates — "pinned so X cannot silently change this" is a regression
+   anchor, not such a reason.
+
+When you update one you MUST: keep every other assertion in that test
+untouched (they usually carry the real contract — that the first form still
+ran, that the single-form case is unchanged), and rewrite the comment to state
+that spans are in file coordinates as of brief-385, so a later reader does not
+restore the old anchor.
+
+**Anything failing that test is still a stop.** In particular: a pin whose
+*position* changes rather than its coordinate system, a pin on a single-form
+input that moves at all, or a pinned message whose text changes beyond the
+coordinates. Report those.
+
+Note that `incomplete_tail_reports_the_legacy_shaped_error` contains both
+cases — `data = {` is single-form and its `8..8` must not move, while
+`x = 1\ny +` is a later form and becomes `9..9`. After the update it anchors
+both relationships, which is worth saying in its comment.
+
+### The `Get` wording, settled
+
+The second dispatch proposed:
+
+```
+Get::syntax: syntax error at line 4, column 7: trailing input at bytes 24..25
+```
+
+Accepted with one edit — drop the redundant "syntax error at", since the tag
+already says it, and put the description first as the other paths do:
+
+```
+Get::syntax: trailing input at line 4, column 7 (bytes 24..25)
+```
+
+Keep the byte range parenthesized and in file coordinates.
 
 **A finding about the tests, which you must act on.** Ten assertions in the
 repository pin `--> N:M`, and **all of the ones this brief's grep found are
@@ -192,9 +236,9 @@ is right — the excerpt uses the same span and would be wrong in the same way.
 - Timeout discipline: `scripts/run-bounded.py --timeout SECONDS`, sized from a
   measured run of the same shape.
 - **Stop-loss** — report rather than improvise if: spans cannot carry file
-  coordinates without changing a public type the brief does not list; an
-  existing pinned location **other than the one authorized above** moves; or
-  `Get`'s message structure cannot gain a location without changing its tag.
+  coordinates without changing a public type the brief does not list; a pinned
+  location moves in a way that **fails the criterion above**; or `Get`'s
+  message structure cannot gain a location without changing its tag.
 - Paste real verbatim output. If a run did not reach green, say so.
 
 ## Report format
