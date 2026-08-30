@@ -2,7 +2,7 @@
 
 Generated from the installed `rum` builtin registry. Do not edit by hand.
 
-Builtin count: 642
+Builtin count: 643
 
 Regenerate with `cargo run -p rum-stdlib --bin generate-builtin-reference`.
 
@@ -2314,6 +2314,13 @@ Increments a held symbol or exact Part target and returns its previous value.
   - Increment::argx — expected exactly `1` argument(s), got `2`
   - Increment::rvalue — `1` is not a variable with a value, so its value cannot be changed.
   - Increment::wrsym — Symbol `1` is Protected.
+
+### Inequality
+
+Evaluates alternating operand/operator comparison chains without short-circuiting; each operand evaluates once, binary chains degenerate to their comparison head, and undetermined multi-segment chains remain symbolic.
+
+- Attributes: `Protected`
+- Capability: `Pure`
 
 ### Information
 

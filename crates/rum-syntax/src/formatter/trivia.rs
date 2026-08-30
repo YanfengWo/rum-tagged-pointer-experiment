@@ -189,37 +189,43 @@ pub(super) fn collect_binary_chain_rhs_start_indices(
     expr: &SyntaxExpr,
     token_index_by_start: &BTreeMap<usize, usize>,
 ) -> Vec<usize> {
-    let SyntaxExprKind::Binary { op, lhs, rhs } = &expr.kind else {
-        return Vec::new();
-    };
+    match &expr.kind {
+        SyntaxExprKind::ComparisonChain { operands, .. } => operands
+            .iter()
+            .skip(1)
+            .filter_map(|operand| token_index_by_start.get(&operand.span.start).copied())
+            .collect(),
+        SyntaxExprKind::Binary { op, lhs, rhs } => {
+            let mut indices = Vec::new();
 
-    let mut indices = Vec::new();
+            if op.is_right_associative() {
+                if binary_chain_child_matches(rhs, *op) {
+                    indices.extend(collect_binary_chain_rhs_start_indices(
+                        rhs,
+                        token_index_by_start,
+                    ));
+                }
 
-    if op.is_right_associative() {
-        if binary_chain_child_matches(rhs, *op) {
-            indices.extend(collect_binary_chain_rhs_start_indices(
-                rhs,
-                token_index_by_start,
-            ));
-        }
+                if let Some(rhs_start_index) = token_index_by_start.get(&rhs.span.start).copied() {
+                    indices.insert(0, rhs_start_index);
+                }
+            } else {
+                if binary_chain_child_matches(lhs, *op) {
+                    indices.extend(collect_binary_chain_rhs_start_indices(
+                        lhs,
+                        token_index_by_start,
+                    ));
+                }
 
-        if let Some(rhs_start_index) = token_index_by_start.get(&rhs.span.start).copied() {
-            indices.insert(0, rhs_start_index);
-        }
-    } else {
-        if binary_chain_child_matches(lhs, *op) {
-            indices.extend(collect_binary_chain_rhs_start_indices(
-                lhs,
-                token_index_by_start,
-            ));
-        }
+                if let Some(rhs_start_index) = token_index_by_start.get(&rhs.span.start).copied() {
+                    indices.push(rhs_start_index);
+                }
+            }
 
-        if let Some(rhs_start_index) = token_index_by_start.get(&rhs.span.start).copied() {
-            indices.push(rhs_start_index);
+            indices
         }
+        _ => Vec::new(),
     }
-
-    indices
 }
 
 pub(super) fn binary_chain_child_matches(expr: &SyntaxExpr, parent_op: crate::BinaryOp) -> bool {

@@ -26,7 +26,7 @@ fn comparison_lowering_preserves_resolver_call_count_and_order() {
     );
     assert_eq!(
         lowered.to_string(),
-        "And[Less[f[a], b], LessEqual[b, c], Equal[c, g[d]]]"
+        "LessEqual[Less[f[a], b], Equal[c, g[d]]]"
     );
 }
 
@@ -37,8 +37,6 @@ fn comparison_lowering_accepts_a_uniform_chain_at_the_boundary() {
     let source = comparison_source(LINK_COUNT);
     let syntax = parse_expr(&source).expect("boundary comparison source should parse");
     let lowered = lower_syntax_expr(&syntax).expect("boundary comparison source should lower");
-
-    drop_left_binary_chain(syntax);
 
     let Expr::Call { head, args } = lowered else {
         panic!("boundary comparison should lower to a call");
@@ -67,51 +65,21 @@ fn comparison_parser_rejects_a_long_uniform_chain_gracefully() {
 }
 
 #[test]
-fn comparison_lowering_bounds_the_total_of_direct_ast_subtrees() {
-    let accepted = SyntaxExpr::binary(
-        BinaryOp::Equal,
-        hand_built_comparison_chain(2_048, 1_000),
-        hand_built_comparison_chain(2_047, 10_000),
-        Span::new(30_000, 30_001),
-    );
+fn comparison_lowering_bounds_direct_chain_nodes() {
+    let accepted = hand_built_comparison_chain(MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS, 1_000);
     let lowered = lower_syntax_expr(&accepted)
-        .expect("4,096 comparison operators across both subtrees should lower");
+        .expect("a direct comparison chain at the parser limit should lower");
     let Expr::Call { head, args } = &lowered else {
         panic!("direct comparison tree should lower to a call");
     };
     assert!(is_system_symbol_name(head, "Equal"));
     assert_eq!(args.len(), MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS + 1);
-    drop_binary_tree_iteratively(accepted);
+    drop(accepted);
     drop(lowered);
 
-    let rejected_rhs_start = 20_000;
-    let rejected = SyntaxExpr::binary(
-        BinaryOp::Equal,
-        hand_built_comparison_chain(2_048, 1_000),
-        hand_built_comparison_chain(2_048, rejected_rhs_start),
-        Span::new(30_000, 30_001),
-    );
+    let rejected = hand_built_comparison_chain(MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS + 1, 20_000);
     let error = lower_syntax_expr(&rejected)
-        .expect_err("4,097 direct comparison operators should be rejected");
-    assert!(matches!(
-        error,
-        EvalError::Syntax(SyntaxError::LeftAssociativeChainTooLong {
-            max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
-            span,
-        }) if span == Span::new(rejected_rhs_start, rejected_rhs_start + 1)
-    ));
-    drop_binary_tree_iteratively(rejected);
-}
-
-#[test]
-fn comparison_lowering_counts_explicitly_parenthesized_subtrees_together() {
-    let side = comparison_source(2_048);
-    let source = format!("({side}) == ({side})");
-    let syntax =
-        parse_expr(&source).expect("independent parenthesized comparison spines should parse");
-    let error = lower_syntax_expr(&syntax)
-        .expect_err("4,097 total comparison operators should be rejected during lowering");
-
+        .expect_err("a direct comparison chain above the parser limit should be rejected");
     assert!(matches!(
         error,
         EvalError::Syntax(SyntaxError::LeftAssociativeChainTooLong {
@@ -119,7 +87,34 @@ fn comparison_lowering_counts_explicitly_parenthesized_subtrees_together() {
             ..
         })
     ));
-    drop_binary_tree_iteratively(syntax);
+    drop(rejected);
+}
+
+#[test]
+fn comparison_lowering_keeps_parenthesized_subtrees_independent() {
+    let side = comparison_source(2_048);
+    let source = format!("({side}) == ({side})");
+    let syntax =
+        parse_expr(&source).expect("independent parenthesized comparison spines should parse");
+    let lowered = lower_syntax_expr(&syntax)
+        .expect("independent parenthesized chains should not share a link budget");
+
+    let Expr::Call { head, args } = &lowered else {
+        panic!("outer parenthesized comparison should lower to a call");
+    };
+    assert!(is_system_symbol_name(head, "Equal"));
+    assert_eq!(args.len(), 2);
+    for arg in args {
+        let Expr::Call {
+            head: inner_head,
+            args: inner_args,
+        } = arg
+        else {
+            panic!("parenthesized chain should remain an inner call");
+        };
+        assert!(is_system_symbol_name(inner_head, "Equal"));
+        assert_eq!(inner_args.len(), 2_049);
+    }
 }
 
 fn comparison_source(link_count: usize) -> String {
@@ -134,16 +129,14 @@ fn comparison_source(link_count: usize) -> String {
 }
 
 fn hand_built_comparison_chain(link_count: usize, span_start: usize) -> SyntaxExpr {
-    let mut syntax = SyntaxExpr::symbol("a", Span::point(span_start));
-    for index in 0..link_count {
-        syntax = SyntaxExpr::binary(
-            BinaryOp::Equal,
-            syntax,
-            SyntaxExpr::symbol("a", Span::point(span_start + index)),
-            Span::new(span_start + index, span_start + index + 1),
-        );
-    }
-    syntax
+    let operands = (0..=link_count)
+        .map(|index| SyntaxExpr::symbol("a", Span::point(span_start + index)))
+        .collect();
+    SyntaxExpr::comparison_chain(
+        operands,
+        vec![BinaryOp::Equal; link_count],
+        Span::new(span_start, span_start + link_count + 1),
+    )
 }
 
 fn is_global_a(expr: &Expr) -> bool {
@@ -152,26 +145,4 @@ fn is_global_a(expr: &Expr) -> bool {
         Expr::Atom(Atom::Symbol(symbol))
             if symbol.context() == GLOBAL_CONTEXT && symbol.name() == "a"
     )
-}
-
-fn drop_left_binary_chain(mut expr: SyntaxExpr) {
-    loop {
-        match expr.kind {
-            SyntaxExprKind::Binary { lhs, rhs, .. } => {
-                drop(rhs);
-                expr = *lhs;
-            }
-            _ => return,
-        }
-    }
-}
-
-fn drop_binary_tree_iteratively(expr: SyntaxExpr) {
-    let mut work = vec![expr];
-    while let Some(expr) = work.pop() {
-        if let SyntaxExprKind::Binary { lhs, rhs, .. } = expr.kind {
-            work.push(*lhs);
-            work.push(*rhs);
-        }
-    }
 }

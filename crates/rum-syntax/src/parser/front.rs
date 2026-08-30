@@ -300,6 +300,16 @@ impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
                 break;
             }
 
+            if op.is_comparison() {
+                lhs = self.parse_comparison_chain(
+                    lhs,
+                    allow_function_postfix,
+                    allow_infix_application,
+                    &mut left_associative_chain_links,
+                )?;
+                continue;
+            }
+
             let operator_span = self.current().span;
             if !op.is_right_associative() {
                 count_left_associative_chain_link(
@@ -363,6 +373,45 @@ impl<'a, const SPLIT_FORMS: bool> Parser<'a, SPLIT_FORMS> {
         }
 
         Ok(lhs)
+    }
+
+    fn parse_comparison_chain(
+        &mut self,
+        lhs: SyntaxExpr,
+        allow_function_postfix: bool,
+        allow_infix_application: bool,
+        left_associative_chain_links: &mut usize,
+    ) -> Result<SyntaxExpr, SyntaxError> {
+        let mut operands = vec![lhs];
+        let mut operators = Vec::new();
+
+        while let Some(op) = self.current_binary_op() {
+            if !op.is_comparison() || self.at_form_boundary() {
+                break;
+            }
+
+            count_left_associative_chain_link(left_associative_chain_links, self.current().span)?;
+            self.bump();
+            let rhs = self.parse_nested_binary_expr_internal(
+                next_min_precedence_for_binary_op(op),
+                allow_function_postfix,
+                allow_infix_application,
+            )?;
+            operators.push(op);
+            operands.push(rhs);
+        }
+
+        let span = operands
+            .first()
+            .expect("comparison chain has a left operand")
+            .span()
+            .merge(
+                operands
+                    .last()
+                    .expect("comparison chain has a right operand")
+                    .span(),
+            );
+        Ok(SyntaxExpr::comparison_chain(operands, operators, span))
     }
 
     /// Collects the rest of a `;`-separated statement chain iteratively, so

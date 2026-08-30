@@ -7,6 +7,7 @@ pub(crate) use self::comparison::eval_comparison_operator_wrapper;
 pub(crate) use self::comparison::eval_equal;
 pub(crate) use self::comparison::eval_greater;
 pub(crate) use self::comparison::eval_greater_equal;
+pub(crate) use self::comparison::eval_inequality;
 pub(crate) use self::comparison::eval_less;
 pub(crate) use self::comparison::eval_less_equal;
 pub(crate) use self::comparison::eval_unequal;

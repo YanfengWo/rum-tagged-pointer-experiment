@@ -78,6 +78,18 @@ impl SyntaxExpr {
         )
     }
 
+    pub fn comparison_chain(operands: Vec<Self>, operators: Vec<BinaryOp>, span: Span) -> Self {
+        debug_assert_eq!(operands.len(), operators.len() + 1);
+        debug_assert!(operators.iter().all(|op| op.is_comparison()));
+        Self::new(
+            SyntaxExprKind::ComparisonChain {
+                operands,
+                operators,
+            },
+            span,
+        )
+    }
+
     pub fn postfix(op: PostfixOp, expr: Self, span: Span) -> Self {
         Self::new(
             SyntaxExprKind::Postfix {
@@ -111,6 +123,7 @@ impl SyntaxExpr {
         match &self.kind {
             SyntaxExprKind::Postfix { op, .. } => op.precedence(),
             SyntaxExprKind::Binary { op, .. } => op.precedence(),
+            SyntaxExprKind::ComparisonChain { .. } => BinaryOp::Equal.precedence(),
             SyntaxExprKind::Prefix { op, .. } => op.precedence(),
             SyntaxExprKind::Pattern { .. } => 85,
             SyntaxExprKind::Blank { .. } => 85,
@@ -157,6 +170,10 @@ pub enum SyntaxExprKind {
         op: BinaryOp,
         lhs: Box<SyntaxExpr>,
         rhs: Box<SyntaxExpr>,
+    },
+    ComparisonChain {
+        operands: Vec<SyntaxExpr>,
+        operators: Vec<BinaryOp>,
     },
     Postfix {
         op: PostfixOp,
@@ -409,6 +426,20 @@ impl BinaryOp {
                 | Self::Function
         )
     }
+
+    pub(crate) fn is_comparison(self) -> bool {
+        matches!(
+            self,
+            Self::SameQ
+                | Self::UnsameQ
+                | Self::Equal
+                | Self::Unequal
+                | Self::Less
+                | Self::Greater
+                | Self::LessEqual
+                | Self::GreaterEqual
+        )
+    }
 }
 
 impl PostfixOp {
@@ -512,8 +543,14 @@ fn format_expr(
             format_expr(expr, f, op.precedence())?;
         }
         SyntaxExprKind::Binary { op, lhs, rhs } => {
-            let lhs_precedence = op.precedence() + u8::from(op.is_right_associative());
-            let rhs_precedence = op.precedence() + u8::from(!op.is_right_associative());
+            let (lhs_precedence, rhs_precedence) = if op.is_comparison() {
+                (op.precedence() + 1, op.precedence() + 1)
+            } else {
+                (
+                    op.precedence() + u8::from(op.is_right_associative()),
+                    op.precedence() + u8::from(!op.is_right_associative()),
+                )
+            };
 
             format_expr(lhs, f, lhs_precedence)?;
             if matches!(op, BinaryOp::CompoundExpression) {
@@ -522,6 +559,19 @@ fn format_expr(
                 write!(f, " {} ", op.token())?;
             }
             format_expr(rhs, f, rhs_precedence)?;
+        }
+        SyntaxExprKind::ComparisonChain {
+            operands,
+            operators,
+        } => {
+            let mut operands = operands.iter();
+            if let Some(first) = operands.next() {
+                format_expr(first, f, precedence + 1)?;
+            }
+            for (op, operand) in operators.iter().zip(operands) {
+                write!(f, " {} ", op.token())?;
+                format_expr(operand, f, precedence + 1)?;
+            }
         }
         SyntaxExprKind::Postfix { op, expr } => {
             format_expr(expr, f, op.precedence())?;
@@ -656,6 +706,18 @@ mod tests {
                 op: BinaryOp::RuleDelayed,
                 ..
             }
+        ));
+        assert!(matches!(
+            SyntaxExpr::comparison_chain(
+                vec![SyntaxExpr::symbol("lhs", span), SyntaxExpr::symbol("rhs", span)],
+                vec![BinaryOp::Equal],
+                span,
+            )
+            .kind,
+            SyntaxExprKind::ComparisonChain {
+                operands,
+                operators,
+            } if operands.len() == 2 && operators == vec![BinaryOp::Equal]
         ));
         assert!(matches!(
             SyntaxExpr::postfix(PostfixOp::RepeatedNull, SyntaxExpr::symbol("x", span), span).kind,
@@ -902,5 +964,21 @@ mod tests {
             z(),
         );
         assert_eq!(right_power_tree.to_string(), "a ^ b ^ c");
+
+        let left_comparison_tree = SyntaxExpr::binary(
+            BinaryOp::Equal,
+            SyntaxExpr::binary(BinaryOp::Equal, s("a"), s("b"), z()),
+            s("c"),
+            z(),
+        );
+        assert_eq!(left_comparison_tree.to_string(), "(a == b) == c");
+
+        let right_comparison_tree = SyntaxExpr::binary(
+            BinaryOp::Equal,
+            s("a"),
+            SyntaxExpr::binary(BinaryOp::Equal, s("b"), s("c"), z()),
+            z(),
+        );
+        assert_eq!(right_comparison_tree.to_string(), "a == (b == c)");
     }
 }

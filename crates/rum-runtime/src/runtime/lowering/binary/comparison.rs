@@ -1,5 +1,5 @@
 use super::*;
-use rum_syntax::MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS;
+use rum_syntax::{MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS, Span};
 
 pub(super) fn comparison_head(op: BinaryOp) -> Option<&'static str> {
     match op {
@@ -15,99 +15,60 @@ pub(super) fn comparison_head(op: BinaryOp) -> Option<&'static str> {
     }
 }
 
-pub(super) fn lower_comparison_chain<F>(
-    op: BinaryOp,
-    lhs: &SyntaxExpr,
-    rhs: &SyntaxExpr,
+pub(in crate::runtime::lowering) fn lower_comparison_chain<F>(
+    operands: &[SyntaxExpr],
+    operators: &[BinaryOp],
+    span: Span,
     resolve_symbol: &mut F,
 ) -> Result<Expr, EvalError>
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
-    let mut operands = Vec::new();
-    let mut ops = Vec::new();
-    collect_comparison_chain(op, lhs, rhs, &mut operands, &mut ops)?;
+    debug_assert_eq!(operands.len(), operators.len() + 1);
+    debug_assert!(
+        operators
+            .iter()
+            .all(|operator| comparison_head(*operator).is_some())
+    );
 
-    if ops.len() == 1 {
-        return Ok(canonical_call(
-            comparison_head(op).expect("checked comparison op"),
-            vec![
-                lower_syntax_expr_with(lhs, resolve_symbol)?,
-                lower_syntax_expr_with(rhs, resolve_symbol)?,
-            ],
-        ));
+    if operators.len() > MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS {
+        return Err(SyntaxError::LeftAssociativeChainTooLong {
+            max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
+            span,
+        }
+        .into());
     }
 
-    if ops.iter().all(|candidate| *candidate == ops[0]) {
+    let Some(first_operator) = operators.first().copied() else {
+        return operands.first().map_or_else(
+            || Ok(canonical_call("Inequality", Vec::new())),
+            |operand| lower_syntax_expr_with(operand, resolve_symbol),
+        );
+    };
+
+    if operators
+        .iter()
+        .all(|candidate| *candidate == first_operator)
+    {
         let args = operands
-            .into_iter()
+            .iter()
             .map(|operand| lower_syntax_expr_with(operand, resolve_symbol))
             .collect::<Result<Vec<_>, _>>()?;
         return Ok(canonical_call(
-            comparison_head(ops[0]).expect("comparison chain op"),
+            comparison_head(first_operator).expect("comparison chain operator"),
             args,
         ));
     }
 
-    let lowered_operands = operands
-        .into_iter()
-        .map(|operand| lower_syntax_expr_with(operand, resolve_symbol))
-        .collect::<Result<Vec<_>, _>>()?;
-    let comparisons = ops
-        .into_iter()
-        .zip(lowered_operands.windows(2))
-        .map(|(chain_op, pair)| {
-            canonical_call(
-                comparison_head(chain_op).expect("comparison chain op"),
-                vec![pair[0].clone(), pair[1].clone()],
-            )
-        })
-        .collect();
-
-    Ok(canonical_call("And", comparisons))
-}
-
-enum ComparisonWork<'a> {
-    Visit(&'a SyntaxExpr),
-    EmitOp(BinaryOp),
-}
-
-fn collect_comparison_chain<'a>(
-    root_op: BinaryOp,
-    lhs: &'a SyntaxExpr,
-    rhs: &'a SyntaxExpr,
-    operands: &mut Vec<&'a SyntaxExpr>,
-    ops: &mut Vec<BinaryOp>,
-) -> Result<(), EvalError> {
-    let mut operator_count = 1;
-    let mut work = vec![
-        ComparisonWork::Visit(rhs),
-        ComparisonWork::EmitOp(root_op),
-        ComparisonWork::Visit(lhs),
-    ];
-
-    while let Some(item) = work.pop() {
-        match item {
-            ComparisonWork::Visit(expr) => match &expr.kind {
-                SyntaxExprKind::Binary { op, lhs, rhs } if comparison_head(*op).is_some() => {
-                    if operator_count >= MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS {
-                        return Err(SyntaxError::LeftAssociativeChainTooLong {
-                            max: MAX_LEFT_ASSOCIATIVE_CHAIN_LINKS,
-                            span: expr.span(),
-                        }
-                        .into());
-                    }
-                    operator_count += 1;
-                    work.push(ComparisonWork::Visit(rhs));
-                    work.push(ComparisonWork::EmitOp(*op));
-                    work.push(ComparisonWork::Visit(lhs));
-                }
-                _ => operands.push(expr),
-            },
-            ComparisonWork::EmitOp(op) => ops.push(op),
+    let mut args = Vec::with_capacity(operators.len() * 2 + 1);
+    for (index, operand) in operands.iter().enumerate() {
+        args.push(lower_syntax_expr_with(operand, resolve_symbol)?);
+        if let Some(operator) = operators.get(index) {
+            args.push(system_expr(
+                comparison_head(*operator).expect("comparison chain operator"),
+            ));
         }
     }
 
-    debug_assert_eq!(ops.len(), operator_count);
-    Ok(())
+    Ok(canonical_call("Inequality", args))
 }

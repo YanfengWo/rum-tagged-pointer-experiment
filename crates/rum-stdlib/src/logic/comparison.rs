@@ -1,7 +1,9 @@
 use super::shared::predicate_bool_expr;
 use rum_core::SharedArgs;
 use rum_core::{Atom, Expr, Rational, heads};
-use rum_runtime::kernel_api::{EvalError, Session, system_expr, truthiness_symbol};
+use rum_runtime::kernel_api::{
+    EvalError, Session, is_system_symbol_name, system_expr, truthiness_symbol,
+};
 use std::collections::HashSet;
 use std::hash::Hash;
 
@@ -13,6 +15,13 @@ enum ComparisonRelation {
     Greater,
     LessEqual,
     GreaterEqual,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum InequalityRelation {
+    Comparison(ComparisonRelation),
+    SameQ,
+    UnsameQ,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -109,6 +118,94 @@ pub(crate) fn eval_greater_equal(
         args,
         ComparisonRelation::GreaterEqual,
     ))
+}
+
+pub(crate) fn eval_inequality(
+    session: &mut Session,
+    head: &Expr,
+    args: &SharedArgs,
+) -> Result<Expr, EvalError> {
+    let args = args.as_ref();
+    if args.len() < 3 || args.len() % 2 == 0 {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+
+    let segment_count = (args.len() - 1) / 2;
+    let mut saw_false = false;
+    let mut saw_undetermined = false;
+    let mut binary_result = None;
+
+    for segment_index in 0..segment_count {
+        let operand_index = segment_index * 2;
+        let operator = &args[operand_index + 1];
+        let Some(relation) = inequality_relation(operator) else {
+            return Ok(Expr::call(head.clone(), args.to_vec()));
+        };
+        let result = eval_inequality_segment(
+            session,
+            operator,
+            &args[operand_index],
+            &args[operand_index + 2],
+            relation,
+        );
+
+        match truthiness_symbol(&result) {
+            Some(false) => saw_false = true,
+            Some(true) => {}
+            None => saw_undetermined = true,
+        }
+        binary_result = Some(result);
+    }
+
+    if segment_count == 1 {
+        return Ok(binary_result.expect("one-segment inequality has one result"));
+    }
+    if saw_false {
+        return Ok(predicate_bool_expr(false));
+    }
+    if saw_undetermined {
+        return Ok(Expr::call(head.clone(), args.to_vec()));
+    }
+    Ok(predicate_bool_expr(true))
+}
+
+fn inequality_relation(operator: &Expr) -> Option<InequalityRelation> {
+    let relation = if is_system_symbol_name(operator, "SameQ") {
+        InequalityRelation::SameQ
+    } else if is_system_symbol_name(operator, "UnsameQ") {
+        InequalityRelation::UnsameQ
+    } else if is_system_symbol_name(operator, "Equal") {
+        InequalityRelation::Comparison(ComparisonRelation::Equal)
+    } else if is_system_symbol_name(operator, "Unequal") {
+        InequalityRelation::Comparison(ComparisonRelation::Unequal)
+    } else if is_system_symbol_name(operator, "Less") {
+        InequalityRelation::Comparison(ComparisonRelation::Less)
+    } else if is_system_symbol_name(operator, "Greater") {
+        InequalityRelation::Comparison(ComparisonRelation::Greater)
+    } else if is_system_symbol_name(operator, "LessEqual") {
+        InequalityRelation::Comparison(ComparisonRelation::LessEqual)
+    } else if is_system_symbol_name(operator, "GreaterEqual") {
+        InequalityRelation::Comparison(ComparisonRelation::GreaterEqual)
+    } else {
+        return None;
+    };
+    Some(relation)
+}
+
+fn eval_inequality_segment(
+    session: &mut Session,
+    operator: &Expr,
+    lhs: &Expr,
+    rhs: &Expr,
+    relation: InequalityRelation,
+) -> Expr {
+    match relation {
+        InequalityRelation::Comparison(relation) => {
+            eval_comparison_subset(session, operator, &[lhs.clone(), rhs.clone()], relation)
+        }
+        InequalityRelation::SameQ => predicate_bool_expr(lhs == rhs),
+        InequalityRelation::UnsameQ => predicate_bool_expr(lhs != rhs),
+    }
 }
 
 pub(crate) fn eval_comparison_operator_wrapper(

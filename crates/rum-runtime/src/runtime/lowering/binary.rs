@@ -3,7 +3,8 @@ use super::*;
 mod comparison;
 mod left_chain;
 
-use comparison::{comparison_head, lower_comparison_chain};
+use comparison::comparison_head;
+pub(super) use comparison::lower_comparison_chain;
 use left_chain::{is_iterative_left_chain_op, lower_left_chain};
 
 pub(super) fn lower_binary_sugar<F>(
@@ -15,10 +16,6 @@ pub(super) fn lower_binary_sugar<F>(
 where
     F: FnMut(&str) -> Option<Symbol>,
 {
-    if comparison_head(op).is_some() {
-        return lower_comparison_chain(op, lhs, rhs, resolve_symbol);
-    }
-
     if matches!(op, BinaryOp::CompoundExpression) {
         return lower_compound_expression_sugar(lhs, rhs, resolve_symbol);
     }
@@ -91,7 +88,10 @@ where
         | BinaryOp::Less
         | BinaryOp::Greater
         | BinaryOp::LessEqual
-        | BinaryOp::GreaterEqual => unreachable!("comparison ops handled before lowering operands"),
+        | BinaryOp::GreaterEqual => Ok(canonical_call(
+            comparison_head(op).expect("comparison operator has a canonical head"),
+            vec![lowered_lhs, lowered_rhs],
+        )),
         BinaryOp::CompoundExpression => {
             unreachable!("compound expression handled before lowering operands")
         }

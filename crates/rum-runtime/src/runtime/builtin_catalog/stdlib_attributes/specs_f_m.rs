@@ -52,6 +52,7 @@ pub(super) const SPECS: &[Spec] = &[
     Spec::new("Identity", ATTR_PROTECTED),
     Spec::new("If", ATTR_HOLD_REST.with(Attribute::Protected)),
     Spec::new("Implies", ATTR_PROTECTED),
+    Spec::new("Inequality", ATTR_PROTECTED),
     Spec::new("Inner", ATTR_PROTECTED),
     Spec::new("Insert", ATTR_PROTECTED),
     Spec::new("IntegerDigits", ATTR_LISTABLE_PROTECTED),

@@ -220,6 +220,17 @@ fn collect_container_group_plans(
                 plans,
             );
         }
+        SyntaxExprKind::ComparisonChain { operands, .. } => {
+            for operand in operands {
+                collect_container_group_plans(
+                    parsed,
+                    operand,
+                    token_index_by_start,
+                    token_index_by_end,
+                    plans,
+                );
+            }
+        }
         SyntaxExprKind::Call { head, args } => {
             collect_container_group_plans(
                 parsed,
@@ -379,6 +390,25 @@ fn collect_binary_group_plans(
                     plans,
                 );
             }
+        }
+        SyntaxExprKind::ComparisonChain { operands, .. } => {
+            for operand in operands {
+                collect_binary_group_plans(
+                    parsed,
+                    operand,
+                    token_index_by_start,
+                    token_index_by_end,
+                    None,
+                    plans,
+                );
+            }
+            maybe_collect_binary_group_plan(
+                parsed,
+                expr,
+                token_index_by_start,
+                token_index_by_end,
+                plans,
+            );
         }
         SyntaxExprKind::Call { head, args } => {
             collect_binary_group_plans(

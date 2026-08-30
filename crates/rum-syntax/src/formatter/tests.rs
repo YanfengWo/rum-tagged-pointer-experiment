@@ -147,6 +147,13 @@ fn formatter_keeps_short_binary_chains_inline() {
 }
 
 #[test]
+fn formatter_keeps_comparison_chains_and_parenthesis_boundaries() {
+    assert_eq!(format_source("a < b <= c == d").unwrap(), "a < b <= c == d");
+    assert_eq!(format_source("(a == b) == c").unwrap(), "(a == b) == c");
+    assert_eq!(format_source("a == (b == c)").unwrap(), "a == (b == c)");
+}
+
+#[test]
 fn formatter_actively_expands_wide_top_level_binary_chains() {
     let formatted = format_source("aaaaaaaaaaaaaa + bbbbbbbbbbbbbb + cccccccccccccc").unwrap();
     assert_eq!(

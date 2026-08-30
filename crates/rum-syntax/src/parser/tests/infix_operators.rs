@@ -221,9 +221,53 @@ fn parses_logical_and_comparison_operator_precedence() {
 
     let same_chain = parse_expr("x === y === z").unwrap();
     assert_eq!(same_chain.to_string(), "x === y === z");
+    let SyntaxExprKind::ComparisonChain {
+        operands,
+        operators,
+    } = &same_chain.kind
+    else {
+        panic!("same-operator comparisons should parse as one chain");
+    };
+    assert_eq!(operands.len(), 3);
+    assert_eq!(operators, &[BinaryOp::SameQ, BinaryOp::SameQ]);
 
     let mixed_chain = parse_expr("x == y != z").unwrap();
     assert_eq!(mixed_chain.to_string(), "x == y != z");
+    let SyntaxExprKind::ComparisonChain {
+        operands,
+        operators,
+    } = &mixed_chain.kind
+    else {
+        panic!("mixed comparisons should parse as one chain");
+    };
+    assert_eq!(operands.len(), 3);
+    assert_eq!(operators, &[BinaryOp::Equal, BinaryOp::Unequal]);
+}
+
+#[test]
+fn comparison_chains_do_not_cross_parenthesis_boundaries() {
+    let parsed = parse_expr("(a == b) == c").unwrap();
+    let SyntaxExprKind::ComparisonChain {
+        operands,
+        operators,
+    } = &parsed.kind
+    else {
+        panic!("outer comparison should parse as a chain");
+    };
+    assert_eq!(operators, &[BinaryOp::Equal]);
+    assert!(matches!(
+        operands[0].kind,
+        SyntaxExprKind::ComparisonChain { .. }
+    ));
+
+    let parsed = parse_expr("a == (b == c)").unwrap();
+    let SyntaxExprKind::ComparisonChain { operands, .. } = &parsed.kind else {
+        panic!("outer comparison should parse as a chain");
+    };
+    assert!(matches!(
+        operands[1].kind,
+        SyntaxExprKind::ComparisonChain { .. }
+    ));
 }
 
 #[test]

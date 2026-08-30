@@ -91,6 +91,11 @@ pub(crate) const LOGIC_BUILTINS: &[BuiltinSpec] = &[
         logic::eval_greater_equal,
     ).protected(),
     BuiltinSpec::ordinary(
+        "Inequality",
+        "Evaluates alternating operand/operator comparison chains without short-circuiting; each operand evaluates once, binary chains degenerate to their comparison head, and undetermined multi-segment chains remain symbolic.",
+        logic::eval_inequality,
+    ).protected(),
+    BuiltinSpec::ordinary(
         "LessThan",
         "Represents a unary comparison operator equivalent to Less[#, bound] when applied.",
         logic::eval_comparison_operator_wrapper,

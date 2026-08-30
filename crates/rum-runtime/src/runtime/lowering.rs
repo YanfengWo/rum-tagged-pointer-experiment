@@ -37,6 +37,10 @@ where
         SyntaxExprKind::Binary { op, lhs, rhs } => {
             lower_binary_sugar(*op, lhs, rhs, resolve_symbol)
         }
+        SyntaxExprKind::ComparisonChain {
+            operands,
+            operators,
+        } => binary::lower_comparison_chain(operands, operators, expr.span(), resolve_symbol),
         SyntaxExprKind::Postfix { op, expr } => lower_postfix_sugar(*op, expr, resolve_symbol),
         SyntaxExprKind::Call { head, args } => {
             lower_head_preserving_call(head, args, resolve_symbol)

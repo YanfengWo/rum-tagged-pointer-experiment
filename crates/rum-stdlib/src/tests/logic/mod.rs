@@ -8,6 +8,7 @@ fn core_session() -> Session {
 }
 
 mod comparison;
+mod inequality;
 mod part2;
 mod session_requests;
 mod truth;
