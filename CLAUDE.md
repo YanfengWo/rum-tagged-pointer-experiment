@@ -209,8 +209,16 @@ Consequences for how I present and pick work:
   a `Block` frame's bare `Symbol` that leaked in the opposite direction, which
   is why the visitor treats `Symbol` as a root. The repair is enforced, not
   maintained: `SuspensionFrame: FrameRootTrace` makes a missing traversal a
-  compile error, the queue is private, and an invariant test holds handwritten
-  traversals to a two-entry allowlist. It also removed a 63.8 KiB per-call
+  compile error, and an invariant test records every handwritten traversal.
+  **Two claims here were overstated and the brief-389 review corrected them.**
+  That list is an inventory of handwritten impls, now 59 entries, most of which
+  deliberately walk their contents (`Expr`, `SharedArgs`, `Option<T>`, `Vec<T>`,
+  maps, tuples); only the no-op leaves need to be structurally root-free. And
+  the queue is the single insertion route for ordinary code, not literally —
+  `insert_suspension_frame` is public, the resume driver pushes directly, and
+  the invariant exempts `suspension/core.rs` and test directories. No current
+  path bypasses `SuspensionFrame`, so the traversal guarantee holds; the guard's
+  reach is narrower than "one route" suggests. It also removed a 63.8 KiB per-call
   ordinary-path capture. Detail in `TODO.md`, the 2026-08-28 `PROGRESS.md`
   entry, and memory `suspension-frame-roots-line.md`.
 - **Still open, with the decision stated in `TODO.md`:** the `rum-jupyter`
