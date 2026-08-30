@@ -352,6 +352,17 @@ memory tradeoff stated before it can be reopened.
   after the third occurrence were all green. The standing agreement was to
   brief it on a third occurrence; it is unrelated to the 10 ms idle sleep,
   which landed after the flake's first two appearances.
+- **Second occurrence of the call-stability-proof flake, 2026-08-31.** One
+  workspace run during brief-385 failed
+  `association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof`
+  again, on `valid_call_stability_proof(&session, &key).is_some()`; it passed
+  alone and on the rerun, and brief-385 touched neither `evaluation_cache` nor
+  `association_lvalue`. Two of three under the standing agreement. Note also
+  the `association_write_index` failure recorded during brief-379, which was
+  never resolved as flake-or-fixed and asserts pointer identity in the same
+  write path — if that one is the same cause, the count is already three.
+  Decide that before treating the next sighting as the first of a new pair.
+
 - **First occurrence of a call-stability-proof flake, recorded not explained
   away.** One `cargo test -p rum-runtime` run during brief-370 failed
   `association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof`
@@ -551,12 +562,13 @@ loop, so lowering it hides the very defect being tested.
 
 **Deferred, with evidence, from the second sweep:**
 
-- **Error spans are computed per form but rendered against the whole file.** A
-  script `q = 1\nw = 1 ! 2` reports `2:1` when the offending `!` is at `2:7`,
-  and the `Get` path shows byte offsets with no line/column at all. This is a
-  real pre-existing defect, deliberately excluded from the splitter work
-  because fixing it changes user-visible output and would have voided that
-  change's byte-identical acceptance criterion.
+- **Error spans — FIXED 2026-08-31** (brief-385, `a0c6afe3`). Spans now leave
+  the parser in file coordinates, so `--file`, stdin scripts, host script
+  requests, `Get` and `Needs` all report the right line and column, and `Get`
+  has a location at all. Re-probing found it wider than recorded: both the line
+  and the column were wrong, not just the column, and `a == (b == c)`-style
+  right-hand cases were affected too. The suite's blind spot was the cause —
+  every pinned location was `1:x`, where form and file coordinates coincide.
 - **A trailing-operator form still re-parses per line.** The linear splitter
   drives the parser form by form, but a form whose delimiters are balanced and
   whose expression is unfinished (`1 +\n2 +\n3`) cannot be predicted from
