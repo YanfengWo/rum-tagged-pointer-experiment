@@ -25,6 +25,22 @@ fn install_association(
     target
 }
 
+fn install_identity_association(
+    session: &mut Session,
+    name: &str,
+    identity: u64,
+    keys: impl IntoIterator<Item = i64>,
+) -> Symbol {
+    let target = Symbol::with_identity(GLOBAL_CONTEXT, name, identity);
+    session.definitions.entry(target).or_default().own_value =
+        Some(association_with_integer_keys(keys));
+    target
+}
+
+fn association_function_lvalue(target: Symbol, key: Expr) -> Expr {
+    Expr::call(Expr::Atom(Atom::Symbol(target)), vec![key])
+}
+
 fn current_own_value(session: &Session, target: &Symbol) -> Expr {
     session
         .definitions
@@ -140,35 +156,58 @@ fn rewriting_an_appended_key_replaces_it_through_the_index() {
     );
 }
 
-/// Replacement locates the key through the index every time and never
-/// rebuilds it — the key-to-position map is unchanged by a value replacement.
+/// Replacement preserves the ordinary-symbol semantics even when conservative
+/// invalidation falls back. With lane-disjoint data, the direct path locates
+/// the key through the index every time and never rebuilds it.
 #[test]
 fn repeated_replacement_writes_stay_indexed() {
-    let mut session = session_with_test_control_builtins();
-    let target = install_association(&mut session, "replaceAssoc", 1..=32);
-    seed_direct_write_proof(&mut session, &target);
-    read_two_keys_to_build_the_index(&mut session, &target);
-    let args_before = own_args_ptr_key(&session, &target);
-    let before = session.association_lookup_work();
+    let mut semantic_session = session_with_test_control_builtins();
+    let semantic_target = install_association(&mut semantic_session, "replaceAssoc", 1..=32);
+    seed_direct_write_proof(&mut semantic_session, &semantic_target);
+    read_two_keys_to_build_the_index(&mut semantic_session, &semantic_target);
 
-    session
+    semantic_session
         .eval_text("Do[replaceAssoc[5] = i, {i, 1, 64}]")
         .unwrap();
 
-    assert_eq!(own_args_ptr_key(&session, &target), args_before);
-    let after = session.association_lookup_work();
-    assert_eq!(after.index_builds, before.index_builds);
-    assert_eq!(after.indexed_probes - before.indexed_probes, 64);
-
-    let current = current_own_value(&session, &target);
+    let current = current_own_value(&semantic_session, &semantic_target);
     let Expr::Call { args, .. } = &current else {
         panic!("the target must store an Association");
     };
     assert_eq!(args.len(), 32);
     assert_eq!(
-        session.apply_association_to_args(&current, &[Expr::small_integer(5)]),
+        semantic_session.apply_association_to_args(&current, &[Expr::small_integer(5)]),
         Some(Expr::small_integer(64))
     );
+
+    // The identity-bearing target's writes use the generated lane; the
+    // Association of regular System symbols and integers depends only on the
+    // regular lane, so no interner-assigned bits can overlap across them.
+    let mut indexed_session = session_with_test_control_builtins();
+    let indexed_target =
+        install_identity_association(&mut indexed_session, "generatedReplaceAssoc", 1, 1..=32);
+    seed_direct_write_proof(&mut indexed_session, &indexed_target);
+    read_two_keys_to_build_the_index(&mut indexed_session, &indexed_target);
+    let args_before = own_args_ptr_key(&indexed_session, &indexed_target);
+    let before = indexed_session.association_lookup_work();
+
+    for value in 1..=64_i64 {
+        indexed_session
+            .try_set_association_lvalue(
+                association_function_lvalue(indexed_target, Expr::small_integer(5)),
+                Expr::small_integer(value),
+            )
+            .unwrap()
+            .expect("the generated target must accept the replacement write");
+    }
+
+    assert_eq!(
+        own_args_ptr_key(&indexed_session, &indexed_target),
+        args_before
+    );
+    let after = indexed_session.association_lookup_work();
+    assert_eq!(after.index_builds, before.index_builds);
+    assert_eq!(after.indexed_probes - before.indexed_probes, 64);
 }
 
 /// At or below the index threshold the write path keeps the plain scan and

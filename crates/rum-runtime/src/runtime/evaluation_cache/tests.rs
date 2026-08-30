@@ -365,40 +365,76 @@ fn association_lvalue_update_preserves_an_aliased_value() {
 
 #[test]
 fn association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof() {
-    let (mut session, target) = session_with_stable_association("directAssociation");
-    let before = association_definition_args_key(&session, &target);
+    let (mut semantic_session, semantic_target) =
+        session_with_stable_association("directAssociation");
 
-    let replaced = session.eval_text("directAssociation[x] = 2").unwrap();
+    let replaced = semantic_session
+        .eval_text("directAssociation[x] = 2")
+        .unwrap();
     assert_eq!(replaced.value.to_string(), "2");
-    assert_eq!(association_definition_args_key(&session, &target), before);
-    assert!(
-        session.has_valid_call_stability_proof_for_key(association_definition_cache_key(
-            &session, &target,
-        ))
-    );
 
-    let appended = session.eval_text("directAssociation[y] = 3").unwrap();
+    let appended = semantic_session
+        .eval_text("directAssociation[y] = 3")
+        .unwrap();
     assert_eq!(appended.value.to_string(), "3");
-    assert_eq!(association_definition_args_key(&session, &target), before);
     assert_eq!(
-        session
+        semantic_session
             .definitions
-            .get(&target)
+            .get(&semantic_target)
             .and_then(|definition| definition.own_value.as_ref())
             .unwrap()
             .to_string(),
         "Association[Rule[x, 2], Rule[y, 3]]"
     );
 
-    let current = session
+    // An identity-bearing target writes only the generated lane, while this
+    // Association's System symbols write only the regular dependency lane.
+    let mut direct_session = Session::default();
+    let direct_target = Symbol::with_identity(GLOBAL_CONTEXT, "generatedDirectAssociation", 1);
+    direct_session
         .definitions
-        .get(&target)
+        .entry(direct_target)
+        .or_default()
+        .own_value = Some(association_with_integer_keys([1]));
+    seed_association_stability_proof(&mut direct_session, &direct_target);
+    let before = association_definition_args_key(&direct_session, &direct_target);
+
+    direct_session
+        .try_set_association_lvalue(
+            association_function_lvalue(direct_target, Expr::small_integer(1)),
+            Expr::small_integer(2),
+        )
+        .unwrap()
+        .expect("the generated target must accept the replacement write");
+    assert_eq!(
+        association_definition_args_key(&direct_session, &direct_target),
+        before
+    );
+    assert!(direct_session.has_valid_call_stability_proof_for_key(
+        association_definition_cache_key(&direct_session, &direct_target)
+    ));
+
+    direct_session
+        .try_set_association_lvalue(
+            association_function_lvalue(direct_target, Expr::small_integer(2)),
+            Expr::small_integer(3),
+        )
+        .unwrap()
+        .expect("the generated target must accept the append write");
+    assert_eq!(
+        association_definition_args_key(&direct_session, &direct_target),
+        before
+    );
+
+    let current = direct_session
+        .definitions
+        .get(&direct_target)
         .and_then(|definition| definition.own_value.clone())
         .unwrap();
-    let (stable, cached_bloom) = session.cached_expr_stability_with_bloom(&current);
+    let (stable, cached_bloom) = direct_session.cached_expr_stability_with_bloom(&current);
     assert!(stable);
     let (head, args) = call_parts(&current);
-    let proof = session
+    let proof = direct_session
         .take_call_stability_proof(head, args)
         .expect("the direct update must reinsert the exact Association proof");
     assert_eq!(proof.bloom, cached_bloom);

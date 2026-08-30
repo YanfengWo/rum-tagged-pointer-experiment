@@ -59,8 +59,9 @@ impl Session {
                 // disabled for good. Rerun the evaluator's own seeding check
                 // on the current value: when the data is still stable this
                 // re-seeds the exact entry, which the second take below then
-                // consumes, so the write keeps the direct path in exactly
-                // the cases a seeded proof would allow.
+                // consumes. A rewritten-dirty Bloom collision is the
+                // conservative exception: stability can succeed without
+                // caching a proof, and the write then falls back.
                 let current = self
                     .definitions
                     .get(target)
