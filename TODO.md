@@ -274,8 +274,9 @@ be fixed already.
    worth keeping: under the settled contract the rule is stored ready for
    lookup and is reachable immediately. The "preserve raw plus a warning"
    option, and the diagnostic question that depended on it, are both closed.
-2. **The `rum-jupyter` ZeroMQ ordering flake — DIAGNOSED 2026-08-28, fix in
-   brief-384.** It reproduces on demand in **release** mode: thirty runs of
+2. **The `rum-jupyter` ZeroMQ ordering flake — CLOSED 2026-08-28** (brief-384,
+   `5f9a44ab`). Baseline 21 of 30 release runs failing on the director's host,
+   0 of 30 after. Diagnosis follows. It reproduces on demand in **release** mode: thirty runs of
    `cargo test -p rum-jupyter zeromq::tests::native --release` fail 22 times,
    always the same single test
    (`native_zeromq_backend_shutdown_stops_shell_work_and_reports_pending_shell_messages`,
@@ -292,8 +293,20 @@ be fixed already.
    other twenty-one waits loop until their expected event and are
    order-insensitive.
 
-   **Carry this forward beyond the fix: the test gate runs debug, and this
-   defect is nearly invisible there.** Three years of sightings were all
+   **Two things to carry forward.**
+
+   *The defect was environment-dependent, and a stop-loss demanding a
+   reproduction made the work unsatisfiable.* The first dispatch of brief-384
+   correctly stopped: 0 failures in 30 runs in the sandbox, against ~70% on the
+   director's host, with `--test-threads` ruled out as the variable (6/10,
+   3/10, 7/10, 4/10 at 1, 2, 4, 9 threads — serial still fails, so the race is
+   inside one test). The fix was to make acceptance a **structural argument** —
+   why the assertion cannot fail on either arrival order — with run counts
+   demoted to corroboration and the director verifying where it reproduces.
+   When a defect may not reproduce for the worker, do not gate the work on
+   reproducing it; gate it on an argument, and verify separately.
+
+   *The test gate runs debug, and this defect is nearly invisible there.* Three years of sightings were all
    incidental workspace runs; this line's own six-plus workspace runs never hit
    it. Where a defect is timing-shaped, a release-mode repetition run is a
    different instrument from the debug gate, not a slower version of it.
