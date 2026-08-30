@@ -352,6 +352,44 @@ memory tradeoff stated before it can be reopened.
   after the third occurrence were all green. The standing agreement was to
   brief it on a third occurrence; it is unrelated to the 10 ms idle sleep,
   which landed after the flake's first two appearances.
+- **The call-stability-proof flake — DIAGNOSED 2026-08-31** (brief-387), and
+  **all three recorded sightings are one cause**, so the standing
+  three-occurrence threshold is met.
+
+  `symbol_stability_bloom_bit` derives one of 128 bits from
+  `symbol.interned_id()`, assigned by the process-global `SYMBOL_INTERNER` that
+  parallel tests share. In both failures the target's rewritten-dirty bit and
+  ``System`Rule``'s dependency bit are the same `0x2000`. A Bloom overlap
+  yields `MissDirty`, the proof is not cached, the direct association update
+  declines, and the generic renderer allocates new args — which is why one
+  sighting shows a missing proof and the other a moved pointer key and rebuilt
+  index. Same cause, two downstream symptoms.
+
+  **The flake is now deterministic**, which is the finding worth keeping:
+  interning 36 unrelated symbols before the direct test, or 142 before the
+  indexed one, fails every time. Neutralizing `StabilityBloom::intersects`
+  makes both pass; forcing it true makes both fail harder.
+
+  **The contract, settled from the code: the stability predicate is one-sided.**
+  `true`/`Some(proof)` is authoritative; `false`/`None` may be conservative. A
+  Bloom collision is a fast-path miss, not an "unstable" verdict — every
+  consumer re-does the work rather than trusting a negative, and
+  `association_lvalue.rs:53` explicitly anticipates a lost proof and rebuilds.
+  **The implementation is correct; both tests assert cache residency and
+  pointer identity that the mechanism never promised.** Same shape as the
+  ZeroMQ flake closed in brief-384.
+
+  **Director's ruling: pointer and index continuity are an opportunistic
+  optimization, not a guaranteed invariant.** The recovery path exists
+  precisely because a proof can vanish under a size-cap clear; guaranteeing
+  continuity would require exact dependency disambiguation on hot-path
+  machinery, and buys nothing semantically since the fallback produces the same
+  result. The repair is therefore in the tests — but by making the collision
+  impossible by construction, not by relaxing the assertions: a target whose
+  dirty lane is structurally disjoint from its proof dependencies. Widening the
+  Bloom is rejected outright; it lowers a probability without establishing a
+  guarantee.
+
 - **Second occurrence of the call-stability-proof flake, 2026-08-31.** One
   workspace run during brief-385 failed
   `association_lvalue_direct_update_keeps_args_identity_and_reinserts_proof`
