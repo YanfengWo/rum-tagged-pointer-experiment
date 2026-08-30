@@ -1,4 +1,13 @@
-# brief-384 — the `rum-jupyter` ZeroMQ ordering flake
+# brief-384 — the `rum-jupyter` ZeroMQ ordering flake (revision 1)
+
+**Revision 1.** The first dispatch stopped correctly on this brief's own
+stop-loss: thirty release runs passed in Codex's environment, so it refused to
+fix a defect it could not see. That was the right call, and the fault is the
+brief's — the defect is environment-dependent, and the repair's correctness
+does not actually depend on reproducing it. Revised below: reproduction is now
+reported, not required, and the acceptance criterion is a structural argument
+the director then verifies in an environment where the flake does reproduce.
+
 
 The flake `TODO.md` has tracked since brief-165 is diagnosed. This brief fixes
 it. The diagnosis below is the director's, reproduced on the current tree; you
@@ -7,9 +16,21 @@ before and after your change.
 
 ## The diagnosis
 
-**It reproduces on demand in release mode.** Thirty runs of
-`cargo test -p rum-jupyter zeromq::tests::native --release`: **22 failed, all
-of them the same single test**, no other test ever failing.
+**It reproduces in release mode in the director's environment, and not in
+Codex's.** Director, on a 16-core Darwin host: 22 failures in 30 runs, then 14
+in 20, of `cargo test -p rum-jupyter zeromq::tests::native --release` —
+**always the same single test**, no other test ever failing. Codex's first
+dispatch measured 0 failures in 30 runs of the identical command with the tests
+confirmed running rather than skipped.
+
+`--test-threads` is not the variable: at 1, 2, 4 and 9 threads the director
+measured 6/10, 3/10, 7/10 and 4/10, with no monotonic trend. Serial execution
+still fails, so the race is inside a single test — background workers moving
+messages into the channel buffers against the main thread's poll — not a
+contention between tests. Some environment difference (scheduler, loopback
+stack) evidently keeps the control message punctual in the sandbox. **Race
+conditions surface more readily on faster paths, so a green run there is weak
+evidence.**
 
 ```
 test zeromq::tests::native::frontend::control::
@@ -106,24 +127,30 @@ cargo fmt --check
 scripts/run-bounded.py --timeout 900 -- cargo test --workspace
 ```
 
-### The reproduction gate — this is the real one
+### Acceptance is a structural argument, not a reproduction
 
-Debug mode cannot see this defect, so a green `cargo test --workspace` proves
-nothing here. You must:
+Debug mode cannot see this defect and your environment apparently cannot
+either, so no run count you can produce will demonstrate the fix. **The
+acceptance criterion is therefore structural**, and the director verifies it
+afterwards in an environment where the flake reproduces at roughly 70%.
 
-1. **Before your change**, run
-   `cargo test -p rum-jupyter zeromq::tests::native --release` **thirty times**
-   and report the failure count. Expect roughly 22/30. If it does not
-   reproduce for you, STOP and report that — do not fix a defect you cannot
-   see.
-2. **After your change**, run the same thirty times and report the count. It
-   must be **0/30**.
-3. Paste both counts verbatim, with the command line used.
+What you must deliver:
+
+1. **The argument.** State plainly why the revised assertion cannot fail
+   regardless of the order in which the two messages reach their buffers.
+   Name the precondition you establish, and show it is established before the
+   assertion rather than assumed. If the argument needs a timing assumption of
+   any kind, you have not finished.
+2. **Run it anyway and report the number.** Thirty release runs before and
+   after, with the command line. Both are expected to be 0/30 in your
+   environment; report them as corroboration, not as proof, and do not treat
+   0/30 before the change as a reason to stop this time.
+3. `cargo test --workspace` green, and the other eight native tests green.
 
 A fix that merely makes the race less likely — a longer sleep, a bigger
-timeout, a retry — is not acceptable. The assertion must be true by
-construction, not by timing. If your repair still depends on a duration, say
-so explicitly and explain why it cannot be made deterministic.
+timeout, a retry — is not acceptable, and here it would also be undetectable.
+The assertion must be true by construction. If your repair still depends on a
+duration, say so explicitly and explain why it cannot be made deterministic.
 
 ### Coverage that must survive
 
@@ -140,18 +167,20 @@ so explicitly and explain why it cannot be made deterministic.
 - Timeout discipline: `scripts/run-bounded.py --timeout SECONDS`, sized from a
   measured run of the same shape. Thirty release runs of this filter take well
   under a minute total; size accordingly.
-- **Stop-loss** — report rather than improvise if: the flake does not reproduce
-  for you; the deterministic precondition cannot be established without
-  changing polling behavior; or you conclude the implementation rather than the
-  test is wrong.
+- **Stop-loss** — report rather than improvise if: the deterministic
+  precondition cannot be established without changing polling behavior; or you
+  conclude the implementation rather than the test is wrong. **Not reproducing
+  the flake is no longer a stop** — it is the expected outcome in your
+  environment and is why acceptance is structural.
 - Paste real verbatim output. If a run did not reach green, say so.
 
 ## Report format
 
-1. Reproduction before the change — command and failure count out of thirty.
-2. What changed — per file, line ranges, one-line why, and the mechanism you
-   chose for the precondition with its justification.
-3. Mechanical ripple — every file edited under the criterion above.
-4. Verification — `fmt`, workspace counts, and the after-change count out of
-   thirty release runs.
-5. Stop-loss / open questions.
+1. The structural argument — the precondition, where it is established, and
+   why the assertion cannot fail on either arrival order.
+2. Reproduction counts before and after — command and counts out of thirty,
+   reported as corroboration.
+3. What changed — per file, line ranges, one-line why.
+4. Mechanical ripple — every file edited under the criterion above.
+5. Verification — `fmt` and workspace counts.
+6. Stop-loss / open questions.
