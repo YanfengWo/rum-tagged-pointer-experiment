@@ -237,6 +237,23 @@ Consequences for how I present and pick work:
   ruling). The call-stability-proof flake is also closed: all three sightings
   were one Bloom collision driven by a process-global interner id, and the
   repair makes the collision structurally impossible rather than rare.
+- **A four-part consistency review of briefs 364-388 is COMPLETE (2026-08-31,
+  briefs 389-396).** Eight findings, three high, all repaired. Every repair
+  replaced a convention with a structure — a list of protected pattern wrappers
+  became a registry shared with the matcher, assertions resting on interner
+  order moved to a lane-disjoint construction, a public installer that trusted
+  its caller now demands a typed lhs, and a wrapper claiming two constructors
+  left the continuation protocol that offered a third. **Three lessons outlast
+  the findings**: two of them were corrections to my own briefs; one was a gate
+  miss where brief-388 closed the two instances that had been seen rather than
+  the class, because diagnosis and repair both looked only at recorded
+  sightings; and **a boundary can hold inside the repository and evaporate at
+  the crate edge** — the test policing it scanned in-repository callers, and a
+  source scan cannot establish a property about code that does not exist yet.
+  The gate that settled those two compiled an external crate and required the
+  compiler errors. Reviews were dispatched in four independent parts so an
+  interrupted run would lose at most one, with findings written before any
+  verification command, and none tripped the upstream content filter.
 - **`TODO.md` currently has no known-and-worth-fixing item.** What remains is
   deliberate conservatism (`ReplacePart` sequencing, product propagation),
   something with no practical impact (trailing-operator re-parsing), and
