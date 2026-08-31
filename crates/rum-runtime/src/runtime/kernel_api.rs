@@ -16,7 +16,9 @@ pub use super::kernel_data::control_data::ControlDataBuiltin;
 
 // assignment Part selectors
 #[doc(hidden)]
-pub use super::kernel_data::evaluated_part_selectors::EvaluatedPartSelectors;
+pub use super::kernel_data::evaluated_part_selectors::{
+    EvaluatedPartSelectors, EvaluatedPartSelectorsContinuation, EvaluatedPartSelectorsEvaluation,
+};
 
 // rewrite_data
 pub use super::kernel_data::rewrite_data::RewriteDataBuiltin;
@@ -76,6 +78,8 @@ pub use super::model::{
     CasesLevelSpec, CasesTraversalConfig, RewriteRule, RuleApplicationSource, Session,
     SymbolExprMap,
 };
+#[doc(hidden)]
+pub use super::session::TrustedSystemDownValueLhs;
 
 // parse_and_message_helpers
 pub use super::messages::parse_and_message_helpers::{

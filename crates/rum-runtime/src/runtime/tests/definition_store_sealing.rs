@@ -128,8 +128,9 @@ fn definition_store_and_targeted_removal_are_sealed_behind_prepared_tokens() {
     }
 
     // Static catalog installation is the other explicit non-preparing path.
-    // Its unforgeable token is declared and constructed only in session_api.
-    let trusted_inventory = call_inventory(&workspace, &files, "TrustedSystemDownValue::new(");
+    // The general token constructor is private to session_api; published
+    // constructors expose only the two exact static-catalog identities.
+    let trusted_inventory = call_inventory(&workspace, &files, "TrustedSystemDownValueLhs::new(");
     assert_eq!(
         trusted_inventory,
         vec![(
@@ -137,6 +138,10 @@ fn definition_store_and_targeted_removal_are_sealed_behind_prepared_tokens() {
             1
         )]
     );
+    let session_api_source =
+        fs::read_to_string(workspace.join("crates/rum-runtime/src/runtime/session/session_api.rs"))
+            .expect("sealing gate should read the trusted catalog token module");
+    assert!(!session_api_source.contains("pub fn new(name: &str, lhs: Expr)"));
     assert_eq!(
         call_inventory(&workspace, &files, "install_system_down_value("),
         vec![
@@ -146,7 +151,7 @@ fn definition_store_and_targeted_removal_are_sealed_behind_prepared_tokens() {
             ),
             ("crates/rum-stdlib/src/lib.rs".to_string(), 2),
         ],
-        "the raw trusted installer must remain confined to its API declaration and static catalog seeding"
+        "the typed trusted installer must remain confined to its API declaration and static catalog seeding"
     );
 }
 

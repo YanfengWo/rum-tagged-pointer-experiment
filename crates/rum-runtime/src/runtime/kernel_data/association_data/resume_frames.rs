@@ -20,7 +20,7 @@ impl crate::runtime::suspension::SuspensionFrame
         let direct_single_key = self.direct_single_key;
         let rhs = self.rhs.clone();
         let resumed = (|| {
-            let evaluated_selectors = <EvaluatedPartSelectors as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(outcome?);
+            let evaluated_selectors = EvaluatedPartSelectors::from_continuation_expr(outcome?);
             session.finish_association_set_part_lvalue(
                 symbol,
                 direct_single_key,

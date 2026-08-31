@@ -9,26 +9,47 @@ struct SnapshotRestoreMode<'a> {
     session: &'a mut Session,
 }
 
-/// The sole raw-lhs definition-store capability: static system-catalog
-/// installation constructs it here, outside every source-language evaluator
-/// entry point. Private fields prevent other runtime modules from forging it.
-pub(in crate::runtime) struct TrustedSystemDownValue {
+/// A statically proven system downvalue identity.
+///
+/// The fields and general constructor stay private. Published constructors
+/// name the exact catalog identities that may bypass lhs preparation, so a
+/// downstream caller cannot turn an arbitrary expression into this proof.
+#[doc(hidden)]
+pub struct TrustedSystemDownValueLhs {
     symbol: Symbol,
     lhs: Expr,
-    rhs: Expr,
 }
 
-impl TrustedSystemDownValue {
-    fn new(name: &str, lhs: Expr, rhs: Expr) -> Self {
+impl TrustedSystemDownValueLhs {
+    fn new(name: &str, lhs: Expr) -> Self {
         Self {
             symbol: Symbol::system(name),
             lhs,
-            rhs,
         }
     }
 
-    pub(in crate::runtime) fn into_parts(self) -> (Symbol, Expr, Expr) {
-        (self.symbol, self.lhs, self.rhs)
+    fn arithmetic_default(head: &'static str) -> Self {
+        TrustedSystemDownValueLhs::new(
+            "Default",
+            Expr::call(
+                Expr::system_symbol("Default"),
+                vec![Expr::system_symbol(head)],
+            ),
+        )
+    }
+
+    #[doc(hidden)]
+    pub fn default_for_plus() -> Self {
+        Self::arithmetic_default("Plus")
+    }
+
+    #[doc(hidden)]
+    pub fn default_for_times() -> Self {
+        Self::arithmetic_default("Times")
+    }
+
+    pub(in crate::runtime) fn into_parts(self) -> (Symbol, Expr) {
+        (self.symbol, self.lhs)
     }
 }
 
@@ -223,17 +244,14 @@ impl Session {
     }
 
     #[doc(hidden)]
-    pub fn install_system_down_value(&mut self, name: &str, lhs: Expr, rhs: Expr) {
-        let symbol = Symbol::system(name);
-        self.store_trusted_system_down_value(TrustedSystemDownValue::new(
-            name,
-            lhs.clone(),
-            rhs.clone(),
-        ));
+    pub fn install_system_down_value(&mut self, lhs: TrustedSystemDownValueLhs, rhs: Expr) {
+        let symbol = lhs.symbol;
+        let installed_lhs = lhs.lhs.clone();
+        self.store_trusted_system_down_value(lhs, rhs.clone());
         self.installed_system_down_values
             .entry(symbol)
             .or_default()
-            .push((lhs, rhs));
+            .push((installed_lhs, rhs));
     }
 
     #[doc(hidden)]

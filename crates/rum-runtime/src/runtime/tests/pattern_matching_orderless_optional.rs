@@ -276,13 +276,11 @@ fn flat_optional_omission_collects_every_match_for_builtin_heads() {
 fn installed_system_down_values_surface_as_a_whole_after_user_mutation() {
     let mut session = Session::new();
     session.install_system_down_value(
-        "Default",
-        Expr::call(system_expr("Default"), vec![system_expr("Plus")]),
+        TrustedSystemDownValueLhs::default_for_plus(),
         Expr::small_integer(0),
     );
     session.install_system_down_value(
-        "Default",
-        Expr::call(system_expr("Default"), vec![system_expr("Times")]),
+        TrustedSystemDownValueLhs::default_for_times(),
         Expr::small_integer(1),
     );
 
@@ -307,13 +305,11 @@ fn installed_system_down_values_surface_as_a_whole_after_user_mutation() {
 fn snapshot_after_unset_resurrects_an_installed_system_down_value() {
     let mut source = Session::new();
     source.install_system_down_value(
-        "Default",
-        Expr::call(system_expr("Default"), vec![system_expr("Plus")]),
+        TrustedSystemDownValueLhs::default_for_plus(),
         Expr::small_integer(0),
     );
     source.install_system_down_value(
-        "Default",
-        Expr::call(system_expr("Default"), vec![system_expr("Times")]),
+        TrustedSystemDownValueLhs::default_for_times(),
         Expr::small_integer(1),
     );
     source.eval_text("Unset[Default[Plus]]").unwrap();
@@ -329,13 +325,11 @@ fn snapshot_after_unset_resurrects_an_installed_system_down_value() {
 
     let mut restored = Session::new();
     restored.install_system_down_value(
-        "Default",
-        Expr::call(system_expr("Default"), vec![system_expr("Plus")]),
+        TrustedSystemDownValueLhs::default_for_plus(),
         Expr::small_integer(0),
     );
     restored.install_system_down_value(
-        "Default",
-        Expr::call(system_expr("Default"), vec![system_expr("Times")]),
+        TrustedSystemDownValueLhs::default_for_times(),
         Expr::small_integer(1),
     );
     let outcome = restored

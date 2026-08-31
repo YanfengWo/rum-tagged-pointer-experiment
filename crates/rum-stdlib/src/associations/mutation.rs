@@ -527,25 +527,34 @@ fn eval_held_association_part_mutation(
     selector_exprs: Vec<Expr>,
     spec: Expr,
 ) -> Result<Expr, EvalError> {
-    let evaluated_result = session.evaluate_part_selectors_owned(selector_exprs);
-    rum_runtime::resume_or_suspend!(
-        session,
-        evaluated_result,
-        ok(evaluated_selectors) => finish_held_association_part_mutation(
-            session,
-            operation,
-            target_expr,
-            target,
-            evaluated_selectors,
-            spec,
-        ),
-        suspend => FinishHeldAssociationPartSelectorEvaluationSuspensionFrame {
-            operation,
-            target_expr,
-            target,
-            spec,
-        },
-    )
+    match session.evaluate_part_selectors_owned_for_builtin(selector_exprs) {
+        EvaluatedPartSelectorsEvaluation::Complete(result) => {
+            finish_held_association_part_mutation(
+                session,
+                operation,
+                target_expr,
+                target,
+                result?,
+                spec,
+            )
+        }
+        EvaluatedPartSelectorsEvaluation::Suspended {
+            error,
+            continuation,
+        } => {
+            rum_runtime::resume_or_suspend!(
+                insert session,
+                FinishHeldAssociationPartSelectorEvaluationSuspensionFrame {
+                    operation,
+                    target_expr,
+                    target,
+                    spec,
+                    continuation,
+                },
+            );
+            Err(error)
+        }
+    }
 }
 
 fn finish_held_association_part_mutation(

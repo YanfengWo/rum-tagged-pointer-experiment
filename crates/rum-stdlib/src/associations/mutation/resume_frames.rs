@@ -7,6 +7,7 @@ pub(super) struct FinishHeldAssociationPartSelectorEvaluationSuspensionFrame {
     pub(super) target_expr: Expr,
     pub(super) target: Symbol,
     pub(super) spec: Expr,
+    pub(super) continuation: EvaluatedPartSelectorsContinuation,
 }
 
 impl rum_runtime::kernel_api::SuspensionFrame
@@ -22,7 +23,7 @@ impl rum_runtime::kernel_api::SuspensionFrame
         let target = self.target;
         let spec = self.spec.clone();
         let resumed = (|| {
-            let evaluated_selectors = <EvaluatedPartSelectors as rum_runtime::kernel_api::ContinuationValue>::from_continuation_expr(outcome?);
+            let evaluated_selectors = self.continuation.finish(outcome)?;
             finish_held_association_part_mutation(
                 session,
                 operation,

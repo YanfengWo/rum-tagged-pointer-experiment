@@ -20,7 +20,7 @@ impl crate::runtime::suspension::SuspensionFrame
         let target = self.target;
         let args = self.args.clone();
         let resumed = (|| {
-            let evaluated_selectors = <EvaluatedPartSelectors as crate::runtime::suspension::ContinuationValue>::from_continuation_expr(outcome?);
+            let evaluated_selectors = EvaluatedPartSelectors::from_continuation_expr(outcome?);
             session.finish_suspended_held_part_selector_evaluation(
                 operation,
                 target,

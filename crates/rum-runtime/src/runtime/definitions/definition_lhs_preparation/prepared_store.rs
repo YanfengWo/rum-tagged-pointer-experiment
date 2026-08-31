@@ -205,9 +205,10 @@ impl Session {
 
     pub(in crate::runtime) fn store_trusted_system_down_value(
         &mut self,
-        trusted: TrustedSystemDownValue,
+        trusted: TrustedSystemDownValueLhs,
+        rhs: Expr,
     ) {
-        store_trusted_system_down_value(self, trusted);
+        store_trusted_system_down_value(self, trusted, rhs);
     }
 
     pub(in crate::runtime::definitions) fn prepared_unset_target(
@@ -382,8 +383,12 @@ fn store(session: &mut Session, prepared: PreparedDefinitionStore, rhs: Expr, de
     session.bump_evaluation_epoch_for_symbol(&symbol);
 }
 
-fn store_trusted_system_down_value(session: &mut Session, trusted: TrustedSystemDownValue) {
-    let (symbol, lhs, rhs) = trusted.into_parts();
+fn store_trusted_system_down_value(
+    session: &mut Session,
+    trusted: TrustedSystemDownValueLhs,
+    rhs: Expr,
+) {
+    let (symbol, lhs) = trusted.into_parts();
     debug_assert_eq!(
         classify_definition_lhs(&lhs),
         Some(TaggedDefinitionTarget::DownValue(symbol)),

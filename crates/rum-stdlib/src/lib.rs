@@ -4,6 +4,7 @@
 //! installs the core builtin set into runtime sessions through [`install_core`].
 
 use rum_core::Expr;
+use rum_runtime::kernel_api::TrustedSystemDownValueLhs;
 use rum_runtime::{Session, core_builtin_specs};
 
 mod adaptive_set;
@@ -139,19 +140,11 @@ pub fn install_core(session: &mut Session) {
     character_classes::install(session);
 
     session.install_system_down_value(
-        "Default",
-        Expr::call(
-            Expr::system_symbol("Default"),
-            vec![Expr::system_symbol("Plus")],
-        ),
+        TrustedSystemDownValueLhs::default_for_plus(),
         Expr::small_integer(0),
     );
     session.install_system_down_value(
-        "Default",
-        Expr::call(
-            Expr::system_symbol("Default"),
-            vec![Expr::system_symbol("Times")],
-        ),
+        TrustedSystemDownValueLhs::default_for_times(),
         Expr::small_integer(1),
     );
 }

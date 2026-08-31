@@ -71,6 +71,38 @@ fn association_part_mutation_resumes_one_selector_without_replay_and_refetches_o
 }
 
 #[test]
+fn association_part_mutation_keeps_opaque_completion_across_two_suspensions() {
+    const SOURCE: &str = "parts = {{Association[a -> 1]}}; seen = {}; \
+        AssociateTo[parts[[(AppendTo[seen, firstBefore]; InputString[\"first: \"]; \
+                              AppendTo[seen, firstAfter]; \
+                              parts = {{Association[a -> 10]}}; 1), \
+                           (AppendTo[seen, secondBefore]; InputString[\"second: \"]; \
+                              AppendTo[seen, secondAfter]; \
+                              parts = {{Association[a -> 20]}}; 1)]], b -> 2]; \
+        {parts, seen}";
+
+    let mut session = core_session();
+    let first = session
+        .eval_request(SOURCE)
+        .expect_err("the first association Part selector should request input");
+    assert_input_prompt(&first.error, "first: ");
+
+    let second = session
+        .resume_eval_request_with_input("one")
+        .expect_err("the second association Part selector should request input");
+    assert_input_prompt(&second.error, "second: ");
+
+    let response = session
+        .resume_eval_request_with_input("two")
+        .expect("the association Part mutation should finish after both selectors");
+    assert_eq!(
+        response.value.to_string(),
+        "List[List[List[Association[Rule[a, 20], Rule[b, 2]]]], List[firstBefore, firstAfter, secondBefore, secondAfter]]"
+    );
+    assert!(response.messages.is_empty());
+}
+
+#[test]
 fn associateto_requires_an_immediate_symbol_value_instead_of_suspending_delayed_values() {
     let mut session = core_session();
     session
