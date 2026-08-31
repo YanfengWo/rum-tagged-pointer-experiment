@@ -696,6 +696,16 @@ regressions and space-for-time tradeoffs.
   A uniform-relational lowering regression or a leftmost double evaluation
   would escape the suite.
 
+- **Pattern regions — FIXED 2026-08-31** (brief-393, `d423d2d3`). The list of
+  protected wrappers is gone; a shared registry names every pattern head once
+  and preparation, the matcher, `MatchQ`, options matching and substitution all
+  consult it, so the sets cannot drift. It gathers heads that had been
+  recognized in three separate files, which is why it carries `HoldPattern` and
+  `OptionsPattern` beyond the seventeen the matcher file compared by name. The
+  old-versus-new recognized-head diff lost nothing, and matcher behavior was
+  checked by probe. Per-form treatment is now documented rather than implied.
+  The original finding follows.
+
 - **HIGH — preparation evaluates inside pattern regions it does not recognize.**
   The pattern-region policy enumerates the wrappers it protects and omits
   `Verbatim`, `PatternSequence`, `OrderlessPatternSequence`, `KeyValuePattern`,
