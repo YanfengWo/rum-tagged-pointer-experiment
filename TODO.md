@@ -653,6 +653,30 @@ Every item remains subject to the performance gate in
 versus candidate timing plus counters and memory, and reject or report
 regressions and space-for-time tradeoffs.
 
+## The 2026-08-31 consistency review — CLOSED (briefs 389-396)
+
+Four reviews of the work from briefs 364-388, run in independent parts so an
+interrupted dispatch would lose at most one. Eight findings, three of them
+high, all repaired by briefs 393-396. **Every repair replaced a convention with
+a structure**: a list of protected pattern wrappers became one registry shared
+with the matcher; assertions resting on interner order moved to a construction
+where the two Bloom lanes cannot intersect; a public installer that trusted its
+caller now demands a typed left-hand side; and a wrapper claiming two
+constructors left the continuation protocol that offered a third.
+
+**Two of the findings were corrections to the briefs themselves**, which was
+worth more than some of what was asked for: the frame-root allowlist is an
+inventory of handwritten traversals rather than a two-entry exemption list, and
+the frame queue is the single insertion route for ordinary code rather than
+literally. `CLAUDE.md` was wrong on both and has been corrected.
+
+**One was a gate miss of mine.** brief-388 repaired the two assertions that had
+been seen failing; five more rested on the same mechanism, because the
+diagnosis and the repair both examined the recorded sightings and the recorded
+sightings were two.
+
+The findings and their repairs follow.
+
 ## Opened by the 2026-08-31 consistency review (briefs 389-392)
 
 - **The assertion class — CLOSED 2026-08-31** (brief-394, `HEAD`). The
