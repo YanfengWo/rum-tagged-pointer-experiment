@@ -655,6 +655,13 @@ regressions and space-for-time tradeoffs.
 
 ## Opened by the 2026-08-31 consistency review (briefs 389-392)
 
+- **The assertion class — CLOSED 2026-08-31** (brief-394, `HEAD`). The
+  review's five sites were the complete remaining set; each group now splits
+  semantic coverage on ordinary symbols from optimization coverage on a
+  lane-disjoint target, with no assertion deleted. Four groups swept 0..256 at
+  257/257. Two assertions could not be made to fail under any preintern count
+  and were reported rather than changed. The original finding follows.
+
 - **HIGH — brief-388 fixed two instances, not the class.** Five further
   assertions still pair ordinary symbols with ordinary dependencies, so they sit
   on one Bloom lane and can be flipped by a legal false positive exactly as the
