@@ -164,7 +164,7 @@ impl Session {
 fn is_plain_blank_pattern(expr: &Expr) -> bool {
     matches!(
         expr,
-        Expr::Call { head, args } if is_system_symbol_name(head, "Blank") && args.is_empty()
+        Expr::Call { head, args } if MatcherPatternHead::Blank.matches(head) && args.is_empty()
     )
 }
 
@@ -190,24 +190,11 @@ fn contains_pattern_syntax(expr: &Expr) -> bool {
 }
 
 fn matches_pattern_head(head: &Expr) -> bool {
-    is_system_symbol_name(head, "Alternatives")
-        || is_system_symbol_name(head, "Blank")
-        || is_system_symbol_name(head, "BlankSequence")
-        || is_system_symbol_name(head, "BlankNullSequence")
-        || is_system_symbol_name(head, "Condition")
-        || is_system_symbol_name(head, "Except")
-        || is_system_symbol_name(head, "HoldPattern")
-        || is_system_symbol_name(head, "KeyValuePattern")
-        || is_system_symbol_name(head, "Longest")
-        || is_system_symbol_name(head, "Optional")
-        || is_system_symbol_name(head, "OrderlessPatternSequence")
-        || is_system_symbol_name(head, "Pattern")
-        || is_system_symbol_name(head, "PatternSequence")
-        || is_system_symbol_name(head, "PatternTest")
-        || is_system_symbol_name(head, "Repeated")
-        || is_system_symbol_name(head, "RepeatedNull")
-        || is_system_symbol_name(head, "Shortest")
-        || is_system_symbol_name(head, "Verbatim")
+    // OptionsPattern is recognized by the sequence matcher, but the existing
+    // MatchQ resolution policy does not treat it as an opaque whole-pattern
+    // wrapper. Keep that matcher behavior unchanged while sharing the registry.
+    matcher_pattern_head(head)
+        .is_some_and(|pattern_head| pattern_head != MatcherPatternHead::OptionsPattern)
 }
 
 #[derive(rum_derive::FrameRootTrace)]

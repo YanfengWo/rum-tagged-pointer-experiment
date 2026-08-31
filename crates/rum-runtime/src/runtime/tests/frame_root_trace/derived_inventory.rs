@@ -115,6 +115,7 @@ pub(super) const DERIVED_FRAME_ROOT_TRACE_TYPES: &[&str] = &[
     "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation/resume_frames.rs:DefinitionLhsRegion",
     "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation/resume_frames.rs:DefinitionLhsStructuralCallState",
     "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation/resume_frames.rs:DefinitionLhsStructuralSelection",
+    "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation/resume_frames.rs:DefinitionLhsStructuralSource",
     "crates/rum-runtime/src/runtime/definitions/definition_tags.rs:EvalTagSetSuspensionFrame",
     "crates/rum-runtime/src/runtime/definitions/definition_tags.rs:EvalUpSetSuspensionFrame",
     "crates/rum-runtime/src/runtime/definitions/definition_updates.rs:HeldUpdateOperation",

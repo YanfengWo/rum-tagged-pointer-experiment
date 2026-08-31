@@ -44,6 +44,7 @@ mod package_tools;
 mod pattern_matching;
 #[cfg(test)]
 mod pattern_matching_interpreted;
+mod pattern_syntax;
 mod profiling;
 mod random;
 mod resolution;
@@ -63,8 +64,8 @@ use self::{
     eval_core::*, eval_dispatch::*, evaluation_cache::*, expr_helpers::*, expr_runtime_helpers::*,
     file_io::*, hold_thread::*, kernel_data::*, listable_dispatch::*, lowering::*,
     matcher_and_symbols::*, messages::*, metadata::*, model::*, namespace_tools::*, options::*,
-    package_tools::*, pattern_matching::*, profiling::*, random::*, resolution::*, scoping::*,
-    session::*, substitution::*, suspension::*, tree_walkers::*,
+    package_tools::*, pattern_matching::*, pattern_syntax::*, profiling::*, random::*,
+    resolution::*, scoping::*, session::*, substitution::*, suspension::*, tree_walkers::*,
 };
 pub use self::{
     builtin_catalog::core_builtin_specs, capabilities::*, file_io::*, lowering::lower_syntax_expr,

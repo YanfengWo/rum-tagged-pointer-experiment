@@ -1,9 +1,15 @@
 mod prepared_store;
 mod resume_frames;
+mod syntax_policy;
 pub(super) use prepared_store::{
     PreparedDefinitionAssignment, PreparedDefinitionStore, PreparedUnsetDefinitionTarget,
 };
 use resume_frames::*;
+use syntax_policy::{DefinitionLhsSyntaxCallPlan, definition_lhs_syntax_call_plan};
+pub(super) use syntax_policy::{
+    definition_lhs_blank_head, definition_lhs_contains_pattern_syntax,
+    definition_lhs_pattern_wrapper_head,
+};
 
 use super::super::*;
 use super::value_table_assignment::ValueTableAssignmentState;
@@ -169,12 +175,6 @@ impl DefinitionLhsPreparationContinuation {
     }
 }
 
-enum DefinitionLhsSyntaxCallPlan {
-    Opaque,
-    Structural(DefinitionLhsStructuralSelection),
-    Ordinary,
-}
-
 impl Session {
     #[cold]
     #[inline(never)]
@@ -244,7 +244,12 @@ impl Session {
                     unreachable!("definition-lhs work is replaced only while it is being driven")
                 }
                 DefinitionLhsPreparationWork::PrepareNode { expr, region } => match expr {
-                    Expr::Atom(_) if matches!(region, DefinitionLhsRegion::Root) => {
+                    Expr::Atom(_)
+                        if matches!(
+                            region,
+                            DefinitionLhsRegion::Root | DefinitionLhsRegion::RawPattern
+                        ) =>
+                    {
                         state.work = DefinitionLhsPreparationWork::CompleteNode(expr);
                     }
                     Expr::Atom(_) => {
@@ -263,15 +268,36 @@ impl Session {
                         }
                     }
                     Expr::Call { head, args } => {
-                        match definition_lhs_syntax_call_plan(&head, args.len()) {
+                        match definition_lhs_syntax_call_plan(&head, args.len(), region) {
                             DefinitionLhsSyntaxCallPlan::Opaque => {
                                 state.work = DefinitionLhsPreparationWork::CompleteNode(
                                     Expr::call_shared(head, args),
                                 );
                             }
-                            DefinitionLhsSyntaxCallPlan::Structural(selection) => {
+                            DefinitionLhsSyntaxCallPlan::Structural {
+                                selection,
+                                child_region,
+                            } => {
                                 self.start_definition_lhs_structural_call(
-                                    &mut state, head, args, selection,
+                                    &mut state,
+                                    head,
+                                    args,
+                                    selection,
+                                    child_region,
+                                );
+                            }
+                            DefinitionLhsSyntaxCallPlan::Ordinary
+                                if matches!(region, DefinitionLhsRegion::RawPattern) =>
+                            {
+                                self.start_definition_lhs_structural_call(
+                                    &mut state,
+                                    head,
+                                    args,
+                                    DefinitionLhsStructuralSelection::RawTree {
+                                        head_pending: true,
+                                        cursor: 0,
+                                    },
+                                    DefinitionLhsRegion::RawPattern,
                                 );
                             }
                             DefinitionLhsSyntaxCallPlan::Ordinary => {
@@ -336,7 +362,7 @@ impl Session {
                                 .push(DefinitionLhsParentContext::CallArgument { call, argument });
                             state.work = DefinitionLhsPreparationWork::PrepareNode {
                                 expr: plan.expr,
-                                region: DefinitionLhsRegion::Pattern,
+                                region: DefinitionLhsRegion::ActivePattern,
                             };
                         }
                         CallArgumentMode::Evaluate => {
@@ -408,15 +434,8 @@ impl Session {
                             self.merge_definition_lhs_call_argument(&mut call, argument, value);
                             state.work = DefinitionLhsPreparationWork::PrepareCallArguments(call);
                         }
-                        DefinitionLhsParentContext::StructuralArgument {
-                            mut call,
-                            source_index,
-                        } => {
-                            merge_definition_lhs_structural_argument(
-                                &mut call,
-                                source_index,
-                                value,
-                            );
+                        DefinitionLhsParentContext::StructuralNode { mut call, source } => {
+                            merge_definition_lhs_structural_node(&mut call, source, value);
                             self.continue_definition_lhs_structural_call(&mut state, call);
                         }
                     }
@@ -613,6 +632,7 @@ impl Session {
         head: SharedExpr,
         args: SharedArgs,
         selection: DefinitionLhsStructuralSelection,
+        child_region: DefinitionLhsRegion,
     ) {
         self.continue_definition_lhs_structural_call(
             state,
@@ -620,6 +640,7 @@ impl Session {
                 head,
                 args,
                 selection,
+                child_region,
                 prepared: None,
             },
         );
@@ -630,14 +651,20 @@ impl Session {
         state: &mut DefinitionLhsPreparationState,
         mut call: DefinitionLhsStructuralCallState,
     ) {
-        if let Some(source_index) = call.selection.next(call.args.len()) {
-            let expr = call.args[source_index].clone();
+        if let Some(source) = call.selection.next(call.args.len()) {
+            let expr = match source {
+                DefinitionLhsStructuralSource::Head => call.head.as_ref().clone(),
+                DefinitionLhsStructuralSource::Argument(source_index) => {
+                    call.args[source_index].clone()
+                }
+            };
+            let child_region = call.child_region;
             state
                 .parents
-                .push(DefinitionLhsParentContext::StructuralArgument { call, source_index });
+                .push(DefinitionLhsParentContext::StructuralNode { call, source });
             state.work = DefinitionLhsPreparationWork::PrepareNode {
                 expr,
-                region: DefinitionLhsRegion::Pattern,
+                region: child_region,
             };
             return;
         }
@@ -669,11 +696,18 @@ fn reuse_definition_lhs_call_head(source_head: SharedExpr, evaluated: Expr) -> S
     }
 }
 
-fn merge_definition_lhs_structural_argument(
+fn merge_definition_lhs_structural_node(
     call: &mut DefinitionLhsStructuralCallState,
-    source_index: usize,
+    source: DefinitionLhsStructuralSource,
     value: Expr,
 ) {
+    let DefinitionLhsStructuralSource::Argument(source_index) = source else {
+        if call.head.as_ref() != &value {
+            call.head = SharedExpr::new(value);
+        }
+        return;
+    };
+
     let changed = value != call.args[source_index];
     if call.prepared.is_none() && changed {
         call.prepared = Some(PreparedArgumentAccumulator::freeze(
@@ -686,119 +720,6 @@ fn merge_definition_lhs_structural_argument(
             prepared, value, false, true, false,
         ));
     }
-}
-
-fn definition_lhs_syntax_call_plan(head: &Expr, arg_count: usize) -> DefinitionLhsSyntaxCallPlan {
-    let Some(symbol) = expr_as_symbol(head).filter(|symbol| symbol.context() == SYSTEM_CONTEXT)
-    else {
-        return DefinitionLhsSyntaxCallPlan::Ordinary;
-    };
-
-    match symbol.name() {
-        "HoldPattern"
-        | "MessageName"
-        | heads::patterns::DEFAULT
-        | "Attributes"
-        | "Options"
-        | "DefaultValues"
-        | "OwnValues"
-        | "DownValues"
-        | "UpValues"
-        | "SubValues"
-        | "SyntaxInformation" => DefinitionLhsSyntaxCallPlan::Opaque,
-        heads::patterns::PATTERN if arg_count == 2 => {
-            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::One {
-                index: Some(1),
-            })
-        }
-        heads::patterns::BLANK
-        | heads::patterns::BLANK_SEQUENCE
-        | heads::patterns::BLANK_NULL_SEQUENCE
-        | heads::patterns::ALTERNATIVES
-        | heads::patterns::OPTIONAL
-        | heads::patterns::EXCEPT
-        | heads::patterns::REPEATED
-        | heads::patterns::REPEATED_NULL => {
-            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::All {
-                cursor: 0,
-            })
-        }
-        heads::patterns::PATTERN_TEST | heads::patterns::CONDITION if arg_count == 2 => {
-            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::One {
-                index: Some(0),
-            })
-        }
-        // Unset[TagSet[tag, lhs]] is the explicit spelling retained for
-        // tagged removal. Keep the tag opaque and prepare only the embedded
-        // definition lhs before prepared_unset_target classifies it.
-        heads::rules::TAG_SET if arg_count == 2 => {
-            DefinitionLhsSyntaxCallPlan::Structural(DefinitionLhsStructuralSelection::One {
-                index: Some(1),
-            })
-        }
-        _ => DefinitionLhsSyntaxCallPlan::Ordinary,
-    }
-}
-
-pub(super) fn definition_lhs_contains_pattern_syntax(expr: &Expr) -> bool {
-    match expr {
-        Expr::Atom(_) => false,
-        Expr::Call { head, args } => {
-            definition_lhs_pattern_syntax_head(head)
-                || definition_lhs_contains_pattern_syntax(head)
-                || args.iter().any(definition_lhs_contains_pattern_syntax)
-        }
-    }
-}
-
-fn definition_lhs_pattern_syntax_head(head: &Expr) -> bool {
-    matches!(
-        definition_lhs_system_head_name(head),
-        Some(
-            heads::patterns::BLANK
-                | heads::patterns::BLANK_SEQUENCE
-                | heads::patterns::BLANK_NULL_SEQUENCE
-                | heads::patterns::ALTERNATIVES
-                | heads::patterns::OPTIONAL
-                | heads::patterns::EXCEPT
-                | heads::patterns::REPEATED
-                | heads::patterns::REPEATED_NULL
-                | heads::patterns::PATTERN
-                | heads::patterns::PATTERN_TEST
-                | heads::patterns::CONDITION
-                | "HoldPattern"
-        )
-    )
-}
-
-pub(super) fn definition_lhs_blank_head(head: &Expr) -> bool {
-    matches!(
-        definition_lhs_system_head_name(head),
-        Some(
-            heads::patterns::BLANK
-                | heads::patterns::BLANK_SEQUENCE
-                | heads::patterns::BLANK_NULL_SEQUENCE
-        )
-    )
-}
-
-pub(super) fn definition_lhs_pattern_wrapper_head(head: &Expr) -> bool {
-    matches!(
-        definition_lhs_system_head_name(head),
-        Some(
-            heads::patterns::ALTERNATIVES
-                | heads::patterns::OPTIONAL
-                | heads::patterns::EXCEPT
-                | heads::patterns::REPEATED
-                | heads::patterns::REPEATED_NULL
-        )
-    )
-}
-
-fn definition_lhs_system_head_name(head: &Expr) -> Option<&str> {
-    expr_as_symbol(head)
-        .filter(|symbol| symbol.context() == SYSTEM_CONTEXT)
-        .map(Symbol::name)
 }
 
 #[cfg(test)]

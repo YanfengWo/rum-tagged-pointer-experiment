@@ -120,10 +120,15 @@ one snapshot of that head's attributes, and prepare arguments from left to
 right under the same hold, `Evaluate`, `Unevaluated`, `Sequence`, `Flat`, and
 `Orderless` rules used for ordinary call lookup. Active positions complete
 evaluation, including delayed own-values and nested definitions. Held
-positions retain their raw subtree. Pattern binder names and deferred
-`PatternTest`/`Condition` predicates remain raw, while typed blank constraints
-are prepared; opaque assignment forms such as `HoldPattern`, `MessageName`,
-and `Default` are not user-evaluated.
+positions retain their raw subtree. Preparation classifies pattern syntax from
+the same head registry as the matcher. Pattern binder names and deferred
+`PatternTest`/`Condition` predicates remain raw, while their pattern operands
+and typed blank constraints are prepared. `PatternSequence`,
+`OrderlessPatternSequence`, `KeyValuePattern`, `Longest`, and `Shortest`
+traverse their pattern structure without evaluating literal calls inside it;
+nested typed constraints are still prepared. `Verbatim` contents and
+`OptionsPattern` targets are entirely raw. Opaque assignment forms such as
+`HoldPattern`, `MessageName`, and `Default` are not user-evaluated.
 
 The resulting definition identity is a snapshot. Later own-value or attribute
 changes affect identities prepared by later assignments and lookups, but do

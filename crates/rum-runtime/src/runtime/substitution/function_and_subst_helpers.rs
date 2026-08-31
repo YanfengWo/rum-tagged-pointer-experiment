@@ -23,7 +23,7 @@ pub(in crate::runtime) fn unevaluated_wrapper_arg(expr: &Expr) -> Option<&Expr> 
 pub(in crate::runtime) fn strip_hold_pattern<'a>(expr: &'a Expr) -> &'a Expr {
     match expr {
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "HoldPattern") && args.len() == 1 =>
+            if MatcherPatternHead::HoldPattern.matches(head) && args.len() == 1 =>
         {
             strip_hold_pattern(&args[0])
         }

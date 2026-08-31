@@ -161,7 +161,9 @@ fn compile_matcher_group_items(
 
 pub(super) fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Pattern.matches(head) && args.len() == 2 =>
+        {
             let name = expr_as_symbol(&args[0])?;
             Some((name, &args[1]))
         }
@@ -172,7 +174,7 @@ pub(super) fn pattern_named_pattern(expr: &Expr) -> Option<(&Symbol, &Expr)> {
 pub(super) fn pattern_condition(expr: &Expr) -> Option<(&Expr, &Expr)> {
     match expr {
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "Condition") && args.len() == 2 =>
+            if MatcherPatternHead::Condition.matches(head) && args.len() == 2 =>
         {
             Some((&args[0], &args[1]))
         }
@@ -183,7 +185,7 @@ pub(super) fn pattern_condition(expr: &Expr) -> Option<(&Expr, &Expr)> {
 pub(super) fn pattern_test(expr: &Expr) -> Option<(&Expr, &Expr)> {
     match expr {
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "PatternTest") && args.len() == 2 =>
+            if MatcherPatternHead::PatternTest.matches(head) && args.len() == 2 =>
         {
             Some((&args[0], &args[1]))
         }
@@ -193,10 +195,14 @@ pub(super) fn pattern_test(expr: &Expr) -> Option<(&Expr, &Expr)> {
 
 pub(super) fn pattern_except(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Except") && args.len() == 1 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Except.matches(head) && args.len() == 1 =>
+        {
             Some((&args[0], None))
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Except") && args.len() == 2 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Except.matches(head) && args.len() == 2 =>
+        {
             Some((&args[0], Some(&args[1])))
         }
         _ => None,
@@ -205,10 +211,14 @@ pub(super) fn pattern_except(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
 
 pub(super) fn pattern_optional(expr: &Expr) -> Option<(&Expr, Option<&Expr>)> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Optional") && args.len() == 1 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Optional.matches(head) && args.len() == 1 =>
+        {
             Some((&args[0], None))
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Optional") && args.len() == 2 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Optional.matches(head) && args.len() == 2 =>
+        {
             Some((&args[0], Some(&args[1])))
         }
         _ => None,
@@ -220,7 +230,7 @@ pub(super) fn pattern_key_value_pattern_entries(expr: &Expr) -> Option<Vec<Assoc
         return None;
     };
 
-    if !is_system_symbol_name(head, "KeyValuePattern") || args.len() != 1 {
+    if !MatcherPatternHead::KeyValuePattern.matches(head) || args.len() != 1 {
         return None;
     }
 
@@ -245,21 +255,23 @@ pub(super) fn pattern_key_value_pattern_entries(expr: &Expr) -> Option<Vec<Assoc
 
 pub(super) fn pattern_alternatives(expr: &Expr) -> Option<&[Expr]> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Alternatives") => Some(args),
+        Expr::Call { head, args } if MatcherPatternHead::Alternatives.matches(head) => Some(args),
         _ => None,
     }
 }
 
 pub(super) fn pattern_sequence_items(expr: &Expr) -> Option<&[Expr]> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "PatternSequence") => Some(args),
+        Expr::Call { head, args } if MatcherPatternHead::PatternSequence.matches(head) => {
+            Some(args)
+        }
         _ => None,
     }
 }
 
 pub(super) fn pattern_orderless_sequence_items(expr: &Expr) -> Option<&[Expr]> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "OrderlessPatternSequence") => {
+        Expr::Call { head, args } if MatcherPatternHead::OrderlessPatternSequence.matches(head) => {
             Some(args)
         }
         _ => None,
@@ -268,7 +280,9 @@ pub(super) fn pattern_orderless_sequence_items(expr: &Expr) -> Option<&[Expr]> {
 
 pub(super) fn pattern_verbatim_inner(expr: &Expr) -> Option<&Expr> {
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Verbatim") && args.len() == 1 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Verbatim.matches(head) && args.len() == 1 =>
+        {
             Some(&args[0])
         }
         _ => None,
@@ -279,7 +293,9 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
     let expr = strip_hold_pattern(expr);
 
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Pattern.matches(head) && args.len() == 2 =>
+        {
             let mut spec = decompose_sequence_pattern(&args[1])?;
             let name = expr_as_symbol(&args[0])?;
 
@@ -291,32 +307,36 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
             Some(spec)
         }
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "Condition") && args.len() == 2 =>
+            if MatcherPatternHead::Condition.matches(head) && args.len() == 2 =>
         {
             let mut spec = decompose_sequence_pattern(&args[0])?;
             spec.checks
                 .push(SequencePatternCheck::Condition(args[1].clone()));
             Some(spec)
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Longest") && args.len() == 1 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Longest.matches(head) && args.len() == 1 =>
+        {
             let mut spec = decompose_sequence_pattern(&args[0])?;
             spec.greediness = SequenceGreediness::Longest;
             Some(spec)
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "Shortest") && args.len() == 1 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Shortest.matches(head) && args.len() == 1 =>
+        {
             let mut spec = decompose_sequence_pattern(&args[0])?;
             spec.greediness = SequenceGreediness::Shortest;
             Some(spec)
         }
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "PatternTest") && args.len() == 2 =>
+            if MatcherPatternHead::PatternTest.matches(head) && args.len() == 2 =>
         {
             let mut spec = decompose_sequence_pattern(&args[0])?;
             spec.checks
                 .push(SequencePatternCheck::PatternTest(args[1].clone()));
             Some(spec)
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "BlankSequence") => {
+        Expr::Call { head, args } if MatcherPatternHead::BlankSequence.matches(head) => {
             if args.len() > 1 {
                 return None;
             }
@@ -332,7 +352,7 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
                 greediness: SequenceGreediness::Shortest,
             })
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "BlankNullSequence") => {
+        Expr::Call { head, args } if MatcherPatternHead::BlankNullSequence.matches(head) => {
             if args.len() > 1 {
                 return None;
             }
@@ -349,10 +369,10 @@ pub(super) fn decompose_sequence_pattern(expr: &Expr) -> Option<CompiledSequence
             })
         }
         expr if is_options_pattern_expr(expr) => Some(options_pattern_sequence_matcher()),
-        Expr::Call { head, args } if is_system_symbol_name(head, "Repeated") => {
+        Expr::Call { head, args } if MatcherPatternHead::Repeated.matches(head) => {
             compile_repeated_pattern(args, 1)
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "RepeatedNull") => {
+        Expr::Call { head, args } if MatcherPatternHead::RepeatedNull.matches(head) => {
             compile_repeated_pattern(args, 0)
         }
         _ => None,
@@ -371,28 +391,30 @@ pub(super) fn first_invalid_repeated_bounds(expr: &Expr) -> Option<RepeatedBound
         return None;
     };
 
-    if is_system_symbol_name(head, "Verbatim") && args.len() == 1 {
+    if MatcherPatternHead::Verbatim.matches(head) && args.len() == 1 {
         return None;
     }
 
-    if is_system_symbol_name(head, "Blank")
-        || is_system_symbol_name(head, "BlankSequence")
-        || is_system_symbol_name(head, "BlankNullSequence")
+    if matches!(
+        matcher_pattern_head(head),
+        Some(
+            MatcherPatternHead::Blank
+                | MatcherPatternHead::BlankSequence
+                | MatcherPatternHead::BlankNullSequence
+        )
+    ) {
+        return None;
+    }
+
+    if let Some(pattern_head @ (MatcherPatternHead::Repeated | MatcherPatternHead::RepeatedNull)) =
+        matcher_pattern_head(head)
     {
-        return None;
-    }
-
-    for symbol in ["Repeated", "RepeatedNull"] {
-        if !is_system_symbol_name(head, symbol) {
-            continue;
-        }
-
         return match args.as_slice() {
             [inner] => first_invalid_repeated_bounds(inner),
             [inner, spec] => {
                 if parse_repeated_bounds(spec).is_none() {
                     Some(RepeatedBoundsError {
-                        symbol,
+                        symbol: pattern_head.name(),
                         spec: spec.clone(),
                     })
                 } else {
@@ -403,13 +425,18 @@ pub(super) fn first_invalid_repeated_bounds(expr: &Expr) -> Option<RepeatedBound
         };
     }
 
-    if (is_system_symbol_name(head, "Pattern")
-        || is_system_symbol_name(head, "Condition")
-        || is_system_symbol_name(head, "PatternTest")
-        || is_system_symbol_name(head, "Optional"))
-        && !args.is_empty()
+    let pattern_head = matcher_pattern_head(head);
+    if matches!(
+        pattern_head,
+        Some(
+            MatcherPatternHead::Pattern
+                | MatcherPatternHead::Condition
+                | MatcherPatternHead::PatternTest
+                | MatcherPatternHead::Optional
+        )
+    ) && !args.is_empty()
     {
-        let pattern_index = usize::from(is_system_symbol_name(head, "Pattern"));
+        let pattern_index = usize::from(pattern_head == Some(MatcherPatternHead::Pattern));
         return args
             .get(pattern_index)
             .and_then(first_invalid_repeated_bounds);
@@ -540,9 +567,14 @@ pub(super) fn max_possible_matcher_arg_count(patterns: &[MatcherArg]) -> Option<
 pub(super) fn pattern_blank_head(expr: &Expr) -> Option<Option<&Expr>> {
     match expr {
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "Blank")
-                || is_system_symbol_name(head, "BlankSequence")
-                || is_system_symbol_name(head, "BlankNullSequence") =>
+            if matches!(
+                matcher_pattern_head(head),
+                Some(
+                    MatcherPatternHead::Blank
+                        | MatcherPatternHead::BlankSequence
+                        | MatcherPatternHead::BlankNullSequence
+                )
+            ) =>
         {
             if args.is_empty() {
                 Some(None)

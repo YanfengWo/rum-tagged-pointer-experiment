@@ -5,7 +5,8 @@ use std::sync::Arc;
 #[derive(Clone, Copy, rum_derive::FrameRootTrace)]
 pub(super) enum DefinitionLhsRegion {
     Root,
-    Pattern,
+    ActivePattern,
+    RawPattern,
 }
 
 #[derive(Clone, rum_derive::FrameRootTrace)]
@@ -72,9 +73,9 @@ pub(super) enum DefinitionLhsParentContext {
         call: DefinitionLhsCallState,
         argument: DefinitionLhsCallArgumentContinuation,
     },
-    StructuralArgument {
+    StructuralNode {
         call: DefinitionLhsStructuralCallState,
-        source_index: usize,
+        source: DefinitionLhsStructuralSource,
     },
 }
 
@@ -100,25 +101,46 @@ pub(super) struct DefinitionLhsStructuralCallState {
     pub(super) head: SharedExpr,
     pub(super) args: SharedArgs,
     pub(super) selection: DefinitionLhsStructuralSelection,
+    pub(super) child_region: DefinitionLhsRegion,
     pub(super) prepared: Option<PreparedArgumentAccumulator>,
+}
+
+#[derive(Clone, Copy, rum_derive::FrameRootTrace)]
+pub(super) enum DefinitionLhsStructuralSource {
+    Head,
+    Argument(usize),
 }
 
 #[derive(Clone, Copy, rum_derive::FrameRootTrace)]
 pub(super) enum DefinitionLhsStructuralSelection {
     All { cursor: usize },
     One { index: Option<usize> },
+    RawTree { head_pending: bool, cursor: usize },
 }
 
 impl DefinitionLhsStructuralSelection {
-    pub(super) fn next(&mut self, len: usize) -> Option<usize> {
+    pub(super) fn next(&mut self, len: usize) -> Option<DefinitionLhsStructuralSource> {
         match self {
             Self::All { cursor } if *cursor < len => {
                 let index = *cursor;
                 *cursor += 1;
-                Some(index)
+                Some(DefinitionLhsStructuralSource::Argument(index))
             }
             Self::All { .. } => None,
-            Self::One { index } => index.take().filter(|index| *index < len),
+            Self::One { index } => index
+                .take()
+                .filter(|index| *index < len)
+                .map(DefinitionLhsStructuralSource::Argument),
+            Self::RawTree { head_pending, .. } if *head_pending => {
+                *head_pending = false;
+                Some(DefinitionLhsStructuralSource::Head)
+            }
+            Self::RawTree { cursor, .. } if *cursor < len => {
+                let index = *cursor;
+                *cursor += 1;
+                Some(DefinitionLhsStructuralSource::Argument(index))
+            }
+            Self::RawTree { .. } => None,
         }
     }
 }
@@ -156,4 +178,5 @@ const _: fn() = || {
     assert_traces::<DefinitionLhsRegion>();
     assert_traces::<DefinitionLhsStructuralCallState>();
     assert_traces::<DefinitionLhsStructuralSelection>();
+    assert_traces::<DefinitionLhsStructuralSource>();
 };

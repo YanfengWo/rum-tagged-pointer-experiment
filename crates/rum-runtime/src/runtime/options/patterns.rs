@@ -86,16 +86,16 @@ impl Session {
 
         match expr {
             Expr::Call { head, args }
-                if is_system_symbol_name(head, "Pattern") && args.len() == 2 =>
+                if MatcherPatternHead::Pattern.matches(head) && args.len() == 2 =>
             {
                 self.options_pattern_target_for_arg(&args[1])
             }
             Expr::Call { head, args }
-                if is_system_symbol_name(head, "Optional") && !args.is_empty() =>
+                if MatcherPatternHead::Optional.matches(head) && !args.is_empty() =>
             {
                 self.options_pattern_target_for_arg(&args[0])
             }
-            Expr::Call { head, args } if is_system_symbol_name(head, "OptionsPattern") => {
+            Expr::Call { head, args } if MatcherPatternHead::OptionsPattern.matches(head) => {
                 match args.as_slice() {
                     [] => Some(OptionsPatternTarget::Automatic),
                     [target] => self
@@ -139,15 +139,17 @@ pub(in crate::runtime) fn is_options_pattern_expr(expr: &Expr) -> bool {
     let expr = strip_hold_pattern(expr);
 
     match expr {
-        Expr::Call { head, args } if is_system_symbol_name(head, "Pattern") && args.len() == 2 => {
+        Expr::Call { head, args }
+            if MatcherPatternHead::Pattern.matches(head) && args.len() == 2 =>
+        {
             is_options_pattern_expr(&args[1])
         }
         Expr::Call { head, args }
-            if is_system_symbol_name(head, "Optional") && !args.is_empty() =>
+            if MatcherPatternHead::Optional.matches(head) && !args.is_empty() =>
         {
             is_options_pattern_expr(&args[0])
         }
-        Expr::Call { head, args } if is_system_symbol_name(head, "OptionsPattern") => {
+        Expr::Call { head, args } if MatcherPatternHead::OptionsPattern.matches(head) => {
             args.len() <= 1
         }
         _ => false,

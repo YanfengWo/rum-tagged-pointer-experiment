@@ -142,6 +142,73 @@ fn definition_lhs_pattern_regions_prepare_constraints_but_defer_binders_and_pred
 }
 
 #[test]
+fn matcher_wrappers_keep_literal_pattern_regions_raw_and_prepare_nested_constraints() {
+    let mut session = definition_lhs_session();
+
+    assert_value(
+        &mut session,
+        "ClearAll[typeAlias, patternRegionCalls, patternRegionCall, fVerbatimRegion, \
+                  fPatternSequenceRegion, fOrderlessPatternSequenceRegion, \
+                  fKeyValuePatternRegion, fLongestRegion, fShortestRegion, \
+                  fOptionsPatternRegion, verbatimCount, patternSequenceCount, \
+                  orderlessPatternSequenceCount, keyValuePatternCount, longestCount, \
+                  shortestCount, optionsPatternCount]; \
+         typeAlias = Integer; patternRegionCalls = 0; \
+         patternRegionCall[] := (patternRegionCalls = patternRegionCalls + 1; zzz); \
+         fVerbatimRegion[Verbatim[Blank[typeAlias]], \
+             Verbatim[patternRegionCall[]]] = verbatim; \
+         verbatimCount = patternRegionCalls; patternRegionCalls = 0; \
+         fPatternSequenceRegion[PatternSequence[patternRegionCall[], \
+             Pattern[bPatternSequence, Blank[typeAlias]]]] = patternSequence; \
+         patternSequenceCount = patternRegionCalls; patternRegionCalls = 0; \
+         fOrderlessPatternSequenceRegion[OrderlessPatternSequence[patternRegionCall[], \
+             Pattern[bOrderlessPatternSequence, Blank[typeAlias]]]] = \
+             orderlessPatternSequence; \
+         orderlessPatternSequenceCount = patternRegionCalls; patternRegionCalls = 0; \
+         fKeyValuePatternRegion[System`KeyValuePattern[List[Rule[patternRegionCall[], \
+             Pattern[bKeyValuePattern, Blank[typeAlias]]]]]] = keyValuePattern; \
+         keyValuePatternCount = patternRegionCalls; patternRegionCalls = 0; \
+         fLongestRegion[Longest[Repeated[Alternatives[patternRegionCall[], \
+             Blank[typeAlias]]]]] = longest; \
+         longestCount = patternRegionCalls; patternRegionCalls = 0; \
+         fShortestRegion[Shortest[Repeated[Alternatives[patternRegionCall[], \
+             Blank[typeAlias]]]]] = shortest; \
+         shortestCount = patternRegionCalls; patternRegionCalls = 0; \
+         fOptionsPatternRegion[OptionsPattern[patternRegionCall[]]] = optionsPattern; \
+         optionsPatternCount = patternRegionCalls; \
+         {{verbatimCount, DownValues[fVerbatimRegion]}, \
+          {patternSequenceCount, DownValues[fPatternSequenceRegion]}, \
+          {orderlessPatternSequenceCount, DownValues[fOrderlessPatternSequenceRegion]}, \
+          {keyValuePatternCount, DownValues[fKeyValuePatternRegion]}, \
+          {longestCount, DownValues[fLongestRegion]}, \
+          {shortestCount, DownValues[fShortestRegion]}, \
+          {optionsPatternCount, DownValues[fOptionsPatternRegion]}}",
+        "List[List[0, List[RuleDelayed[HoldPattern[fVerbatimRegion[Verbatim[Blank[typeAlias]], Verbatim[patternRegionCall[]]]], verbatim]]], List[0, List[RuleDelayed[HoldPattern[fPatternSequenceRegion[PatternSequence[patternRegionCall[], Pattern[bPatternSequence, Blank[Integer]]]]], patternSequence]]], List[0, List[RuleDelayed[HoldPattern[fOrderlessPatternSequenceRegion[OrderlessPatternSequence[patternRegionCall[], Pattern[bOrderlessPatternSequence, Blank[Integer]]]]], orderlessPatternSequence]]], List[0, List[RuleDelayed[HoldPattern[fKeyValuePatternRegion[KeyValuePattern[List[Rule[patternRegionCall[], Pattern[bKeyValuePattern, Blank[Integer]]]]]]], keyValuePattern]]], List[0, List[RuleDelayed[HoldPattern[fLongestRegion[Longest[Repeated[Alternatives[patternRegionCall[], Blank[Integer]]]]]], longest]]], List[0, List[RuleDelayed[HoldPattern[fShortestRegion[Shortest[Repeated[Alternatives[patternRegionCall[], Blank[Integer]]]]]], shortest]]], List[0, List[RuleDelayed[HoldPattern[fOptionsPatternRegion[OptionsPattern[patternRegionCall[]]]], optionsPattern]]]]",
+    );
+}
+
+#[test]
+fn active_lhs_and_pattern_test_pattern_operands_still_prepare_once() {
+    let mut session = definition_lhs_session();
+
+    assert_value(
+        &mut session,
+        "ClearAll[activeCalls, patternOperandCalls, activeCall, patternOperand, \
+                  activeHead, patternTestHead, typeAlias, predicateAlias]; \
+         activeCalls = 0; patternOperandCalls = 0; typeAlias = Integer; \
+         predicateAlias = evaluatedPredicate; \
+         activeCall[] := (activeCalls = activeCalls + 1; 2); \
+         patternOperand := (patternOperandCalls = patternOperandCalls + 1; \
+                            Blank[typeAlias]); \
+         activeHead[activeCall[]] = active; \
+         SetDelayed[patternTestHead[System`PatternTest[patternOperand, predicateAlias]], tested]; \
+         {activeCalls, DownValues[activeHead], patternOperandCalls, \
+          DownValues[patternTestHead]}",
+        "List[1, List[RuleDelayed[HoldPattern[activeHead[2]], active]], 1, List[RuleDelayed[HoldPattern[patternTestHead[PatternTest[Blank[Integer], predicateAlias]]], tested]]]",
+    );
+}
+
+#[test]
 fn one_metadata_snapshot_controls_every_argument_even_after_an_earlier_mutation() {
     let mut session = definition_lhs_session();
 
