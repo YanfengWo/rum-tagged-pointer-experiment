@@ -9,6 +9,7 @@ fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_r
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let stdin_endpoint = bootstrap.transport_layout().stdin.uri();
     let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+    let heartbeat_endpoint = bootstrap.transport_layout().heartbeat.uri();
     let frontend_identity =
         PeerIdentity::from_str("frontend-zmq-stdin-client").expect("identity should parse");
     let runtime = test_runtime();
@@ -49,9 +50,12 @@ fn native_zeromq_backend_frontend_style_stdin_round_trip_emits_iopub_and_shell_r
         iopub
     });
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    });
+    acknowledge_iopub_subscription(
+        &runtime,
+        &heartbeat_endpoint,
+        &mut driver,
+        backend.transport_mut(),
+    );
 
     let execute_header = KernelMessageHeader::new(
         "execute-zmq-stdin-1",

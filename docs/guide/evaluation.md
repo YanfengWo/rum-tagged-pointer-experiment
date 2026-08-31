@@ -169,13 +169,14 @@ target positions remain raw.
 Assignment-style `Part` mutations have a stricter callback order. For the
 binary heads `AddTo`, `SubtractFrom`, `TimesBy`, `DivideBy`, `ApplyTo`,
 `AppendTo`, and `PrependTo`, ordinary `HoldFirst` preparation evaluates the
-second argument once before target selection. The `Part` selectors then
-evaluate exactly once from left to right. Only after the final selector does
-the mutation read the owner's removal, protection, and value state; both the
-selected paths and their current values come from that post-selector value.
-The update evaluates once, and protection is checked again immediately before
-the result is stored. `AssociateTo` and `KeyDropFrom` use the same selector-
-then-owner order for `Part` targets.
+second argument once before target selection. When a mutation reaches target
+selection, the `Part` selectors evaluate exactly once from left to right. Only
+after the final selector does the mutation read the owner's removal,
+protection, and value state; both the selected paths and their current values
+come from that post-selector value. The update evaluates once, and protection
+is checked again immediately before the result is stored. `AssociateTo` and
+`KeyDropFrom` use the same selector-then-owner order for `Part` targets after
+their evaluated mutation specification passes validation.
 
 `Increment` and `Decrement` return the selection from before their update.
 `PreIncrement`, `PreDecrement`, and the seven binary update heads return the

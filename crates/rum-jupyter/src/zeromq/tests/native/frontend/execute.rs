@@ -8,6 +8,7 @@ fn native_zeromq_backend_frontend_style_execute_preserves_headers_and_iopub_meta
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+    let heartbeat_endpoint = bootstrap.transport_layout().heartbeat.uri();
     let runtime = test_runtime();
     let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
         .expect("native zeromq backend should build");
@@ -34,9 +35,12 @@ fn native_zeromq_backend_frontend_style_execute_preserves_headers_and_iopub_meta
         iopub
     });
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    });
+    acknowledge_iopub_subscription(
+        &runtime,
+        &heartbeat_endpoint,
+        &mut driver,
+        backend.transport_mut(),
+    );
 
     let execute_header = KernelMessageHeader::new(
         "execute-zmq-metadata-1",

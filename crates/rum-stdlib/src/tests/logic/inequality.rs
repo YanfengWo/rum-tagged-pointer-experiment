@@ -29,6 +29,13 @@ fn comparison_parentheses_bound_chain_full_forms() {
 }
 
 #[test]
+fn uniform_less_chain_keeps_its_nary_head() {
+    let mut session = core_session();
+
+    assert_held_full_form(&mut session, "a < b < c", "Less[a, b, c]");
+}
+
+#[test]
 fn mixed_comparison_chains_have_alternating_inequality_full_forms() {
     let mut session = core_session();
 
@@ -70,6 +77,23 @@ fn mixed_comparison_chain_evaluates_middle_operand_once() {
         .expect("mixed comparison count probe should evaluate");
 
     assert_eq!(outcome.value.to_string(), "List[True, 1]");
+}
+
+#[test]
+fn uniform_less_chain_evaluates_every_operand_once() {
+    let mut session = core_session();
+    let outcome = session
+        .eval_text(
+            "leftCalls = 0; middleCalls = 0; rightCalls = 0; \
+             left[] := (leftCalls = leftCalls + 1; 1); \
+             middle[] := (middleCalls = middleCalls + 1; 2); \
+             right[] := (rightCalls = rightCalls + 1; 3); \
+             result = left[] < middle[] < right[]; \
+             {result, leftCalls, middleCalls, rightCalls}",
+        )
+        .expect("uniform comparison count probe should evaluate");
+
+    assert_eq!(outcome.value.to_string(), "List[True, 1, 1, 1]");
 }
 
 #[test]

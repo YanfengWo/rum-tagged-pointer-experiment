@@ -4,6 +4,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
+const CANCELLABLE_LONG_RUNNING_EVAL: &str = "Print[\"evaluation-started\"]; Do[x = 1, 50000000]";
+
 #[test]
 fn host_eval_script_uses_last_form_and_classifies_syntax_failures() {
     let mut session = HostSession::new();
@@ -209,14 +211,27 @@ fn host_eval_memory_ceiling_reports_structured_termination_and_session_recovers(
 
 #[test]
 fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
-    let mut session = host_session_with_large_iteration_budget();
+    let mut limits = HostResourceLimits::default();
+    limits.iteration_work_limit = 50_000_000;
+    let mut session = HostSession::builder()
+        .with_config(HostConfig::default().with_resource_limits(limits))
+        .build();
     let cancel = session.cancel_handle();
     let (cancelled_tx, cancelled_rx) = mpsc::channel();
+    let (evaluation_started_tx, evaluation_started_rx) = mpsc::sync_channel(0);
+    session.set_print_sink(move |line| {
+        assert_eq!(line, "evaluation-started");
+        evaluation_started_tx
+            .send(())
+            .expect("canceller should receive evaluation-start signal");
+    });
 
     let canceller = {
         let cancel = cancel.clone();
         thread::spawn(move || {
-            thread::sleep(Duration::from_millis(50));
+            evaluation_started_rx
+                .recv()
+                .expect("evaluation should report that it started");
             let cancelled_at = Instant::now();
             cancel.cancel();
             cancelled_tx
@@ -226,7 +241,7 @@ fn host_cancel_handle_interrupts_running_eval_from_another_thread() {
     };
 
     let started = Instant::now();
-    let outcome = session.eval(LONG_RUNNING_EVAL);
+    let outcome = session.eval(CANCELLABLE_LONG_RUNNING_EVAL);
     let completed_at = Instant::now();
     let elapsed = completed_at.duration_since(started);
     let cancelled_at = cancelled_rx

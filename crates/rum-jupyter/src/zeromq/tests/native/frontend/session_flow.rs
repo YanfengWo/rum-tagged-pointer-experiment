@@ -10,6 +10,7 @@ fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts
     let stdin_endpoint = bootstrap.transport_layout().stdin.uri();
     let control_endpoint = bootstrap.transport_layout().control.uri();
     let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+    let heartbeat_endpoint = bootstrap.transport_layout().heartbeat.uri();
     let frontend_identity =
         PeerIdentity::from_str("frontend-zmq-multi-client").expect("identity should parse");
     let runtime = test_runtime();
@@ -58,9 +59,12 @@ fn native_zeromq_backend_frontend_style_multi_message_session_flow_tracks_counts
         iopub
     });
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    });
+    acknowledge_iopub_subscription(
+        &runtime,
+        &heartbeat_endpoint,
+        &mut driver,
+        backend.transport_mut(),
+    );
 
     let first_execute_header = KernelMessageHeader::new(
         "execute-zmq-multi-1",

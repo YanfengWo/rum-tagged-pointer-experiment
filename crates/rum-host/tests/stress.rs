@@ -9,6 +9,8 @@ use std::time::{Duration, Instant};
 
 const REWRITE_LOOP_UNDER_LOAD: &str =
     "expr = 0; Do[expr = expr /. n_Integer :> n + 1, 50000000]; expr";
+const CANCELLABLE_REWRITE_LOOP_UNDER_LOAD: &str = "Print[\"evaluation-started\"]; expr = 0; \
+     Do[expr = expr /. n_Integer :> n + 1, 50000000]; expr";
 
 fn successful_eval(outcome: HostEvalOutcome) -> HostEvalSuccess {
     match outcome {
@@ -54,9 +56,18 @@ fn cancel_interrupts_heavy_rewrite_loop_and_session_recovers() {
     let mut session = rewrite_load_session();
     let cancel = session.cancel_handle();
     let (cancelled_tx, cancelled_rx) = mpsc::channel();
+    let (evaluation_started_tx, evaluation_started_rx) = mpsc::sync_channel(0);
+    session.set_print_sink(move |line| {
+        assert_eq!(line, "evaluation-started");
+        evaluation_started_tx
+            .send(())
+            .expect("canceller should receive evaluation-start signal");
+    });
 
     let canceller = thread::spawn(move || {
-        thread::sleep(Duration::from_millis(50));
+        evaluation_started_rx
+            .recv()
+            .expect("evaluation should report that it started");
         let cancelled_at = Instant::now();
         cancel.cancel();
         cancelled_tx
@@ -65,7 +76,7 @@ fn cancel_interrupts_heavy_rewrite_loop_and_session_recovers() {
     });
 
     let started = Instant::now();
-    let outcome = session.eval(REWRITE_LOOP_UNDER_LOAD);
+    let outcome = session.eval(CANCELLABLE_REWRITE_LOOP_UNDER_LOAD);
     let completed_at = Instant::now();
     let elapsed = completed_at.duration_since(started);
     let cancelled_at = cancelled_rx

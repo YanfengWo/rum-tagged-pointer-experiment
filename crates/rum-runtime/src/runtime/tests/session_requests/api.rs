@@ -1,7 +1,17 @@
 use super::*;
-use std::sync::atomic::Ordering;
+use std::sync::{atomic::Ordering, mpsc};
 use std::thread;
 use std::time::Duration;
+
+fn mark_file_request_evaluation_started(
+    session: &mut Session,
+    _head: &Expr,
+    args: &SharedArgs,
+) -> Result<Expr, EvalError> {
+    assert!(args.is_empty(), "evaluation-start probe takes no arguments");
+    session.push_print("evaluation-started");
+    Ok(system_expr(heads::structure::NULL))
+}
 
 fn file_request_error(source: &str, configure: impl FnOnce(&mut Session)) -> SessionRequestError {
     let dir = TempDirGuard::new("request-error");
@@ -500,15 +510,29 @@ fn file_request_maps_resource_limit_exit_and_cancel_errors() {
     );
 
     let dir = TempDirGuard::new("request-cancel");
-    let file = dir.write("cancel.rum", "Do[x = 1, 50000000]");
+    let file = dir.write("cancel.rum", "TestEvaluationStarted[]; Do[x = 1, 50000000]");
     let mut session = session_with_test_control_builtins();
+    session.register_builtin(BuiltinSpec::ordinary(
+        "TestEvaluationStarted",
+        "Marks that a cancellation-test file evaluation reached builtin dispatch.",
+        mark_file_request_evaluation_started,
+    ));
+    let (evaluation_started_tx, evaluation_started_rx) = mpsc::sync_channel(0);
+    session.set_print_sink(Box::new(move |line| {
+        assert_eq!(line, "evaluation-started");
+        evaluation_started_tx
+            .send(())
+            .expect("canceller should receive evaluation-start signal");
+    }));
     install_test_file_io(&mut session);
     session.set_iteration_work_limit(50_000_000);
     let cancel = session.interrupt_handle();
     let canceller = {
         let cancel = cancel.clone();
         thread::spawn(move || {
-            thread::sleep(Duration::from_millis(25));
+            evaluation_started_rx
+                .recv()
+                .expect("file evaluation should report that it started");
             cancel.store(true, Ordering::Relaxed);
         })
     };

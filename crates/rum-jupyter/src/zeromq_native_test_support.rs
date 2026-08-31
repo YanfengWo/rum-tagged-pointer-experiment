@@ -75,6 +75,43 @@ pub(super) fn test_runtime() -> tokio::runtime::Runtime {
         .expect("test runtime should build")
 }
 
+pub(super) fn acknowledge_iopub_subscription(
+    runtime: &tokio::runtime::Runtime,
+    heartbeat_endpoint: &str,
+    driver: &mut KernelSocketDriver,
+    transport: &mut ZeroMqSocketSession<NativeZeroMqSocket>,
+) {
+    let mut heartbeat = runtime.block_on(async {
+        let mut heartbeat = ReqSocket::new();
+        heartbeat
+            .connect(heartbeat_endpoint)
+            .await
+            .expect("iopub subscription barrier should connect");
+        heartbeat
+    });
+    let barrier = b"iopub-subscription-ready".to_vec();
+
+    runtime.block_on(async {
+        heartbeat
+            .send(ZmqMessage::from(barrier.clone()))
+            .await
+            .expect("iopub subscription barrier should send");
+    });
+    wait_for_socket_event(
+        driver,
+        transport,
+        crate::KernelSocketPollEvent::Heartbeat,
+    );
+
+    let reply = runtime.block_on(async {
+        tokio::time::timeout(Duration::from_secs(2), heartbeat.recv())
+            .await
+            .expect("iopub subscription barrier reply should arrive before timeout")
+            .expect("iopub subscription barrier reply should decode")
+    });
+    assert_eq!(zmq_message_to_frames(reply), vec![barrier]);
+}
+
 pub(super) fn wait_for_socket_event(
     driver: &mut KernelSocketDriver,
     transport: &mut ZeroMqSocketSession<NativeZeroMqSocket>,

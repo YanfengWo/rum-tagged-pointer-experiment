@@ -8,6 +8,7 @@ fn native_zeromq_backend_round_trips_signed_execute_and_signed_iopub_messages() 
     let codec = bootstrap.wire_codec();
     let shell_endpoint = bootstrap.transport_layout().shell.uri();
     let iopub_endpoint = bootstrap.transport_layout().iopub.uri();
+    let heartbeat_endpoint = bootstrap.transport_layout().heartbeat.uri();
     let runtime = test_runtime();
     let mut backend = NativeZeroMqTransportBackend::new_native(bootstrap.clone())
         .expect("signed native zeromq backend should build");
@@ -34,9 +35,12 @@ fn native_zeromq_backend_round_trips_signed_execute_and_signed_iopub_messages() 
         iopub
     });
 
-    runtime.block_on(async {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    });
+    acknowledge_iopub_subscription(
+        &runtime,
+        &heartbeat_endpoint,
+        &mut driver,
+        backend.transport_mut(),
+    );
 
     let request = codec
         .encode_request_envelope(&KernelRequestEnvelope {

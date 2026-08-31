@@ -26,8 +26,8 @@ mod support {
 }
 
 use self::support::{
-    loopback_connection, signed_loopback_connection, test_runtime, wait_for_next_socket_event,
-    wait_for_pending_socket_channels, wait_for_socket_event,
+    acknowledge_iopub_subscription, loopback_connection, signed_loopback_connection, test_runtime,
+    wait_for_next_socket_event, wait_for_pending_socket_channels, wait_for_socket_event,
 };
 
 mod native;
