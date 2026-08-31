@@ -726,6 +726,12 @@ regressions and space-for-time tradeoffs.
   crate needed.** This is family B's own invariant failing on the forms nobody
   enumerated.
 
+- **Published-surface boundaries — FIXED 2026-08-31** (brief-395). The
+  installer now takes a typed lhs and the selector wrapper left the
+  continuation protocol; an external crate attempting either construction fails
+  to compile (E0061, E0277), reproduced independently by the director. Catalog
+  installation measured -0.56%. The original findings follow.
+
 - **HIGH — `install_system_down_value` stores a raw lhs from outside the
   crate.** It is `pub`, takes an arbitrary `Expr`, and mints the trusted token
   internally, so preparation never runs (`session_api.rs:225`,
