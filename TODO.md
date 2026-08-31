@@ -655,6 +655,47 @@ regressions and space-for-time tradeoffs.
 
 ## Opened by the 2026-08-31 consistency review (briefs 389-392)
 
+- **HIGH — brief-388 fixed two instances, not the class.** Five further
+  assertions still pair ordinary symbols with ordinary dependencies, so they sit
+  on one Bloom lane and can be flipped by a legal false positive exactly as the
+  two closed flakes were: `evaluation_cache/tests.rs:105`, `:472`, `:499`,
+  `association_write_index.rs:84`, and `association_write_recovery.rs:40`.
+  Director-confirmed. **This is a gate miss of mine**: I verified that the two
+  known tests were repaired and that the lane argument held, and never asked how
+  many other assertions rest on the same mechanism. The diagnosis brief had the
+  same shape — it examined the two recorded sightings because those were the
+  sightings. Sweep the class, then decide per assertion whether it wants the
+  lane-disjoint construction or should stop asserting cache residency at all.
+
+- **Cross-thread cancellation tests synchronize with sleeps.** Top-level
+  evaluation clears a pending interrupt (`session_helpers.rs:30`), and these
+  tests start a sleeping canceller before calling evaluation
+  (`rum-host/tests/lifecycle_contract.rs:118`, `eval_contract.rs:210`,
+  `stress.rs:52`, `session_requests/api.rs:502`). If the main thread is delayed
+  past the worker's sleep, the cancellation lands first and is then erased. Not
+  yet observed failing; same shape as the flakes already closed.
+
+- **Four native IOPub tests depend on a fixed 50 ms PUB/SUB propagation
+  delay** (`native/signed.rs:24`, `frontend/execute.rs:24`,
+  `frontend/stdin.rs:39`, `frontend/session_flow.rs:48`). The pinned zeromq
+  0.5.0 queues subscriptions without publisher acknowledgement, and PUB sends
+  only to subscriptions already processed, so a delayed subscription drops
+  early frames and the two-second receive loops time out. Reached by reading
+  the dependency, not by reproduction — **the native tests skipped in the
+  worker's sandbox** ("loopback socket binding is not permitted").
+
+  **Note the inconsistency**: during brief-384 the same worker reported these
+  tests running rather than skipping. If they were in fact skipping then, its
+  0-of-30 result there measured nothing — which is why that brief's acceptance
+  was moved to a structural argument and the fix was verified on the director's
+  host instead. Establish which sandbox conditions permit loopback before
+  trusting any future native-test result from that environment.
+
+- **Comparison-chain coverage omits two stated parts of the contract**: no test
+  lowers a surface uniform-`Less` chain, and none counts the leftmost operand.
+  A uniform-relational lowering regression or a leftmost double evaluation
+  would escape the suite.
+
 - **HIGH — preparation evaluates inside pattern regions it does not recognize.**
   The pattern-region policy enumerates the wrappers it protects and omits
   `Verbatim`, `PatternSequence`, `OrderlessPatternSequence`, `KeyValuePattern`,
