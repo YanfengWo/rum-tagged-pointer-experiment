@@ -83,26 +83,54 @@ fn read_two_keys_to_build_the_index(session: &mut Session, target: &Symbol) {
 /// the next indexed read reports it `Missing`.
 #[test]
 fn appended_keys_after_a_wide_read_stay_readable() {
-    let mut session = session_with_test_control_builtins();
-    let target = install_association(&mut session, "appendedAssoc", 1..=32);
-    seed_direct_write_proof(&mut session, &target);
-    read_two_keys_to_build_the_index(&mut session, &target);
-
-    assert_eq!(session.association_lookup_work().index_builds, 1);
-    let args_before = own_args_ptr_key(&session, &target);
+    let mut semantic_session = session_with_test_control_builtins();
+    let semantic_target = install_association(&mut semantic_session, "appendedAssoc", 1..=32);
+    seed_direct_write_proof(&mut semantic_session, &semantic_target);
+    read_two_keys_to_build_the_index(&mut semantic_session, &semantic_target);
 
     let script = (1..=8_i64)
         .map(|value| format!("appendedAssoc[1{value:02}] = {value}"))
         .collect::<Vec<_>>()
         .join("; ");
-    session.eval_text(&script).unwrap();
+    semantic_session.eval_text(&script).unwrap();
+
+    let after = current_own_value(&semantic_session, &semantic_target);
+    for key in 101_i64..=108 {
+        assert_eq!(
+            semantic_session.apply_association_to_args(&after, &[Expr::small_integer(key)]),
+            Some(Expr::small_integer(key - 100)),
+            "appended key {key} must read back its value, not Missing"
+        );
+    }
+
+    // The identity-bearing target's writes use the generated lane; the
+    // Association of regular System symbols and integers depends only on the
+    // regular lane, so rewritten-dirty target bits cannot invalidate it.
+    let mut indexed_session = session_with_test_control_builtins();
+    let indexed_target =
+        install_identity_association(&mut indexed_session, "generatedAppendAssoc", 5, 1..=32);
+    indexed_session.bump_evaluation_epoch_for_symbol(&indexed_target);
+    seed_direct_write_proof(&mut indexed_session, &indexed_target);
+    read_two_keys_to_build_the_index(&mut indexed_session, &indexed_target);
+
+    assert_eq!(indexed_session.association_lookup_work().index_builds, 1);
+    let args_before = own_args_ptr_key(&indexed_session, &indexed_target);
+    for key in 101_i64..=108 {
+        indexed_session
+            .try_set_association_lvalue(
+                association_function_lvalue(indexed_target, Expr::small_integer(key)),
+                Expr::small_integer(key - 100),
+            )
+            .unwrap()
+            .expect("the generated target must accept the appended write");
+    }
 
     assert_eq!(
-        own_args_ptr_key(&session, &target),
+        own_args_ptr_key(&indexed_session, &indexed_target),
         args_before,
         "the appends must stay on the indexed allocation"
     );
-    let work = session.association_lookup_work();
+    let work = indexed_session.association_lookup_work();
     assert_eq!(
         work.index_builds, 1,
         "the appends must maintain the attached index, not detach it"
@@ -111,15 +139,6 @@ fn appended_keys_after_a_wide_read_stay_readable() {
         work.indexed_probes, 9,
         "one probe for the index-building read plus one per appended write"
     );
-
-    let after = current_own_value(&session, &target);
-    for key in 101_i64..=108 {
-        assert_eq!(
-            session.apply_association_to_args(&after, &[Expr::small_integer(key)]),
-            Some(Expr::small_integer(key - 100)),
-            "appended key {key} must read back its value, not Missing"
-        );
-    }
 }
 
 /// The duplicate half of the same window: without append recording, a second

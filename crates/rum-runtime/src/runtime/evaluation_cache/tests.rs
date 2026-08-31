@@ -90,6 +90,33 @@ fn association_with_integer_keys(keys: impl IntoIterator<Item = i64>) -> Expr {
     )
 }
 
+fn session_with_stable_identity_association(name: &str, identity: u64) -> (Session, Symbol) {
+    let mut session = Session::default();
+    let target = Symbol::with_identity(GLOBAL_CONTEXT, name, identity);
+    session.definitions.entry(target).or_default().own_value =
+        Some(association_with_integer_keys([1]));
+    session.bump_evaluation_epoch_for_symbol(&target);
+    seed_association_stability_proof(&mut session, &target);
+    (session, target)
+}
+
+fn session_with_stable_identity_list(name: &str, identity: u64) -> (Session, Symbol) {
+    let mut session = Session::default();
+    let target = Symbol::with_identity(GLOBAL_CONTEXT, name, identity);
+    session.definitions.entry(target).or_default().own_value =
+        Some(Expr::call(system_expr("List"), Vec::new()));
+    session.bump_evaluation_epoch_for_symbol(&target);
+
+    let current = session
+        .definitions
+        .get(&target)
+        .and_then(|definition| definition.own_value.clone())
+        .expect("the identity target must have a List own value");
+    assert!(session.cached_expr_is_evaluation_stable(&current));
+    drop(current);
+    (session, target)
+}
+
 #[test]
 fn association_stability_index_preserves_distinct_and_duplicate_verdicts() {
     let mut session = Session::default();
@@ -103,11 +130,27 @@ fn association_stability_index_preserves_distinct_and_duplicate_verdicts() {
 
 #[test]
 fn append_to_args_become_exclusive_after_definition_take_and_cache_entry_removal() {
-    let mut session = Session::default();
-    session.eval_text("lst = {}").unwrap();
-    session.eval_text("AppendTo[lst, 1]").unwrap();
+    let mut semantic_session = Session::default();
+    semantic_session.eval_text("lst = {}").unwrap();
+    semantic_session.eval_text("AppendTo[lst, 1]").unwrap();
+    assert_eq!(
+        own_value_text(&semantic_session, &Symbol::new(GLOBAL_CONTEXT, "lst")),
+        "List[1]"
+    );
 
-    let target = Symbol::new(GLOBAL_CONTEXT, "lst");
+    // The identity-bearing target is dirty only in the generated lane, while
+    // the List proof depends only on the regular lane.
+    let (mut session, target) = session_with_stable_identity_list("generatedAppendTarget", 2);
+    let updated = session
+        .try_incremental_append_to_plain_list(
+            &Expr::Atom(Atom::Symbol(target)),
+            &Expr::small_integer(1),
+        )
+        .unwrap()
+        .expect("the identity target must accept the incremental append");
+    assert_eq!(updated.to_string(), "List[1]");
+    drop(updated);
+
     let mut current = session
         .definitions
         .get_mut(&target)
@@ -124,7 +167,7 @@ fn append_to_args_become_exclusive_after_definition_take_and_cache_entry_removal
     );
     let proof = session
         .take_call_stability_proof(head, args)
-        .expect("the real AppendTo result must have an exact call-stability entry");
+        .expect("the incremental AppendTo result must have an exact call-stability entry");
     assert!(!session.call_stability_cache.contains_key(&key));
     assert_ne!(proof.bloom, StabilityBloom::default());
 
@@ -472,56 +515,80 @@ fn association_lvalue_absent_stale_and_dirty_proofs_recover_by_recomputation() {
     let (mut stale_session, stale_target) =
         session_with_stable_association("staleProofAssociation");
     stale_session.call_stability_generation += 1;
-    let stale_before = association_definition_args_key(&stale_session, &stale_target);
-    let stale_key_before = association_definition_cache_key(&stale_session, &stale_target);
     stale_session
         .eval_text("staleProofAssociation[x] = 2")
         .unwrap();
     assert_eq!(
-        association_definition_args_key(&stale_session, &stale_target),
-        stale_before
-    );
-    assert_eq!(
         own_value_text(&stale_session, &stale_target),
         "Association[Rule[x, 2]]"
+    );
+
+    let (mut stale_direct_session, stale_direct_target) =
+        session_with_stable_identity_association("generatedStaleProofAssociation", 3);
+    stale_direct_session.call_stability_generation += 1;
+    let stale_before = association_definition_args_key(&stale_direct_session, &stale_direct_target);
+    let stale_key_before =
+        association_definition_cache_key(&stale_direct_session, &stale_direct_target);
+    stale_direct_session
+        .try_set_association_lvalue(
+            association_function_lvalue(stale_direct_target, Expr::small_integer(1)),
+            Expr::small_integer(2),
+        )
+        .unwrap()
+        .expect("the generated target must accept stale-proof recovery");
+    assert_eq!(
+        association_definition_args_key(&stale_direct_session, &stale_direct_target),
+        stale_before
     );
     // The cache key covers the head as well as the args, so recomputing it
     // here would hide a moved head behind a missing-proof failure. Pin the
     // allocation first, then look the proof up under the key it was seeded
     // with.
     assert_eq!(
-        association_definition_cache_key(&stale_session, &stale_target),
+        association_definition_cache_key(&stale_direct_session, &stale_direct_target),
         stale_key_before,
         "the recovering write must leave the head and args allocations in place"
     );
-    assert!(stale_session.has_valid_call_stability_proof_for_key(stale_key_before));
+    assert!(stale_direct_session.has_valid_call_stability_proof_for_key(stale_key_before));
 
     let (mut dirty_session, dirty_target) =
         session_with_stable_association("dirtyProofAssociation");
     dirty_session.bump_evaluation_epoch_for_symbol(&Symbol::new(GLOBAL_CONTEXT, "x"));
-    let dirty_before = association_definition_args_key(&dirty_session, &dirty_target);
-    let dirty_key_before = association_definition_cache_key(&dirty_session, &dirty_target);
     dirty_session
         .eval_text("dirtyProofAssociation[x] = 2")
         .unwrap();
     assert_eq!(
-        association_definition_args_key(&dirty_session, &dirty_target),
-        dirty_before
-    );
-    assert_eq!(
         own_value_text(&dirty_session, &dirty_target),
         "Association[Rule[x, 2]]"
+    );
+
+    let (mut dirty_direct_session, dirty_direct_target) =
+        session_with_stable_identity_association("generatedDirtyProofAssociation", 4);
+    dirty_direct_session.bump_evaluation_epoch_for_symbol(&Symbol::new(SYSTEM_CONTEXT, "Rule"));
+    let dirty_before = association_definition_args_key(&dirty_direct_session, &dirty_direct_target);
+    let dirty_key_before =
+        association_definition_cache_key(&dirty_direct_session, &dirty_direct_target);
+    dirty_direct_session
+        .try_set_association_lvalue(
+            association_function_lvalue(dirty_direct_target, Expr::small_integer(1)),
+            Expr::small_integer(2),
+        )
+        .unwrap()
+        .expect("the generated target must accept dirty-proof recovery");
+    assert_eq!(
+        association_definition_args_key(&dirty_direct_session, &dirty_direct_target),
+        dirty_before
     );
     // The cache key covers the head as well as the args, so recomputing it
     // here would hide a moved head behind a missing-proof failure. Pin the
     // allocation first, then look the proof up under the key it was seeded
     // with.
     assert_eq!(
-        association_definition_cache_key(&dirty_session, &dirty_target),
+        association_definition_cache_key(&dirty_direct_session, &dirty_direct_target),
         dirty_key_before,
         "the recovering write must leave the head and args allocations in place"
     );
-    assert!(dirty_session.has_valid_call_stability_proof_for_key(dirty_key_before));
+    assert!(dirty_direct_session.has_valid_call_stability_proof_for_key(dirty_key_before));
 }
 
 #[test]
