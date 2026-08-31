@@ -9,6 +9,36 @@ minor versions may include breaking changes; the project aims to follow
 
 ### Fixed
 
+- Comparison operators are not associative, and parentheses bound a chain.
+  `(a == b) == c`, `a == (b == c)` and `(a < b) < c` all flattened to the n-ary
+  form, so `(1 == 1) == 1` evaluated to `True` where it should reduce to
+  `True == 1` and stay unevaluated. Chains are now collected while parsing, so a
+  parenthesised operand is one operand of the outer chain by construction. A
+  chain of one relation keeps its n-ary head (`a == b == c` is
+  `Equal[a, b, c]`); a mixed chain lowers to `Inequality[e1, op1, e2, op2, …]`,
+  which carries exactly `Protected` and no hold attribute — so every operand
+  evaluates exactly once and nothing is skipped. Previously a mixed chain
+  lowered to `And`, which repeated the middle operand and short-circuited.
+  `Inequality[a, Less, b]` degenerates to `Less[a, b]`, and an undetermined
+  chain is preserved.
+
+- Preparation no longer evaluates inside pattern regions. The policy listed the
+  wrappers it protected and the list was short: `Verbatim[Blank[typeAlias]]`
+  stored `Verbatim[_Integer]`, evaluating the contents of a wrapper whose
+  entire purpose is not to, and a call inside `PatternSequence` ran and was
+  replaced by its result. `OrderlessPatternSequence`, `KeyValuePattern`,
+  `Longest`, `Shortest` and `OptionsPattern` were equally exposed. Pattern
+  syntax is now named once in a registry shared with the matcher, so the two
+  cannot drift apart.
+
+- Syntax errors report the location of the offending text. Spans were computed
+  per form and rendered against the whole file, so a script failing in its
+  fourth form reported the position of an unrelated character in its second.
+  `Get` reported no line or column at all. Spans now leave the parser in file
+  coordinates, so `--file`, stdin scripts, host script requests, `Get` and
+  `Needs` are all correct, and the caret in the rendered excerpt points at the
+  right character.
+
 - A definition's left-hand side is prepared consistently, so the identity a
   definition is stored under matches the one a lookup constructs. Seven
   defects shared this shape and pointed in both directions. Where preparation
@@ -65,6 +95,15 @@ minor versions may include breaking changes; the project aims to follow
   consequence `ValueQ[DumpSave[path, x]]` now answers `False`.
 
 ### Changed
+
+- `Session::install_system_down_value` takes a `TrustedSystemDownValueLhs`
+  rather than a name and an arbitrary expression. It previously accepted any
+  expression and stored it without preparation, so a caller outside the crate
+  could install a definition whose identity no lookup could reach. Constructing
+  a valid left-hand side is now the caller's typed obligation. The
+  `EvaluatedPartSelectors` wrapper likewise no longer participates in the
+  continuation protocol, which had offered a third way to build one.
+
 
 - Sorting with a user comparator is `n log n`. `Sort`, `SortBy` and
   `ReverseSort` built a full all-pairs table — 639 200 comparisons at n=800 —

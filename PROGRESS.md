@@ -1841,3 +1841,71 @@ differing only in layout, while the three hot lookup functions' disassembly is
 instruction-identical with addresses shifted `+0xa0`. The layout estimate is
 incomplete in a known direction — the inert arms add code where the change
 removes 232 lines net. Recorded rather than tuned blind.
+
+## 2026-08-31 — three long-standing items, then a consistency review (briefs 384-396)
+
+`TODO.md` had carried three items for months. All three closed in a day, and
+each turned on the same thing: a test asserting a property the implementation
+never promised.
+
+**The `rum-jupyter` ZeroMQ flake (brief-384)** had been seen three times since
+brief-165, always green in isolation. It reproduces on demand in **release**
+mode — 22 of 30 runs — and is nearly invisible in debug, which is what the test
+gate runs. The test sent a shutdown on control, slept, sent an execute on
+shell, and asserted the *next* event was control; the poller's priority is
+correct but selects among channels already pending, and native transport
+buffers on background workers. The repair waits until both channels report
+pending through the same predicate the poller uses.
+
+**Syntax error locations (brief-385)** were computed per form and rendered
+against the whole file. A four-line script failing at 4:7 reported 2:1 — the
+position of an unrelated character — and `Get` reported no location at all. The
+suite could not see it: every pinned location was `1:x`, where form and file
+coordinates coincide.
+
+**Comparison chains (brief-386).** `TODO.md` recorded this as half-fixable
+because `(a == b) == c` and `a == b == c` "share one AST". Both halves were
+wrong — `a == (b == c)` flattened too, and the shared AST was a consequence of
+parsing these operators as associative. The user's diagnosis was the right one:
+they have no associativity. Chains are collected while parsing, and mixed
+chains lower to `Inequality`, whose absence of a hold attribute is why each
+operand evaluates once and nothing short-circuits.
+
+**The call-stability flake (briefs 387-388)** turned out to be all three
+recorded sightings of one cause: a 128-bit Bloom taking its bit from a
+process-global interner id. E1 made it deterministic — 36 preinterned symbols
+fail the direct test every time, 142 the indexed one — which was worth more
+than the statistics that preceded it. The predicate is one-sided by design, so
+the tests were at fault, and the repair pairs an identity-bearing target with
+regular-lane dependencies so the lanes cannot intersect for any interner order.
+
+**Then a four-part consistency review of briefs 364-388 (389-392), repaired by
+393-396.** Eight findings, three high. Every repair replaced a convention with
+a structure: the list of protected pattern wrappers became a registry shared
+with the matcher; assertions resting on interner order moved to a
+lane-disjoint construction; a public installer that trusted its caller now
+demands a typed left-hand side; a wrapper claiming two constructors left the
+continuation protocol that offered a third.
+
+**What the review was worth, beyond the findings.**
+
+- *Two findings were corrections to the briefs themselves.* The frame-root
+  allowlist is an inventory of handwritten traversals, not a two-entry
+  exemption list, and the frame queue is the single insertion route for
+  ordinary code rather than literally. `CLAUDE.md` was wrong on both.
+- *One was a gate miss.* brief-388 repaired the two assertions that had been
+  seen failing; five more rested on the same mechanism, because the diagnosis
+  and the repair both examined the recorded sightings, and the recorded
+  sightings were two. **Sweep the class, not the instances.**
+- *A boundary can hold inside the repository and evaporate at the crate edge.*
+  Two findings were exactly this, and in both cases the test meant to police it
+  scanned in-repository callers — **a source scan cannot establish a property
+  about code that does not exist yet.** The gate that settled them compiled an
+  external crate and required the compiler errors.
+- *The worker's honesty was worth more than several of the findings.* It
+  reported that native tests skipped in its sandbox and that its green rows
+  were compilation evidence rather than stability evidence; that two assertions
+  could not be made to fail and so were reported rather than changed on
+  suspicion; and that a brief's own background was wrong. Where its evidence
+  could not exist, the verification became the director's: forty release
+  repetitions on a host where those tests actually run.
