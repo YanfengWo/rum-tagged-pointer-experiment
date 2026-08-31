@@ -613,7 +613,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "rum-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "mimalloc",
  "rum-host",
@@ -624,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "rum-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "num-bigint",
  "serde",
@@ -632,7 +632,7 @@ dependencies = [
 
 [[package]]
 name = "rum-derive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -641,7 +641,7 @@ dependencies = [
 
 [[package]]
 name = "rum-host"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rum-core",
  "rum-runtime",
@@ -650,7 +650,7 @@ dependencies = [
 
 [[package]]
 name = "rum-jupyter"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytes",
  "futures",
@@ -664,7 +664,7 @@ dependencies = [
 
 [[package]]
 name = "rum-repl"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rum-host",
  "rum-syntax",
@@ -673,7 +673,7 @@ dependencies = [
 
 [[package]]
 name = "rum-runtime"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "num-integer",
  "num-traits",
@@ -685,7 +685,7 @@ dependencies = [
 
 [[package]]
 name = "rum-stdlib"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "crc32fast",
  "md-5",
@@ -698,14 +698,14 @@ dependencies = [
 
 [[package]]
 name = "rum-syntax"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "rum-terminal"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rum-host",
 ]

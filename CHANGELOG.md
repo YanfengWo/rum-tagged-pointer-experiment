@@ -5,7 +5,7 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Pre-1.0,
 minor versions may include breaking changes; the project aims to follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once it reaches 1.0.
 
-## [Unreleased]
+## [0.2.0] — 2026-08-31
 
 ### Fixed
 
