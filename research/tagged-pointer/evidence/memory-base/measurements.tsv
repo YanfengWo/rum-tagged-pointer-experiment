@@ -1,0 +1,9 @@
+label	mem_before	mem_after	mem_delta	max_memory	mem_postcleanup	peak_rss_bytes	alloc_count	alloc_bytes	alloc_peak_live_bytes
+baseline	67628	67822	194	68020	68210				
+matcher-single-wide-small	67628	67822	194	68020	68210				
+matcher-single-wide-large	67628	67822	194	68020	68210				
+module-leak-20000	67628	67822	194	68020	68210				
+retain-range-1000	67628	100066	32438	100264	68210				
+retain-range-10000	67628	388066	320438	388264	68210				
+retain-range-100000	67628	3268066	3200438	3268264	68210				
+transient-total-200000	67628	67822	194	6468078	68210				

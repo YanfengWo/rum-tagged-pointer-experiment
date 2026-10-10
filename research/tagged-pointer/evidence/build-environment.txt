@@ -1,0 +1,1 @@
+target storage: WSL /tmp; build jobs: 4; dev debug info: 0; release profile: upstream default

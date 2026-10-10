@@ -1,0 +1,12 @@
+{
+  "recorded_on": "2026-10-10",
+  "upstream_url": "https://github.com/siqiliu-tsinghua/rum",
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "upstream_commit_date": "2026-08-31T11:47:21+08:00",
+  "base_branch": "baseline/upstream",
+  "candidate_branch": "experiment/tagged-expr",
+  "upstream_modified": false,
+  "github_fork_created": false,
+  "runtime_changes": false,
+  "second_worktree_has_same_commit": true
+}

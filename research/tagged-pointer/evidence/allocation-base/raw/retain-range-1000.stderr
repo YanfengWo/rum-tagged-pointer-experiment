@@ -1,0 +1,2 @@
+rum-profile repr into_vec_total=0 into_vec_clone=0 into_owned_total=0 into_owned_clone=0 shared_args_alloc=21 shared_expr_alloc=20
+rum-profile alloc count=7048 bytes_total=550717 peak_live_bytes=305240

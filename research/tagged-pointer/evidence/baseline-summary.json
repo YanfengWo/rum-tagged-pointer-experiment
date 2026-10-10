@@ -1,0 +1,2182 @@
+{
+  "checked_on": "2026-10-10",
+  "status": "PASS",
+  "upstream": {
+    "recorded_on": "2026-10-10",
+    "upstream_url": "https://github.com/siqiliu-tsinghua/rum",
+    "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+    "upstream_commit_date": "2026-08-31T11:47:21+08:00",
+    "base_branch": "baseline/upstream",
+    "candidate_branch": "experiment/tagged-expr",
+    "upstream_modified": false,
+    "github_fork_created": false,
+    "runtime_changes": false,
+    "second_worktree_has_same_commit": true
+  },
+  "source_hashes": {
+    "Cargo.lock": "494b12255195e0c45d3972ba3360dba9088877acb63c6d60b229283067c481c8",
+    "rust-toolchain.toml": "4875df36dbbef64b8439a978c36fee75752864da47f9bbc1e5d76717263bdadf",
+    "crates/rum-core/src/expr.rs": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+    "crates/rum-core/src/profiling.rs": "7ffa5d1b1f4d020196a268dbbf589ec0deafec0810b0248654a10fdc339b5bc8",
+    "scripts/core-language-microbench.sh": "9295fa8ebade810474105027cc31593f5f43ff13469cd39bb244184ce01b555b",
+    "scripts/core-memory-microbench.sh": "dc5131d1e3fad922a5346f1733972ef3b0653e5e3d1c4c80d3f66ce646f8bb5f",
+    "crates/rum-cli/src/alloc_count.rs": "242255e46599a9538b14ffa177a3d226d2c7b4c3afb322c33ddcd2babab869ea"
+  },
+  "rustc": "rustc 1.85.0 (4d91de4e4 2025-02-17)\nbinary: rustc\ncommit-hash: 4d91de4e48198da2e33413efdcd9cd2cc0c46688\ncommit-date: 2025-02-17\nhost: x86_64-unknown-linux-gnu\nrelease: 1.85.0\nLLVM version: 19.1.7\n",
+  "workspace_tests": {
+    "passed": 2238,
+    "failed": 0,
+    "ignored": 7,
+    "summary_groups": 29,
+    "includes_doc_tests": true
+  },
+  "format_check": "PASS",
+  "layout": {
+    "target": "x86_64-linux",
+    "types": [
+      {
+        "type": "usize",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "IntValue",
+        "bytes": 16,
+        "alignment": 8
+      },
+      {
+        "type": "Rational",
+        "bytes": 64,
+        "alignment": 8
+      },
+      {
+        "type": "Symbol",
+        "bytes": 24,
+        "alignment": 8
+      },
+      {
+        "type": "SymbolText",
+        "bytes": 40,
+        "alignment": 8
+      },
+      {
+        "type": "Atom",
+        "bytes": 32,
+        "alignment": 8
+      },
+      {
+        "type": "Expr",
+        "bytes": 32,
+        "alignment": 8
+      },
+      {
+        "type": "SharedExpr",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "SharedArgs",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "WeakSharedArgs",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "Option<SharedExpr>",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "Option<SharedArgs>",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "Arc<Expr>",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "Arc<Vec<Expr>>",
+        "bytes": 8,
+        "alignment": 8
+      },
+      {
+        "type": "Vec<Expr>",
+        "bytes": 24,
+        "alignment": 8
+      }
+    ]
+  },
+  "build_environment": "target storage: WSL /tmp; build jobs: 4; dev debug info: 0; release profile: upstream default",
+  "timing": {
+    "runs": 2,
+    "labels": 112,
+    "rows": [
+      {
+        "label": "association-part-key-read-width4000",
+        "iterations": 40,
+        "first_seconds": 0.000792019,
+        "second_seconds": 0.000792139,
+        "larger_over_smaller": 1.0001515115167692
+      },
+      {
+        "label": "association-part-key-read-width32000",
+        "iterations": 40,
+        "first_seconds": 0.00605033,
+        "second_seconds": 0.00603984,
+        "larger_over_smaller": 1.0017368009748602
+      },
+      {
+        "label": "association-part-positional-read-width4000",
+        "iterations": 40,
+        "first_seconds": 2.836e-05,
+        "second_seconds": 2.7837e-05,
+        "larger_over_smaller": 1.018787944103172
+      },
+      {
+        "label": "association-part-positional-read-width32000",
+        "iterations": 40,
+        "first_seconds": 2.7479e-05,
+        "second_seconds": 2.7727e-05,
+        "larger_over_smaller": 1.009025073692638
+      },
+      {
+        "label": "loop-empty",
+        "iterations": 5000,
+        "first_seconds": 0.000229327,
+        "second_seconds": 0.000245565,
+        "larger_over_smaller": 1.0708071879892032
+      },
+      {
+        "label": "do-count-null",
+        "iterations": 10000,
+        "first_seconds": 0.000236959,
+        "second_seconds": 0.000234149,
+        "larger_over_smaller": 1.0120009054063865
+      },
+      {
+        "label": "do-iterator-null",
+        "iterations": 1000,
+        "first_seconds": 4.5626e-05,
+        "second_seconds": 4.5609e-05,
+        "larger_over_smaller": 1.000372733451731
+      },
+      {
+        "label": "table-count-null",
+        "iterations": 5000,
+        "first_seconds": 0.000105186,
+        "second_seconds": 0.000110972,
+        "larger_over_smaller": 1.0550073203658281
+      },
+      {
+        "label": "table-iterator-null",
+        "iterations": 1000,
+        "first_seconds": 2.6102e-05,
+        "second_seconds": 2.4494e-05,
+        "larger_over_smaller": 1.0656487303012983
+      },
+      {
+        "label": "table-iterator-symbol",
+        "iterations": 1000,
+        "first_seconds": 1.1434e-05,
+        "second_seconds": 1.1296e-05,
+        "larger_over_smaller": 1.0122167138810199
+      },
+      {
+        "label": "literal-integer",
+        "iterations": 2000,
+        "first_seconds": 7.8708e-05,
+        "second_seconds": 7.8772e-05,
+        "larger_over_smaller": 1.0008131320831426
+      },
+      {
+        "label": "literal-string",
+        "iterations": 2000,
+        "first_seconds": 9.434e-05,
+        "second_seconds": 8.9067e-05,
+        "larger_over_smaller": 1.0592026227446751
+      },
+      {
+        "label": "symbol-ownvalue-read",
+        "iterations": 2000,
+        "first_seconds": 0.000223744,
+        "second_seconds": 0.000210454,
+        "larger_over_smaller": 1.0631491917473652
+      },
+      {
+        "label": "symbol-ownvalue-guarded-read",
+        "iterations": 1000,
+        "first_seconds": 0.000167711,
+        "second_seconds": 0.000164304,
+        "larger_over_smaller": 1.0207359528678548
+      },
+      {
+        "label": "set-ownvalue",
+        "iterations": 1000,
+        "first_seconds": 0.000234553,
+        "second_seconds": 0.000229217,
+        "larger_over_smaller": 1.023279250666399
+      },
+      {
+        "label": "list-literal-small",
+        "iterations": 1000,
+        "first_seconds": 7.6669e-05,
+        "second_seconds": 7.7202e-05,
+        "larger_over_smaller": 1.0069519623315812
+      },
+      {
+        "label": "head-list",
+        "iterations": 2000,
+        "first_seconds": 0.000998569,
+        "second_seconds": 0.000983903,
+        "larger_over_smaller": 1.014905940931169
+      },
+      {
+        "label": "length-list",
+        "iterations": 2000,
+        "first_seconds": 0.00098933,
+        "second_seconds": 0.000977951,
+        "larger_over_smaller": 1.0116355522924974
+      },
+      {
+        "label": "part-list",
+        "iterations": 2000,
+        "first_seconds": 0.00115846,
+        "second_seconds": 0.00115627,
+        "larger_over_smaller": 1.0018940212926046
+      },
+      {
+        "label": "sameq-integer",
+        "iterations": 2000,
+        "first_seconds": 0.00057475,
+        "second_seconds": 0.000564281,
+        "larger_over_smaller": 1.0185528132260344
+      },
+      {
+        "label": "sameq-list",
+        "iterations": 1000,
+        "first_seconds": 0.000737429,
+        "second_seconds": 0.000729549,
+        "larger_over_smaller": 1.0108011936141368
+      },
+      {
+        "label": "if-true",
+        "iterations": 2000,
+        "first_seconds": 0.000661889,
+        "second_seconds": 0.000647837,
+        "larger_over_smaller": 1.021690641318727
+      },
+      {
+        "label": "module-local",
+        "iterations": 500,
+        "first_seconds": 0.000686687,
+        "second_seconds": 0.000682315,
+        "larger_over_smaller": 1.0064075976638356
+      },
+      {
+        "label": "module-chain-escape-small",
+        "iterations": 96,
+        "first_seconds": 4.4754e-05,
+        "second_seconds": 4.2807e-05,
+        "larger_over_smaller": 1.0454832153619735
+      },
+      {
+        "label": "module-chain-escape-large",
+        "iterations": 192,
+        "first_seconds": 0.000100171,
+        "second_seconds": 9.2456e-05,
+        "larger_over_smaller": 1.0834450982088777
+      },
+      {
+        "label": "block-local",
+        "iterations": 500,
+        "first_seconds": 0.000413781,
+        "second_seconds": 0.000412578,
+        "larger_over_smaller": 1.0029158122827684
+      },
+      {
+        "label": "block-symbol-only-repeat",
+        "iterations": 1000,
+        "first_seconds": 0.000241028,
+        "second_seconds": 0.000238189,
+        "larger_over_smaller": 1.0119191062559565
+      },
+      {
+        "label": "block-init-null-repeat",
+        "iterations": 1000,
+        "first_seconds": 0.000287968,
+        "second_seconds": 0.000269793,
+        "larger_over_smaller": 1.0673664624360157
+      },
+      {
+        "label": "block-init-read-repeat",
+        "iterations": 1000,
+        "first_seconds": 0.000323969,
+        "second_seconds": 0.000330628,
+        "larger_over_smaller": 1.0205544357639158
+      },
+      {
+        "label": "with-local",
+        "iterations": 500,
+        "first_seconds": 0.000447854,
+        "second_seconds": 0.000443675,
+        "larger_over_smaller": 1.0094190567419847
+      },
+      {
+        "label": "table-small",
+        "iterations": 200,
+        "first_seconds": 0.000177419,
+        "second_seconds": 0.000174893,
+        "larger_over_smaller": 1.014443116648465
+      },
+      {
+        "label": "table-iterator-plus",
+        "iterations": 1000,
+        "first_seconds": 3.6268e-05,
+        "second_seconds": 3.7223e-05,
+        "larger_over_smaller": 1.026331752509099
+      },
+      {
+        "label": "table-iterator-pair-list",
+        "iterations": 1000,
+        "first_seconds": 8.3097e-05,
+        "second_seconds": 8.2556e-05,
+        "larger_over_smaller": 1.0065531275740103
+      },
+      {
+        "label": "do-small",
+        "iterations": 200,
+        "first_seconds": 0.000832236,
+        "second_seconds": 0.000831262,
+        "larger_over_smaller": 1.0011717124083621
+      },
+      {
+        "label": "downvalue-exact-hit",
+        "iterations": 2000,
+        "first_seconds": 0.000691646,
+        "second_seconds": 0.000679908,
+        "larger_over_smaller": 1.017264100437118
+      },
+      {
+        "label": "downvalue-exact-miss",
+        "iterations": 2000,
+        "first_seconds": 0.000518452,
+        "second_seconds": 0.000497779,
+        "larger_over_smaller": 1.0415304783849861
+      },
+      {
+        "label": "downvalue-pattern-hit",
+        "iterations": 1000,
+        "first_seconds": 0.000918971,
+        "second_seconds": 0.000906591,
+        "larger_over_smaller": 1.013655551400797
+      },
+      {
+        "label": "downvalue-pattern-miss",
+        "iterations": 1000,
+        "first_seconds": 0.000267726,
+        "second_seconds": 0.000264053,
+        "larger_over_smaller": 1.0139100862326882
+      },
+      {
+        "label": "downvalue-exact-miss-repeat",
+        "iterations": 5000,
+        "first_seconds": 0.00114998,
+        "second_seconds": 0.00114032,
+        "larger_over_smaller": 1.0084713062999862
+      },
+      {
+        "label": "downvalue-pattern-miss-repeat",
+        "iterations": 5000,
+        "first_seconds": 0.00126168,
+        "second_seconds": 0.0012089,
+        "larger_over_smaller": 1.0436595251881877
+      },
+      {
+        "label": "downvalue-guarded-hit",
+        "iterations": 1000,
+        "first_seconds": 0.00178955,
+        "second_seconds": 0.00179196,
+        "larger_over_smaller": 1.001346707272778
+      },
+      {
+        "label": "downvalue-guarded-decline-fallback",
+        "iterations": 1000,
+        "first_seconds": 0.00130312,
+        "second_seconds": 0.00133213,
+        "larger_over_smaller": 1.0222619559211736
+      },
+      {
+        "label": "upvalue-guarded-hit",
+        "iterations": 1000,
+        "first_seconds": 0.00217502,
+        "second_seconds": 0.00220385,
+        "larger_over_smaller": 1.013255050528271
+      },
+      {
+        "label": "subvalue-unguarded-hit",
+        "iterations": 1000,
+        "first_seconds": 0.0013043,
+        "second_seconds": 0.00131047,
+        "larger_over_smaller": 1.0047305067852488
+      },
+      {
+        "label": "subvalue-unguarded-miss",
+        "iterations": 1000,
+        "first_seconds": 0.000712301,
+        "second_seconds": 0.000719474,
+        "larger_over_smaller": 1.0100701810049402
+      },
+      {
+        "label": "subvalue-guarded-hit",
+        "iterations": 1000,
+        "first_seconds": 0.00226215,
+        "second_seconds": 0.00228118,
+        "larger_over_smaller": 1.0084123510819352
+      },
+      {
+        "label": "default-unguarded-hit",
+        "iterations": 1000,
+        "first_seconds": 0.00116961,
+        "second_seconds": 0.00113145,
+        "larger_over_smaller": 1.0337266339652658
+      },
+      {
+        "label": "default-unguarded-miss",
+        "iterations": 1000,
+        "first_seconds": 0.000944806,
+        "second_seconds": 0.000977574,
+        "larger_over_smaller": 1.0346822522295582
+      },
+      {
+        "label": "default-guarded-hit",
+        "iterations": 1000,
+        "first_seconds": 0.00147037,
+        "second_seconds": 0.00144517,
+        "larger_over_smaller": 1.0174373949085573
+      },
+      {
+        "label": "matchq-integer-success",
+        "iterations": 1000,
+        "first_seconds": 0.000282301,
+        "second_seconds": 0.000283017,
+        "larger_over_smaller": 1.002536299906837
+      },
+      {
+        "label": "matchq-integer-fail",
+        "iterations": 1000,
+        "first_seconds": 0.000285149,
+        "second_seconds": 0.000281346,
+        "larger_over_smaller": 1.01351716391916
+      },
+      {
+        "label": "matcher-single-tiny",
+        "iterations": 1000,
+        "first_seconds": 0.000637101,
+        "second_seconds": 0.000626439,
+        "larger_over_smaller": 1.0170200131217884
+      },
+      {
+        "label": "matcher-single-wide-small",
+        "iterations": 800,
+        "first_seconds": 3.6057e-05,
+        "second_seconds": 3.5763e-05,
+        "larger_over_smaller": 1.008220786846741
+      },
+      {
+        "label": "matcher-single-wide-large",
+        "iterations": 1600,
+        "first_seconds": 7.1168e-05,
+        "second_seconds": 7.0378e-05,
+        "larger_over_smaller": 1.011225098752451
+      },
+      {
+        "label": "replaceall-simple",
+        "iterations": 500,
+        "first_seconds": 0.000322868,
+        "second_seconds": 0.000320764,
+        "larger_over_smaller": 1.0065593395767605
+      },
+      {
+        "label": "rewrite-guarded-hit",
+        "iterations": 500,
+        "first_seconds": 0.00167644,
+        "second_seconds": 0.00164794,
+        "larger_over_smaller": 1.0172943189679235
+      },
+      {
+        "label": "rewrite-guarded-decline-fallback",
+        "iterations": 500,
+        "first_seconds": 0.00235637,
+        "second_seconds": 0.00230076,
+        "larger_over_smaller": 1.0241702741702743
+      },
+      {
+        "label": "cases-wide-no-match",
+        "iterations": 1600,
+        "first_seconds": 0.000176151,
+        "second_seconds": 0.000184389,
+        "larger_over_smaller": 1.04676669448371
+      },
+      {
+        "label": "count-wide-no-match",
+        "iterations": 1600,
+        "first_seconds": 0.000152539,
+        "second_seconds": 0.000148966,
+        "larger_over_smaller": 1.0239853389364018
+      },
+      {
+        "label": "position-wide-no-match",
+        "iterations": 1600,
+        "first_seconds": 0.00021792,
+        "second_seconds": 0.000223661,
+        "larger_over_smaller": 1.02634453010279
+      },
+      {
+        "label": "deletecases-wide-no-match",
+        "iterations": 1600,
+        "first_seconds": 0.000166692,
+        "second_seconds": 0.000164395,
+        "larger_over_smaller": 1.0139724444174094
+      },
+      {
+        "label": "deletecases-wide-association-no-match",
+        "iterations": 1600,
+        "first_seconds": 0.000481816,
+        "second_seconds": 0.000482808,
+        "larger_over_smaller": 1.0020588772477461
+      },
+      {
+        "label": "replace-wide-no-match",
+        "iterations": 1600,
+        "first_seconds": 7.779e-05,
+        "second_seconds": 7.7367e-05,
+        "larger_over_smaller": 1.005467447361278
+      },
+      {
+        "label": "replacepart-wide-rule-list",
+        "iterations": 1600,
+        "first_seconds": 0.000259423,
+        "second_seconds": 0.000252646,
+        "larger_over_smaller": 1.026824093791313
+      },
+      {
+        "label": "replacepart-guarded-hit",
+        "iterations": 500,
+        "first_seconds": 0.00050351,
+        "second_seconds": 0.000520886,
+        "larger_over_smaller": 1.0345097416138707
+      },
+      {
+        "label": "replacepart-guarded-decline-fallback",
+        "iterations": 500,
+        "first_seconds": 0.000562903,
+        "second_seconds": 0.000582456,
+        "larger_over_smaller": 1.0347360024728949
+      },
+      {
+        "label": "string-repeat-small",
+        "iterations": 500,
+        "first_seconds": 0.000170099,
+        "second_seconds": 0.000166315,
+        "larger_over_smaller": 1.0227520067342093
+      },
+      {
+        "label": "character-range-small",
+        "iterations": 200,
+        "first_seconds": 0.000124178,
+        "second_seconds": 0.000127953,
+        "larger_over_smaller": 1.0303999098068903
+      },
+      {
+        "label": "stringtrim-literal-list-4000",
+        "iterations": 100,
+        "first_seconds": 0.000305418,
+        "second_seconds": 0.000294342,
+        "larger_over_smaller": 1.0376296960678395
+      },
+      {
+        "label": "stringtrim-literal-list-32000",
+        "iterations": 100,
+        "first_seconds": 0.00199838,
+        "second_seconds": 0.00207946,
+        "larger_over_smaller": 1.040572864019856
+      },
+      {
+        "label": "stringtrim-single-literal-4000",
+        "iterations": 100,
+        "first_seconds": 0.000291724,
+        "second_seconds": 0.00029289,
+        "larger_over_smaller": 1.003996928603749
+      },
+      {
+        "label": "stringtrim-single-literal-32000",
+        "iterations": 100,
+        "first_seconds": 0.00202783,
+        "second_seconds": 0.00203106,
+        "larger_over_smaller": 1.0015928356913548
+      },
+      {
+        "label": "stringtrim-whitespace-4000",
+        "iterations": 100,
+        "first_seconds": 0.000274081,
+        "second_seconds": 0.000281244,
+        "larger_over_smaller": 1.026134609841616
+      },
+      {
+        "label": "stringtrim-whitespace-32000",
+        "iterations": 100,
+        "first_seconds": 0.00200106,
+        "second_seconds": 0.00202997,
+        "larger_over_smaller": 1.0144473429082586
+      },
+      {
+        "label": "stringreplace-single-literal-unguarded",
+        "iterations": 200,
+        "first_seconds": 0.000286526,
+        "second_seconds": 0.000286058,
+        "larger_over_smaller": 1.00163603185368
+      },
+      {
+        "label": "stringreplace-pattern-unguarded",
+        "iterations": 500,
+        "first_seconds": 0.00101659,
+        "second_seconds": 0.000997532,
+        "larger_over_smaller": 1.0191051515139364
+      },
+      {
+        "label": "stringreplace-guarded-hit",
+        "iterations": 500,
+        "first_seconds": 0.000543149,
+        "second_seconds": 0.000541881,
+        "larger_over_smaller": 1.0023399971580476
+      },
+      {
+        "label": "stringreplace-guarded-decline-fallback",
+        "iterations": 500,
+        "first_seconds": 0.000613287,
+        "second_seconds": 0.000597857,
+        "larger_over_smaller": 1.0258088472661522
+      },
+      {
+        "label": "appendto-list-incremental-small",
+        "iterations": 250,
+        "first_seconds": 0.00111899,
+        "second_seconds": 0.00110289,
+        "larger_over_smaller": 1.0145980106810288
+      },
+      {
+        "label": "appendto-list-incremental-large",
+        "iterations": 500,
+        "first_seconds": 0.00191406,
+        "second_seconds": 0.00192319,
+        "larger_over_smaller": 1.0047699654138325
+      },
+      {
+        "label": "appendto-part-outer1000-small",
+        "iterations": 100,
+        "first_seconds": 0.00177452,
+        "second_seconds": 0.00175479,
+        "larger_over_smaller": 1.0112435106195043
+      },
+      {
+        "label": "appendto-part-outer1000-large",
+        "iterations": 200,
+        "first_seconds": 0.00355662,
+        "second_seconds": 0.00361186,
+        "larger_over_smaller": 1.0155316002271821
+      },
+      {
+        "label": "association-set-key-incremental-small",
+        "iterations": 100,
+        "first_seconds": 0.00127892,
+        "second_seconds": 0.00126746,
+        "larger_over_smaller": 1.0090417054581604
+      },
+      {
+        "label": "association-set-key-incremental-large",
+        "iterations": 200,
+        "first_seconds": 0.00478583,
+        "second_seconds": 0.00483597,
+        "larger_over_smaller": 1.01047676160666
+      },
+      {
+        "label": "association-small-literal-repeat",
+        "iterations": 500,
+        "first_seconds": 0.000716636,
+        "second_seconds": 0.000778436,
+        "larger_over_smaller": 1.0862362482487622
+      },
+      {
+        "label": "set-part-fixed100-len100",
+        "iterations": 100,
+        "first_seconds": 0.000116868,
+        "second_seconds": 0.000114581,
+        "larger_over_smaller": 1.0199596791789214
+      },
+      {
+        "label": "set-part-fixed100-len800",
+        "iterations": 100,
+        "first_seconds": 0.000426198,
+        "second_seconds": 0.000403963,
+        "larger_over_smaller": 1.055042169703661
+      },
+      {
+        "label": "set-part-fill-small",
+        "iterations": 200,
+        "first_seconds": 0.000329856,
+        "second_seconds": 0.000322335,
+        "larger_over_smaller": 1.0233328679789662
+      },
+      {
+        "label": "set-part-fill-large",
+        "iterations": 400,
+        "first_seconds": 0.000997256,
+        "second_seconds": 0.001016,
+        "larger_over_smaller": 1.0187955750579591
+      },
+      {
+        "label": "upvalue-candidates-tiny",
+        "iterations": 1000,
+        "first_seconds": 0.0018355,
+        "second_seconds": 0.00188242,
+        "larger_over_smaller": 1.0255625170253337
+      },
+      {
+        "label": "upvalue-candidates-wide-small",
+        "iterations": 1600,
+        "first_seconds": 0.000132829,
+        "second_seconds": 0.00013462,
+        "larger_over_smaller": 1.013483501343833
+      },
+      {
+        "label": "upvalue-candidates-wide-large",
+        "iterations": 3200,
+        "first_seconds": 0.000269351,
+        "second_seconds": 0.000272538,
+        "larger_over_smaller": 1.0118321446736787
+      },
+      {
+        "label": "sort-callback-small",
+        "iterations": 100,
+        "first_seconds": 0.000158279,
+        "second_seconds": 0.000157976,
+        "larger_over_smaller": 1.0019180128627134
+      },
+      {
+        "label": "sort-callback-large",
+        "iterations": 200,
+        "first_seconds": 0.000359457,
+        "second_seconds": 0.000366418,
+        "larger_over_smaller": 1.019365320469486
+      },
+      {
+        "label": "sortby-callback-small",
+        "iterations": 100,
+        "first_seconds": 0.000189229,
+        "second_seconds": 0.000177023,
+        "larger_over_smaller": 1.0689514921789822
+      },
+      {
+        "label": "sortby-callback-large",
+        "iterations": 200,
+        "first_seconds": 0.000422524,
+        "second_seconds": 0.000394917,
+        "larger_over_smaller": 1.0699058283132912
+      },
+      {
+        "label": "reversesort-callback-small",
+        "iterations": 100,
+        "first_seconds": 0.000151556,
+        "second_seconds": 0.000155193,
+        "larger_over_smaller": 1.0239977302119347
+      },
+      {
+        "label": "reversesort-callback-large",
+        "iterations": 200,
+        "first_seconds": 0.000340501,
+        "second_seconds": 0.000337654,
+        "larger_over_smaller": 1.0084317081983332
+      },
+      {
+        "label": "keysort-callback-small",
+        "iterations": 50,
+        "first_seconds": 7.9213e-05,
+        "second_seconds": 7.9911e-05,
+        "larger_over_smaller": 1.0088116849507025
+      },
+      {
+        "label": "keysort-callback-large",
+        "iterations": 100,
+        "first_seconds": 0.000169723,
+        "second_seconds": 0.00017267,
+        "larger_over_smaller": 1.017363586549849
+      },
+      {
+        "label": "keysortby-callback-small",
+        "iterations": 25,
+        "first_seconds": 4.1439e-05,
+        "second_seconds": 4.1742e-05,
+        "larger_over_smaller": 1.0073119525085066
+      },
+      {
+        "label": "keysortby-callback-large",
+        "iterations": 50,
+        "first_seconds": 8.9536e-05,
+        "second_seconds": 9.0794e-05,
+        "larger_over_smaller": 1.0140502144388848
+      },
+      {
+        "label": "sort-default-wide",
+        "iterations": 1600,
+        "first_seconds": 1.3748e-05,
+        "second_seconds": 1.3877e-05,
+        "larger_over_smaller": 1.0093831830084377
+      },
+      {
+        "label": "sort-symbol-default-width4000",
+        "iterations": 4000,
+        "first_seconds": 0.00120484,
+        "second_seconds": 0.00119726,
+        "larger_over_smaller": 1.006331122730234
+      },
+      {
+        "label": "sort-symbol-default-width16000",
+        "iterations": 16000,
+        "first_seconds": 0.00478664,
+        "second_seconds": 0.00468765,
+        "larger_over_smaller": 1.0211171909165573
+      },
+      {
+        "label": "sortby-default-wide",
+        "iterations": 1600,
+        "first_seconds": 0.000423553,
+        "second_seconds": 0.000420954,
+        "larger_over_smaller": 1.0061740712761964
+      },
+      {
+        "label": "reversesort-default-wide",
+        "iterations": 1600,
+        "first_seconds": 1.4089e-05,
+        "second_seconds": 1.3904e-05,
+        "larger_over_smaller": 1.0133055235903339
+      },
+      {
+        "label": "keysort-default-wide",
+        "iterations": 1600,
+        "first_seconds": 0.000335734,
+        "second_seconds": 0.000386669,
+        "larger_over_smaller": 1.1517123675290557
+      },
+      {
+        "label": "keysortby-default-wide",
+        "iterations": 1600,
+        "first_seconds": 0.000747513,
+        "second_seconds": 0.000760095,
+        "larger_over_smaller": 1.0168318142962063
+      },
+      {
+        "label": "valueq-undefined-symbol-definitions-2000",
+        "iterations": 20,
+        "first_seconds": 7.127e-06,
+        "second_seconds": 7.255e-06,
+        "larger_over_smaller": 1.0179598709134279
+      },
+      {
+        "label": "valueq-undefined-symbol-definitions-8000",
+        "iterations": 20,
+        "first_seconds": 7.209e-06,
+        "second_seconds": 7.118e-06,
+        "larger_over_smaller": 1.012784490025288
+      },
+      {
+        "label": "module-retained-gensym-gc-batch",
+        "iterations": 40,
+        "first_seconds": 6.6971e-05,
+        "second_seconds": 6.833e-05,
+        "larger_over_smaller": 1.0202923653521674
+      }
+    ],
+    "within_run_statistic": "minimum of seven reps, after an untimed warm evaluation",
+    "run_spread_over_20_percent": [],
+    "profiling_disabled": true,
+    "cpu_heavy_experiment_jobs_overlapped": false,
+    "external_host_contention_excluded": false,
+    "candidate_measured": false
+  },
+  "memory_proxy_rows": [
+    {
+      "label": "baseline",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "matcher-single-wide-small",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "matcher-single-wide-large",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "module-leak-20000",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "retain-range-1000",
+      "rum_retained": "32438",
+      "rum_peak": "32636",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "retain-range-10000",
+      "rum_retained": "320438",
+      "rum_peak": "320636",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "retain-range-100000",
+      "rum_retained": "3200438",
+      "rum_peak": "3200636",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    },
+    {
+      "label": "transient-total-200000",
+      "rum_retained": "194",
+      "rum_peak": "6400450",
+      "rum_transient": "6400256",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "",
+      "rum_alloc_bytes": "",
+      "rum_alloc_peak_live_bytes": ""
+    }
+  ],
+  "instrumented_allocation_rows": [
+    {
+      "label": "baseline",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "6974",
+      "rum_alloc_bytes": "511758",
+      "rum_alloc_peak_live_bytes": "269643"
+    },
+    {
+      "label": "matcher-single-wide-small",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "18273",
+      "rum_alloc_bytes": "2180174",
+      "rum_alloc_peak_live_bytes": "1011909"
+    },
+    {
+      "label": "matcher-single-wide-large",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "29480",
+      "rum_alloc_bytes": "3868048",
+      "rum_alloc_peak_live_bytes": "1766847"
+    },
+    {
+      "label": "module-leak-20000",
+      "rum_retained": "194",
+      "rum_peak": "392",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "1287126",
+      "rum_alloc_bytes": "68107713",
+      "rum_alloc_peak_live_bytes": "3182252"
+    },
+    {
+      "label": "retain-range-1000",
+      "rum_retained": "32438",
+      "rum_peak": "32636",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "7048",
+      "rum_alloc_bytes": "550717",
+      "rum_alloc_peak_live_bytes": "305240"
+    },
+    {
+      "label": "retain-range-10000",
+      "rum_retained": "320438",
+      "rum_peak": "320636",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "7048",
+      "rum_alloc_bytes": "838740",
+      "rum_alloc_peak_live_bytes": "593252"
+    },
+    {
+      "label": "retain-range-100000",
+      "rum_retained": "3200438",
+      "rum_peak": "3200636",
+      "rum_transient": "198",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "7048",
+      "rum_alloc_bytes": "3718765",
+      "rum_alloc_peak_live_bytes": "3473266"
+    },
+    {
+      "label": "transient-total-200000",
+      "rum_retained": "194",
+      "rum_peak": "6400450",
+      "rum_transient": "6400256",
+      "rum_post_cleanup": "582",
+      "rum_peak_rss": "",
+      "rum_rss_delta": "",
+      "rum_alloc_count": "208517",
+      "rum_alloc_bytes": "29352547",
+      "rum_alloc_peak_live_bytes": "16278435"
+    }
+  ],
+  "allocation_scope": "whole fresh process after instrumentation initialization; realloc counts growth; not per-expression counts",
+  "memory_proxy_is_actual_rss": false,
+  "rss_collected": false,
+  "expr_pattern_migration": {
+    "files": 265,
+    "textual_hits": 1441,
+    "includes_tests": true,
+    "not_an_edit_count": true,
+    "by_file": [
+      {
+        "path": "crates/rum-core/src/expr.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-host/src/session.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-host/src/model/outcome.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/builtins_context_loader.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/builtins_input.rs",
+        "hits": 17
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/call_preparation.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/eval_call_prepare.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/expr_helpers.rs",
+        "hits": 12
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs",
+        "hits": 14
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/hold_thread.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/lowering.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/matcher_and_symbols.rs",
+        "hits": 33
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/metadata.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/mod.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/options.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/package_tools.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching_interpreted.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/resolution.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/test_builtins.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/arithmetic/canonical.rs",
+        "hits": 15
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/arithmetic/exact.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/arithmetic/extremum.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/arithmetic/parts.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/properties.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/reap.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/shared.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/trace.rs",
+        "hits": 12
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definitions.rs",
+        "hits": 13
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_analysis_helpers.rs",
+        "hits": 41
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_updates.rs",
+        "hits": 12
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/incremental_append.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/part_assignment.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/rhs_guards.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/value_table_assignment.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/evaluation_cache/stability.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/evaluation_cache/tests.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/eval_core/mod.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/eval_core/stability.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/eval_core/symbol.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/association_data.rs",
+        "hits": 18
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/association_lvalue.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/evaluated_part_selectors.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/functional_data.rs",
+        "hits": 17
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/text_rendering.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/lowering/binary.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/messages/builtins_messages_inspect.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/messages/message_catalog.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/messages/message_format.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/messages/message_selector_parsing.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/messages/parse_and_message_helpers.rs",
+        "hits": 17
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/model/cache.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/model/definitions.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/namespace_tools/names.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/namespace_tools/syntax.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/options/arguments.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/options/builtins.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/options/core.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/options/patterns.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/continuation.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/core.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/outcome.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/profiling/fingerprints.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/profiling/presence.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/scoping/callable.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/scoping/gensym_gc.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/scoping/packages.rs",
+        "hits": 24
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/scoping/unique.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/session/session_eval.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs",
+        "hits": 30
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/substitution/function_and_subst_helpers.rs",
+        "hits": 12
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/substitution/lexical_presence.rs",
+        "hits": 12
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/substitution/lexical_substitution.rs",
+        "hits": 30
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/substitution/slot_substitution.rs",
+        "hits": 11
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/suspension/collections.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/suspension/error.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/suspension/primitive.rs",
+        "hits": 13
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/suspension/rewrite_rules.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/suspension/traversal.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/arithmetic.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/association_lookup_cache.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/association_part_cursor.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/association_write_index.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/association_write_recovery.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/comparison_lowering.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/debug_tools.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/definitions_and_rules_patterns.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/definitions_and_rules_tags.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/definitions_rhs_guards.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/definitions_rhs_guards_sub_values.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/definitions_rhs_guards_up_values.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/holding_and_control_io.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/left_chain_lowering.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/messages.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/package_tools.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/part_assignment.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/reap.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/scoping_gensym_gc.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/sealed_packages.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/sealed_snapshot.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/sealed_visibility.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/wide_child_traversals.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/wide_definition_dispatch.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tree_walkers/count_like.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tree_walkers/level.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tree_walkers/position.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/resources/memory.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/test_report/evaluation.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/test_report/parsing.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/debug_tools/trace/builder.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/application/fast_match.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_catalog/entries.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_catalog/rewrite_rules.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_catalog/traversal_continuation.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation/prepared_store.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/definitions/definition_lhs_preparation/syntax_policy.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/evaluation_cache/profile/source.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/abort_cleanup.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/confirmation.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/exceptions.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/failsafe.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/nonlocal.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/status.rs",
+        "hits": 23
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/exact_paths.rs",
+        "hits": 15
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/mod.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/confirmation/builtins.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/branching_loops/iteration/spec.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/branching_loops/iteration/table_fast_path.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/control_data/branching_loops/iteration/driver/continuation.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/cases/collect.rs",
+        "hits": 10
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/cases/match_q.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/list.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs",
+        "hits": 17
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/repeated.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/cases/collect/resume_frames.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/cases/delete/resume_frames.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/cases/delete/traversal.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/list/matching.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once/resume_frames.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/list/matching/resume_frames.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/guarded_plan.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/parsing.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/plan.rs",
+        "hits": 15
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/replace_at.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/replace/replace_part.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors/apply.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors/diagnostics.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors/extract.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors/parse.rs",
+        "hits": 10
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/kernel_data/structure_data/selectors/spans.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/lowering/binary/left_chain.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/core/key_value.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/core/resume_frames.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/ordered.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/resume_frames.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/optional_sequence/choices.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/optional_sequence/collect.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/optional_sequence/optional.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/optional_sequence/pattern.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/candidates.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/collect.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/entry.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/match_choices.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/optional.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/optional_sequence/optional/resume_frames.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/pattern_matching/sequence/orderless/optional/resume_frames.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/scoping/lexical/module.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/scoping/lexical/block/continuation.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-runtime/src/runtime/tests/structure_data/replace.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/calculus.rs",
+        "hits": 14
+      },
+      {
+        "path": "crates/rum-stdlib/src/control_flow.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/csv.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/ini.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/integer_digits.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/json.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/lazy.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/number_theory.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/predicates.rs",
+        "hits": 30
+      },
+      {
+        "path": "crates/rum-stdlib/src/random.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/schema.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-stdlib/src/toml.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/xml.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/yaml.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/basic.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/data.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/grouping.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/join_across.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/missing.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/mutation.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-stdlib/src/bytes/codec.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/targeted_map.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-stdlib/src/json/encode.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-stdlib/src/logic/comparison.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-stdlib/src/logic/truth.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/polynomials/core.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/polynomials/mod.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-stdlib/src/polynomials/rational_function.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/predicates/basic.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/predicates/collections.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/predicates/numeric.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/predicates/ordering.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/random/password_policy.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/encoding.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/patterns.rs",
+        "hits": 13
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/template.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/tokenize.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/collection_stats.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/combinatorial_lists.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/dedup.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/flatten.rs",
+        "hits": 8
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/join.rs",
+        "hits": 16
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/list_plumbing.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/mod.rs",
+        "hits": 16
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/ordering_sets.rs",
+        "hits": 17
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/reordering.rs",
+        "hits": 5
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/surface.rs",
+        "hits": 16
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/codecs_matrix.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/codecs_text.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/codecs_toml.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/codecs_xml.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/codecs_yaml.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/datetime.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/json.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/schema.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/stress_corpus.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/toml/encode.rs",
+        "hits": 9
+      },
+      {
+        "path": "crates/rum-stdlib/src/xml/decode.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/xml/encode.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-stdlib/src/yaml/encode.rs",
+        "hits": 6
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/resumable/key_sort.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/associations/transforms/key_collections.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/apply_map/traversal.rs",
+        "hits": 16
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/arrays/generators.rs",
+        "hits": 10
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/arrays/spec.rs",
+        "hits": 7
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/arrays/tensor.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/callable/curried.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/callable/head_ops.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/sequence/select.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/sequence/window.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/sequence/fold/mod.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/functional_ops/sequence/fold/pair.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/polynomials/core/factors.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/polynomials/core/intersection.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/polynomials/core/factors/tests.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/patterns/parts.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/patterns/search.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/scripting/args.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/scripting/text_shape.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/scripting/url.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/similarity/nearest.rs",
+        "hits": 4
+      },
+      {
+        "path": "crates/rum-stdlib/src/strings/text/builtins.rs",
+        "hits": 1
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/selectors/apply.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/selectors/spans.rs",
+        "hits": 2
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/sequence/delete.rs",
+        "hits": 13
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/sequence/edit_plan.rs",
+        "hits": 11
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/sequence/insert.rs",
+        "hits": 10
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/sequence/take_drop.rs",
+        "hits": 10
+      },
+      {
+        "path": "crates/rum-stdlib/src/structure_ops/sequence/take_list.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/strings/tokenize.rs",
+        "hits": 3
+      },
+      {
+        "path": "crates/rum-stdlib/src/tests/structure_ops/ordering_sets.rs",
+        "hits": 4
+      }
+    ]
+  },
+  "runtime_source_changed": false,
+  "tagged_candidate_implemented": false,
+  "performance_improvement_demonstrated": false,
+  "existing_u64_proofs_cover_rum": false
+}

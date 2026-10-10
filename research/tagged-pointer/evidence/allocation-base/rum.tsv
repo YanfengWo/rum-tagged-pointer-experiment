@@ -1,0 +1,9 @@
+label	rum_retained	rum_peak	rum_transient	rum_post_cleanup	rum_peak_rss	rum_rss_delta	rum_alloc_count	rum_alloc_bytes	rum_alloc_peak_live_bytes
+baseline	194	392	198	582			6974	511758	269643
+matcher-single-wide-small	194	392	198	582			18273	2180174	1011909
+matcher-single-wide-large	194	392	198	582			29480	3868048	1766847
+module-leak-20000	194	392	198	582			1287126	68107713	3182252
+retain-range-1000	32438	32636	198	582			7048	550717	305240
+retain-range-10000	320438	320636	198	582			7048	838740	593252
+retain-range-100000	3200438	3200636	198	582			7048	3718765	3473266
+transient-total-200000	194	6400450	6400256	582			208517	29352547	16278435

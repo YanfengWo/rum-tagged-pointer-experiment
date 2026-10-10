@@ -1,0 +1,20 @@
+{
+  "target":"x86_64-linux",
+  "types":[
+    {"type":"usize","bytes":8,"alignment":8},
+    {"type":"IntValue","bytes":16,"alignment":8},
+    {"type":"Rational","bytes":64,"alignment":8},
+    {"type":"Symbol","bytes":24,"alignment":8},
+    {"type":"SymbolText","bytes":40,"alignment":8},
+    {"type":"Atom","bytes":32,"alignment":8},
+    {"type":"Expr","bytes":32,"alignment":8},
+    {"type":"SharedExpr","bytes":8,"alignment":8},
+    {"type":"SharedArgs","bytes":8,"alignment":8},
+    {"type":"WeakSharedArgs","bytes":8,"alignment":8},
+    {"type":"Option<SharedExpr>","bytes":8,"alignment":8},
+    {"type":"Option<SharedArgs>","bytes":8,"alignment":8},
+    {"type":"Arc<Expr>","bytes":8,"alignment":8},
+    {"type":"Arc<Vec<Expr>>","bytes":8,"alignment":8},
+    {"type":"Vec<Expr>","bytes":24,"alignment":8}
+  ]
+}
