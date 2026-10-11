@@ -1,5 +1,5 @@
 {
-  "prepared_on": "2026-10-10",
+  "prepared_on": "2026-10-11",
   "files": [
     {
       "path": "compact-expr/Cargo.lock",
@@ -790,6 +790,101 @@
       "path": "evidence/rustc-version.txt",
       "bytes": 196,
       "sha256": "be9e105cd61ce407c0e06d80a25240f93cc48de72942117e1886f09aa08f9a2a"
+    },
+    {
+      "path": "evidence/selective-sharing/allocation-build.log",
+      "bytes": 159,
+      "sha256": "0776c09bddf88a700aee86b0a6557406f5fd32126b3e7f0ca370737b08654a1d"
+    },
+    {
+      "path": "evidence/selective-sharing/allocations.json",
+      "bytes": 380965,
+      "sha256": "59afae4610b6ea5f3d70882c54b76dfacfc5c080422c93c14dce2c806836fa36"
+    },
+    {
+      "path": "evidence/selective-sharing/allocations.log",
+      "bytes": 66,
+      "sha256": "46a01dd998fbdf406b05467d151c21a97e6105fbcfc310e13f8c39aa6e9adc4e"
+    },
+    {
+      "path": "evidence/selective-sharing/environment.txt",
+      "bytes": 169,
+      "sha256": "e2e7f83b1da0a633aa421b1c0e207fcad4b6c38029d719131d2a3737143fa36e"
+    },
+    {
+      "path": "evidence/selective-sharing/format.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/selective-sharing/miri-stacked.log",
+      "bytes": 1772,
+      "sha256": "3c424e93b1b2a5f703d928613136024427f2bb704cbe113c33424621a930ff04"
+    },
+    {
+      "path": "evidence/selective-sharing/miri-tree.log",
+      "bytes": 1005,
+      "sha256": "b061988d4227045e0041a32af0d842767cb8ec5cee3f7e1ae637d9aed2caef85"
+    },
+    {
+      "path": "evidence/selective-sharing/native-all-features.log",
+      "bytes": 2422,
+      "sha256": "61c8a42c15b030d7e67e3a4be11c456fac4539ea85ab1c314327c38d6290baba"
+    },
+    {
+      "path": "evidence/selective-sharing/native.log",
+      "bytes": 1696,
+      "sha256": "37deed42d557c04e8bf9fa19f53701e4361a22e44ad3d532a37c644caf6ec0e1"
+    },
+    {
+      "path": "evidence/selective-sharing/run-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/selective-sharing/run-1.tsv",
+      "bytes": 27003,
+      "sha256": "c6c0be4f7e7980a82ff0693e5c8a6ef1f678799ee94af0f75c14c29d16369120"
+    },
+    {
+      "path": "evidence/selective-sharing/run-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/selective-sharing/run-2.tsv",
+      "bytes": 27003,
+      "sha256": "e9873183e17fcba1d7b4e542e03e636ea6b8c3549839ed9f68cf11030cd34c04"
+    },
+    {
+      "path": "evidence/selective-sharing/run-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/selective-sharing/run-3.tsv",
+      "bytes": 27003,
+      "sha256": "36ef0a29424c6f1e449cebbd0dfa95024abaa15685f4a2b2b3facd2c56bcdfa8"
+    },
+    {
+      "path": "evidence/selective-sharing/semantic.log",
+      "bytes": 98,
+      "sha256": "6aded894e0573d9ec08fa136cf2479d70e3569f387a63a95d0980bb13e505983"
+    },
+    {
+      "path": "evidence/selective-sharing/status.txt",
+      "bytes": 5,
+      "sha256": "c26de83abdc9496cd1301470918ec39ecca1cf389ef0ae1c6504da1800d1c431"
+    },
+    {
+      "path": "evidence/selective-sharing/summary.json",
+      "bytes": 194865,
+      "sha256": "f56a069e4efab4be93005e8a0e32281bfc53b55ba14723cd2cf2aa06d9215ebf"
+    },
+    {
+      "path": "evidence/selective-sharing/timing-build.log",
+      "bytes": 1258,
+      "sha256": "537887c7ff5df35669568bc8aedd34e399029d427dd33e761043004a0e0b80c1"
     },
     {
       "path": "evidence/symbol-sharing/allocation-build.log",
@@ -1653,8 +1748,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 9087,
-      "sha256": "58ffcacb1e2e173ec8617184db5ec6f3f752b1906e5d88eb1b2ec615993d5f49"
+      "bytes": 9477,
+      "sha256": "c37b6df180b9295b2ab586b42222b87c6c15ef6f656dd5df33a16723cbe91b53"
     },
     {
       "path": "recursive-expr/analyze.py",
@@ -1812,6 +1907,66 @@
       "sha256": "48dce4f38a2ad6dd955dad17a052b979416dce5c2386be0307bc1fdbaba4c314"
     },
     {
+      "path": "selective-sharing/analyze.py",
+      "bytes": 6061,
+      "sha256": "961fef5a6244a94e25d659576ce8c83aef31a9f9761bf6204c6ecd69f50bd45e"
+    },
+    {
+      "path": "selective-sharing/Cargo.lock",
+      "bytes": 5039,
+      "sha256": "c9fc04513c8c78690aa7e77153b438858d279d555a89b3f315f742385627ca02"
+    },
+    {
+      "path": "selective-sharing/Cargo.toml",
+      "bytes": 903,
+      "sha256": "434b6ac426659161add6116ee185336b5183ae8329a17fa6267998b6c6a9790b"
+    },
+    {
+      "path": "selective-sharing/README.md",
+      "bytes": 8749,
+      "sha256": "85caa663f25f3b2889186b3a371b93dc4ace17ee313ed8fc61e07c92c1335cfe"
+    },
+    {
+      "path": "selective-sharing/run-study.sh",
+      "bytes": 2217,
+      "sha256": "4009448108bb736c7e1a2f6dab43ed16c43af5e3fff8a0caeda9087421786a8d"
+    },
+    {
+      "path": "selective-sharing/SEMANTICS.md",
+      "bytes": 4762,
+      "sha256": "cc63d2793c18152f3ea362e3885cf50c911997fc4b85d07982d74b1771858c9c"
+    },
+    {
+      "path": "selective-sharing/src/bin/policy.rs",
+      "bytes": 1816,
+      "sha256": "e1468d3ad50be8faaf9525805888e0afd5e6594f45c67780ebed227a5a45c35f"
+    },
+    {
+      "path": "selective-sharing/src/bin/selective-study.rs",
+      "bytes": 6039,
+      "sha256": "a00710338cb80a914af1b5dcc4203d8bb80c7984ab138077ee42d75beaca1aa7"
+    },
+    {
+      "path": "selective-sharing/src/bin/timing.rs",
+      "bytes": 1230,
+      "sha256": "3a07e5aa29736708b3be94f2f1c27516d7c23a0740c5594eb5f4880ee42102c6"
+    },
+    {
+      "path": "selective-sharing/src/lib.rs",
+      "bytes": 3657,
+      "sha256": "98ae2428502fb425335ae6f76e392eb54d953e5bfaa6b4f7cbf9504097f48c85"
+    },
+    {
+      "path": "selective-sharing/src/tests.rs",
+      "bytes": 5801,
+      "sha256": "8f5a9fbfbfcb747855facdac6a2f79433cfd298dfafc3e40923f2349ca305a49"
+    },
+    {
+      "path": "selective-sharing/timings.py",
+      "bytes": 2555,
+      "sha256": "2fd5f248ce22cdb42f62fcdd2c66a87104482e40e9ca09c31fc400bc6cc72e6c"
+    },
+    {
       "path": "symbol-sharing/analyze.py",
       "bytes": 7087,
       "sha256": "f0077b4e033977eb88a51c3df3d325fab9a27519a71f11645e0b134c13e5598d"
@@ -1884,5 +2039,6 @@
   "recursive_candidate_implemented": true,
   "expression_census_implemented": true,
   "symbol_sharing_implemented": true,
-  "kernel_integration_implemented": false
+  "kernel_integration_implemented": false,
+  "selective_sharing_implemented": true
 }

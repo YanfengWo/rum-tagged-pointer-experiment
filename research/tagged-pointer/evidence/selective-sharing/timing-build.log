@@ -1,0 +1,27 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling syn v2.0.117
+   Compiling thiserror v2.0.18
+   Compiling num-integer v0.1.46
+   Compiling zmij v1.0.21
+   Compiling serde_json v1.0.149
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.0
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling rum-derive v0.2.0 (<RUM_ROOT>/crates/rum-derive)
+   Compiling rum-syntax v0.2.0 (<RUM_ROOT>/crates/rum-syntax)
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<RUM_ROOT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+   Compiling rum-runtime v0.2.0 (<RUM_ROOT>/crates/rum-runtime)
+   Compiling rum-recursive-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/recursive-expr)
+   Compiling rum-symbol-sharing v0.0.0 (<RUM_ROOT>/research/tagged-pointer/symbol-sharing)
+   Compiling rum-stdlib v0.2.0 (<RUM_ROOT>/crates/rum-stdlib)
+   Compiling rum-selective-sharing v0.0.0 (<RUM_ROOT>/research/tagged-pointer/selective-sharing)
+    Finished `release` profile [optimized] target(s) in 41.55s

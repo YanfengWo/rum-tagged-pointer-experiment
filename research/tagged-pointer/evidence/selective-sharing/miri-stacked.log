@@ -1,0 +1,32 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling num-integer v0.1.46
+   Compiling syn v2.0.117
+   Compiling serde_derive v1.0.228
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<RUM_ROOT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+   Compiling rum-recursive-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/recursive-expr)
+   Compiling rum-symbol-sharing v0.0.0 (<RUM_ROOT>/research/tagged-pointer/symbol-sharing)
+   Compiling rum-selective-sharing v0.0.0 (<RUM_ROOT>/research/tagged-pointer/selective-sharing)
+    Finished `test` profile [unoptimized] target(s) in 11.53s
+     Running unittests src/lib.rs (/tmp/rum-tagged-build-77029938/base/miri/x86_64-unknown-linux-gnu/debug/build/rum-selective-sharing/0fc80a112edd126b/out/rum_selective_sharing-0fc80a112edd126b)
+
+running 9 tests
+test tests::call_only_prefix_is_bounded_without_reading_the_tail ... ok
+test tests::early_repetition_can_select_an_unrepresentative_prefix ... ok
+test tests::full_symbol_identity_is_used_by_probe_and_shared_branch ... ok
+test tests::late_repetition_is_explicitly_missed ... ok
+test tests::repeated_prefix_stops_at_eight_and_uses_bounded_sharing ... ok
+test tests::selected_branch_preserves_head_args_alias_cow_and_weak ... ok
+test tests::shared_storage_does_not_inflate_probe_repetition ... ok
+test tests::small_root_skips_probe_even_if_all_symbols_repeat ... ok
+test tests::unique_prefix_exhausts_exact_budget_and_uses_plain ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 112.73s
+

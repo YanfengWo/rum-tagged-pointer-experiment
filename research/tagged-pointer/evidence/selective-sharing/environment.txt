@@ -1,0 +1,1 @@
+CPU affinity: 0; 1 warmup + 9 measured rounds; 3 runs; run 2 reverses dataset/case order; counters absent; probe included; root >=64, budget 256, repeats >=8, cache 128
