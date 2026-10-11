@@ -1,0 +1,15 @@
+    Finished `test` profile [unoptimized] target(s) in 0.62s
+     Running unittests src/lib.rs (/tmp/rum-tagged-build-77029938/base/miri/x86_64-unknown-linux-gnu/debug/build/rum-symbol-sharing/90aeaeda5bf242f2/out/rum_symbol_sharing-90aeaeda5bf242f2)
+
+running 8 tests
+test tests::consuming_one_cached_atom_keeps_its_sibling_valid ... ok
+test tests::deep_explicit_release_handles_shared_symbol_payloads ... ok
+test tests::full_context_and_generated_identity_are_keys ... ok
+test tests::head_args_alias_classes_cow_and_weak_are_preserved ... ok
+test tests::nested_dag_is_not_unfolded_by_conversion ... ok
+test tests::non_symbol_atoms_keep_their_original_variants ... ok
+test tests::repeated_symbols_share_then_release_for_both_owners ... ok
+test tests::zero_limit_and_full_cache_fallback_are_correct ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.27s
+

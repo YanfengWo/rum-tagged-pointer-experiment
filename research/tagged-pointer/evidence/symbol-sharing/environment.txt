@@ -1,0 +1,1 @@
+CPU affinity: 0; 1 warmup + 9 measured rounds; 3 runs; cases rotate; counters absent; cache limit 128

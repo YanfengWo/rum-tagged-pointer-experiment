@@ -792,6 +792,101 @@
       "sha256": "be9e105cd61ce407c0e06d80a25240f93cc48de72942117e1886f09aa08f9a2a"
     },
     {
+      "path": "evidence/symbol-sharing/allocation-build.log",
+      "bytes": 153,
+      "sha256": "1101af82cbcbf580c3d7cca57a2d6fadc7992ca6d4c6d6f175db8ffc73983610"
+    },
+    {
+      "path": "evidence/symbol-sharing/allocations.json",
+      "bytes": 221293,
+      "sha256": "9ec4d6d632039452d7cfb5d66228bf91a89cec3ecf46a67db073427cfa1cb0d0"
+    },
+    {
+      "path": "evidence/symbol-sharing/allocations.log",
+      "bytes": 66,
+      "sha256": "9035d379fade1a6b3a3f879860d09efeedf6cd52e64d2ee971ffe92781ba6d8f"
+    },
+    {
+      "path": "evidence/symbol-sharing/environment.txt",
+      "bytes": 102,
+      "sha256": "f0fc848a6362a7f3d2fe640cafd042bb1627ad66baa675dd98c63c8f95ee6585"
+    },
+    {
+      "path": "evidence/symbol-sharing/format.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/symbol-sharing/miri-stacked.log",
+      "bytes": 1572,
+      "sha256": "761e4fde8d9eafc5922aeab877d8abc3f1ea014bb44fe0b3111f6d9d7a10fe31"
+    },
+    {
+      "path": "evidence/symbol-sharing/miri-tree.log",
+      "bytes": 902,
+      "sha256": "fff7cd0abff63718ac84c4d2f1e6454abcf2eb81ff6fdf5afcac21ddbf141184"
+    },
+    {
+      "path": "evidence/symbol-sharing/native-all-features.log",
+      "bytes": 2217,
+      "sha256": "f28e72bb8c927e8b19b6e1a42ea0a82d46fd0ffd9145e6f707bc6cbe6b490485"
+    },
+    {
+      "path": "evidence/symbol-sharing/native.log",
+      "bytes": 1500,
+      "sha256": "d4450ca30711853a462594b9576cb2c4c4cc0e9353f7f165e159067dc8e9a7d1"
+    },
+    {
+      "path": "evidence/symbol-sharing/run-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/symbol-sharing/run-1.tsv",
+      "bytes": 54602,
+      "sha256": "8ed330679e0fd72e2755b71dc3989445909a611f95a3688e1bd11b24202e0094"
+    },
+    {
+      "path": "evidence/symbol-sharing/run-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/symbol-sharing/run-2.tsv",
+      "bytes": 54602,
+      "sha256": "cea49cb9e065e1976f38933d58925d83f1600b301d57d0dcedb1bdbc3990b42d"
+    },
+    {
+      "path": "evidence/symbol-sharing/run-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/symbol-sharing/run-3.tsv",
+      "bytes": 54602,
+      "sha256": "1e394de17727af2370408cdb08d86b84a7020651a47d6169905871e902add275"
+    },
+    {
+      "path": "evidence/symbol-sharing/semantic.log",
+      "bytes": 102,
+      "sha256": "8fd0c88242d8ebc6bd8809bab224fa397ab47e9fabd738f7bcd177db8608edb8"
+    },
+    {
+      "path": "evidence/symbol-sharing/status.txt",
+      "bytes": 5,
+      "sha256": "c26de83abdc9496cd1301470918ec39ecca1cf389ef0ae1c6504da1800d1c431"
+    },
+    {
+      "path": "evidence/symbol-sharing/summary.json",
+      "bytes": 183135,
+      "sha256": "ba676fdf19ab2dbe2ec78fd5ab042dc9380f0d87f04eb7fc4b2d69f291162a05"
+    },
+    {
+      "path": "evidence/symbol-sharing/timing-build.log",
+      "bytes": 1161,
+      "sha256": "0fc02f52708ff3f5e436d17ee165d59515d57c09a44a344af508dbd5f7fd5610"
+    },
+    {
       "path": "evidence/timing-base-1/measurements.tsv",
       "bytes": 12614,
       "sha256": "6f54a69564fb162ae8eaa072ac8bf268cc01b11905e4454f0c55cbe6958ade80"
@@ -1558,8 +1653,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 8705,
-      "sha256": "504d09c2608d03e3f7ef081b5f5d7d42bf2052c716f60d92cafd9116d0e1cab0"
+      "bytes": 9087,
+      "sha256": "58ffcacb1e2e173ec8617184db5ec6f3f752b1906e5d88eb1b2ec615993d5f49"
     },
     {
       "path": "recursive-expr/analyze.py",
@@ -1715,6 +1810,71 @@
       "path": "run-baseline.sh",
       "bytes": 2374,
       "sha256": "48dce4f38a2ad6dd955dad17a052b979416dce5c2386be0307bc1fdbaba4c314"
+    },
+    {
+      "path": "symbol-sharing/analyze.py",
+      "bytes": 7087,
+      "sha256": "f0077b4e033977eb88a51c3df3d325fab9a27519a71f11645e0b134c13e5598d"
+    },
+    {
+      "path": "symbol-sharing/Cargo.lock",
+      "bytes": 4899,
+      "sha256": "8f61c7b482fa9ba52bbc14cf2fb74251d214c6d5939582748a9ab1bfbec5131e"
+    },
+    {
+      "path": "symbol-sharing/Cargo.toml",
+      "bytes": 842,
+      "sha256": "18cc9eebad286801f4ae53c9da768d49da9739337b80c1adad9e74c70ce0d774"
+    },
+    {
+      "path": "symbol-sharing/README.md",
+      "bytes": 9066,
+      "sha256": "098bf291058061de1cb4cafa703755a4c14fb4a94775f26e0d79064702f4be1b"
+    },
+    {
+      "path": "symbol-sharing/run-study.sh",
+      "bytes": 1881,
+      "sha256": "ad58f6a250f311abcfcb62bb91acd55b9f575885e811559c0b5ca22238da20a3"
+    },
+    {
+      "path": "symbol-sharing/SEMANTICS.md",
+      "bytes": 6213,
+      "sha256": "ea1bbf8292cd85dac737ab38f692fb78b182900d7593cfb825ab46585477a485"
+    },
+    {
+      "path": "symbol-sharing/src/bin/scan.rs",
+      "bytes": 2323,
+      "sha256": "3b08ed17123d76628fb390d0bd7cd4ca862c1c6c928b5f1cf9e3942d55ffae44"
+    },
+    {
+      "path": "symbol-sharing/src/bin/symbol-study.rs",
+      "bytes": 5139,
+      "sha256": "cbde0d37a522f0c2ffc8990d08f0329e75c40e958e50bb8b08a14c219cb49f86"
+    },
+    {
+      "path": "symbol-sharing/src/bin/timing.rs",
+      "bytes": 3519,
+      "sha256": "ae1371c7ce4ffb30165d78a1cda2e8224025ece55e6bfd9e3ee5e7aafccb0dac"
+    },
+    {
+      "path": "symbol-sharing/src/bridge.rs",
+      "bytes": 3228,
+      "sha256": "96100adae2e4d71df331572428c3f2bf7c42bbdf1e9d7044faffe864c0a3b12a"
+    },
+    {
+      "path": "symbol-sharing/src/lib.rs",
+      "bytes": 1841,
+      "sha256": "6ceb618d3511eff2550bfa337251e0ed21702eecdd4b882aaaa1fff68c2fe1cf"
+    },
+    {
+      "path": "symbol-sharing/src/tests.rs",
+      "bytes": 7044,
+      "sha256": "9ab40a89ddeca3e425ad7bc010772402e62d8541af1dedb683976b3558f28fe4"
+    },
+    {
+      "path": "symbol-sharing/timings.py",
+      "bytes": 3277,
+      "sha256": "5a83e6b52644de43ceaa7a645a4026b98b850737a9f2d39aef8e7287f47d75c0"
     }
   ],
   "diagnostic_paths_redacted": true,
@@ -1723,5 +1883,6 @@
   "tagged_candidate_implemented": true,
   "recursive_candidate_implemented": true,
   "expression_census_implemented": true,
+  "symbol_sharing_implemented": true,
   "kernel_integration_implemented": false
 }

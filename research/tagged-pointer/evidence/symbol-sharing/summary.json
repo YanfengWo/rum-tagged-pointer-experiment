@@ -1,0 +1,6701 @@
+{
+  "status": "PASS",
+  "recorded_on": "2026-10-10",
+  "cache_entry_limit": 128,
+  "checks": {
+    "native.log": 8,
+    "native-all-features.log": 8,
+    "miri-stacked.log": 8,
+    "miri-tree.log": 8,
+    "roundtrip_equalities": 512,
+    "allocation_windows": 640,
+    "symbol_payload_cost_equalities": 128,
+    "same_policy_stats": "PASS",
+    "prior_plain_layout_bytes_match": 127,
+    "frozen_bridge_and_dependencies": "PASS",
+    "format": "PASS"
+  },
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "recursive_owner_commit": "209b08afa2061b65289e8731bb6fcbb71e15475a",
+  "corpus_commit": "1f3c21bee022a24aea6cce4f653a9a381d9eada8",
+  "kernel_integration_implemented": false,
+  "allocation_scope": "Fresh normalized retained System requested heap bytes; root/input/static intern pool/allocator overhead excluded. Original peak/calls include two bridges and are not comparable construction costs.",
+  "timing_scope": "Expression scan, build-and-drop and append COW; counters absent, per-build cache empty. Snapshot controls, not evaluator A/B; host interference not excluded and no statistical significance claimed.",
+  "timings": {
+    "raw_rows": 2520,
+    "measured_rows": 2268,
+    "results": [
+      {
+        "dataset": "gMicroAssociationPartWidth32000",
+        "operation": "scan",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.772455,
+          "compact-shared": 0.661504,
+          "original": 0.560965,
+          "safe-plain": 0.860239,
+          "safe-shared": 0.712273
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.568451,
+            0.87429
+          ],
+          "compact-shared": [
+            0.543304,
+            1.744212
+          ],
+          "original": [
+            0.382748,
+            1.515982
+          ],
+          "safe-plain": [
+            0.655038,
+            1.11287
+          ],
+          "safe-shared": [
+            0.595908,
+            1.0002
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.8491324233737992,
+            "per_run_medians": [
+              0.8882426157825809,
+              0.8924034619496845,
+              0.7610244005452207
+            ],
+            "range": [
+              0.6228643221332842,
+              1.2327150262349424
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9183696329345726,
+            "per_run_medians": [
+              1.0261449933389073,
+              0.8553279890800021,
+              0.8349887848367458
+            ],
+            "range": [
+              0.6953573673488449,
+              2.1920279700945198
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9164725179281933,
+            "per_run_medians": [
+              0.7904275145493687,
+              0.9333080737145358,
+              0.9318717247402777
+            ],
+            "range": [
+              0.6793672030550498,
+              2.600561199691072
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9014678080640465,
+            "per_run_medians": [
+              0.8113814881678232,
+              0.9655684074674495,
+              0.8687597907981003
+            ],
+            "range": [
+              0.5461275800407954,
+              1.0833509216993533
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 1.2563217051207782,
+            "per_run_medians": [
+              1.2614914964801627,
+              1.3031619929699694,
+              1.2130389870179912
+            ],
+            "range": [
+              0.41489542751826874,
+              2.803757607322319
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 1.2938007971518135,
+            "per_run_medians": [
+              1.39375227852716,
+              1.2938007971518135,
+              1.2263530270174994
+            ],
+            "range": [
+              0.5249000317945728,
+              2.1354729482583843
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroAssociationPartWidth32000",
+        "operation": "build_drop",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 21.988635,
+          "compact-shared": 20.079691,
+          "safe-plain": 23.590024,
+          "safe-shared": 21.945543
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            19.730246,
+            32.289309
+          ],
+          "compact-shared": [
+            18.132599,
+            22.569492
+          ],
+          "safe-plain": [
+            21.62448,
+            31.372826
+          ],
+          "safe-shared": [
+            20.181271,
+            29.145438
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9621127005942307,
+            "per_run_medians": [
+              0.9874763231300823,
+              0.9621127005942307,
+              0.9357902296929933
+            ],
+            "range": [
+              0.6980731350118092,
+              1.2722072230078305
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9269948091062364,
+            "per_run_medians": [
+              0.9269948091062364,
+              0.8412518783795753,
+              0.9494644983884749
+            ],
+            "range": [
+              0.6646228013117282,
+              1.036330464404752
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.896724921591421,
+            "per_run_medians": [
+              0.9023624161393705,
+              0.8805721043176377,
+              0.9318100427446334
+            ],
+            "range": [
+              0.7345196527840824,
+              1.0239207471515022
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9166577465390627,
+            "per_run_medians": [
+              0.9025221622890782,
+              0.9760087226069661,
+              0.9166577465390627
+            ],
+            "range": [
+              0.6850930802344679,
+              1.49318314243857
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroAssociationPartWidth32000",
+        "operation": "cow",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.628551,
+          "compact-shared": 0.627963,
+          "original": 1.534536,
+          "safe-plain": 0.668162,
+          "safe-shared": 0.670177
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.549081,
+            1.315585
+          ],
+          "compact-shared": [
+            0.53829,
+            1.289773
+          ],
+          "original": [
+            1.337335,
+            2.790251
+          ],
+          "safe-plain": [
+            0.577616,
+            2.347517
+          ],
+          "safe-shared": [
+            0.571114,
+            2.980603
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9726857615915626,
+            "per_run_medians": [
+              0.9340085188921249,
+              1.03509078695881,
+              0.9516752008652409
+            ],
+            "range": [
+              0.2854833426126414,
+              4.836717539290379
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.020854532406465,
+            "per_run_medians": [
+              1.1135289402282138,
+              0.9949661343226227,
+              0.9990645150512848
+            ],
+            "range": [
+              0.4277747161908961,
+              2.156735298593193
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9500047435381561,
+            "per_run_medians": [
+              0.9209057428127319,
+              0.9103028006034227,
+              0.9662980189604233
+            ],
+            "range": [
+              0.21063086898859057,
+              2.127879958992621
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9142299123867372,
+            "per_run_medians": [
+              0.8471890490141157,
+              0.9142299123867372,
+              0.9472570057819294
+            ],
+            "range": [
+              0.25369486142166386,
+              2.023818131192783
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 0.4081506616206488,
+            "per_run_medians": [
+              0.421176808908797,
+              0.39966869464124666,
+              0.41628237014313463
+            ],
+            "range": [
+              0.23548060730020345,
+              0.9213470102942249
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 0.4591015027905158,
+            "per_run_medians": [
+              0.46665121304684315,
+              0.4454211920689004,
+              0.43818978060335867
+            ],
+            "range": [
+              0.20807877140802028,
+              1.3963599856082214
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroReplacePartRules",
+        "operation": "scan",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.050164,
+          "compact-shared": 0.050953,
+          "original": 0.043826,
+          "safe-plain": 0.063205,
+          "safe-shared": 0.05324
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.043027,
+            0.092043
+          ],
+          "compact-shared": [
+            0.041981,
+            0.101376
+          ],
+          "original": [
+            0.035442,
+            0.065345
+          ],
+          "safe-plain": [
+            0.050513,
+            0.134226
+          ],
+          "safe-shared": [
+            0.04367,
+            0.085403
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.7834837514155314,
+            "per_run_medians": [
+              0.7721695307853632,
+              0.7472749362583206,
+              0.8475142870787501
+            ],
+            "range": [
+              0.35456617942872465,
+              1.494548763628091
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.0097063119858538,
+            "per_run_medians": [
+              0.9527571115973743,
+              1.1165333625506737,
+              0.9820810188951123
+            ],
+            "range": [
+              0.624158188852271,
+              1.3343611028757782
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9083731295765681,
+            "per_run_medians": [
+              0.8624541943151431,
+              1.0843619700284852,
+              0.8672725536385052
+            ],
+            "range": [
+              0.4970434293877264,
+              1.777216787630167
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.790434156571822,
+            "per_run_medians": [
+              0.790434156571822,
+              0.7958383955919849,
+              0.7867952369513743
+            ],
+            "range": [
+              0.3205563750689136,
+              1.1810820976778253
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 1.1905861407071523,
+            "per_run_medians": [
+              1.1613000300932892,
+              1.242826780021254,
+              1.1905861407071523
+            ],
+            "range": [
+              0.7750501998950777,
+              2.2380784175203106
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 1.2593164959378311,
+            "per_run_medians": [
+              1.2593164959378311,
+              1.1406840615196265,
+              1.3106796116504853
+            ],
+            "range": [
+              0.8939967746027144,
+              2.3364156156813394
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroReplacePartRules",
+        "operation": "build_drop",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.715245,
+          "compact-shared": 0.714734,
+          "safe-plain": 0.77501,
+          "safe-shared": 0.78067
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.6692,
+            0.874924
+          ],
+          "compact-shared": [
+            0.630774,
+            1.31487
+          ],
+          "safe-plain": [
+            0.720245,
+            2.392855
+          ],
+          "safe-shared": [
+            0.676731,
+            0.874639
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9716830378041325,
+            "per_run_medians": [
+              0.9568580208324584,
+              0.9948002879840502,
+              0.9951139147990391
+            ],
+            "range": [
+              0.34131779819504315,
+              1.1802540324015889
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.0037119811696456,
+            "per_run_medians": [
+              1.0435382421025559,
+              0.9214213311522625,
+              1.0275064324536751
+            ],
+            "range": [
+              0.7209471908417188,
+              1.6048053721746836
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9369793081954587,
+            "per_run_medians": [
+              0.9630236453029398,
+              0.9369793081954587,
+              0.8843437650371357
+            ],
+            "range": [
+              0.7524433783460887,
+              1.6006870852562753
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9143780890658836,
+            "per_run_medians": [
+              0.8982347342415582,
+              1.0068865941880036,
+              0.9143780890658836
+            ],
+            "range": [
+              0.28989846856579277,
+              1.194619784348985
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroReplacePartRules",
+        "operation": "cow",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.028168,
+          "compact-shared": 0.028545,
+          "original": 0.05527,
+          "safe-plain": 0.027855,
+          "safe-shared": 0.026514
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.025367,
+            0.087074
+          ],
+          "compact-shared": [
+            0.025495,
+            0.076917
+          ],
+          "original": [
+            0.051661,
+            1.153325
+          ],
+          "safe-plain": [
+            0.025514,
+            0.06552
+          ],
+          "safe-shared": [
+            0.024972,
+            0.081869
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9802425665101722,
+            "per_run_medians": [
+              0.9655498907501822,
+              1.0007045009784736,
+              0.9255803862009112
+            ],
+            "range": [
+              0.3912240537240537,
+              2.784489016236867
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.0861749517089132,
+            "per_run_medians": [
+              1.1006377955530497,
+              1.011123296255679,
+              0.9292459528543028
+            ],
+            "range": [
+              0.32464340675747067,
+              2.9615354997689822
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 1.0179509289017794,
+            "per_run_medians": [
+              1.1343629343629344,
+              1.0164631529668786,
+              1.0078918581028287
+            ],
+            "range": [
+              0.3153330320389891,
+              3.0521407880639657
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9801579657098826,
+            "per_run_medians": [
+              0.9691308500477555,
+              0.971409525220354,
+              0.9845652027708656
+            ],
+            "range": [
+              0.3983669108669109,
+              2.8208500712712192
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 0.5159053163725293,
+            "per_run_medians": [
+              0.531572281527049,
+              0.49065948551843613,
+              0.5288988303982711
+            ],
+            "range": [
+              0.022383976762837883,
+              1.3109308762896577
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 0.4804536129473444,
+            "per_run_medians": [
+              0.4826346852300242,
+              0.4804536129473444,
+              0.4746956728049203
+            ],
+            "range": [
+              0.07098519497973252,
+              1.2833923309301853
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroSortSymbolWidth16000",
+        "operation": "scan",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.086982,
+          "compact-shared": 0.080296,
+          "original": 0.084098,
+          "safe-plain": 0.089224,
+          "safe-shared": 0.091281
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.070524,
+            0.185586
+          ],
+          "compact-shared": [
+            0.07148,
+            0.197789
+          ],
+          "original": [
+            0.062397,
+            0.169226
+          ],
+          "safe-plain": [
+            0.077413,
+            0.255612
+          ],
+          "safe-shared": [
+            0.075329,
+            0.493944
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.924754213483146,
+            "per_run_medians": [
+              0.9784553893759669,
+              0.7581120161311719,
+              0.9727927011013776
+            ],
+            "range": [
+              0.392426803123484,
+              5.758936691150752
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.0053021672784552,
+            "per_run_medians": [
+              1.2063974525980605,
+              0.9212101185886845,
+              0.9870473275885212
+            ],
+            "range": [
+              0.396091299990301,
+              2.273907245177163
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9441975564567326,
+            "per_run_medians": [
+              1.089675444954498,
+              0.8353262150965004,
+              0.9269408694994518
+            ],
+            "range": [
+              0.29405965048669486,
+              2.166814561628378
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9092831356369262,
+            "per_run_medians": [
+              0.9092831356369262,
+              0.8690411700975081,
+              0.9197437131958075
+            ],
+            "range": [
+              0.3746029137912148,
+              1.5828378220823132
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 1.123007183742461,
+            "per_run_medians": [
+              1.2010756281127182,
+              0.7485410646033374,
+              1.1870447159027233
+            ],
+            "range": [
+              0.43064304539491566,
+              2.4199036458747396
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 1.2072535538567557,
+            "per_run_medians": [
+              1.2271603757036469,
+              0.9309732888657712,
+              1.2649653383711434
+            ],
+            "range": [
+              0.4560942172006666,
+              5.873433375347808
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroSortSymbolWidth16000",
+        "operation": "build_drop",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.920164,
+          "compact-shared": 1.137278,
+          "safe-plain": 1.008801,
+          "safe-shared": 1.222239
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.827516,
+            1.079261
+          ],
+          "compact-shared": [
+            1.049762,
+            1.421443
+          ],
+          "safe-plain": [
+            0.917125,
+            1.34301
+          ],
+          "safe-shared": [
+            1.102819,
+            2.814603
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.2126801988815414,
+            "per_run_medians": [
+              1.2779487445797522,
+              1.124655777122491,
+              1.3324671371274608
+            ],
+            "range": [
+              0.882802808616466,
+              3.0689415292353823
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.2467469273214435,
+            "per_run_medians": [
+              1.2403772858254607,
+              1.3254785619086715,
+              1.1688017520546663
+            ],
+            "range": [
+              1.0009617692105985,
+              1.6106728115242468
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9295527160502992,
+            "per_run_medians": [
+              0.9146221156661849,
+              1.0093035039859535,
+              0.8603293718936993
+            ],
+            "range": [
+              0.38128077032533536,
+              1.1707336425089434
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.8941082086975279,
+            "per_run_medians": [
+              0.8941082086975279,
+              0.820296569888412,
+              0.9709388413802283
+            ],
+            "range": [
+              0.6491463205784022,
+              1.1010418427150062
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroSortSymbolWidth16000",
+        "operation": "cow",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.242158,
+          "compact-shared": 0.240156,
+          "original": 0.068403,
+          "safe-plain": 0.257302,
+          "safe-shared": 0.249339
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.232817,
+            0.30946
+          ],
+          "compact-shared": [
+            0.232927,
+            0.375221
+          ],
+          "original": [
+            0.062121,
+            0.14245
+          ],
+          "safe-plain": [
+            0.240678,
+            0.764832
+          ],
+          "safe-shared": [
+            0.239925,
+            0.316308
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9747484084624782,
+            "per_run_medians": [
+              0.9747484084624782,
+              0.9896067817383312,
+              0.9406536467189655
+            ],
+            "range": [
+              0.3401256746579641,
+              1.1989856451350007
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.0003498950314906,
+            "per_run_medians": [
+              1.0447841772856983,
+              0.9374566765391644,
+              0.998260741838673
+            ],
+            "range": [
+              0.7619207652039035,
+              1.3676871239061985
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9845379374816445,
+            "per_run_medians": [
+              1.0140565088289846,
+              0.9768894543514396,
+              0.9845379374816445
+            ],
+            "range": [
+              0.7363930093453217,
+              1.4601175188730642
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9677111251085833,
+            "per_run_medians": [
+              0.9449020473520168,
+              0.9770987666198457,
+              0.9675755175067188
+            ],
+            "range": [
+              0.3081016484665914,
+              1.2242043058211958
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 3.5311726576311138,
+            "per_run_medians": [
+              3.4961185912898554,
+              3.544518597485287,
+              3.7358190436802086
+            ],
+            "range": [
+              2.2013395630215786,
+              5.97219392627491
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 3.68243959929287,
+            "per_run_medians": [
+              3.545648582664503,
+              3.8406435088842645,
+              3.862039894378519
+            ],
+            "range": [
+              1.8261776061776063,
+              5.091804703723378
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroWideTraversal",
+        "operation": "scan",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.004445,
+          "compact-shared": 0.004344,
+          "original": 0.005015,
+          "safe-plain": 0.004096,
+          "safe-shared": 0.004326
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.004096,
+            0.006346
+          ],
+          "compact-shared": [
+            0.00406,
+            0.006346
+          ],
+          "original": [
+            0.004803,
+            0.008394
+          ],
+          "safe-plain": [
+            0.003462,
+            0.033127
+          ],
+          "safe-shared": [
+            0.003977,
+            0.005822
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.039035305818001,
+            "per_run_medians": [
+              1.0535532994923857,
+              1.025494071146245,
+              1.284660766961652
+            ],
+            "range": [
+              0.12252845111238568,
+              1.6022530329289428
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9957666980244592,
+            "per_run_medians": [
+              0.9976437323279923,
+              1.0020761245674739,
+              0.9762464722483538
+            ],
+            "range": [
+              0.7048047010024195,
+              1.4731445312500002
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 1.0451168689980068,
+            "per_run_medians": [
+              1.013161043311797,
+              1.0749814402375648,
+              1.0807141061101333
+            ],
+            "range": [
+              0.700446581930608,
+              1.5373647984267456
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 1.07177734375,
+            "per_run_medians": [
+              1.0927089282314868,
+              1.0703703703703704,
+              1.07177734375
+            ],
+            "range": [
+              0.12364536480816253,
+              1.7059139784946236
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 0.881920326864147,
+            "per_run_medians": [
+              0.881920326864147,
+              0.8775757575757575,
+              0.8880165289256199
+            ],
+            "range": [
+              0.4836788182034787,
+              1.210568295114656
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 0.8458897192486367,
+            "per_run_medians": [
+              0.8117331288343558,
+              0.8458897192486367,
+              0.8823058446757406
+            ],
+            "range": [
+              0.4945198951632118,
+              1.137139493819894
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroWideTraversal",
+        "operation": "build_drop",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.021225,
+          "compact-shared": 0.021215,
+          "safe-plain": 0.027341,
+          "safe-shared": 0.025697
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.020233,
+            0.031529
+          ],
+          "compact-shared": [
+            0.019681,
+            0.097983
+          ],
+          "safe-plain": [
+            0.024393,
+            0.057447
+          ],
+          "safe-shared": [
+            0.024779,
+            0.055095
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.0132209618149866,
+            "per_run_medians": [
+              0.9978356681882575,
+              0.9804377300019369,
+              1.0177314945116802
+            ],
+            "range": [
+              0.43645447107768903,
+              1.738341641951158
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.023065951900851,
+            "per_run_medians": [
+              1.0462523835134212,
+              0.9476439790575915,
+              1.0281735646667312
+            ],
+            "range": [
+              0.6664657933965555,
+              4.735537190082645
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.838072827344155,
+            "per_run_medians": [
+              0.8439089797689001,
+              0.8289202473442207,
+              0.8519986078016651
+            ],
+            "range": [
+              0.3750119090718546,
+              2.3096124834999054
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.8197901170037393,
+            "per_run_medians": [
+              0.8176823370090927,
+              0.7338957850696726,
+              0.8292218576578766
+            ],
+            "range": [
+              0.4183918450881612,
+              1.2242092457420923
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "gMicroWideTraversal",
+        "operation": "cow",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.00393,
+          "compact-shared": 0.003701,
+          "original": 0.017982,
+          "safe-plain": 0.004491,
+          "safe-shared": 0.00495
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.003637,
+            0.005354
+          ],
+          "compact-shared": [
+            0.003517,
+            0.005364
+          ],
+          "original": [
+            0.016485,
+            0.021785
+          ],
+          "safe-plain": [
+            0.003793,
+            0.007348
+          ],
+          "safe-shared": [
+            0.004243,
+            0.007016
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.046350918590932,
+            "per_run_medians": [
+              1.0646602398307077,
+              0.9926314065826102,
+              1.0359116022099448
+            ],
+            "range": [
+              0.5986663037561241,
+              1.7287107830213553
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9685946087411672,
+            "per_run_medians": [
+              0.9544502617801047,
+              0.9981613891726251,
+              0.9384813384813384
+            ],
+            "range": [
+              0.6568920433320882,
+              1.3887819631564475
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.7838815789473684,
+            "per_run_medians": [
+              0.7579748919530769,
+              0.7801373143860769,
+              0.804
+            ],
+            "range": [
+              0.511830102622577,
+              1.1788693234476366
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.8757889990982868,
+            "per_run_medians": [
+              0.8885787392416842,
+              0.8491658943466172,
+              0.8757889990982868
+            ],
+            "range": [
+              0.5111594991834513,
+              1.1936978683966635
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 0.215570645699309,
+            "per_run_medians": [
+              0.1892744479495268,
+              0.23477968382105616,
+              0.21364348280062648
+            ],
+            "range": [
+              0.17181504221028399,
+              0.3048897411313518
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 0.2853488372093023,
+            "per_run_medians": [
+              0.27445490016066104,
+              0.29313438473888,
+              0.2934504561030938
+            ],
+            "range": [
+              0.2026937618147448,
+              0.361672931209355
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "rulesSimple",
+        "operation": "scan",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.010792,
+          "compact-shared": 0.010314,
+          "original": 0.010158,
+          "safe-plain": 0.010433,
+          "safe-shared": 0.010525
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.010094,
+            0.032438
+          ],
+          "compact-shared": [
+            0.010084,
+            0.029931
+          ],
+          "original": [
+            0.009836,
+            0.017587
+          ],
+          "safe-plain": [
+            0.010157,
+            0.033596
+          ],
+          "safe-shared": [
+            0.010075,
+            0.017716
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9930182092650249,
+            "per_run_medians": [
+              0.9654297792390794,
+              1.006199748135232,
+              0.9992123658560599
+            ],
+            "range": [
+              0.3058995118466484,
+              1.71003861003861
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9830787081802359,
+            "per_run_medians": [
+              0.9582119446467589,
+              0.9850474456052909,
+              0.992819907544015
+            ],
+            "range": [
+              0.4974412725815402,
+              2.755062592047128
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9930641330166271,
+            "per_run_medians": [
+              1.0114357101672111,
+              0.9894098392221045,
+              0.7853826568818333
+            ],
+            "range": [
+              0.5821855949424249,
+              2.9361389052383755
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 1.01065581710743,
+            "per_run_medians": [
+              1.0224518553311412,
+              1.01065581710743,
+              1.0009845426799253
+            ],
+            "range": [
+              0.3086379330872723,
+              3.114546327412386
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 1.0101150337167792,
+            "per_run_medians": [
+              1.0324700804394742,
+              1.0071282101357288,
+              0.9953731049419177
+            ],
+            "range": [
+              0.5889325777726379,
+              1.8482001582278482
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 1.0207965469884246,
+            "per_run_medians": [
+              1.0207965469884246,
+              1.0359257400903161,
+              0.9954675337471671
+            ],
+            "range": [
+              0.5796326832319327,
+              1.7964619764131764
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "rulesSimple",
+        "operation": "build_drop",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.134593,
+          "compact-shared": 0.170595,
+          "safe-plain": 0.148341,
+          "safe-shared": 0.181644
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.12619,
+            0.19045
+          ],
+          "compact-shared": [
+            0.156617,
+            0.23089
+          ],
+          "safe-plain": [
+            0.138955,
+            0.208387
+          ],
+          "safe-shared": [
+            0.167692,
+            0.228657
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.252592555838301,
+            "per_run_medians": [
+              1.2338134330538433,
+              1.2751581062710562,
+              1.252592555838301
+            ],
+            "range": [
+              0.865404271859569,
+              1.432229901306317
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 1.229487049184173,
+            "per_run_medians": [
+              1.1642923546279444,
+              1.2440288453918695,
+              1.211325660762037
+            ],
+            "range": [
+              0.8309792596482016,
+              1.573420378345963
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.894563994731874,
+            "per_run_medians": [
+              0.894563994731874,
+              0.8752911604524508,
+              0.9309933015259279
+            ],
+            "range": [
+              0.6865479736023826,
+              1.357976768122335
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9129374703318517,
+            "per_run_medians": [
+              0.9377019486400421,
+              0.8852642397209037,
+              0.9574666363144865
+            ],
+            "range": [
+              0.6079361956360042,
+              1.3523493030554785
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "rulesSimple",
+        "operation": "cow",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.018809,
+          "compact-shared": 0.017661,
+          "original": 0.023144,
+          "safe-plain": 0.017689,
+          "safe-shared": 0.017679
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.017514,
+            0.021105
+          ],
+          "compact-shared": [
+            0.017542,
+            0.055815
+          ],
+          "original": [
+            0.021013,
+            0.036994
+          ],
+          "safe-plain": [
+            0.01744,
+            0.020811
+          ],
+          "safe-shared": [
+            0.017422,
+            0.025477
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.9999438769783364,
+            "per_run_medians": [
+              1.0010894495412843,
+              0.999041875669278,
+              1.0005119745150464
+            ],
+            "range": [
+              0.8743447656132993,
+              1.456161408321902
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9999431430520809,
+            "per_run_medians": [
+              0.9382136934375741,
+              1.0078018995929445,
+              0.9958558047118933
+            ],
+            "range": [
+              0.8497401847575058,
+              3.1569570135746603
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 1.0046212804328225,
+            "per_run_medians": [
+              1.0079042327739276,
+              1.0046212804328225,
+              1.0042319569941667
+            ],
+            "range": [
+              0.6899948973584017,
+              3.176902498719335
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 1.011036770172128,
+            "per_run_medians": [
+              1.011036770172128,
+              1.094620973864006,
+              1.00848623853211
+            ],
+            "range": [
+              0.8464273701407908,
+              1.1981265966505819
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 0.800865603644647,
+            "per_run_medians": [
+              0.8294211915535447,
+              0.7695089538582197,
+              0.7898309656536595
+            ],
+            "range": [
+              0.48137535816618915,
+              2.4116401659177322
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 0.7692624948445878,
+            "per_run_medians": [
+              0.7591168337366057,
+              0.7962447219477136,
+              0.7848858119043337
+            ],
+            "range": [
+              0.4891253411252309,
+              1.1606833712984055
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "synthetic-repeated-symbol-16000",
+        "operation": "scan",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.092071,
+          "compact-shared": 0.073638,
+          "original": 0.071094,
+          "safe-plain": 0.090656,
+          "safe-shared": 0.084797
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.070185,
+            0.172478
+          ],
+          "compact-shared": [
+            0.066659,
+            0.184096
+          ],
+          "original": [
+            0.062654,
+            0.184183
+          ],
+          "safe-plain": [
+            0.0779,
+            0.203557
+          ],
+          "safe-shared": [
+            0.072628,
+            0.300954
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.038285849420609,
+            "per_run_medians": [
+              0.8050873632192022,
+              1.0317035367056502,
+              1.147731191801744
+            ],
+            "range": [
+              0.4369488644458309,
+              2.084140108862758
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.8511968009140245,
+            "per_run_medians": [
+              0.7997958097555147,
+              0.8164839725592637,
+              0.9117985669976028
+            ],
+            "range": [
+              0.45034949146652764,
+              1.8300528755444785
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.8468656104889375,
+            "per_run_medians": [
+              0.9152581584605752,
+              0.8496133496133496,
+              0.809324697729499
+            ],
+            "range": [
+              0.5223669916482726,
+              1.7666396833962943
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.9711817363472695,
+            "per_run_medians": [
+              0.9148188339032097,
+              0.9713478818998716,
+              0.9547470069468394
+            ],
+            "range": [
+              0.4218081421911307,
+              2.146770720535703
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 1.0576081193668105,
+            "per_run_medians": [
+              1.0565386685238534,
+              1.0620578675673953,
+              1.058006192423837
+            ],
+            "range": [
+              0.5589485748086805,
+              2.4497521125003896
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 1.2555694737342826,
+            "per_run_medians": [
+              1.1552621998512116,
+              1.235884884800405,
+              1.386673318574413
+            ],
+            "range": [
+              0.6699589977220957,
+              2.0378761343735072
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "synthetic-repeated-symbol-16000",
+        "operation": "build_drop",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.906949,
+          "compact-shared": 0.457586,
+          "safe-plain": 0.99992,
+          "safe-shared": 0.547061
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.842844,
+            1.553293
+          ],
+          "compact-shared": [
+            0.398489,
+            0.798126
+          ],
+          "safe-plain": [
+            0.936026,
+            1.252528
+          ],
+          "safe-shared": [
+            0.490046,
+            1.089591
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 0.5475927125238608,
+            "per_run_medians": [
+              0.5371620002834188,
+              0.5410084887357476,
+              0.5571859267397525
+            ],
+            "range": [
+              0.42700664392170945,
+              1.080331478894396
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.48457702437122563,
+            "per_run_medians": [
+              0.49384346332180096,
+              0.4775478150953414,
+              0.47116134225913053
+            ],
+            "range": [
+              0.3456274018075095,
+              0.7930693895720884
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.8255937575620536,
+            "per_run_medians": [
+              0.8255937575620536,
+              0.8032373717652905,
+              0.8518408621082666
+            ],
+            "range": [
+              0.38813646588490547,
+              1.517465202517178
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 0.8979645437980261,
+            "per_run_medians": [
+              0.8908832602025667,
+              0.8912170403408649,
+              0.9921143561306223
+            ],
+            "range": [
+              0.7537396369582157,
+              1.3910755113902489
+            ]
+          }
+        }
+      },
+      {
+        "dataset": "synthetic-repeated-symbol-16000",
+        "operation": "cow",
+        "measured_samples_per_case": 27,
+        "median_ms": {
+          "compact-plain": 0.261371,
+          "compact-shared": 0.246566,
+          "original": 0.077265,
+          "safe-plain": 0.250837,
+          "safe-shared": 0.253242
+        },
+        "sample_ms_range": {
+          "compact-plain": [
+            0.236628,
+            0.376861
+          ],
+          "compact-shared": [
+            0.233938,
+            0.497349
+          ],
+          "original": [
+            0.06202,
+            0.158967
+          ],
+          "safe-plain": [
+            0.239007,
+            0.302524
+          ],
+          "safe-shared": [
+            0.236573,
+            1.367472
+          ]
+        },
+        "ratios": {
+          "safe-shared/safe-plain": {
+            "paired_median": 1.0075182427950173,
+            "per_run_medians": [
+              1.0075182427950173,
+              0.9889711858684462,
+              1.032111606069375
+            ],
+            "range": [
+              0.7919536962356705,
+              5.305193570788443
+            ]
+          },
+          "compact-shared/compact-plain": {
+            "paired_median": 0.9886319455009551,
+            "per_run_medians": [
+              0.9946687485127186,
+              0.9562675492187311,
+              0.9625142938822183
+            ],
+            "range": [
+              0.6981904017284289,
+              1.8091630194931345
+            ]
+          },
+          "compact-shared/safe-shared": {
+            "paired_median": 0.9888617889615468,
+            "per_run_medians": [
+              0.9736353887618092,
+              0.9961310063176705,
+              0.9413641458998016
+            ],
+            "range": [
+              0.17345071782091334,
+              1.768733201935137
+            ]
+          },
+          "compact-plain/safe-plain": {
+            "paired_median": 1.0160340274558026,
+            "per_run_medians": [
+              0.9767199960374461,
+              1.0826651719347842,
+              1.0513304818655587
+            ],
+            "range": [
+              0.8352714398662217,
+              1.5472834543834655
+            ]
+          },
+          "compact-shared/original": {
+            "paired_median": 3.340972476547314,
+            "per_run_medians": [
+              3.8102436823104693,
+              3.7217662919361727,
+              2.661224445693046
+            ],
+            "range": [
+              1.5658407090779847,
+              7.763874032592964
+            ]
+          },
+          "safe-shared/original": {
+            "paired_median": 3.22838628101786,
+            "per_run_medians": [
+              3.967139632376653,
+              3.22838628101786,
+              2.8526494359683623
+            ],
+            "range": [
+              1.490214950272698,
+              19.26179677155816
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "allocation_rows": [
+    {
+      "entry": {
+        "file": "results/gMicroAssociationPartWidth32000.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroAssociationPartWidth32000",
+        "source_end": 5259,
+        "source_start": 5214
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 5888088,
+        "safe-plain": 6912168,
+        "safe-shared": 5376216,
+        "compact-plain": 5888160,
+        "compact-shared": 4352208
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 31999,
+        "symbol_visits": 32001,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 1535952,
+      "compact_shared_over_original_normalized": 0.7391547137203113,
+      "peak_requested_bytes": {
+        "original-normalized": 17613184,
+        "safe-plain": 11200808,
+        "safe-shared": 9665036,
+        "compact-plain": 10176800,
+        "compact-shared": 8640996
+      },
+      "allocation_calls": {
+        "original-normalized": 256104,
+        "safe-plain": 160053,
+        "safe-shared": 128055,
+        "compact-plain": 160053,
+        "compact-shared": 128055
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroAssociationPartWidth4000.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroAssociationPartWidth4000",
+        "source_end": 5178,
+        "source_start": 5135
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 736088,
+        "safe-plain": 864168,
+        "safe-shared": 672216,
+        "compact-plain": 736160,
+        "compact-shared": 544208
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 3999,
+        "symbol_visits": 4001,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 191952,
+      "compact_shared_over_original_normalized": 0.7393246459662431,
+      "peak_requested_bytes": {
+        "original-normalized": 2201984,
+        "safe-plain": 1400360,
+        "safe-shared": 1208588,
+        "compact-plain": 1272352,
+        "compact-shared": 1080548
+      },
+      "allocation_calls": {
+        "original-normalized": 32086,
+        "safe-plain": 20044,
+        "safe-shared": 16046,
+        "compact-plain": 20044,
+        "compact-shared": 16046
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroReplacePartRules.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroReplacePartRules",
+        "source_end": 5326,
+        "source_start": 5286
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 294608,
+        "safe-plain": 422704,
+        "safe-shared": 345904,
+        "compact-plain": 371480,
+        "compact-shared": 294680
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 1600,
+        "symbol_visits": 1602,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 76800,
+      "compact_shared_over_original_normalized": 1.0002443925487428,
+      "peak_requested_bytes": {
+        "original-normalized": 929408,
+        "safe-plain": 602032,
+        "safe-shared": 525412,
+        "compact-plain": 550808,
+        "compact-shared": 474156
+      },
+      "allocation_calls": {
+        "original-normalized": 14483,
+        "safe-plain": 9643,
+        "safe-shared": 8044,
+        "compact-plain": 9643,
+        "compact-shared": 8044
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroSortCallbackLarge.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroSortCallbackLarge",
+        "source_end": 160455,
+        "source_start": 160425
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 6488,
+        "safe-plain": 3368,
+        "safe-shared": 3368,
+        "compact-plain": 1760,
+        "compact-shared": 1760
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 0.2712700369913687,
+      "peak_requested_bytes": {
+        "original-normalized": 23064,
+        "safe-plain": 12480,
+        "safe-shared": 12660,
+        "compact-plain": 10872,
+        "compact-shared": 11020
+      },
+      "allocation_calls": {
+        "original-normalized": 32,
+        "safe-plain": 17,
+        "safe-shared": 18,
+        "compact-plain": 17,
+        "compact-shared": 18
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroSortCallbackSmall.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroSortCallbackSmall",
+        "source_end": 160397,
+        "source_start": 160367
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 3288,
+        "safe-plain": 1768,
+        "safe-shared": 1768,
+        "compact-plain": 960,
+        "compact-shared": 960
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 0.291970802919708,
+      "peak_requested_bytes": {
+        "original-normalized": 11768,
+        "safe-plain": 6432,
+        "safe-shared": 6612,
+        "compact-plain": 5624,
+        "compact-shared": 5772
+      },
+      "allocation_calls": {
+        "original-normalized": 30,
+        "safe-plain": 16,
+        "safe-shared": 17,
+        "compact-plain": 16,
+        "compact-shared": 17
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroSortDefaultWide.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroSortDefaultWide",
+        "source_end": 160744,
+        "source_start": 160713
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 51288,
+        "safe-plain": 25768,
+        "safe-shared": 25768,
+        "compact-plain": 12960,
+        "compact-shared": 12960
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 0.2526906878802059,
+      "peak_requested_bytes": {
+        "original-normalized": 181208,
+        "safe-plain": 97152,
+        "safe-shared": 97332,
+        "compact-plain": 84344,
+        "compact-shared": 84492
+      },
+      "allocation_calls": {
+        "original-normalized": 38,
+        "safe-plain": 20,
+        "safe-shared": 21,
+        "compact-plain": 20,
+        "compact-shared": 21
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroSortSymbolWidth16000.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroSortSymbolWidth16000",
+        "source_end": 161094,
+        "source_start": 161006
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 512088,
+        "safe-plain": 1024168,
+        "safe-shared": 1024168,
+        "compact-plain": 896160,
+        "compact-shared": 896160
+      },
+      "stats": {
+        "entries": 128,
+        "hits": 0,
+        "symbol_visits": 16001,
+        "uncached": 15873
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.750011716736186,
+      "peak_requested_bytes": {
+        "original-normalized": 2444760,
+        "safe-plain": 1670528,
+        "safe-shared": 1681040,
+        "compact-plain": 1542520,
+        "compact-shared": 1550984
+      },
+      "allocation_calls": {
+        "original-normalized": 16044,
+        "safe-plain": 16023,
+        "safe-shared": 16030,
+        "compact-plain": 16023,
+        "compact-shared": 16030
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroSortSymbolWidth4000.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroSortSymbolWidth4000",
+        "source_end": 160975,
+        "source_start": 160888
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 128088,
+        "safe-plain": 256168,
+        "safe-shared": 256168,
+        "compact-plain": 224160,
+        "compact-shared": 224160
+      },
+      "stats": {
+        "entries": 128,
+        "hits": 0,
+        "symbol_visits": 4001,
+        "uncached": 3873
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.750046842795578,
+      "peak_requested_bytes": {
+        "original-normalized": 611544,
+        "safe-plain": 417920,
+        "safe-shared": 428432,
+        "compact-plain": 385912,
+        "compact-shared": 394376
+      },
+      "allocation_calls": {
+        "original-normalized": 4040,
+        "safe-plain": 4021,
+        "safe-shared": 4028,
+        "compact-plain": 4021,
+        "compact-shared": 4028
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroStringLiteralHaystack.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroStringLiteralHaystack",
+        "source_end": 5535,
+        "source_start": 5472
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 316,
+        "safe-plain": 364,
+        "safe-shared": 364,
+        "compact-plain": 364,
+        "compact-shared": 364
+      },
+      "stats": {
+        "entries": 0,
+        "hits": 0,
+        "symbol_visits": 0,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.1518987341772151,
+      "peak_requested_bytes": {
+        "original-normalized": 832,
+        "safe-plain": 452,
+        "safe-shared": 452,
+        "compact-plain": 452,
+        "compact-shared": 452
+      },
+      "allocation_calls": {
+        "original-normalized": 7,
+        "safe-plain": 4,
+        "safe-shared": 4,
+        "compact-plain": 4,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroStringTrimLiteralList32000.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroStringTrimLiteralList32000",
+        "source_end": 5979,
+        "source_start": 5929
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 32000,
+        "safe-plain": 32048,
+        "safe-shared": 32048,
+        "compact-plain": 32048,
+        "compact-shared": 32048
+      },
+      "stats": {
+        "entries": 0,
+        "hits": 0,
+        "symbol_visits": 0,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.0015,
+      "peak_requested_bytes": {
+        "original-normalized": 64200,
+        "safe-plain": 32136,
+        "safe-shared": 32136,
+        "compact-plain": 32136,
+        "compact-shared": 32136
+      },
+      "allocation_calls": {
+        "original-normalized": 7,
+        "safe-plain": 4,
+        "safe-shared": 4,
+        "compact-plain": 4,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroStringTrimLiteralList4000.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroStringTrimLiteralList4000",
+        "source_end": 5892,
+        "source_start": 5843
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 4000,
+        "safe-plain": 4048,
+        "safe-shared": 4048,
+        "compact-plain": 4048,
+        "compact-shared": 4048
+      },
+      "stats": {
+        "entries": 0,
+        "hits": 0,
+        "symbol_visits": 0,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.012,
+      "peak_requested_bytes": {
+        "original-normalized": 8200,
+        "safe-plain": 4136,
+        "safe-shared": 4136,
+        "compact-plain": 4136,
+        "compact-shared": 4136
+      },
+      "allocation_calls": {
+        "original-normalized": 7,
+        "safe-plain": 4,
+        "safe-shared": 4,
+        "compact-plain": 4,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroWideAssociation.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroWideAssociation",
+        "source_end": 5100,
+        "source_start": 5029
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 294488,
+        "safe-plain": 345768,
+        "safe-shared": 269016,
+        "compact-plain": 294560,
+        "compact-shared": 217808
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 1599,
+        "symbol_visits": 1601,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 76752,
+      "compact_shared_over_original_normalized": 0.739615875689332,
+      "peak_requested_bytes": {
+        "original-normalized": 852352,
+        "safe-plain": 525096,
+        "safe-shared": 448524,
+        "compact-plain": 473888,
+        "compact-shared": 397284
+      },
+      "allocation_calls": {
+        "original-normalized": 12876,
+        "safe-plain": 8039,
+        "safe-shared": 6441,
+        "compact-plain": 8039,
+        "compact-shared": 6441
+      }
+    },
+    {
+      "entry": {
+        "file": "results/gMicroWideTraversal.rum",
+        "kind": "evaluated-result",
+        "label": "gMicroWideTraversal",
+        "source_end": 5003,
+        "source_start": 4981
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 51288,
+        "safe-plain": 25768,
+        "safe-shared": 25768,
+        "compact-plain": 12960,
+        "compact-shared": 12960
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 0.2526906878802059,
+      "peak_requested_bytes": {
+        "original-normalized": 181208,
+        "safe-plain": 97152,
+        "safe-shared": 97332,
+        "compact-plain": 84344,
+        "compact-shared": 84492
+      },
+      "allocation_calls": {
+        "original-normalized": 38,
+        "safe-plain": 20,
+        "safe-shared": 21,
+        "compact-plain": 20,
+        "compact-shared": 21
+      }
+    },
+    {
+      "entry": {
+        "file": "results/list10.rum",
+        "kind": "evaluated-result",
+        "label": "list10",
+        "source_end": 4772,
+        "source_start": 4742
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 408,
+        "safe-plain": 328,
+        "safe-shared": 328,
+        "compact-plain": 240,
+        "compact-shared": 240
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 0.5882352941176471,
+      "peak_requested_bytes": {
+        "original-normalized": 1704,
+        "safe-plain": 1040,
+        "safe-shared": 1220,
+        "compact-plain": 952,
+        "compact-shared": 1100
+      },
+      "allocation_calls": {
+        "original-normalized": 24,
+        "safe-plain": 13,
+        "safe-shared": 14,
+        "compact-plain": 13,
+        "compact-shared": 14
+      }
+    },
+    {
+      "entry": {
+        "file": "results/rulesSimple.rum",
+        "kind": "evaluated-result",
+        "label": "rulesSimple",
+        "source_end": 4812,
+        "source_start": 4788
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe-plain": 960,
+        "safe-shared": 864,
+        "compact-plain": 856,
+        "compact-shared": 760
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 2,
+        "symbol_visits": 7,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.1875,
+      "peak_requested_bytes": {
+        "original-normalized": 2436,
+        "safe-plain": 1620,
+        "safe-shared": 1868,
+        "compact-plain": 1516,
+        "compact-shared": 1700
+      },
+      "allocation_calls": {
+        "original-normalized": 53,
+        "safe-plain": 32,
+        "safe-shared": 32,
+        "compact-plain": 32,
+        "compact-shared": 32
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/appendto-list-incremental-large.rum",
+        "kind": "lowered-input",
+        "label": "appendto-list-incremental-large",
+        "source_end": 54582,
+        "source_start": 54473
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1032,
+        "safe-plain": 1624,
+        "safe-shared": 1480,
+        "compact-plain": 1464,
+        "compact-shared": 1320
+      },
+      "stats": {
+        "entries": 9,
+        "hits": 3,
+        "symbol_visits": 12,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 144,
+      "compact_shared_over_original_normalized": 1.2790697674418605,
+      "peak_requested_bytes": {
+        "original-normalized": 3856,
+        "safe-plain": 2568,
+        "safe-shared": 3096,
+        "compact-plain": 2408,
+        "compact-shared": 2808
+      },
+      "allocation_calls": {
+        "original-normalized": 81,
+        "safe-plain": 50,
+        "safe-shared": 50,
+        "compact-plain": 50,
+        "compact-shared": 50
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/appendto-list-incremental-small.rum",
+        "kind": "lowered-input",
+        "label": "appendto-list-incremental-small",
+        "source_end": 54398,
+        "source_start": 54289
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1032,
+        "safe-plain": 1624,
+        "safe-shared": 1480,
+        "compact-plain": 1464,
+        "compact-shared": 1320
+      },
+      "stats": {
+        "entries": 9,
+        "hits": 3,
+        "symbol_visits": 12,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 144,
+      "compact_shared_over_original_normalized": 1.2790697674418605,
+      "peak_requested_bytes": {
+        "original-normalized": 3856,
+        "safe-plain": 2568,
+        "safe-shared": 3096,
+        "compact-plain": 2408,
+        "compact-shared": 2808
+      },
+      "allocation_calls": {
+        "original-normalized": 81,
+        "safe-plain": 50,
+        "safe-shared": 50,
+        "compact-plain": 50,
+        "compact-shared": 50
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/appendto-part-outer1000-large.rum",
+        "kind": "lowered-input",
+        "label": "appendto-part-outer1000-large",
+        "source_end": 55058,
+        "source_start": 54893
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1456,
+        "safe-plain": 2208,
+        "safe-shared": 2016,
+        "compact-plain": 1984,
+        "compact-shared": 1792
+      },
+      "stats": {
+        "entries": 11,
+        "hits": 4,
+        "symbol_visits": 15,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 192,
+      "compact_shared_over_original_normalized": 1.2307692307692308,
+      "peak_requested_bytes": {
+        "original-normalized": 5136,
+        "safe-plain": 3424,
+        "safe-shared": 3904,
+        "compact-plain": 3200,
+        "compact-shared": 3552
+      },
+      "allocation_calls": {
+        "original-normalized": 109,
+        "safe-plain": 67,
+        "safe-shared": 66,
+        "compact-plain": 67,
+        "compact-shared": 66
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/appendto-part-outer1000-small.rum",
+        "kind": "lowered-input",
+        "label": "appendto-part-outer1000-small",
+        "source_end": 54820,
+        "source_start": 54655
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1456,
+        "safe-plain": 2208,
+        "safe-shared": 2016,
+        "compact-plain": 1984,
+        "compact-shared": 1792
+      },
+      "stats": {
+        "entries": 11,
+        "hits": 4,
+        "symbol_visits": 15,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 192,
+      "compact_shared_over_original_normalized": 1.2307692307692308,
+      "peak_requested_bytes": {
+        "original-normalized": 5136,
+        "safe-plain": 3424,
+        "safe-shared": 3904,
+        "compact-plain": 3200,
+        "compact-shared": 3552
+      },
+      "allocation_calls": {
+        "original-normalized": 109,
+        "safe-plain": 67,
+        "safe-shared": 66,
+        "compact-plain": 67,
+        "compact-shared": 66
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-part-key-read-width32000.rum",
+        "kind": "lowered-input",
+        "label": "association-part-key-read-width32000",
+        "source_end": 7318,
+        "source_start": 7223
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 728,
+        "safe-plain": 1080,
+        "safe-shared": 1080,
+        "compact-plain": 968,
+        "compact-shared": 968
+      },
+      "stats": {
+        "entries": 7,
+        "hits": 0,
+        "symbol_visits": 7,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.3296703296703296,
+      "peak_requested_bytes": {
+        "original-normalized": 2752,
+        "safe-plain": 1896,
+        "safe-shared": 2240,
+        "compact-plain": 1784,
+        "compact-shared": 2064
+      },
+      "allocation_calls": {
+        "original-normalized": 62,
+        "safe-plain": 37,
+        "safe-shared": 39,
+        "compact-plain": 37,
+        "compact-shared": 39
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-part-key-read-width4000.rum",
+        "kind": "lowered-input",
+        "label": "association-part-key-read-width4000",
+        "source_end": 7056,
+        "source_start": 6963
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 728,
+        "safe-plain": 1080,
+        "safe-shared": 1080,
+        "compact-plain": 968,
+        "compact-shared": 968
+      },
+      "stats": {
+        "entries": 7,
+        "hits": 0,
+        "symbol_visits": 7,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.3296703296703296,
+      "peak_requested_bytes": {
+        "original-normalized": 2752,
+        "safe-plain": 1896,
+        "safe-shared": 2240,
+        "compact-plain": 1784,
+        "compact-shared": 2064
+      },
+      "allocation_calls": {
+        "original-normalized": 62,
+        "safe-plain": 37,
+        "safe-shared": 39,
+        "compact-plain": 37,
+        "compact-shared": 39
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-part-positional-read-width32000.rum",
+        "kind": "lowered-input",
+        "label": "association-part-positional-read-width32000",
+        "source_end": 7796,
+        "source_start": 7725
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe-plain": 896,
+        "safe-shared": 896,
+        "compact-plain": 800,
+        "compact-shared": 800
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 0,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.3157894736842106,
+      "peak_requested_bytes": {
+        "original-normalized": 2340,
+        "safe-plain": 1556,
+        "safe-shared": 1900,
+        "compact-plain": 1460,
+        "compact-shared": 1740
+      },
+      "allocation_calls": {
+        "original-normalized": 52,
+        "safe-plain": 31,
+        "safe-shared": 33,
+        "compact-plain": 31,
+        "compact-shared": 33
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-part-positional-read-width4000.rum",
+        "kind": "lowered-input",
+        "label": "association-part-positional-read-width4000",
+        "source_end": 7563,
+        "source_start": 7494
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe-plain": 896,
+        "safe-shared": 896,
+        "compact-plain": 800,
+        "compact-shared": 800
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 0,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.3157894736842106,
+      "peak_requested_bytes": {
+        "original-normalized": 2340,
+        "safe-plain": 1556,
+        "safe-shared": 1900,
+        "compact-plain": 1460,
+        "compact-shared": 1740
+      },
+      "allocation_calls": {
+        "original-normalized": 52,
+        "safe-plain": 31,
+        "safe-shared": 33,
+        "compact-plain": 31,
+        "compact-shared": 33
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-set-key-incremental-large.rum",
+        "kind": "lowered-input",
+        "label": "association-set-key-incremental-large",
+        "source_end": 55458,
+        "source_start": 55339
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1152,
+        "safe-plain": 1808,
+        "safe-shared": 1616,
+        "compact-plain": 1632,
+        "compact-shared": 1440
+      },
+      "stats": {
+        "entries": 9,
+        "hits": 4,
+        "symbol_visits": 13,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 192,
+      "compact_shared_over_original_normalized": 1.25,
+      "peak_requested_bytes": {
+        "original-normalized": 4584,
+        "safe-plain": 3128,
+        "safe-shared": 3608,
+        "compact-plain": 2952,
+        "compact-shared": 3304
+      },
+      "allocation_calls": {
+        "original-normalized": 93,
+        "safe-plain": 57,
+        "safe-shared": 56,
+        "compact-plain": 57,
+        "compact-shared": 56
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-set-key-incremental-small.rum",
+        "kind": "lowered-input",
+        "label": "association-set-key-incremental-small",
+        "source_end": 55258,
+        "source_start": 55139
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1152,
+        "safe-plain": 1808,
+        "safe-shared": 1616,
+        "compact-plain": 1632,
+        "compact-shared": 1440
+      },
+      "stats": {
+        "entries": 9,
+        "hits": 4,
+        "symbol_visits": 13,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 192,
+      "compact_shared_over_original_normalized": 1.25,
+      "peak_requested_bytes": {
+        "original-normalized": 4584,
+        "safe-plain": 3128,
+        "safe-shared": 3608,
+        "compact-plain": 2952,
+        "compact-shared": 3304
+      },
+      "allocation_calls": {
+        "original-normalized": 93,
+        "safe-plain": 57,
+        "safe-shared": 56,
+        "compact-plain": 57,
+        "compact-shared": 56
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/association-small-literal-repeat.rum",
+        "kind": "lowered-input",
+        "label": "association-small-literal-repeat",
+        "source_end": 55665,
+        "source_start": 55534
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 944,
+        "safe-plain": 1456,
+        "safe-shared": 1360,
+        "compact-plain": 1304,
+        "compact-shared": 1208
+      },
+      "stats": {
+        "entries": 9,
+        "hits": 2,
+        "symbol_visits": 11,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.2796610169491525,
+      "peak_requested_bytes": {
+        "original-normalized": 3344,
+        "safe-plain": 2272,
+        "safe-shared": 2848,
+        "compact-plain": 2120,
+        "compact-shared": 2568
+      },
+      "allocation_calls": {
+        "original-normalized": 73,
+        "safe-plain": 45,
+        "safe-shared": 46,
+        "compact-plain": 45,
+        "compact-shared": 46
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/block-init-null-repeat.rum",
+        "kind": "lowered-input",
+        "label": "block-init-null-repeat",
+        "source_end": 23904,
+        "source_start": 23856
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 848,
+        "safe-plain": 1312,
+        "safe-shared": 1264,
+        "compact-plain": 1184,
+        "compact-shared": 1136
+      },
+      "stats": {
+        "entries": 8,
+        "hits": 1,
+        "symbol_visits": 9,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.3396226415094339,
+      "peak_requested_bytes": {
+        "original-normalized": 3104,
+        "safe-plain": 2128,
+        "safe-shared": 2752,
+        "compact-plain": 2000,
+        "compact-shared": 2496
+      },
+      "allocation_calls": {
+        "original-normalized": 71,
+        "safe-plain": 43,
+        "safe-shared": 45,
+        "compact-plain": 43,
+        "compact-shared": 45
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/block-init-read-repeat.rum",
+        "kind": "lowered-input",
+        "label": "block-init-read-repeat",
+        "source_end": 24008,
+        "source_start": 23963
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 848,
+        "safe-plain": 1312,
+        "safe-shared": 1216,
+        "compact-plain": 1184,
+        "compact-shared": 1088
+      },
+      "stats": {
+        "entries": 7,
+        "hits": 2,
+        "symbol_visits": 9,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.2830188679245282,
+      "peak_requested_bytes": {
+        "original-normalized": 3104,
+        "safe-plain": 2128,
+        "safe-shared": 2376,
+        "compact-plain": 2000,
+        "compact-shared": 2184
+      },
+      "allocation_calls": {
+        "original-normalized": 71,
+        "safe-plain": 43,
+        "safe-shared": 43,
+        "compact-plain": 43,
+        "compact-shared": 43
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/block-local.rum",
+        "kind": "lowered-input",
+        "label": "block-local",
+        "source_end": 23692,
+        "source_start": 23665
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 576,
+        "safe-plain": 880,
+        "safe-shared": 832,
+        "compact-plain": 792,
+        "compact-shared": 744
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 1,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.2916666666666667,
+      "peak_requested_bytes": {
+        "original-normalized": 2484,
+        "safe-plain": 1732,
+        "safe-shared": 2028,
+        "compact-plain": 1644,
+        "compact-shared": 1876
+      },
+      "allocation_calls": {
+        "original-normalized": 54,
+        "safe-plain": 32,
+        "safe-shared": 33,
+        "compact-plain": 32,
+        "compact-shared": 33
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/block-symbol-only-repeat.rum",
+        "kind": "lowered-input",
+        "label": "block-symbol-only-repeat",
+        "source_end": 23797,
+        "source_start": 23753
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 696,
+        "safe-plain": 1112,
+        "safe-shared": 1064,
+        "compact-plain": 1008,
+        "compact-shared": 960
+      },
+      "stats": {
+        "entries": 7,
+        "hits": 1,
+        "symbol_visits": 8,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.3793103448275863,
+      "peak_requested_bytes": {
+        "original-normalized": 2752,
+        "safe-plain": 1928,
+        "safe-shared": 2224,
+        "compact-plain": 1824,
+        "compact-shared": 2056
+      },
+      "allocation_calls": {
+        "original-normalized": 63,
+        "safe-plain": 38,
+        "safe-shared": 39,
+        "compact-plain": 38,
+        "compact-shared": 39
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/cases-wide-no-match.rum",
+        "kind": "lowered-input",
+        "label": "cases-wide-no-match",
+        "source_end": 51502,
+        "source_start": 51462
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/character-range-small.rum",
+        "kind": "lowered-input",
+        "label": "character-range-small",
+        "source_end": 52590,
+        "source_start": 52566
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 154,
+        "safe-plain": 298,
+        "safe-shared": 298,
+        "compact-plain": 274,
+        "compact-shared": 274
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7792207792207793,
+      "peak_requested_bytes": {
+        "original-normalized": 844,
+        "safe-plain": 626,
+        "safe-shared": 806,
+        "compact-plain": 602,
+        "compact-shared": 750
+      },
+      "allocation_calls": {
+        "original-normalized": 24,
+        "safe-plain": 14,
+        "safe-shared": 15,
+        "compact-plain": 14,
+        "compact-shared": 15
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/count-wide-no-match.rum",
+        "kind": "lowered-input",
+        "label": "count-wide-no-match",
+        "source_end": 51606,
+        "source_start": 51566
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/default-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "default-guarded-hit",
+        "source_end": 25701,
+        "source_start": 25679
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 88,
+        "safe-plain": 168,
+        "safe-shared": 168,
+        "compact-plain": 160,
+        "compact-shared": 160
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8181818181818181,
+      "peak_requested_bytes": {
+        "original-normalized": 648,
+        "safe-plain": 496,
+        "safe-shared": 676,
+        "compact-plain": 488,
+        "compact-shared": 636
+      },
+      "allocation_calls": {
+        "original-normalized": 16,
+        "safe-plain": 9,
+        "safe-shared": 10,
+        "compact-plain": 9,
+        "compact-shared": 10
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/default-unguarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "default-unguarded-hit",
+        "source_end": 25536,
+        "source_start": 25518
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 88,
+        "safe-plain": 168,
+        "safe-shared": 168,
+        "compact-plain": 160,
+        "compact-shared": 160
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8181818181818181,
+      "peak_requested_bytes": {
+        "original-normalized": 648,
+        "safe-plain": 496,
+        "safe-shared": 676,
+        "compact-plain": 488,
+        "compact-shared": 636
+      },
+      "allocation_calls": {
+        "original-normalized": 16,
+        "safe-plain": 9,
+        "safe-shared": 10,
+        "compact-plain": 9,
+        "compact-shared": 10
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/default-unguarded-miss.rum",
+        "kind": "lowered-input",
+        "label": "default-unguarded-miss",
+        "source_end": 25615,
+        "source_start": 25596
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 88,
+        "safe-plain": 168,
+        "safe-shared": 168,
+        "compact-plain": 160,
+        "compact-shared": 160
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8181818181818181,
+      "peak_requested_bytes": {
+        "original-normalized": 648,
+        "safe-plain": 496,
+        "safe-shared": 676,
+        "compact-plain": 488,
+        "compact-shared": 636
+      },
+      "allocation_calls": {
+        "original-normalized": 16,
+        "safe-plain": 9,
+        "safe-shared": 10,
+        "compact-plain": 9,
+        "compact-shared": 10
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/deletecases-wide-association-no-match.rum",
+        "kind": "lowered-input",
+        "label": "deletecases-wide-association-no-match",
+        "source_end": 51962,
+        "source_start": 51914
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/deletecases-wide-no-match.rum",
+        "kind": "lowered-input",
+        "label": "deletecases-wide-no-match",
+        "source_end": 51832,
+        "source_start": 51786
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/do-count-null.rum",
+        "kind": "lowered-input",
+        "label": "do-count-null",
+        "source_end": 8013,
+        "source_start": 7980
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/do-iterator-null.rum",
+        "kind": "lowered-input",
+        "label": "do-iterator-null",
+        "source_end": 8101,
+        "source_start": 8066
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe-plain": 744,
+        "safe-shared": 744,
+        "compact-plain": 672,
+        "compact-shared": 672
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 0,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 1816,
+        "safe-plain": 1232,
+        "safe-shared": 1576,
+        "compact-plain": 1160,
+        "compact-shared": 1440
+      },
+      "allocation_calls": {
+        "original-normalized": 41,
+        "safe-plain": 25,
+        "safe-shared": 27,
+        "compact-plain": 25,
+        "compact-shared": 27
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/do-small.rum",
+        "kind": "lowered-input",
+        "label": "do-small",
+        "source_end": 24423,
+        "source_start": 24383
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1064,
+        "safe-plain": 1640,
+        "safe-shared": 1400,
+        "compact-plain": 1472,
+        "compact-shared": 1232
+      },
+      "stats": {
+        "entries": 7,
+        "hits": 5,
+        "symbol_visits": 12,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 240,
+      "compact_shared_over_original_normalized": 1.1578947368421053,
+      "peak_requested_bytes": {
+        "original-normalized": 3904,
+        "safe-plain": 2584,
+        "safe-shared": 2688,
+        "compact-plain": 2416,
+        "compact-shared": 2456
+      },
+      "allocation_calls": {
+        "original-normalized": 83,
+        "safe-plain": 51,
+        "safe-shared": 48,
+        "compact-plain": 51,
+        "compact-shared": 48
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-exact-hit.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-exact-hit",
+        "source_end": 24490,
+        "source_start": 24481
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 184,
+        "safe-shared": 184,
+        "compact-plain": 168,
+        "compact-shared": 168
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4,
+      "peak_requested_bytes": {
+        "original-normalized": 696,
+        "safe-plain": 512,
+        "safe-shared": 692,
+        "compact-plain": 496,
+        "compact-shared": 644
+      },
+      "allocation_calls": {
+        "original-normalized": 18,
+        "safe-plain": 10,
+        "safe-shared": 11,
+        "compact-plain": 10,
+        "compact-shared": 11
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-exact-miss.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-exact-miss",
+        "source_end": 24557,
+        "source_start": 24548
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 184,
+        "safe-shared": 184,
+        "compact-plain": 168,
+        "compact-shared": 168
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4,
+      "peak_requested_bytes": {
+        "original-normalized": 696,
+        "safe-plain": 512,
+        "safe-shared": 692,
+        "compact-plain": 496,
+        "compact-shared": 644
+      },
+      "allocation_calls": {
+        "original-normalized": 18,
+        "safe-plain": 10,
+        "safe-shared": 11,
+        "compact-plain": 10,
+        "compact-shared": 11
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-exact-miss-repeat.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-exact-miss-repeat",
+        "source_end": 24801,
+        "source_start": 24764
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 544,
+        "safe-plain": 816,
+        "safe-shared": 816,
+        "compact-plain": 736,
+        "compact-shared": 736
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.3529411764705883,
+      "peak_requested_bytes": {
+        "original-normalized": 2196,
+        "safe-plain": 1476,
+        "safe-shared": 1820,
+        "compact-plain": 1396,
+        "compact-shared": 1676
+      },
+      "allocation_calls": {
+        "original-normalized": 51,
+        "safe-plain": 30,
+        "safe-shared": 32,
+        "compact-plain": 30,
+        "compact-shared": 32
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-guarded-decline-fallback.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-guarded-decline-fallback",
+        "source_end": 25077,
+        "source_start": 25057
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 184,
+        "safe-shared": 184,
+        "compact-plain": 168,
+        "compact-shared": 168
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4,
+      "peak_requested_bytes": {
+        "original-normalized": 696,
+        "safe-plain": 512,
+        "safe-shared": 692,
+        "compact-plain": 496,
+        "compact-shared": 644
+      },
+      "allocation_calls": {
+        "original-normalized": 18,
+        "safe-plain": 10,
+        "safe-shared": 11,
+        "compact-plain": 10,
+        "compact-shared": 11
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-guarded-hit",
+        "source_end": 24978,
+        "source_start": 24967
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 184,
+        "safe-shared": 184,
+        "compact-plain": 168,
+        "compact-shared": 168
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4,
+      "peak_requested_bytes": {
+        "original-normalized": 696,
+        "safe-plain": 512,
+        "safe-shared": 692,
+        "compact-plain": 496,
+        "compact-shared": 644
+      },
+      "allocation_calls": {
+        "original-normalized": 18,
+        "safe-plain": 10,
+        "safe-shared": 11,
+        "compact-plain": 10,
+        "compact-shared": 11
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-pattern-hit.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-pattern-hit",
+        "source_end": 24627,
+        "source_start": 24616
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 184,
+        "safe-shared": 184,
+        "compact-plain": 168,
+        "compact-shared": 168
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4,
+      "peak_requested_bytes": {
+        "original-normalized": 696,
+        "safe-plain": 512,
+        "safe-shared": 692,
+        "compact-plain": 496,
+        "compact-shared": 644
+      },
+      "allocation_calls": {
+        "original-normalized": 18,
+        "safe-plain": 10,
+        "safe-shared": 11,
+        "compact-plain": 10,
+        "compact-shared": 11
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-pattern-miss.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-pattern-miss",
+        "source_end": 24700,
+        "source_start": 24687
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 121,
+        "safe-plain": 233,
+        "safe-shared": 233,
+        "compact-plain": 217,
+        "compact-shared": 217
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7933884297520661,
+      "peak_requested_bytes": {
+        "original-normalized": 746,
+        "safe-plain": 561,
+        "safe-shared": 741,
+        "compact-plain": 545,
+        "compact-shared": 693
+      },
+      "allocation_calls": {
+        "original-normalized": 21,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/downvalue-pattern-miss-repeat.rum",
+        "kind": "lowered-input",
+        "label": "downvalue-pattern-miss-repeat",
+        "source_end": 24908,
+        "source_start": 24867
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 545,
+        "safe-plain": 865,
+        "safe-shared": 865,
+        "compact-plain": 785,
+        "compact-shared": 785
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4403669724770642,
+      "peak_requested_bytes": {
+        "original-normalized": 2246,
+        "safe-plain": 1525,
+        "safe-shared": 1869,
+        "compact-plain": 1445,
+        "compact-shared": 1725
+      },
+      "allocation_calls": {
+        "original-normalized": 54,
+        "safe-plain": 32,
+        "safe-shared": 34,
+        "compact-plain": 32,
+        "compact-shared": 34
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/head-list.rum",
+        "kind": "lowered-input",
+        "label": "head-list",
+        "source_end": 8835,
+        "source_start": 8823
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/if-true.rum",
+        "kind": "lowered-input",
+        "label": "if-true",
+        "source_end": 9147,
+        "source_start": 9133
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe-plain": 264,
+        "safe-shared": 264,
+        "compact-plain": 232,
+        "compact-shared": 232
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.2608695652173914,
+      "peak_requested_bytes": {
+        "original-normalized": 936,
+        "safe-plain": 688,
+        "safe-shared": 868,
+        "compact-plain": 656,
+        "compact-shared": 804
+      },
+      "allocation_calls": {
+        "original-normalized": 21,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/keysort-callback-large.rum",
+        "kind": "lowered-input",
+        "label": "keysort-callback-large",
+        "source_end": 163250,
+        "source_start": 163209
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/keysort-callback-small.rum",
+        "kind": "lowered-input",
+        "label": "keysort-callback-small",
+        "source_end": 163034,
+        "source_start": 162993
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/keysort-default-wide.rum",
+        "kind": "lowered-input",
+        "label": "keysort-default-wide",
+        "source_end": 164769,
+        "source_start": 164736
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/keysortby-callback-large.rum",
+        "kind": "lowered-input",
+        "label": "keysortby-callback-large",
+        "source_end": 163714,
+        "source_start": 163659
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe-plain": 360,
+        "safe-shared": 360,
+        "compact-plain": 328,
+        "compact-shared": 328
+      },
+      "stats": {
+        "entries": 4,
+        "hits": 0,
+        "symbol_visits": 4,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7826086956521738,
+      "peak_requested_bytes": {
+        "original-normalized": 1032,
+        "safe-plain": 784,
+        "safe-shared": 1128,
+        "compact-plain": 752,
+        "compact-shared": 1032
+      },
+      "allocation_calls": {
+        "original-normalized": 23,
+        "safe-plain": 14,
+        "safe-shared": 16,
+        "compact-plain": 14,
+        "compact-shared": 16
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/keysortby-callback-small.rum",
+        "kind": "lowered-input",
+        "label": "keysortby-callback-small",
+        "source_end": 163483,
+        "source_start": 163428
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe-plain": 360,
+        "safe-shared": 360,
+        "compact-plain": 328,
+        "compact-shared": 328
+      },
+      "stats": {
+        "entries": 4,
+        "hits": 0,
+        "symbol_visits": 4,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7826086956521738,
+      "peak_requested_bytes": {
+        "original-normalized": 1032,
+        "safe-plain": 784,
+        "safe-shared": 1128,
+        "compact-plain": 752,
+        "compact-shared": 1032
+      },
+      "allocation_calls": {
+        "original-normalized": 23,
+        "safe-plain": 14,
+        "safe-shared": 16,
+        "compact-plain": 14,
+        "compact-shared": 16
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/keysortby-default-wide.rum",
+        "kind": "lowered-input",
+        "label": "keysortby-default-wide",
+        "source_end": 164996,
+        "source_start": 164949
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/length-list.rum",
+        "kind": "lowered-input",
+        "label": "length-list",
+        "source_end": 8898,
+        "source_start": 8884
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/list-literal-small.rum",
+        "kind": "lowered-input",
+        "label": "list-literal-small",
+        "source_end": 8776,
+        "source_start": 8764
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 216,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 192,
+        "compact-shared": 192
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 0.8888888888888888,
+      "peak_requested_bytes": {
+        "original-normalized": 1064,
+        "safe-plain": 720,
+        "safe-shared": 900,
+        "compact-plain": 680,
+        "compact-shared": 828
+      },
+      "allocation_calls": {
+        "original-normalized": 22,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/literal-integer.rum",
+        "kind": "lowered-input",
+        "label": "literal-integer",
+        "source_end": 8433,
+        "source_start": 8430
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe-plain": 0,
+        "safe-shared": 0,
+        "compact-plain": 0,
+        "compact-shared": 0
+      },
+      "stats": {
+        "entries": 0,
+        "hits": 0,
+        "symbol_visits": 0,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": null,
+      "peak_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 88,
+        "safe-shared": 88,
+        "compact-plain": 88,
+        "compact-shared": 88
+      },
+      "allocation_calls": {
+        "original-normalized": 4,
+        "safe-plain": 2,
+        "safe-shared": 2,
+        "compact-plain": 2,
+        "compact-shared": 2
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/literal-string.rum",
+        "kind": "lowered-input",
+        "label": "literal-string",
+        "source_end": 8490,
+        "source_start": 8485
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 3,
+        "safe-plain": 51,
+        "safe-shared": 51,
+        "compact-plain": 51,
+        "compact-shared": 51
+      },
+      "stats": {
+        "entries": 0,
+        "hits": 0,
+        "symbol_visits": 0,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 17.0,
+      "peak_requested_bytes": {
+        "original-normalized": 206,
+        "safe-plain": 139,
+        "safe-shared": 139,
+        "compact-plain": 139,
+        "compact-shared": 139
+      },
+      "allocation_calls": {
+        "original-normalized": 7,
+        "safe-plain": 4,
+        "safe-shared": 4,
+        "compact-plain": 4,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/loop-empty.rum",
+        "kind": "lowered-input",
+        "label": "loop-empty",
+        "source_end": 7929,
+        "source_start": 7925
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe-plain": 48,
+        "safe-shared": 48,
+        "compact-plain": 48,
+        "compact-shared": 48
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": null,
+      "peak_requested_bytes": {
+        "original-normalized": 200,
+        "safe-plain": 136,
+        "safe-shared": 316,
+        "compact-plain": 136,
+        "compact-shared": 284
+      },
+      "allocation_calls": {
+        "original-normalized": 5,
+        "safe-plain": 3,
+        "safe-shared": 4,
+        "compact-plain": 3,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/matcher-single-tiny.rum",
+        "kind": "lowered-input",
+        "label": "matcher-single-tiny",
+        "source_end": 25992,
+        "source_start": 25924
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 584,
+        "safe-plain": 664,
+        "safe-shared": 616,
+        "compact-plain": 560,
+        "compact-shared": 512
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 1,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 0.8767123287671232,
+      "peak_requested_bytes": {
+        "original-normalized": 2056,
+        "safe-plain": 1344,
+        "safe-shared": 1476,
+        "compact-plain": 1240,
+        "compact-shared": 1340
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 23,
+        "safe-shared": 23,
+        "compact-plain": 23,
+        "compact-shared": 23
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/matcher-single-wide-large.rum",
+        "kind": "lowered-input",
+        "label": "matcher-single-wide-large",
+        "source_end": 51059,
+        "source_start": 34029
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 102728,
+        "safe-plain": 51736,
+        "safe-shared": 51688,
+        "compact-plain": 26096,
+        "compact-shared": 26048
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 1,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 0.25356280663499725,
+      "peak_requested_bytes": {
+        "original-normalized": 258688,
+        "safe-plain": 123192,
+        "safe-shared": 123324,
+        "compact-plain": 97552,
+        "compact-shared": 97652
+      },
+      "allocation_calls": {
+        "original-normalized": 56,
+        "safe-plain": 31,
+        "safe-shared": 31,
+        "compact-plain": 31,
+        "compact-shared": 31
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/matcher-single-wide-small.rum",
+        "kind": "lowered-input",
+        "label": "matcher-single-wide-small",
+        "source_end": 33924,
+        "source_start": 26096
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 51528,
+        "safe-plain": 26136,
+        "safe-shared": 26088,
+        "compact-plain": 13296,
+        "compact-shared": 13248
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 1,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 0.25710293432696785,
+      "peak_requested_bytes": {
+        "original-normalized": 129920,
+        "safe-plain": 62008,
+        "safe-shared": 62140,
+        "compact-plain": 49168,
+        "compact-shared": 49268
+      },
+      "allocation_calls": {
+        "original-normalized": 54,
+        "safe-plain": 30,
+        "safe-shared": 30,
+        "compact-plain": 30,
+        "compact-shared": 30
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/matchq-integer-fail.rum",
+        "kind": "lowered-input",
+        "label": "matchq-integer-fail",
+        "source_end": 25860,
+        "source_start": 25839
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 273,
+        "safe-plain": 481,
+        "safe-shared": 481,
+        "compact-plain": 441,
+        "compact-shared": 441
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.6153846153846154,
+      "peak_requested_bytes": {
+        "original-normalized": 1242,
+        "safe-plain": 905,
+        "safe-shared": 1085,
+        "compact-plain": 865,
+        "compact-shared": 1013
+      },
+      "allocation_calls": {
+        "original-normalized": 32,
+        "safe-plain": 19,
+        "safe-shared": 20,
+        "compact-plain": 19,
+        "compact-shared": 20
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/matchq-integer-success.rum",
+        "kind": "lowered-input",
+        "label": "matchq-integer-success",
+        "source_end": 25782,
+        "source_start": 25763
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe-plain": 432,
+        "safe-shared": 432,
+        "compact-plain": 392,
+        "compact-shared": 392
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4411764705882353,
+      "peak_requested_bytes": {
+        "original-normalized": 1192,
+        "safe-plain": 856,
+        "safe-shared": 1036,
+        "compact-plain": 816,
+        "compact-shared": 964
+      },
+      "allocation_calls": {
+        "original-normalized": 29,
+        "safe-plain": 17,
+        "safe-shared": 18,
+        "compact-plain": 17,
+        "compact-shared": 18
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/module-chain-escape-large.rum",
+        "kind": "lowered-input",
+        "label": "module-chain-escape-large",
+        "source_end": 23616,
+        "source_start": 14029
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 58608,
+        "safe-plain": 95600,
+        "safe-shared": 71312,
+        "compact-plain": 86352,
+        "compact-shared": 62064
+      },
+      "stats": {
+        "entries": 128,
+        "hits": 506,
+        "symbol_visits": 770,
+        "uncached": 136
+      },
+      "payload_saving_bytes": 24288,
+      "compact_shared_over_original_normalized": 1.058968058968059,
+      "peak_requested_bytes": {
+        "original-normalized": 189296,
+        "safe-plain": 126592,
+        "safe-shared": 112816,
+        "compact-plain": 117344,
+        "compact-shared": 101520
+      },
+      "allocation_calls": {
+        "original-normalized": 3528,
+        "safe-plain": 2342,
+        "safe-shared": 1843,
+        "compact-plain": 2342,
+        "compact-shared": 1843
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/module-chain-escape-small.rum",
+        "kind": "lowered-input",
+        "label": "module-chain-escape-small",
+        "source_end": 13971,
+        "source_start": 9274
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 29424,
+        "safe-plain": 47984,
+        "safe-shared": 34256,
+        "compact-plain": 43344,
+        "compact-shared": 29616
+      },
+      "stats": {
+        "entries": 100,
+        "hits": 286,
+        "symbol_visits": 386,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 13728,
+      "compact_shared_over_original_normalized": 1.0065252854812399,
+      "peak_requested_bytes": {
+        "original-normalized": 95088,
+        "safe-plain": 63616,
+        "safe-shared": 55152,
+        "compact-plain": 58976,
+        "compact-shared": 49488
+      },
+      "allocation_calls": {
+        "original-normalized": 1794,
+        "safe-plain": 1187,
+        "safe-shared": 907,
+        "compact-plain": 1187,
+        "compact-shared": 907
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/module-local.rum",
+        "kind": "lowered-input",
+        "label": "module-local",
+        "source_end": 9218,
+        "source_start": 9196
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 576,
+        "safe-plain": 880,
+        "safe-shared": 832,
+        "compact-plain": 792,
+        "compact-shared": 744
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 1,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.2916666666666667,
+      "peak_requested_bytes": {
+        "original-normalized": 2484,
+        "safe-plain": 1732,
+        "safe-shared": 2028,
+        "compact-plain": 1644,
+        "compact-shared": 1876
+      },
+      "allocation_calls": {
+        "original-normalized": 54,
+        "safe-plain": 32,
+        "safe-shared": 33,
+        "compact-plain": 32,
+        "compact-shared": 33
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/module-retained-gensym-gc-batch.rum",
+        "kind": "lowered-input",
+        "label": "module-retained-gensym-gc-batch",
+        "source_end": 444073,
+        "source_start": 443854
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 1784,
+        "safe-plain": 2840,
+        "safe-shared": 2504,
+        "compact-plain": 2576,
+        "compact-shared": 2240
+      },
+      "stats": {
+        "entries": 13,
+        "hits": 7,
+        "symbol_visits": 20,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 336,
+      "compact_shared_over_original_normalized": 1.2556053811659194,
+      "peak_requested_bytes": {
+        "original-normalized": 6480,
+        "safe-plain": 4440,
+        "safe-shared": 4776,
+        "compact-plain": 4176,
+        "compact-shared": 4384
+      },
+      "allocation_calls": {
+        "original-normalized": 139,
+        "safe-plain": 86,
+        "safe-shared": 82,
+        "compact-plain": 86,
+        "compact-shared": 82
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/part-list.rum",
+        "kind": "lowered-input",
+        "label": "part-list",
+        "source_end": 8956,
+        "source_start": 8945
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 248,
+        "safe-shared": 248,
+        "compact-plain": 224,
+        "compact-shared": 224
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 792,
+        "safe-plain": 576,
+        "safe-shared": 756,
+        "compact-plain": 552,
+        "compact-shared": 700
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/position-wide-no-match.rum",
+        "kind": "lowered-input",
+        "label": "position-wide-no-match",
+        "source_end": 51716,
+        "source_start": 51673
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/replace-wide-no-match.rum",
+        "kind": "lowered-input",
+        "label": "replace-wide-no-match",
+        "source_end": 52069,
+        "source_start": 52028
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe-plain": 696,
+        "safe-shared": 696,
+        "compact-plain": 624,
+        "compact-shared": 624
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.368421052631579,
+      "peak_requested_bytes": {
+        "original-normalized": 1768,
+        "safe-plain": 1184,
+        "safe-shared": 1528,
+        "compact-plain": 1112,
+        "compact-shared": 1392
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/replaceall-simple.rum",
+        "kind": "lowered-input",
+        "label": "replaceall-simple",
+        "source_end": 51176,
+        "source_start": 51160
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/replacepart-guarded-decline-fallback.rum",
+        "kind": "lowered-input",
+        "label": "replacepart-guarded-decline-fallback",
+        "source_end": 52430,
+        "source_start": 52375
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe-plain": 432,
+        "safe-shared": 432,
+        "compact-plain": 392,
+        "compact-shared": 392
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4411764705882353,
+      "peak_requested_bytes": {
+        "original-normalized": 1192,
+        "safe-plain": 856,
+        "safe-shared": 1036,
+        "compact-plain": 816,
+        "compact-shared": 964
+      },
+      "allocation_calls": {
+        "original-normalized": 29,
+        "safe-plain": 17,
+        "safe-shared": 18,
+        "compact-plain": 17,
+        "compact-shared": 18
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/replacepart-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "replacepart-guarded-hit",
+        "source_end": 52294,
+        "source_start": 52248
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe-plain": 432,
+        "safe-shared": 432,
+        "compact-plain": 392,
+        "compact-shared": 392
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4411764705882353,
+      "peak_requested_bytes": {
+        "original-normalized": 1192,
+        "safe-plain": 856,
+        "safe-shared": 1036,
+        "compact-plain": 816,
+        "compact-shared": 964
+      },
+      "allocation_calls": {
+        "original-normalized": 29,
+        "safe-plain": 17,
+        "safe-shared": 18,
+        "compact-plain": 17,
+        "compact-shared": 18
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/replacepart-wide-rule-list.rum",
+        "kind": "lowered-input",
+        "label": "replacepart-wide-rule-list",
+        "source_end": 52180,
+        "source_start": 52140
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe-plain": 432,
+        "safe-shared": 432,
+        "compact-plain": 392,
+        "compact-shared": 392
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4411764705882353,
+      "peak_requested_bytes": {
+        "original-normalized": 1192,
+        "safe-plain": 856,
+        "safe-shared": 1036,
+        "compact-plain": 816,
+        "compact-shared": 964
+      },
+      "allocation_calls": {
+        "original-normalized": 29,
+        "safe-plain": 17,
+        "safe-shared": 18,
+        "compact-plain": 17,
+        "compact-shared": 18
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/reversesort-callback-large.rum",
+        "kind": "lowered-input",
+        "label": "reversesort-callback-large",
+        "source_end": 162855,
+        "source_start": 162806
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/reversesort-callback-small.rum",
+        "kind": "lowered-input",
+        "label": "reversesort-callback-small",
+        "source_end": 162664,
+        "source_start": 162615
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/reversesort-default-wide.rum",
+        "kind": "lowered-input",
+        "label": "reversesort-default-wide",
+        "source_end": 164598,
+        "source_start": 164557
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/rewrite-guarded-decline-fallback.rum",
+        "kind": "lowered-input",
+        "label": "rewrite-guarded-decline-fallback",
+        "source_end": 51398,
+        "source_start": 51352
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 248,
+        "safe-shared": 248,
+        "compact-plain": 224,
+        "compact-shared": 224
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 792,
+        "safe-plain": 576,
+        "safe-shared": 756,
+        "compact-plain": 552,
+        "compact-shared": 700
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/rewrite-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "rewrite-guarded-hit",
+        "source_end": 51275,
+        "source_start": 51239
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 248,
+        "safe-shared": 248,
+        "compact-plain": 224,
+        "compact-shared": 224
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 792,
+        "safe-plain": 576,
+        "safe-shared": 756,
+        "compact-plain": 552,
+        "compact-shared": 700
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sameq-integer.rum",
+        "kind": "lowered-input",
+        "label": "sameq-integer",
+        "source_end": 9018,
+        "source_start": 9007
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 200,
+        "safe-shared": 200,
+        "compact-plain": 176,
+        "compact-shared": 176
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.1578947368421053,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 528,
+        "safe-shared": 708,
+        "compact-plain": 504,
+        "compact-shared": 652
+      },
+      "allocation_calls": {
+        "original-normalized": 18,
+        "safe-plain": 10,
+        "safe-shared": 11,
+        "compact-plain": 10,
+        "compact-shared": 11
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sameq-list.rum",
+        "kind": "lowered-input",
+        "label": "sameq-list",
+        "source_end": 9087,
+        "source_start": 9066
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 248,
+        "compact-plain": 272,
+        "compact-shared": 224
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 1,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 756,
+        "compact-plain": 600,
+        "compact-shared": 700
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 12,
+        "compact-plain": 12,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/set-ownvalue.rum",
+        "kind": "lowered-input",
+        "label": "set-ownvalue",
+        "source_end": 8707,
+        "source_start": 8697
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 248,
+        "safe-shared": 248,
+        "compact-plain": 224,
+        "compact-shared": 224
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 792,
+        "safe-plain": 576,
+        "safe-shared": 756,
+        "compact-plain": 552,
+        "compact-shared": 700
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/set-part-fill-large.rum",
+        "kind": "lowered-input",
+        "label": "set-part-fill-large",
+        "source_end": 56264,
+        "source_start": 56216
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe-plain": 1008,
+        "safe-shared": 912,
+        "compact-plain": 904,
+        "compact-shared": 808
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 2,
+        "symbol_visits": 8,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.2625,
+      "peak_requested_bytes": {
+        "original-normalized": 2676,
+        "safe-plain": 1860,
+        "safe-shared": 2108,
+        "compact-plain": 1756,
+        "compact-shared": 1940
+      },
+      "allocation_calls": {
+        "original-normalized": 56,
+        "safe-plain": 34,
+        "safe-shared": 34,
+        "compact-plain": 34,
+        "compact-shared": 34
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/set-part-fill-small.rum",
+        "kind": "lowered-input",
+        "label": "set-part-fill-small",
+        "source_end": 56122,
+        "source_start": 56074
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe-plain": 1008,
+        "safe-shared": 912,
+        "compact-plain": 904,
+        "compact-shared": 808
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 2,
+        "symbol_visits": 8,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.2625,
+      "peak_requested_bytes": {
+        "original-normalized": 2676,
+        "safe-plain": 1860,
+        "safe-shared": 2108,
+        "compact-plain": 1756,
+        "compact-shared": 1940
+      },
+      "allocation_calls": {
+        "original-normalized": 56,
+        "safe-plain": 34,
+        "safe-shared": 34,
+        "compact-plain": 34,
+        "compact-shared": 34
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/set-part-fixed100-len100.rum",
+        "kind": "lowered-input",
+        "label": "set-part-fixed100-len100",
+        "source_end": 55823,
+        "source_start": 55770
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe-plain": 960,
+        "safe-shared": 912,
+        "compact-plain": 856,
+        "compact-shared": 808
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 1,
+        "symbol_visits": 7,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.2625,
+      "peak_requested_bytes": {
+        "original-normalized": 2628,
+        "safe-plain": 1812,
+        "safe-shared": 2108,
+        "compact-plain": 1708,
+        "compact-shared": 1940
+      },
+      "allocation_calls": {
+        "original-normalized": 55,
+        "safe-plain": 33,
+        "safe-shared": 34,
+        "compact-plain": 33,
+        "compact-shared": 34
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/set-part-fixed100-len800.rum",
+        "kind": "lowered-input",
+        "label": "set-part-fixed100-len800",
+        "source_end": 55980,
+        "source_start": 55927
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe-plain": 960,
+        "safe-shared": 912,
+        "compact-plain": 856,
+        "compact-shared": 808
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 1,
+        "symbol_visits": 7,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.2625,
+      "peak_requested_bytes": {
+        "original-normalized": 2628,
+        "safe-plain": 1812,
+        "safe-shared": 2108,
+        "compact-plain": 1708,
+        "compact-shared": 1940
+      },
+      "allocation_calls": {
+        "original-normalized": 55,
+        "safe-plain": 33,
+        "safe-shared": 34,
+        "compact-plain": 33,
+        "compact-shared": 34
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sort-callback-large.rum",
+        "kind": "lowered-input",
+        "label": "sort-callback-large",
+        "source_end": 162128,
+        "source_start": 162093
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sort-callback-small.rum",
+        "kind": "lowered-input",
+        "label": "sort-callback-small",
+        "source_end": 161967,
+        "source_start": 161932
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sort-default-wide.rum",
+        "kind": "lowered-input",
+        "label": "sort-default-wide",
+        "source_end": 163913,
+        "source_start": 163886
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sort-symbol-default-width16000.rum",
+        "kind": "lowered-input",
+        "label": "sort-symbol-default-width16000",
+        "source_end": 164243,
+        "source_start": 164211
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sort-symbol-default-width4000.rum",
+        "kind": "lowered-input",
+        "label": "sort-symbol-default-width4000",
+        "source_end": 164071,
+        "source_start": 164040
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sortby-callback-large.rum",
+        "kind": "lowered-input",
+        "label": "sortby-callback-large",
+        "source_end": 162482,
+        "source_start": 162433
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe-plain": 360,
+        "safe-shared": 360,
+        "compact-plain": 328,
+        "compact-shared": 328
+      },
+      "stats": {
+        "entries": 4,
+        "hits": 0,
+        "symbol_visits": 4,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7826086956521738,
+      "peak_requested_bytes": {
+        "original-normalized": 1032,
+        "safe-plain": 784,
+        "safe-shared": 1128,
+        "compact-plain": 752,
+        "compact-shared": 1032
+      },
+      "allocation_calls": {
+        "original-normalized": 23,
+        "safe-plain": 14,
+        "safe-shared": 16,
+        "compact-plain": 14,
+        "compact-shared": 16
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sortby-callback-small.rum",
+        "kind": "lowered-input",
+        "label": "sortby-callback-small",
+        "source_end": 162305,
+        "source_start": 162256
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe-plain": 360,
+        "safe-shared": 360,
+        "compact-plain": 328,
+        "compact-shared": 328
+      },
+      "stats": {
+        "entries": 4,
+        "hits": 0,
+        "symbol_visits": 4,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7826086956521738,
+      "peak_requested_bytes": {
+        "original-normalized": 1032,
+        "safe-plain": 784,
+        "safe-shared": 1128,
+        "compact-plain": 752,
+        "compact-shared": 1032
+      },
+      "allocation_calls": {
+        "original-normalized": 23,
+        "safe-plain": 14,
+        "safe-shared": 16,
+        "compact-plain": 14,
+        "compact-shared": 16
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/sortby-default-wide.rum",
+        "kind": "lowered-input",
+        "label": "sortby-default-wide",
+        "source_end": 164424,
+        "source_start": 164383
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/string-repeat-small.rum",
+        "kind": "lowered-input",
+        "label": "string-repeat-small",
+        "source_end": 52508,
+        "source_start": 52488
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 153,
+        "safe-plain": 249,
+        "safe-shared": 249,
+        "compact-plain": 225,
+        "compact-shared": 225
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4705882352941178,
+      "peak_requested_bytes": {
+        "original-normalized": 794,
+        "safe-plain": 577,
+        "safe-shared": 757,
+        "compact-plain": 553,
+        "compact-shared": 701
+      },
+      "allocation_calls": {
+        "original-normalized": 21,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringreplace-guarded-decline-fallback.rum",
+        "kind": "lowered-input",
+        "label": "stringreplace-guarded-decline-fallback",
+        "source_end": 54213,
+        "source_start": 54159
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 155,
+        "safe-plain": 299,
+        "safe-shared": 299,
+        "compact-plain": 275,
+        "compact-shared": 275
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7741935483870968,
+      "peak_requested_bytes": {
+        "original-normalized": 846,
+        "safe-plain": 627,
+        "safe-shared": 807,
+        "compact-plain": 603,
+        "compact-shared": 751
+      },
+      "allocation_calls": {
+        "original-normalized": 22,
+        "safe-plain": 13,
+        "safe-shared": 14,
+        "compact-plain": 13,
+        "compact-shared": 14
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringreplace-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "stringreplace-guarded-hit",
+        "source_end": 54076,
+        "source_start": 54031
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 155,
+        "safe-plain": 299,
+        "safe-shared": 299,
+        "compact-plain": 275,
+        "compact-shared": 275
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7741935483870968,
+      "peak_requested_bytes": {
+        "original-normalized": 846,
+        "safe-plain": 627,
+        "safe-shared": 807,
+        "compact-plain": 603,
+        "compact-shared": 751
+      },
+      "allocation_calls": {
+        "original-normalized": 22,
+        "safe-plain": 13,
+        "safe-shared": 14,
+        "compact-plain": 13,
+        "compact-shared": 14
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringreplace-pattern-unguarded.rum",
+        "kind": "lowered-input",
+        "label": "stringreplace-pattern-unguarded",
+        "source_end": 53961,
+        "source_start": 53916
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 155,
+        "safe-plain": 299,
+        "safe-shared": 299,
+        "compact-plain": 275,
+        "compact-shared": 275
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7741935483870968,
+      "peak_requested_bytes": {
+        "original-normalized": 846,
+        "safe-plain": 627,
+        "safe-shared": 807,
+        "compact-plain": 603,
+        "compact-shared": 751
+      },
+      "allocation_calls": {
+        "original-normalized": 22,
+        "safe-plain": 13,
+        "safe-shared": 14,
+        "compact-plain": 13,
+        "compact-shared": 14
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringreplace-single-literal-unguarded.rum",
+        "kind": "lowered-input",
+        "label": "stringreplace-single-literal-unguarded",
+        "source_end": 53840,
+        "source_start": 53773
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 296,
+        "safe-shared": 296,
+        "compact-plain": 272,
+        "compact-shared": 272
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7894736842105263,
+      "peak_requested_bytes": {
+        "original-normalized": 840,
+        "safe-plain": 624,
+        "safe-shared": 804,
+        "compact-plain": 600,
+        "compact-shared": 748
+      },
+      "allocation_calls": {
+        "original-normalized": 20,
+        "safe-plain": 12,
+        "safe-shared": 13,
+        "compact-plain": 12,
+        "compact-shared": 13
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringtrim-literal-list-32000.rum",
+        "kind": "lowered-input",
+        "label": "stringtrim-literal-list-32000",
+        "source_end": 52907,
+        "source_start": 52851
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 306,
+        "safe-plain": 546,
+        "safe-shared": 546,
+        "compact-plain": 498,
+        "compact-shared": 498
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.6274509803921569,
+      "peak_requested_bytes": {
+        "original-normalized": 1468,
+        "safe-plain": 1034,
+        "safe-shared": 1214,
+        "compact-plain": 986,
+        "compact-shared": 1134
+      },
+      "allocation_calls": {
+        "original-normalized": 37,
+        "safe-plain": 22,
+        "safe-shared": 23,
+        "compact-plain": 22,
+        "compact-shared": 23
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringtrim-literal-list-4000.rum",
+        "kind": "lowered-input",
+        "label": "stringtrim-literal-list-4000",
+        "source_end": 52717,
+        "source_start": 52662
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 306,
+        "safe-plain": 546,
+        "safe-shared": 546,
+        "compact-plain": 498,
+        "compact-shared": 498
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 0,
+        "symbol_visits": 3,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.6274509803921569,
+      "peak_requested_bytes": {
+        "original-normalized": 1468,
+        "safe-plain": 1034,
+        "safe-shared": 1214,
+        "compact-plain": 986,
+        "compact-shared": 1134
+      },
+      "allocation_calls": {
+        "original-normalized": 37,
+        "safe-plain": 22,
+        "safe-shared": 23,
+        "compact-plain": 22,
+        "compact-shared": 23
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringtrim-single-literal-32000.rum",
+        "kind": "lowered-input",
+        "label": "stringtrim-single-literal-32000",
+        "source_end": 53280,
+        "source_start": 53229
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 153,
+        "safe-plain": 297,
+        "safe-shared": 297,
+        "compact-plain": 273,
+        "compact-shared": 273
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7843137254901962,
+      "peak_requested_bytes": {
+        "original-normalized": 842,
+        "safe-plain": 625,
+        "safe-shared": 805,
+        "compact-plain": 601,
+        "compact-shared": 749
+      },
+      "allocation_calls": {
+        "original-normalized": 22,
+        "safe-plain": 13,
+        "safe-shared": 14,
+        "compact-plain": 13,
+        "compact-shared": 14
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringtrim-single-literal-4000.rum",
+        "kind": "lowered-input",
+        "label": "stringtrim-single-literal-4000",
+        "source_end": 53093,
+        "source_start": 53043
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 153,
+        "safe-plain": 297,
+        "safe-shared": 297,
+        "compact-plain": 273,
+        "compact-shared": 273
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.7843137254901962,
+      "peak_requested_bytes": {
+        "original-normalized": 842,
+        "safe-plain": 625,
+        "safe-shared": 805,
+        "compact-plain": 601,
+        "compact-shared": 749
+      },
+      "allocation_calls": {
+        "original-normalized": 22,
+        "safe-plain": 13,
+        "safe-shared": 14,
+        "compact-plain": 13,
+        "compact-shared": 14
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringtrim-whitespace-32000.rum",
+        "kind": "lowered-input",
+        "label": "stringtrim-whitespace-32000",
+        "source_end": 53629,
+        "source_start": 53586
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/stringtrim-whitespace-4000.rum",
+        "kind": "lowered-input",
+        "label": "stringtrim-whitespace-4000",
+        "source_end": 53454,
+        "source_start": 53412
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/subvalue-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "subvalue-guarded-hit",
+        "source_end": 25458,
+        "source_start": 25431
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 240,
+        "safe-plain": 320,
+        "safe-shared": 320,
+        "compact-plain": 288,
+        "compact-shared": 288
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.2,
+      "peak_requested_bytes": {
+        "original-normalized": 1048,
+        "safe-plain": 744,
+        "safe-shared": 924,
+        "compact-plain": 712,
+        "compact-shared": 860
+      },
+      "allocation_calls": {
+        "original-normalized": 27,
+        "safe-plain": 15,
+        "safe-shared": 16,
+        "compact-plain": 15,
+        "compact-shared": 16
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/subvalue-unguarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "subvalue-unguarded-hit",
+        "source_end": 25275,
+        "source_start": 25255
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 240,
+        "safe-plain": 320,
+        "safe-shared": 320,
+        "compact-plain": 288,
+        "compact-shared": 288
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.2,
+      "peak_requested_bytes": {
+        "original-normalized": 1048,
+        "safe-plain": 744,
+        "safe-shared": 924,
+        "compact-plain": 712,
+        "compact-shared": 860
+      },
+      "allocation_calls": {
+        "original-normalized": 27,
+        "safe-plain": 15,
+        "safe-shared": 16,
+        "compact-plain": 15,
+        "compact-shared": 16
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/subvalue-unguarded-miss.rum",
+        "kind": "lowered-input",
+        "label": "subvalue-unguarded-miss",
+        "source_end": 25365,
+        "source_start": 25343
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 241,
+        "safe-plain": 369,
+        "safe-shared": 369,
+        "compact-plain": 337,
+        "compact-shared": 337
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.3983402489626555,
+      "peak_requested_bytes": {
+        "original-normalized": 1098,
+        "safe-plain": 793,
+        "safe-shared": 973,
+        "compact-plain": 761,
+        "compact-shared": 909
+      },
+      "allocation_calls": {
+        "original-normalized": 30,
+        "safe-plain": 17,
+        "safe-shared": 18,
+        "compact-plain": 17,
+        "compact-shared": 18
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/symbol-ownvalue-guarded-read.rum",
+        "kind": "lowered-input",
+        "label": "symbol-ownvalue-guarded-read",
+        "source_end": 8646,
+        "source_start": 8625
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe-plain": 48,
+        "safe-shared": 48,
+        "compact-plain": 48,
+        "compact-shared": 48
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": null,
+      "peak_requested_bytes": {
+        "original-normalized": 200,
+        "safe-plain": 136,
+        "safe-shared": 316,
+        "compact-plain": 136,
+        "compact-shared": 284
+      },
+      "allocation_calls": {
+        "original-normalized": 5,
+        "safe-plain": 3,
+        "safe-shared": 4,
+        "compact-plain": 3,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/symbol-ownvalue-read.rum",
+        "kind": "lowered-input",
+        "label": "symbol-ownvalue-read",
+        "source_end": 8552,
+        "source_start": 8548
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe-plain": 48,
+        "safe-shared": 48,
+        "compact-plain": 48,
+        "compact-shared": 48
+      },
+      "stats": {
+        "entries": 1,
+        "hits": 0,
+        "symbol_visits": 1,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": null,
+      "peak_requested_bytes": {
+        "original-normalized": 200,
+        "safe-plain": 136,
+        "safe-shared": 316,
+        "compact-plain": 136,
+        "compact-shared": 284
+      },
+      "allocation_calls": {
+        "original-normalized": 5,
+        "safe-plain": 3,
+        "safe-shared": 4,
+        "compact-plain": 3,
+        "compact-shared": 4
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/table-count-null.rum",
+        "kind": "lowered-input",
+        "label": "table-count-null",
+        "source_end": 8189,
+        "source_start": 8154
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe-plain": 680,
+        "safe-shared": 680,
+        "compact-plain": 616,
+        "compact-shared": 616
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 0,
+        "symbol_visits": 5,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4528301886792452,
+      "peak_requested_bytes": {
+        "original-normalized": 1720,
+        "safe-plain": 1168,
+        "safe-shared": 1512,
+        "compact-plain": 1104,
+        "compact-shared": 1384
+      },
+      "allocation_calls": {
+        "original-normalized": 40,
+        "safe-plain": 24,
+        "safe-shared": 26,
+        "compact-plain": 24,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/table-iterator-null.rum",
+        "kind": "lowered-input",
+        "label": "table-iterator-null",
+        "source_end": 8283,
+        "source_start": 8245
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe-plain": 744,
+        "safe-shared": 744,
+        "compact-plain": 672,
+        "compact-shared": 672
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 0,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 1816,
+        "safe-plain": 1232,
+        "safe-shared": 1576,
+        "compact-plain": 1160,
+        "compact-shared": 1440
+      },
+      "allocation_calls": {
+        "original-normalized": 41,
+        "safe-plain": 25,
+        "safe-shared": 27,
+        "compact-plain": 25,
+        "compact-shared": 27
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/table-iterator-pair-list.rum",
+        "kind": "lowered-input",
+        "label": "table-iterator-pair-list",
+        "source_end": 24338,
+        "source_start": 24298
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe-plain": 992,
+        "safe-shared": 848,
+        "compact-plain": 896,
+        "compact-shared": 752
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 3,
+        "symbol_visits": 8,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 144,
+      "compact_shared_over_original_normalized": 1.236842105263158,
+      "peak_requested_bytes": {
+        "original-normalized": 2436,
+        "safe-plain": 1652,
+        "safe-shared": 1852,
+        "compact-plain": 1556,
+        "compact-shared": 1692
+      },
+      "allocation_calls": {
+        "original-normalized": 54,
+        "safe-plain": 33,
+        "safe-shared": 32,
+        "compact-plain": 33,
+        "compact-shared": 32
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/table-iterator-plus.rum",
+        "kind": "lowered-input",
+        "label": "table-iterator-plus",
+        "source_end": 24237,
+        "source_start": 24198
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe-plain": 944,
+        "safe-shared": 896,
+        "compact-plain": 848,
+        "compact-shared": 800
+      },
+      "stats": {
+        "entries": 6,
+        "hits": 1,
+        "symbol_visits": 7,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.3157894736842106,
+      "peak_requested_bytes": {
+        "original-normalized": 2388,
+        "safe-plain": 1604,
+        "safe-shared": 1900,
+        "compact-plain": 1508,
+        "compact-shared": 1740
+      },
+      "allocation_calls": {
+        "original-normalized": 53,
+        "safe-plain": 32,
+        "safe-shared": 33,
+        "compact-plain": 32,
+        "compact-shared": 33
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/table-iterator-symbol.rum",
+        "kind": "lowered-input",
+        "label": "table-iterator-symbol",
+        "source_end": 8376,
+        "source_start": 8341
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe-plain": 744,
+        "safe-shared": 696,
+        "compact-plain": 672,
+        "compact-shared": 624
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 1,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.368421052631579,
+      "peak_requested_bytes": {
+        "original-normalized": 1816,
+        "safe-plain": 1232,
+        "safe-shared": 1528,
+        "compact-plain": 1160,
+        "compact-shared": 1392
+      },
+      "allocation_calls": {
+        "original-normalized": 41,
+        "safe-plain": 25,
+        "safe-shared": 26,
+        "compact-plain": 25,
+        "compact-shared": 26
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/table-small.rum",
+        "kind": "lowered-input",
+        "label": "table-small",
+        "source_end": 24142,
+        "source_start": 24123
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 336,
+        "safe-plain": 512,
+        "safe-shared": 464,
+        "compact-plain": 456,
+        "compact-shared": 408
+      },
+      "stats": {
+        "entries": 3,
+        "hits": 1,
+        "symbol_visits": 4,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.2142857142857142,
+      "peak_requested_bytes": {
+        "original-normalized": 1464,
+        "safe-plain": 1000,
+        "safe-shared": 1132,
+        "compact-plain": 944,
+        "compact-shared": 1044
+      },
+      "allocation_calls": {
+        "original-normalized": 32,
+        "safe-plain": 19,
+        "safe-shared": 19,
+        "compact-plain": 19,
+        "compact-shared": 19
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/upvalue-candidates-tiny.rum",
+        "kind": "lowered-input",
+        "label": "upvalue-candidates-tiny",
+        "source_end": 56531,
+        "source_start": 56422
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 704,
+        "safe-plain": 1184,
+        "safe-shared": 1088,
+        "compact-plain": 1064,
+        "compact-shared": 968
+      },
+      "stats": {
+        "entries": 9,
+        "hits": 2,
+        "symbol_visits": 11,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.375,
+      "peak_requested_bytes": {
+        "original-normalized": 2916,
+        "safe-plain": 2036,
+        "safe-shared": 2612,
+        "compact-plain": 1916,
+        "compact-shared": 2364
+      },
+      "allocation_calls": {
+        "original-normalized": 59,
+        "safe-plain": 37,
+        "safe-shared": 38,
+        "compact-plain": 37,
+        "compact-shared": 38
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/upvalue-candidates-wide-large.rum",
+        "kind": "lowered-input",
+        "label": "upvalue-candidates-wide-large",
+        "source_end": 160237,
+        "source_start": 90847
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 102976,
+        "safe-plain": 205728,
+        "safe-shared": 205632,
+        "compact-plain": 180040,
+        "compact-shared": 179944
+      },
+      "stats": {
+        "entries": 128,
+        "hits": 2,
+        "symbol_visits": 3207,
+        "uncached": 3077
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.7474362958359229,
+      "peak_requested_bytes": {
+        "original-normalized": 517084,
+        "safe-plain": 348524,
+        "safe-shared": 358940,
+        "compact-plain": 322836,
+        "compact-shared": 331204
+      },
+      "allocation_calls": {
+        "original-normalized": 3275,
+        "safe-plain": 3243,
+        "safe-shared": 3248,
+        "compact-plain": 3243,
+        "compact-shared": 3248
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/upvalue-candidates-wide-small.rum",
+        "kind": "lowered-input",
+        "label": "upvalue-candidates-wide-small",
+        "source_end": 90784,
+        "source_start": 56594
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 51776,
+        "safe-plain": 103328,
+        "safe-shared": 103232,
+        "compact-plain": 90440,
+        "compact-shared": 90344
+      },
+      "stats": {
+        "entries": 128,
+        "hits": 2,
+        "symbol_visits": 1607,
+        "uncached": 1477
+      },
+      "payload_saving_bytes": 96,
+      "compact_shared_over_original_normalized": 1.7449011124845488,
+      "peak_requested_bytes": {
+        "original-normalized": 259548,
+        "safe-plain": 174956,
+        "safe-shared": 185372,
+        "compact-plain": 162068,
+        "compact-shared": 170436
+      },
+      "allocation_calls": {
+        "original-normalized": 1673,
+        "safe-plain": 1642,
+        "safe-shared": 1647,
+        "compact-plain": 1642,
+        "compact-shared": 1647
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/upvalue-guarded-hit.rum",
+        "kind": "lowered-input",
+        "label": "upvalue-guarded-hit",
+        "source_end": 25194,
+        "source_start": 25142
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe-plain": 248,
+        "safe-shared": 248,
+        "compact-plain": 224,
+        "compact-shared": 224
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.4736842105263157,
+      "peak_requested_bytes": {
+        "original-normalized": 792,
+        "safe-plain": 576,
+        "safe-shared": 756,
+        "compact-plain": 552,
+        "compact-shared": 700
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/valueq-undefined-symbol-definitions-2000.rum",
+        "kind": "lowered-input",
+        "label": "valueq-undefined-symbol-definitions-2000",
+        "source_end": 233106,
+        "source_start": 233077
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/valueq-undefined-symbol-definitions-8000.rum",
+        "kind": "lowered-input",
+        "label": "valueq-undefined-symbol-definitions-8000",
+        "source_end": 443327,
+        "source_start": 443298
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe-plain": 232,
+        "safe-shared": 232,
+        "compact-plain": 216,
+        "compact-shared": 216
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 0,
+        "symbol_visits": 2,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 0,
+      "compact_shared_over_original_normalized": 1.8,
+      "peak_requested_bytes": {
+        "original-normalized": 744,
+        "safe-plain": 560,
+        "safe-shared": 740,
+        "compact-plain": 544,
+        "compact-shared": 692
+      },
+      "allocation_calls": {
+        "original-normalized": 19,
+        "safe-plain": 11,
+        "safe-shared": 12,
+        "compact-plain": 11,
+        "compact-shared": 12
+      }
+    },
+    {
+      "entry": {
+        "file": "inputs/with-local.rum",
+        "kind": "lowered-input",
+        "label": "with-local",
+        "source_end": 24075,
+        "source_start": 24055
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 576,
+        "safe-plain": 880,
+        "safe-shared": 832,
+        "compact-plain": 792,
+        "compact-shared": 744
+      },
+      "stats": {
+        "entries": 5,
+        "hits": 1,
+        "symbol_visits": 6,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 48,
+      "compact_shared_over_original_normalized": 1.2916666666666667,
+      "peak_requested_bytes": {
+        "original-normalized": 2484,
+        "safe-plain": 1732,
+        "safe-shared": 2028,
+        "compact-plain": 1644,
+        "compact-shared": 1876
+      },
+      "allocation_calls": {
+        "original-normalized": 54,
+        "safe-plain": 32,
+        "safe-shared": 33,
+        "compact-plain": 32,
+        "compact-shared": 33
+      }
+    },
+    {
+      "entry": {
+        "file": "generated-in-memory",
+        "kind": "synthetic-control",
+        "label": "synthetic-repeated-symbol-16000",
+        "source_end": 0,
+        "source_start": 0
+      },
+      "retained_requested_bytes": {
+        "original-normalized": 512088,
+        "safe-plain": 1024168,
+        "safe-shared": 256216,
+        "compact-plain": 896160,
+        "compact-shared": 128208
+      },
+      "stats": {
+        "entries": 2,
+        "hits": 15999,
+        "symbol_visits": 16001,
+        "uncached": 0
+      },
+      "payload_saving_bytes": 767952,
+      "compact_shared_over_original_normalized": 0.250363218821765,
+      "peak_requested_bytes": {
+        "original-normalized": 2444760,
+        "safe-plain": 1670528,
+        "safe-shared": 902756,
+        "compact-plain": 1542520,
+        "compact-shared": 774716
+      },
+      "allocation_calls": {
+        "original-normalized": 16044,
+        "safe-plain": 16023,
+        "safe-shared": 25,
+        "compact-plain": 16023,
+        "compact-shared": 25
+      }
+    }
+  ],
+  "source_hashes": {
+    "analyze.py": "f0077b4e033977eb88a51c3df3d325fab9a27519a71f11645e0b134c13e5598d",
+    "Cargo.lock": "8f61c7b482fa9ba52bbc14cf2fb74251d214c6d5939582748a9ab1bfbec5131e",
+    "Cargo.toml": "18cc9eebad286801f4ae53c9da768d49da9739337b80c1adad9e74c70ce0d774",
+    "run-study.sh": "ad58f6a250f311abcfcb62bb91acd55b9f575885e811559c0b5ca22238da20a3",
+    "src/bin/scan.rs": "3b08ed17123d76628fb390d0bd7cd4ca862c1c6c928b5f1cf9e3942d55ffae44",
+    "src/bin/symbol-study.rs": "cbde0d37a522f0c2ffc8990d08f0329e75c40e958e50bb8b08a14c219cb49f86",
+    "src/bin/timing.rs": "ae1371c7ce4ffb30165d78a1cda2e8224025ece55e6bfd9e3ee5e7aafccb0dac",
+    "src/bridge.rs": "96100adae2e4d71df331572428c3f2bf7c42bbdf1e9d7044faffe864c0a3b12a",
+    "src/lib.rs": "6ceb618d3511eff2550bfa337251e0ed21702eecdd4b882aaaa1fff68c2fe1cf",
+    "src/tests.rs": "9ab40a89ddeca3e425ad7bc010772402e62d8541af1dedb683976b3558f28fe4",
+    "timings.py": "5a83e6b52644de43ceaa7a645a4026b98b850737a9f2d39aef8e7287f47d75c0"
+  },
+  "raw_evidence_hashes": {
+    "allocation-build.log": "1101af82cbcbf580c3d7cca57a2d6fadc7992ca6d4c6d6f175db8ffc73983610",
+    "allocations.json": "9ec4d6d632039452d7cfb5d66228bf91a89cec3ecf46a67db073427cfa1cb0d0",
+    "allocations.log": "9035d379fade1a6b3a3f879860d09efeedf6cd52e64d2ee971ffe92781ba6d8f",
+    "environment.txt": "f0fc848a6362a7f3d2fe640cafd042bb1627ad66baa675dd98c63c8f95ee6585",
+    "format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "miri-stacked.log": "761e4fde8d9eafc5922aeab877d8abc3f1ea014bb44fe0b3111f6d9d7a10fe31",
+    "miri-tree.log": "fff7cd0abff63718ac84c4d2f1e6454abcf2eb81ff6fdf5afcac21ddbf141184",
+    "native-all-features.log": "f28e72bb8c927e8b19b6e1a42ea0a82d46fd0ffd9145e6f707bc6cbe6b490485",
+    "native.log": "d4450ca30711853a462594b9576cb2c4c4cc0e9353f7f165e159067dc8e9a7d1",
+    "run-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "run-1.tsv": "8ed330679e0fd72e2755b71dc3989445909a611f95a3688e1bd11b24202e0094",
+    "run-2.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "run-2.tsv": "cea49cb9e065e1976f38933d58925d83f1600b301d57d0dcedb1bdbc3990b42d",
+    "run-3.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "run-3.tsv": "1e394de17727af2370408cdb08d86b84a7020651a47d6169905871e902add275",
+    "semantic.log": "8fd0c88242d8ebc6bd8809bab224fa397ab47e9fabd738f7bcd177db8608edb8",
+    "status.txt": "c26de83abdc9496cd1301470918ec39ecca1cf389ef0ae1c6504da1800d1c431",
+    "timing-build.log": "0fc02f52708ff3f5e436d17ee165d59515d57c09a44a344af508dbd5f7fd5610"
+  },
+  "diagnostic_paths_redacted": true,
+  "raw_evidence_hash_scope": "Committed redacted raw files"
+}

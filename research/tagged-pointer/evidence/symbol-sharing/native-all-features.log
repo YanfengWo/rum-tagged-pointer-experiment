@@ -1,0 +1,49 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling num-traits v0.2.19
+   Compiling thiserror v2.0.18
+   Compiling zmij v1.0.21
+   Compiling serde_json v1.0.149
+   Compiling num-integer v0.1.46
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.0
+   Compiling syn v2.0.117
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling rum-derive v0.2.0 (<RUM_ROOT>/crates/rum-derive)
+   Compiling rum-syntax v0.2.0 (<RUM_ROOT>/crates/rum-syntax)
+   Compiling serde v1.0.228
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<RUM_ROOT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+   Compiling rum-runtime v0.2.0 (<RUM_ROOT>/crates/rum-runtime)
+   Compiling rum-recursive-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/recursive-expr)
+   Compiling rum-stdlib v0.2.0 (<RUM_ROOT>/crates/rum-stdlib)
+   Compiling rum-symbol-sharing v0.0.0 (<RUM_ROOT>/research/tagged-pointer/symbol-sharing)
+    Finished `test` profile [unoptimized] target(s) in 35.25s
+     Running unittests src/lib.rs (/tmp/rum-tagged-build-77029938/base/debug/deps/rum_symbol_sharing-2f26069b04d358aa)
+
+running 8 tests
+test tests::consuming_one_cached_atom_keeps_its_sibling_valid ... ok
+test tests::full_context_and_generated_identity_are_keys ... ok
+test tests::head_args_alias_classes_cow_and_weak_are_preserved ... ok
+test tests::non_symbol_atoms_keep_their_original_variants ... ok
+test tests::repeated_symbols_share_then_release_for_both_owners ... ok
+test tests::nested_dag_is_not_unfolded_by_conversion ... ok
+test tests::zero_limit_and_full_cache_fallback_are_correct ... ok
+test tests::deep_explicit_release_handles_shared_symbol_payloads ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running unittests src/bin/symbol-study.rs (/tmp/rum-tagged-build-77029938/base/debug/deps/symbol_study-e3735fdeea45ed4d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rum_symbol_sharing
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
