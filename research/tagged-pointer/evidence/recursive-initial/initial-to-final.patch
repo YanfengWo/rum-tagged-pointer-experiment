@@ -1,0 +1,76 @@
+--- a/research/tagged-pointer/recursive-expr/src/lib.rs
++++ b/research/tagged-pointer/recursive-expr/src/lib.rs
+@@ -202,6 +202,7 @@
+             fn call(head: Head<Self>, args: Args<Self>) -> Self {
+                 Self::call(head, args)
+             }
++            #[inline]
+             fn view(&self) -> View<'_, Self> {
+                 self.view()
+             }
+--- a/research/tagged-pointer/recursive-expr/src/bin/study/fixtures.rs
++++ b/research/tagged-pointer/recursive-expr/src/bin/study/fixtures.rs
+@@ -103,9 +103,14 @@
+ pub fn release_original(expr: Expr) {
+     let mut pending = vec![expr];
+     while let Some(node) = pending.pop() {
+-        if let Expr::Call { head, args } = node {
++        if let Expr::Call { head, mut args } = node {
+             pending.push(head.into_owned());
+-            pending.extend(args.into_vec());
++            // Fixtures have atom heads and no Weak observers. Avoid cloning a
++            // shared DAG list just to release this count. Last unique lists can
++            // move their children out through rum's safe get_mut interface.
++            if let Some(values) = args.get_mut() {
++                pending.extend(std::mem::take(values));
++            }
+         }
+     }
+ }
+--- a/research/tagged-pointer/recursive-expr/src/bin/recursive-study.rs
++++ b/research/tagged-pointer/recursive-expr/src/bin/recursive-study.rs
+@@ -187,6 +187,44 @@
+     }
+ }
+ 
++#[cfg(test)]
++mod checks {
++    use super::*;
++    use rum_core::Expr;
++    use rum_recursive_expr::{Tree, View, from_expr};
++    #[test]
++    fn fixture_cow_preserves_value_and_source() {
++        fn check<N: Tree>(input: &Expr, expected: u64) {
++            let root: N = from_expr(input);
++            let View::Call { head, args } = root.view() else {
++                panic!()
++            };
++            let weak = args.downgrade();
++            let mut changed = args.clone();
++            changed
++                .make_mut()
++                .push(N::atom(rum_core::Atom::Integer(rum_core::IntValue::Small(
++                    1,
++                ))));
++            assert!(!args.ptr_eq(&changed));
++            let modified = N::call(head.clone(), changed);
++            assert_eq!(fixtures::checksum(&modified), expected + 1);
++            assert_eq!(fixtures::checksum(&root), expected);
++            modified.release_iterative();
++            assert!(weak.is_alive());
++            root.release_iterative();
++            assert!(!weak.is_alive());
++        }
++        for dataset in fixtures::DATASETS {
++            let input = fixtures::fixture(dataset);
++            let expected = fixtures::original_checksum(&input);
++            check::<Compact>(&input, expected);
++            check::<Safe>(&input, expected);
++            fixtures::release_original(input);
++        }
++    }
++}
++
+ #[cfg(feature = "allocation-count")]
+ fn measure<T>(dataset: &str, repr: &str, build: impl FnOnce() -> T) {
+     let start = allocation::start();

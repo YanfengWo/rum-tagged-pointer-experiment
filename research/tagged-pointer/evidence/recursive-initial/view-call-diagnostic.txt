@@ -1,0 +1,7 @@
+Cross-crate Tree::view calls in this benchmark binary assembly: 6
+	callq	*_ZN69_$LT$rum_recursive_expr..Safe$u20$as$u20$rum_recursive_expr..Tree$GT$4view17ha96cc5b86b4bb3c7E@GOTPCREL(%rip)
+	callq	*_ZN72_$LT$rum_recursive_expr..Compact$u20$as$u20$rum_recursive_expr..Tree$GT$4view17h611985406b8bc725E@GOTPCREL(%rip)
+	callq	*_ZN69_$LT$rum_recursive_expr..Safe$u20$as$u20$rum_recursive_expr..Tree$GT$4view17ha96cc5b86b4bb3c7E@GOTPCREL(%rip)
+	callq	*_ZN69_$LT$rum_recursive_expr..Safe$u20$as$u20$rum_recursive_expr..Tree$GT$4view17ha96cc5b86b4bb3c7E@GOTPCREL(%rip)
+	callq	*_ZN72_$LT$rum_recursive_expr..Compact$u20$as$u20$rum_recursive_expr..Tree$GT$4view17h611985406b8bc725E@GOTPCREL(%rip)
+	callq	*_ZN72_$LT$rum_recursive_expr..Compact$u20$as$u20$rum_recursive_expr..Tree$GT$4view17h611985406b8bc725E@GOTPCREL(%rip)

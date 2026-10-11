@@ -1,0 +1,1 @@
+CPU affinity: 0; 1 warmup + 9 measured rounds; 3 runs; representations rotate; default standalone release; counters absent from timing build

@@ -1,0 +1,34 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling syn v2.0.119
+   Compiling num-integer v0.1.46
+   Compiling serde_derive v1.0.228
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<RUM_ROOT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+   Compiling rum-recursive-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/recursive-expr)
+    Finished `test` profile [unoptimized] target(s) in 11.24s
+     Running unittests src/lib.rs (/tmp/rum-tagged-build-77029938/recursive-study/miri/x86_64-unknown-linux-gnu/debug/build/rum-recursive-expr/4cd8a84d4b8152d4/out/rum_recursive_expr-4cd8a84d4b8152d4)
+
+running 13 tests
+test tests::compact_aliases_and_weak_namespace ... ok
+test tests::compact_all_variants ... ok
+test tests::compact_cow_and_weak_only_detach ... ok
+test tests::consuming_parts_preserve_shared_sibling ... ok
+test tests::deep_conversion_and_iterative_release ... ok
+test tests::iterative_release_shared_args_and_weak ... ok
+test tests::layout_and_threads ... ok
+test tests::nested_dag_conversion_does_not_expand_logical_tree ... ok
+test tests::ordinary_drop_moderate_depth_both_backends ... ok
+test tests::private_owner_exactly_once_aligned_payload ... ok
+test tests::safe_aliases_and_weak_namespace ... ok
+test tests::safe_all_variants ... ok
+test tests::safe_cow_and_weak_only_detach ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.55s
+

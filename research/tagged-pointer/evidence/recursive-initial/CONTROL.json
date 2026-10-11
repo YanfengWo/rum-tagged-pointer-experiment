@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "path": "src/lib.rs",
+      "before_sha256": "c63e46beb8320e7db88242368c90742f39c10935179a6db66654d8d2ea3571b7",
+      "after_sha256": "0fbed3facfbd19f459a8e5ad9fd55c6e78f975b049fd5a9e76886e66356216fc"
+    },
+    {
+      "path": "src/bin/study/fixtures.rs",
+      "before_sha256": "354b212a640750ec860839f4fa6821158102b0524536017f3aff7d56516a0362",
+      "after_sha256": "89cda5a22ca3e6e3fc14d516a478635b406cd4f3ed8eb433330459e3a11427b1"
+    },
+    {
+      "path": "src/bin/recursive-study.rs",
+      "before_sha256": "f4f75b5ecbf6db67b4e3c3ea9e913dfd4b7d03f930553d14ac45fb99e317e678",
+      "after_sha256": "0436591ed40845a256abc31e5a64e2ac715754457803f7ef07be11cadd24ff69"
+    }
+  ],
+  "library_change": "only an inline hint on Tree::view implementation",
+  "benchmark_changes": [
+    "avoid cloning shared lists in original iterative-release helper",
+    "add fixture-level COW value/liveness test; absent from release builds"
+  ],
+  "initial_original_iterative_release_is_not_a_fair_comparator": true,
+  "patch_direction": "initial to final",
+  "other_recorded_rust_sources_unchanged": true,
+  "reconstruct_initial": "apply initial-to-final.patch in reverse in an isolated checkout and verify before hashes",
+  "phase_timings_are_separate_process_runs": true
+}

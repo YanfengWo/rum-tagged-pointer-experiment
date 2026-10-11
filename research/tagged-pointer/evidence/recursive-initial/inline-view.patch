@@ -1,0 +1,10 @@
+--- a/research/tagged-pointer/recursive-expr/src/lib.rs
++++ b/research/tagged-pointer/recursive-expr/src/lib.rs
+@@ -202,6 +202,7 @@
+             fn call(head: Head<Self>, args: Args<Self>) -> Self {
+                 Self::call(head, args)
+             }
++            #[inline]
+             fn view(&self) -> View<'_, Self> {
+                 self.view()
+             }

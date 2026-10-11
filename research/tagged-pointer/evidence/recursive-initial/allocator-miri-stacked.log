@@ -1,0 +1,3 @@
+   Compiling rum-recursive-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/recursive-expr)
+    Finished `dev` profile [unoptimized] target(s) in 1.58s
+     Running `<WORKSPACE>/experiments/tagged-box/tools/rustup-home/toolchains/nightly-2026-10-05-x86_64-unknown-linux-gnu/bin/cargo-miri runner /tmp/rum-tagged-build-77029938/recursive-study/miri/x86_64-unknown-linux-gnu/debug/recursive-study`

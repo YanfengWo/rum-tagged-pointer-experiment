@@ -1,0 +1,20 @@
+    Finished `test` profile [unoptimized] target(s) in 0.40s
+     Running unittests src/lib.rs (/tmp/rum-tagged-build-77029938/recursive-study/miri/x86_64-unknown-linux-gnu/debug/build/rum-recursive-expr/4cd8a84d4b8152d4/out/rum_recursive_expr-4cd8a84d4b8152d4)
+
+running 13 tests
+test tests::compact_aliases_and_weak_namespace ... ok
+test tests::compact_all_variants ... ok
+test tests::compact_cow_and_weak_only_detach ... ok
+test tests::consuming_parts_preserve_shared_sibling ... ok
+test tests::deep_conversion_and_iterative_release ... ok
+test tests::iterative_release_shared_args_and_weak ... ok
+test tests::layout_and_threads ... ok
+test tests::nested_dag_conversion_does_not_expand_logical_tree ... ok
+test tests::ordinary_drop_moderate_depth_both_backends ... ok
+test tests::private_owner_exactly_once_aligned_payload ... ok
+test tests::safe_aliases_and_weak_namespace ... ok
+test tests::safe_all_variants ... ok
+test tests::safe_cow_and_weak_only_detach ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.59s
+

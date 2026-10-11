@@ -1,0 +1,19 @@
+[package]
+name = "rum-recursive-expr"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace]
+
+[dependencies]
+rum-core = { path = "../../../crates/rum-core" }
+rum-compact-expr = { path = "../compact-expr" }
+
+[features]
+allocation-count = []
+
+[[bin]]
+name = "recursive-study"
+path = "src/bin/recursive-study.rs"

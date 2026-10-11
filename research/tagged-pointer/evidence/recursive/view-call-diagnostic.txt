@@ -1,0 +1,2 @@
+Cross-crate Tree::view calls in this benchmark binary assembly: 0
+

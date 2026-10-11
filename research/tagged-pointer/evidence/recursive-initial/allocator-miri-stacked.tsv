@@ -1,0 +1,16 @@
+dataset	representation	root_stack_bytes	retained_requested_bytes	peak_requested_bytes	allocation_calls	remaining_bytes
+wide-integer	original	32	344	344	3	0
+wide-integer	safe	16	296	944	13	0
+wide-integer	compact	8	224	872	13	0
+wide-string	original	32	400	400	11	0
+wide-string	safe	16	736	1384	29	0
+wide-string	compact	8	664	1312	29	0
+balanced	original	32	888	888	11	0
+balanced	safe	16	840	1700	27	0
+balanced	compact	8	672	1532	27	0
+shared-dag	original	32	352	352	5	0
+shared-dag	safe	16	464	1128	18	0
+shared-dag	compact	8	400	1064	18	0
+deep-chain	original	32	624	672	18	0
+deep-chain	safe	16	864	2340	37	0
+deep-chain	compact	8	792	2268	37	0
