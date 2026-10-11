@@ -2,6 +2,46 @@
   "prepared_on": "2026-10-10",
   "files": [
     {
+      "path": "compact-expr/Cargo.lock",
+      "bytes": 2820,
+      "sha256": "f6e88fe47525bc94b981d4da06fd32c933a700f573cd9b08e971e84deda88089"
+    },
+    {
+      "path": "compact-expr/Cargo.toml",
+      "bytes": 267,
+      "sha256": "94d149bb72265b8834b439a589f9d92f00a9fb2702a5e51219989296a450be01"
+    },
+    {
+      "path": "compact-expr/README.md",
+      "bytes": 4078,
+      "sha256": "e38d07f22d4c8045210ad1f712cb4bcce53db411f6ff44a742d1f2f4f2c54d44"
+    },
+    {
+      "path": "compact-expr/run-checks.sh",
+      "bytes": 1171,
+      "sha256": "567935aa4f1e38b8cdb0f2daffa7eddd56dd417e82797c2033b0ac5646ee9d56"
+    },
+    {
+      "path": "compact-expr/SEMANTICS.md",
+      "bytes": 5674,
+      "sha256": "6a5fae10ab6f6c95773c7ca96c87cb475e3cd2f04a850f03bba36bd2f26018a2"
+    },
+    {
+      "path": "compact-expr/src/bin/representation-bench.rs",
+      "bytes": 3581,
+      "sha256": "cf66eef4c0bdd52e55c20d2629a8552aa9fff4503587478b894ee2e6c52c5e80"
+    },
+    {
+      "path": "compact-expr/src/lib.rs",
+      "bytes": 6753,
+      "sha256": "fff930f8b274f0c10a287278276f6c405781aaec93cb3568553d0f7845a60b70"
+    },
+    {
+      "path": "compact-expr/src/tests.rs",
+      "bytes": 5324,
+      "sha256": "430689442524fb9d2d4f3f1a2fa6d2c0e74fa2adbc3dfeb08d682651adc65d85"
+    },
+    {
       "path": "evidence/allocation-base/measurements.tsv",
       "bytes": 707,
       "sha256": "541066dfa2952c27d0dcb0bd005c11b3e86840a10349ef349d918ff39332560a"
@@ -135,6 +175,76 @@
       "path": "evidence/cargo-version.txt",
       "bytes": 36,
       "sha256": "2d3bc7bb1b2e9f3bfeadb1b2a370e8462c3c3a0bc7481c2d8d5fa4e6953465bf"
+    },
+    {
+      "path": "evidence/compact/bench-build.log",
+      "bytes": 632,
+      "sha256": "423efa0fcdee707c9966f7cbb2c7b19959bdfb8a6e1ff716126c5085c45185c9"
+    },
+    {
+      "path": "evidence/compact/format.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/compact/lib-unhinted.rs",
+      "bytes": 6613,
+      "sha256": "43205376fb7b0d6252bd1c601be781a024cb194714c7e0f403fa42643a23f382"
+    },
+    {
+      "path": "evidence/compact/miri-rustc-version.txt",
+      "bytes": 214,
+      "sha256": "ba405b896c6b4a26674e9d3e7fc4956ed4b1c632ac70c6b7880c76157d124b25"
+    },
+    {
+      "path": "evidence/compact/miri-stacked.log",
+      "bytes": 1328,
+      "sha256": "2b445a21f46bc1515ba175e2d67e1400de7881439705ceb0f143ac99e2883a06"
+    },
+    {
+      "path": "evidence/compact/miri-tree.log",
+      "bytes": 841,
+      "sha256": "5e3b4bf1bff804275a2245290dc345057ce6ffdd9cb4b527877aac521f0bf885"
+    },
+    {
+      "path": "evidence/compact/native.log",
+      "bytes": 1709,
+      "sha256": "ef884a0aac437648f32f17233869fac1281d005b6b0058fd3ed1563346d2ed42"
+    },
+    {
+      "path": "evidence/compact/representation-unhinted.tsv",
+      "bytes": 6976,
+      "sha256": "00852cf2f63b3170f955efab23f5a14089f1962a993cf259a8ff358583480f53"
+    },
+    {
+      "path": "evidence/compact/representation.tsv",
+      "bytes": 6952,
+      "sha256": "2e55eb4a496637c729d794078ade0a3976fc31ebb975128b4f24ed8092c2ca5c"
+    },
+    {
+      "path": "evidence/compact/rustc-version.txt",
+      "bytes": 196,
+      "sha256": "be9e105cd61ce407c0e06d80a25240f93cc48de72942117e1886f09aa08f9a2a"
+    },
+    {
+      "path": "evidence/compact/status.txt",
+      "bytes": 5,
+      "sha256": "c26de83abdc9496cd1301470918ec39ecca1cf389ef0ae1c6504da1800d1c431"
+    },
+    {
+      "path": "evidence/compact/summary.json",
+      "bytes": 8206,
+      "sha256": "5b3b5240d36818e7bbc98d024d1ea2f04b2c7d745ee4f1265875349ae5bc71cd"
+    },
+    {
+      "path": "evidence/compact/workspace-status.txt",
+      "bytes": 5,
+      "sha256": "c26de83abdc9496cd1301470918ec39ecca1cf389ef0ae1c6504da1800d1c431"
+    },
+    {
+      "path": "evidence/compact/workspace.log",
+      "bytes": 238837,
+      "sha256": "57563a514c4af9614bf78c9f6604c5ca2f26d3bb1d3f75e2ccd6f6b019bc7ae4"
     },
     {
       "path": "evidence/layout-build.txt",
@@ -313,8 +423,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 7016,
-      "sha256": "9cef05644d6da19af1cf0be451ae45863120198bbd9f04029c1da953bd1911a8"
+      "bytes": 7404,
+      "sha256": "a9c4946fe6ede8a5a6a4e1232a79d8153faa6d25fa9f5b6ec50ab06b72bec254"
     },
     {
       "path": "run-baseline.sh",
@@ -325,5 +435,6 @@
   "diagnostic_paths_redacted": true,
   "upstream_history_and_license_retained": true,
   "personal_conversation_included": false,
-  "tagged_candidate_implemented": false
+  "tagged_candidate_implemented": true,
+  "kernel_integration_implemented": false
 }

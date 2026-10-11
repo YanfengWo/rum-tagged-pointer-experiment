@@ -1,0 +1,364 @@
+{
+  "status": "PASS",
+  "recorded_on": "2026-10-10",
+  "checks": {
+    "native.log": {
+      "passed": 10,
+      "ignored": 0
+    },
+    "miri-stacked.log": {
+      "passed": 9,
+      "ignored": 0
+    },
+    "miri-tree.log": {
+      "passed": 9,
+      "ignored": 0
+    },
+    "workspace.log": {
+      "passed": 2238,
+      "ignored": 7
+    }
+  },
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "layout_bytes": {
+    "original": 32,
+    "safe": 16,
+    "compact": 8,
+    "option_compact": 8
+  },
+  "source_hashes": {
+    "Cargo.lock": "f6e88fe47525bc94b981d4da06fd32c933a700f573cd9b08e971e84deda88089",
+    "Cargo.toml": "94d149bb72265b8834b439a589f9d92f00a9fb2702a5e51219989296a450be01",
+    "run-checks.sh": "567935aa4f1e38b8cdb0f2daffa7eddd56dd417e82797c2033b0ac5646ee9d56",
+    "SEMANTICS.md": "6a5fae10ab6f6c95773c7ca96c87cb475e3cd2f04a850f03bba36bd2f26018a2",
+    "src/bin/representation-bench.rs": "cf66eef4c0bdd52e55c20d2629a8552aa9fff4503587478b894ee2e6c52c5e80",
+    "src/lib.rs": "fff930f8b274f0c10a287278276f6c405781aaec93cb3568553d0f7845a60b70",
+    "src/tests.rs": "430689442524fb9d2d4f3f1a2fa6d2c0e74fa2adbc3dfeb08d682651adc65d85"
+  },
+  "inline_integer_range": [
+    -1152921504606846976,
+    1152921504606846975
+  ],
+  "full_i64_preserved_by_heap_fallback": true,
+  "timing_rows": [
+    {
+      "dataset": "integers",
+      "operation": "scan",
+      "median_ms": {
+        "original": 2.639246,
+        "safe": 2.405289,
+        "compact": 2.019566
+      },
+      "compact_over_safe": 0.8396354866296734,
+      "compact_over_original": 0.7652056685886803,
+      "min_max_ms": {
+        "original": [
+          2.562302,
+          2.683798
+        ],
+        "safe": [
+          2.371451,
+          2.570925
+        ],
+        "compact": [
+          1.9978,
+          2.57042
+        ]
+      }
+    },
+    {
+      "dataset": "integers",
+      "operation": "clone_drop",
+      "median_ms": {
+        "original": 9.976825,
+        "safe": 1.195477,
+        "compact": 0.884631
+      },
+      "compact_over_safe": 0.7399816140335616,
+      "compact_over_original": 0.08866858945606443,
+      "min_max_ms": {
+        "original": [
+          9.863703,
+          12.133831
+        ],
+        "safe": [
+          1.127431,
+          1.627938
+        ],
+        "compact": [
+          0.861515,
+          1.11399
+        ]
+      }
+    },
+    {
+      "dataset": "integers",
+      "operation": "construct_convert",
+      "median_ms": {
+        "original": 0.823163,
+        "safe": 0.747632,
+        "compact": 0.754768
+      },
+      "compact_over_safe": 1.0095448027906777,
+      "compact_over_original": 0.9169119603286348,
+      "min_max_ms": {
+        "original": [
+          0.809754,
+          0.859798
+        ],
+        "safe": [
+          0.739174,
+          0.779979
+        ],
+        "compact": [
+          0.744344,
+          0.802705
+        ]
+      }
+    },
+    {
+      "dataset": "mixed",
+      "operation": "scan",
+      "median_ms": {
+        "original": 2.710762,
+        "safe": 3.100049,
+        "compact": 3.715082
+      },
+      "compact_over_safe": 1.1983946060207438,
+      "compact_over_original": 1.3704936102837506,
+      "min_max_ms": {
+        "original": [
+          2.599548,
+          2.76269
+        ],
+        "safe": [
+          2.90699,
+          3.17412
+        ],
+        "compact": [
+          3.534062,
+          4.198836
+        ]
+      }
+    },
+    {
+      "dataset": "mixed",
+      "operation": "clone_drop",
+      "median_ms": {
+        "original": 17.042027,
+        "safe": 4.209471,
+        "compact": 4.546114
+      },
+      "compact_over_safe": 1.0799727566718005,
+      "compact_over_original": 0.26675899527679425,
+      "min_max_ms": {
+        "original": [
+          15.774079,
+          17.968225
+        ],
+        "safe": [
+          4.178162,
+          4.325603
+        ],
+        "compact": [
+          4.491633,
+          5.051635
+        ]
+      }
+    },
+    {
+      "dataset": "mixed",
+      "operation": "construct_convert",
+      "median_ms": {
+        "original": 0.95241,
+        "safe": 1.213064,
+        "compact": 1.211806
+      },
+      "compact_over_safe": 0.9989629566123469,
+      "compact_over_original": 1.2723574930964605,
+      "min_max_ms": {
+        "original": [
+          0.941537,
+          0.989817
+        ],
+        "safe": [
+          1.187257,
+          1.264505
+        ],
+        "compact": [
+          1.202209,
+          1.533865
+        ]
+      }
+    }
+  ],
+  "unhinted_timing_rows": [
+    {
+      "dataset": "integers",
+      "operation": "scan",
+      "median_ms": {
+        "original": 2.911769,
+        "safe": 2.667755,
+        "compact": 10.937699
+      },
+      "compact_over_safe": 4.099963827262998,
+      "compact_over_original": 3.75637593504155,
+      "min_max_ms": {
+        "original": [
+          2.755131,
+          3.218642
+        ],
+        "safe": [
+          2.63297,
+          2.769489
+        ],
+        "compact": [
+          10.13794,
+          11.779108
+        ]
+      }
+    },
+    {
+      "dataset": "integers",
+      "operation": "clone_drop",
+      "median_ms": {
+        "original": 11.090449,
+        "safe": 1.033211,
+        "compact": 4.423489
+      },
+      "compact_over_safe": 4.281302657443639,
+      "compact_over_original": 0.39885571810483056,
+      "min_max_ms": {
+        "original": [
+          10.810197,
+          13.527518
+        ],
+        "safe": [
+          0.970683,
+          1.089198
+        ],
+        "compact": [
+          4.396547,
+          4.666771
+        ]
+      }
+    },
+    {
+      "dataset": "integers",
+      "operation": "construct_convert",
+      "median_ms": {
+        "original": 0.917342,
+        "safe": 0.53179,
+        "compact": 0.531399
+      },
+      "compact_over_safe": 0.9992647473626807,
+      "compact_over_original": 0.579281227720959,
+      "min_max_ms": {
+        "original": [
+          0.901261,
+          1.317271
+        ],
+        "safe": [
+          0.51628,
+          0.552459
+        ],
+        "compact": [
+          0.522542,
+          0.670113
+        ]
+      }
+    },
+    {
+      "dataset": "mixed",
+      "operation": "scan",
+      "median_ms": {
+        "original": 3.000158,
+        "safe": 3.38153,
+        "compact": 14.801805
+      },
+      "compact_over_safe": 4.3772508302454805,
+      "compact_over_original": 4.933675159774919,
+      "min_max_ms": {
+        "original": [
+          2.785546,
+          3.268626
+        ],
+        "safe": [
+          3.327438,
+          3.80788
+        ],
+        "compact": [
+          13.841213,
+          15.111634
+        ]
+      }
+    },
+    {
+      "dataset": "mixed",
+      "operation": "clone_drop",
+      "median_ms": {
+        "original": 18.542289,
+        "safe": 4.618139,
+        "compact": 5.811164
+      },
+      "compact_over_safe": 1.258334580228096,
+      "compact_over_original": 0.313400573143909,
+      "min_max_ms": {
+        "original": [
+          17.079461,
+          19.247417
+        ],
+        "safe": [
+          4.606286,
+          4.640151
+        ],
+        "compact": [
+          5.767462,
+          6.29821
+        ]
+      }
+    },
+    {
+      "dataset": "mixed",
+      "operation": "construct_convert",
+      "median_ms": {
+        "original": 1.057859,
+        "safe": 0.959953,
+        "compact": 0.959361
+      },
+      "compact_over_safe": 0.999383303140883,
+      "compact_over_original": 0.9068892924293313,
+      "min_max_ms": {
+        "original": [
+          1.043141,
+          1.085827
+        ],
+        "safe": [
+          0.95366,
+          1.073318
+        ],
+        "compact": [
+          0.9322,
+          0.97281
+        ]
+      }
+    }
+  ],
+  "methodology": {
+    "samples_per_label": 9,
+    "slots": 100000,
+    "scan_passes": 100,
+    "clone_drop_passes": 20,
+    "construct_convert_passes": 1,
+    "mixed_heap_fraction": 0.25,
+    "order_rotated": true,
+    "timer": "std::time::Instant",
+    "external_contention_ruled_out": false
+  },
+  "runtime_source_changed": false,
+  "tagged_candidate_implemented": true,
+  "kernel_integration_implemented": false,
+  "recursive_child_compression": false,
+  "whole_evaluator_speedup_demonstrated": false,
+  "full_soundness_proof_completed": false
+}

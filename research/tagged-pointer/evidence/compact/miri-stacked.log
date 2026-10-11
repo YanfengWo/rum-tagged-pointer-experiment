@@ -1,0 +1,29 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling num-integer v0.1.46
+   Compiling syn v2.0.119
+   Compiling serde_derive v1.0.228
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<RUM_ROOT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+    Finished `test` profile [unoptimized] target(s) in 9.95s
+     Running unittests src/lib.rs (/tmp/rum-tagged-build-77029938/compact/miri/x86_64-unknown-linux-gnu/debug/build/rum-compact-expr/9fa39f57416264a1/out/rum_compact_expr-9fa39f57416264a1)
+
+running 9 tests
+test tests::consuming_unique_and_shared_payloads ... ok
+test tests::counts_and_final_release ... ok
+test tests::deterministic_integer_round_trips ... ok
+test tests::forgotten_inline_value_is_safe ... ok
+test tests::integer_boundaries_and_full_i64 ... ok
+test tests::layout_and_thread_bounds ... ok
+test tests::nested_args_keep_weak_and_copy_on_write_behavior ... ok
+test tests::original_variants_and_generated_identity ... ok
+test tests::threads_borrow_clone_and_release ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.25s
+
