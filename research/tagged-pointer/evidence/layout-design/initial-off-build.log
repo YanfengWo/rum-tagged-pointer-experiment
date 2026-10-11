@@ -1,0 +1,19 @@
+warning: function `count` is never used
+ --> src/bin/census.rs:3:8
+  |
+3 | pub fn count(root: &Expr) -> serde_json::Value {
+  |        ^^^^^
+  |
+  = note: `#[warn(dead_code)]` on by default
+
+warning: method `root_bytes` is never used
+  --> src/bin/graph.rs:31:12
+   |
+14 | impl Case {
+   | --------- method in this implementation
+...
+31 |     pub fn root_bytes(self) -> usize {
+   |            ^^^^^^^^^^
+
+warning: `rum-layout-design` (bin "layout-study") generated 2 warnings
+    Finished `release` profile [optimized] target(s) in 0.50s

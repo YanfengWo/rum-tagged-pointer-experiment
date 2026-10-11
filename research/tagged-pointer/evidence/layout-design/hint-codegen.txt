@@ -1,0 +1,43 @@
+Inline-hint counter-off code generation
+Binary inspected: layout-study-final-off, before the always-inline control
+Binary SHA256: 0066388f10fd8d4f9ff0326dd621fba6a2776ec9f0792aedec4bed4c633f6da5
+Features: corpus; allocation-count absent
+Compiler: Rust 1.85.0; target x86_64-unknown-linux-gnu; release profile
+Change: #[inline] on scan::atom and library atom_ref; two dead-code cfg guards.
+
+Observed: all three new scan::tree specializations and previous scan::old_tree
+still call the separate scan::atom consumer. The same 32-byte AtomRef argument
+materialization and four call sites remain in the binary. The inline hint did
+not remove the suspected consumer-call boundary. This is evidence about code
+generation, not a claim about the fraction of time caused by this boundary.
+
+Symbol table:
+00000000000c69b0 t layout_study::scan::atom
+00000000000c73c0 t layout_study::scan::tree
+00000000000c7720 t layout_study::scan::tree
+00000000000c7a10 t layout_study::scan::tree
+00000000000c7d60 t layout_study::scan::old_tree
+00000000000c6db0 t layout_study::scan::original
+000000000074fa70 T rum_core::expr::Symbol::identity
+
+Relevant call sites:
+   c7538: lea 0x28(%rsp),%rdi
+   c753d: call c69b0 <layout_study::scan::atom>
+   c7542: mov %rbp,%rsi
+
+   c789a: lea 0x18(%rsp),%rdi
+   c789f: call c69b0 <layout_study::scan::atom>
+   c78a4: mov %r13,%rsi
+
+   c7aff: lea 0x28(%rsp),%rdi
+   c7b04: call c69b0 <layout_study::scan::atom>
+   c7b09: mov %rbp,%rsi
+
+   c7e7c: mov %r12,%rdi
+   c7e7f: call c69b0 <layout_study::scan::atom>
+   c7e84: mov %r13,%rsi
+
+Next control: force inlining only in the benchmark consumer, preserve the
+algorithm, validate again, and verify disappearance of these calls before
+interpreting a new timing comparison. Structural SymbolText.id dependent loads
+may remain after the intermediate projection and consumer call are removed.

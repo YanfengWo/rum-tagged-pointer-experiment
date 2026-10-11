@@ -1,0 +1,1 @@
+CPU affinity: 0; 3 runs; 1 warmup + 9 measured rounds; setup order rotates each round; cases rotate; run2 reverses datasets/cases; counters absent; original/new one-pass bridge

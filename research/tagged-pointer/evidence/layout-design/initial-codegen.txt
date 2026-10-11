@@ -1,0 +1,179 @@
+Initial counter-off code generation (reconstructed from unchanged initial overlay)
+Binary: layout-study-initial-off (local build artifact; not committed)
+Binary SHA256: ef8f9d6246d8c3fa657dca53e36b4141687162c772913453be87913d112b9de0
+Features: corpus; allocation-count absent, verified with nm
+Compiler: Rust 1.85.0; target x86_64-unknown-linux-gnu; release profile
+No timing or source synchronization was performed by this evidence script.
+
+Observed: all three new scan::tree specializations and previous scan::old_tree
+materialize a 32-byte AtomRef argument and call scan::atom for each visited atom.
+scan::atom reserves 0x78 bytes of stack and includes decimal formatting paths.
+Its Symbol path then copies a 24-byte Symbol and calls Symbol::identity.
+Original scan also copies Symbol and calls identity: that accessor alone is
+not unique to the new representations. Original small integers calculate directly
+in the traversal loop instead of going through the extra AtomRef call boundary.
+
+Interpretation: the common non-inlined projection consumer is a concrete
+benchmark/code-generation confounder. Inline atom and atom_ref consistently,
+preserve the initial runs, validate semantics, then measure the control again.
+The static-symbol layouts still need a dependent load of SymbolText.id when
+reconstructing Symbol; original Symbol already caches id. This structural cost
+may remain after inlining, especially for many distinct symbols.
+These instructions do not establish how much of any elapsed-time difference
+comes from calls, stack traffic, allocation placement or pointer dependencies.
+
+scan::atom prologue:
+   c69b0:	41 56                	push   %r14
+   c69b2:	53                   	push   %rbx
+   c69b3:	48 83 ec 78          	sub    $0x78,%rsp
+   c69b7:	48 8b 0f             	mov    (%rdi),%rcx
+   c69ba:	48 8d 47 08          	lea    0x8(%rdi),%rax
+   c69be:	48 8d 15 af aa 6e 00 	lea    0x6eaaaf(%rip),%rdx        # 7b1474 <anon.58ab65599e56a6b4eacbe60ba8eb2c64.22.llvm.17520844017429036180+0xc4>
+   c69c5:	48 63 0c 8a          	movslq (%rdx,%rcx,4),%rcx
+   c69c9:	48 01 d1             	add    %rdx,%rcx
+   c69cc:	ff e1                	jmp    *%rcx
+   c69ce:	f6 47 08 01          	testb  $0x1,0x8(%rdi)
+
+scan::atom Symbol branch:
+   c6aa4:	0f 10 00             	movups (%rax),%xmm0
+   c6aa7:	0f 29 44 24 60       	movaps %xmm0,0x60(%rsp)
+   c6aac:	48 8b 40 10          	mov    0x10(%rax),%rax
+   c6ab0:	48 89 44 24 70       	mov    %rax,0x70(%rsp)
+   c6ab5:	89 c3                	mov    %eax,%ebx
+   c6ab7:	48 8d 7c 24 60       	lea    0x60(%rsp),%rdi
+   c6abc:	ff 15 2e 61 8e 00    	call   *0x8e612e(%rip)        # 9acbf0 <_GLOBAL_OFFSET_TABLE_+0x2370>
+   c6ac2:	48 85 c0             	test   %rax,%rax
+   c6ac5:	48 0f 44 d0          	cmove  %rax,%rdx
+   c6ac9:	48 89 d8             	mov    %rbx,%rax
+   c6acc:	48 c1 e0 04          	shl    $0x4,%rax
+   c6ad0:	48 01 d8             	add    %rbx,%rax
+   c6ad3:	48 01 d0             	add    %rdx,%rax
+   c6ad6:	48 83 c0 0b          	add    $0xb,%rax
+   c6ada:	48 83 c4 78          	add    $0x78,%rsp
+   c6ade:	5b                   	pop    %rbx
+   c6adf:	41 5e                	pop    %r14
+   c6ae1:	c3                   	ret    
+
+layout_study::scan::tree specialization at c73c0:
+   c7520:	31 d2                	xor    %edx,%edx
+   c7522:	31 c0                	xor    %eax,%eax
+   c7524:	48 89 54 24 28       	mov    %rdx,0x28(%rsp)
+   c7529:	48 89 44 24 30       	mov    %rax,0x30(%rsp)
+   c752e:	48 89 4c 24 38       	mov    %rcx,0x38(%rsp)
+   c7533:	4c 89 64 24 40       	mov    %r12,0x40(%rsp)
+   c7538:	48 8d 7c 24 28       	lea    0x28(%rsp),%rdi
+   c753d:	e8 6e f4 ff ff       	call   c69b0 <layout_study::scan::atom>
+   c7542:	48 89 ee             	mov    %rbp,%rsi
+   c7545:	48 01 c3             	add    %rax,%rbx
+   c7548:	48 85 ed             	test   %rbp,%rbp
+
+layout_study::scan::tree specialization at c7720:
+   c7882:	31 d2                	xor    %edx,%edx
+   c7884:	31 c9                	xor    %ecx,%ecx
+   c7886:	48 89 54 24 18       	mov    %rdx,0x18(%rsp)
+   c788b:	48 89 4c 24 20       	mov    %rcx,0x20(%rsp)
+   c7890:	48 89 44 24 28       	mov    %rax,0x28(%rsp)
+   c7895:	4c 89 64 24 30       	mov    %r12,0x30(%rsp)
+   c789a:	48 8d 7c 24 18       	lea    0x18(%rsp),%rdi
+   c789f:	e8 0c f1 ff ff       	call   c69b0 <layout_study::scan::atom>
+   c78a4:	4c 89 ee             	mov    %r13,%rsi
+   c78a7:	48 01 c3             	add    %rax,%rbx
+   c78aa:	48 85 f6             	test   %rsi,%rsi
+
+layout_study::scan::tree specialization at c7a10:
+   c7ae7:	31 d2                	xor    %edx,%edx
+   c7ae9:	31 c0                	xor    %eax,%eax
+   c7aeb:	48 89 54 24 28       	mov    %rdx,0x28(%rsp)
+   c7af0:	48 89 44 24 30       	mov    %rax,0x30(%rsp)
+   c7af5:	48 89 4c 24 38       	mov    %rcx,0x38(%rsp)
+   c7afa:	4c 89 74 24 40       	mov    %r14,0x40(%rsp)
+   c7aff:	48 8d 7c 24 28       	lea    0x28(%rsp),%rdi
+   c7b04:	e8 a7 ee ff ff       	call   c69b0 <layout_study::scan::atom>
+   c7b09:	48 89 ee             	mov    %rbp,%rsi
+   c7b0c:	48 01 c3             	add    %rax,%rbx
+   c7b0f:	48 85 ed             	test   %rbp,%rbp
+
+layout_study::scan::old_tree specialization at c7d60:
+   c7e64:	31 d2                	xor    %edx,%edx
+   c7e66:	31 c9                	xor    %ecx,%ecx
+   c7e68:	48 89 54 24 18       	mov    %rdx,0x18(%rsp)
+   c7e6d:	48 89 4c 24 20       	mov    %rcx,0x20(%rsp)
+   c7e72:	48 89 44 24 28       	mov    %rax,0x28(%rsp)
+   c7e77:	48 89 6c 24 30       	mov    %rbp,0x30(%rsp)
+   c7e7c:	4c 89 e7             	mov    %r12,%rdi
+   c7e7f:	e8 2c eb ff ff       	call   c69b0 <layout_study::scan::atom>
+   c7e84:	4c 89 ee             	mov    %r13,%rsi
+   c7e87:	48 01 c3             	add    %rax,%rbx
+   c7e8a:	4d 85 ed             	test   %r13,%r13
+
+Dependent SymbolText.id reads:
+Tagged16 folds tag 2 into displacement 0x1e (= 0x20 - 2).
+Safe24 loads the text pointer then reads offset 0x20; Tagged8 clears
+the low-bit tag then reads offset 0x20. SymbolText.id is a u32.
+Specialization c73c0:
+   c7498:	31 d2                	xor    %edx,%edx
+   c749a:	e9 85 00 00 00       	jmp    c7524 <layout_study::scan::tree+0x164>
+   c749f:	90                   	nop
+   c74a0:	8b 50 1e             	mov    0x1e(%rax),%edx
+   c74a3:	48 83 c0 fe          	add    $0xfffffffffffffffe,%rax
+   c74a7:	48 be 00 00 00 00 ff 	movabs $0xffffffff00000000,%rsi
+   c74ae:	ff ff ff 
+
+Specialization c7720:
+   c77cb:	c3                   	ret    
+   c77cc:	48 8b 41 08          	mov    0x8(%rcx),%rax
+   c77d0:	48 8b 49 10          	mov    0x10(%rcx),%rcx
+   c77d4:	8b 51 20             	mov    0x20(%rcx),%edx
+   c77d7:	48 be 00 00 00 00 ff 	movabs $0xffffffff00000000,%rsi
+   c77de:	ff ff ff 
+   c77e1:	4c 21 e6             	and    %r12,%rsi
+
+Specialization c7a10:
+   c7aab:	0f 85 1c 02 00 00    	jne    c7ccd <layout_study::scan::tree+0x2bd>
+   c7ab1:	48 83 e0 f8          	and    $0xfffffffffffffff8,%rax
+   c7ab5:	0f 84 4d 02 00 00    	je     c7d08 <layout_study::scan::tree+0x2f8>
+   c7abb:	8b 48 20             	mov    0x20(%rax),%ecx
+   c7abe:	48 ba 00 00 00 00 ff 	movabs $0xffffffff00000000,%rdx
+   c7ac5:	ff ff ff 
+   c7ac8:	49 21 d6             	and    %rdx,%r14
+
+Original Symbol branch:
+   c71e4:	49 29 c7             	sub    %rax,%r15
+   c71e7:	49 83 c7 07          	add    $0x7,%r15
+   c71eb:	e9 8f fe ff ff       	jmp    c707f <layout_study::scan::original+0x2cf>
+   c71f0:	f3 0f 6f 40 08       	movdqu 0x8(%rax),%xmm0
+   c71f5:	66 0f 7f 44 24 40    	movdqa %xmm0,0x40(%rsp)
+   c71fb:	4c 8b 78 18          	mov    0x18(%rax),%r15
+   c71ff:	4c 89 7c 24 50       	mov    %r15,0x50(%rsp)
+   c7204:	48 8d 7c 24 40       	lea    0x40(%rsp),%rdi
+   c7209:	ff 15 e1 59 8e 00    	call   *0x8e59e1(%rip)        # 9acbf0 <_GLOBAL_OFFSET_TABLE_+0x2370>
+   c720f:	44 89 f9             	mov    %r15d,%ecx
+   c7212:	48 85 c0             	test   %rax,%rax
+   c7215:	48 0f 44 d0          	cmove  %rax,%rdx
+   c7219:	48 89 c8             	mov    %rcx,%rax
+   c721c:	48 c1 e0 04          	shl    $0x4,%rax
+   c7220:	48 01 c8             	add    %rcx,%rax
+   c7223:	4c 8d 3c 02          	lea    (%rdx,%rax,1),%r15
+   c7227:	49 83 c7 0b          	add    $0xb,%r15
+
+Original small-integer branch:
+   c71d9:	48 8b 40 10          	mov    0x10(%rax),%rax
+   c71dd:	49 89 c7             	mov    %rax,%r15
+   c71e0:	49 c1 e7 05          	shl    $0x5,%r15
+   c71e4:	49 29 c7             	sub    %rax,%r15
+   c71e7:	49 83 c7 07          	add    $0x7,%r15
+   c71eb:	e9 8f fe ff ff       	jmp    c707f <layout_study::scan::original+0x2cf>
+   c71f0:	f3 0f 6f 40 08       	movdqu 0x8(%rax),%xmm0
+
+Symbol::identity implementation:
+  74fa70:	48 8b 57 08          	mov    0x8(%rdi),%rdx
+  74fa74:	31 c0                	xor    %eax,%eax
+  74fa76:	48 85 d2             	test   %rdx,%rdx
+  74fa79:	0f 95 c0             	setne  %al
+  74fa7c:	c3                   	ret    
+
+Indirect identity-call target (GOT entry):
+<BUILD_CACHE>/layout/release/layout-study-initial-off:     file format elf64-x86-64
+
+Contents of section .got:
+ 9acbf0 70fa7400 00000000                    p.t.....

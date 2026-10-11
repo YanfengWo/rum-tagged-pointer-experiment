@@ -1,0 +1,58 @@
+Always-inline consumer control: counter-off code generation
+Binary inspected: layout-study-final-off
+Binary SHA256: 1ab78289ca88bff5244f600a8c4f22445d10eafcb9ab5a4fb5102c45d888a904
+Features: corpus; allocation-count absent
+Compiler: Rust 1.85.0; target x86_64-unknown-linux-gnu; release profile
+Final control: benchmark scan::atom #[inline(always)]; library atom_ref #[inline].
+No representation or traversal algorithm change in this control.
+
+Observed code-generation comparison:
+  Initial: scan::atom exists; three scan::tree + previous scan::old_tree call it.
+  Inline hint: scan::atom still exists; the same four consumer-call sites remain.
+  Always-inline: scan::atom is absent from nm; the four traversals do not call it.
+This verifies removal of the independent checksum-consumer boundary before
+interpreting the final timings. It does not establish a complete performance
+attribution or imply that these snapshot scans predict evaluator speed.
+
+Final symbol table:
+00000000000c6fc0 0000000000000694 t layout_study::scan::tree
+00000000000c7660 0000000000000675 t layout_study::scan::tree
+00000000000c7ce0 0000000000000680 t layout_study::scan::tree
+00000000000c8360 00000000000005f6 t layout_study::scan::old_tree
+00000000000c69b0 0000000000000610 t layout_study::scan::original
+00000000007503a0 000000000000000d T rum_core::expr::Symbol::identity
+No layout_study::scan::atom symbol is present.
+
+The static-symbol layouts retain a dependent SymbolText.id load. This remains
+a structural cost because original Symbol caches the id in the node itself.
+Generated symbols retain full identity. The access below is ordinary safe
+projection, not an interner lookup, mutex acquisition or new allocation.
+
+Tagged16 static-symbol branch (tag 2 folded into offset 0x1e = 0x20 - 2):
+   c71b0: mov 0x1e(%rcx),%edx
+   c71b3: add $0xfffffffffffffffe,%rcx
+   c71b7: movq %rax,%xmm1
+   c71bc: movq %rcx,%xmm0
+   c71c1: punpcklqdq %xmm1,%xmm0
+
+Safe24 static-symbol branch (load text pointer, then its u32 id):
+   c7ad3: mov 0x10(%rax),%rcx
+   c7ad7: add $0x8,%rax
+   c7adb: mov 0x20(%rcx),%edx
+   c7ade: movabs $0xffffffff00000000,%rsi
+   c7ae8: and %r12,%rsi
+   c7aeb: or %rdx,%rsi
+
+Tagged8 static-symbol branch (clear low tag bits, then load id):
+   c7d80: and $0xfffffffffffffff8,%rcx
+   c7d84: je c829d <layout_study::scan::tree+0x5bd>
+   c7d8a: mov 0x20(%rcx),%eax
+   c7d8d: movabs $0xffffffff00000000,%rdx
+   c7d97: and %rdx,%r12
+   c7d9a: or %rax,%r12
+
+Interpretation limits: removing the call enables optimization through the view
+and its intermediate values. A change in timings can reflect multiple related
+code-generation changes; it cannot isolate only call/return cost. The remaining
+dependency chain may matter on distinct-symbol data, but its time contribution
+requires a separate cached-id or workload control rather than inference alone.

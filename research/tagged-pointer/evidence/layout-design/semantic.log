@@ -1,0 +1,3 @@
+PASS: 132 snapshots; 660 full equalities and scans; COW append/source checks for Call roots
+PASS: 620 full COW/source equalities
+PASS: RUM_PROFILE_REPR unset; original disabled profiling branches remain

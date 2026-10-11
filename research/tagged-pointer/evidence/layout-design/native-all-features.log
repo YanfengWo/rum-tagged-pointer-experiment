@@ -1,0 +1,34 @@
+   Compiling rum-layout-design v0.0.0 (<OVERLAY>/research/tagged-pointer/layout-design)
+    Finished `test` profile [unoptimized] target(s) in 2.41s
+     Running unittests src/lib.rs (<BUILD_CACHE>/layout/debug/deps/rum_layout_design-d539146bd9f1c5ab)
+
+running 10 tests
+test tests::context_plain_and_full_generated_identity_are_distinct ... ok
+test tests::aliases_cow_weak_and_changed_value_are_preserved ... ok
+test tests::expected_sizes_and_thread_bounds ... ok
+test tests::full_i64_and_immediate_boundaries_preserve_variants ... ok
+test tests::original_copy_preserves_values_and_alias_classes_in_one_pass ... ok
+test tests::shared_owned_extraction_preserves_big_string_and_rational ... ok
+test tests::viewing_does_not_acquire_counts_and_consumption_transfers_handles ... ok
+test tests::weak_only_cow_invalidates_previous_allocation ... ok
+test tests::shared_dag_conversion_and_release_do_not_unfold ... ok
+test tests::deep_explicit_release_keeps_last_owner_rule ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running unittests src/bin/layout-study.rs (<BUILD_CACHE>/layout/debug/deps/layout_study-73a15022f378d6c1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rum_layout_design
+
+running 4 tests
+test src/lib.rs - (line 26) - compile fail ... ok
+test src/lib.rs - (line 5) - compile fail ... ok
+test src/lib.rs - (line 12) - compile fail ... ok
+test src/lib.rs - (line 19) - compile fail ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+

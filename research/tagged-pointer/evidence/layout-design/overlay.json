@@ -1,0 +1,9 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "overlay_path": "<OVERLAY>",
+  "default_core_unchanged": true,
+  "isolated_additive_safe_api": true,
+  "original_expr_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+  "extension_sha256": "83690402371a1409a37a39d7ae36e13a22575b8296160ec1e5feeacbdb7e4319",
+  "overlay_expr_sha256": "ec06bb2423fa0f8cbffddf3fc8e7ff995345a93e43cabf99c6217a753b3e207e"
+}
