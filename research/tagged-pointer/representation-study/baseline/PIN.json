@@ -1,0 +1,14 @@
+{
+  "commit": "ff3327b74b0381bd1dce7ff51bb5b92f37c69251",
+  "files": [
+    {
+      "path": "src/lib.rs",
+      "sha256": "fff930f8b274f0c10a287278276f6c405781aaec93cb3568553d0f7845a60b70"
+    },
+    {
+      "path": "src/tests.rs",
+      "sha256": "430689442524fb9d2d4f3f1a2fa6d2c0e74fa2adbc3dfeb08d682651adc65d85"
+    }
+  ],
+  "package_metadata_adjusted_for_side_by_side_build": true
+}

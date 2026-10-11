@@ -11,6 +11,17 @@
 //!     }
 //! }
 //! ```
+//!
+//! ```compile_fail
+//! use rum_compact_expr::{CompactExpr, ExprRef, AtomRef};
+//! fn escape_string() -> &'static str {
+//!     let value = CompactExpr::new(rum_core::Expr::string("owned"));
+//!     match value.borrow() {
+//!         ExprRef::Atom(AtomRef::String(text)) => text,
+//!         _ => unreachable!(),
+//!     }
+//! }
+//! ```
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
@@ -23,11 +34,13 @@ use std::mem::ManuallyDrop;
 use std::ptr::NonNull;
 use std::sync::Arc;
 
+mod borrowed;
+pub use borrowed::{AtomRef, ExprRef, IntRef};
+
 pub const MIN_INLINE: i64 = -(1_i64 << 60);
 pub const MAX_INLINE: i64 = (1_i64 << 60) - 1;
 const MASK: usize = 7;
 const INTEGER: usize = 1;
-const HEAP: usize = 2;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ExprView<'a> {
@@ -69,7 +82,7 @@ pub struct CompactExpr {
 
 // SAFETY: the only shared memory is an immutable Arc<Payload>. Payload contains
 // Expr, which is Send + Sync; checked by compile-time assertions in the tests.
-// Pointer tagging changes the address only. No mutable references are exposed.
+// Heap addresses are unchanged. No mutable references are exposed.
 unsafe impl Send for CompactExpr {}
 unsafe impl Sync for CompactExpr {}
 
@@ -89,10 +102,10 @@ impl CompactExpr {
             }
             None => {
                 let raw = Arc::into_raw(Arc::new(Payload(expr))).cast_mut();
-                // Payload alignment reserves all three low bits. with_addr
-                // preserves provenance; this tagged address is never dereferenced.
+                // Payload alignment makes bit zero clear. Keep Arc's exact data
+                // pointer: the heap variant needs no tag insertion or restoration.
                 debug_assert_eq!(raw.addr() & MASK, 0);
-                NonNull::new(raw.with_addr(raw.addr() | HEAP)).unwrap()
+                NonNull::new(raw).unwrap()
             }
         };
         Self {
@@ -102,7 +115,7 @@ impl CompactExpr {
     }
 
     fn is_inline(&self) -> bool {
-        // The closed representation has only tags 001 and 010. Testing bit zero
+        // The closed representation has only tags 001 and 000. Testing bit zero
         // distinguishes them without masking and comparing all reserved bits.
         self.tagged.addr().get() & INTEGER != 0
     }
@@ -113,8 +126,7 @@ impl CompactExpr {
 
     // Private: callers establish the heap variant before using this pointer.
     fn heap_ptr(&self) -> *const Payload {
-        let raw = self.tagged.as_ptr();
-        raw.with_addr(raw.addr() & !MASK)
+        self.tagged.as_ptr()
     }
 
     #[inline]
@@ -122,8 +134,8 @@ impl CompactExpr {
         if self.is_inline() {
             ExprView::Integer(self.integer())
         } else {
-            // SAFETY: this owner holds a live strong count. Restoring the address
-            // preserves Arc::into_raw provenance and Payload alignment. The
+            // SAFETY: this owner holds a live strong count and Arc::into_raw's
+            // exact data pointer, provenance and Payload alignment. The
             // returned borrow is bounded by &self, including across clones.
             ExprView::Heap(&unsafe { &*self.heap_ptr() }.0)
         }
@@ -132,6 +144,12 @@ impl CompactExpr {
     #[inline]
     pub fn to_expr(&self) -> Expr {
         self.view().to_expr()
+    }
+
+    /// Inspect the original variants without an owned conversion or Arc clone.
+    #[inline]
+    pub fn borrow(&self) -> ExprRef<'_> {
+        self.view().into()
     }
 
     #[inline]
@@ -170,8 +188,8 @@ impl Drop for CompactExpr {
     #[inline]
     fn drop(&mut self) {
         if !self.is_inline() {
-            // SAFETY: exactly one strong count belongs to this owner. Restore
-            // the original pointer and let Arc release/deallocate it exactly once.
+            // SAFETY: exactly one strong count belongs to this owner. Give Arc
+            // its exact original pointer and release/deallocate it exactly once.
             drop(unsafe { Arc::from_raw(self.heap_ptr()) });
         }
     }
@@ -210,6 +228,11 @@ impl SafeExpr {
     }
 
     #[inline]
+    pub fn borrow(&self) -> ExprRef<'_> {
+        self.view().into()
+    }
+
+    #[inline]
     pub fn into_expr(self) -> Expr {
         match self.0 {
             SafeRepr::Integer(value) => Expr::small_integer(value),
@@ -221,5 +244,7 @@ impl SafeExpr {
     }
 }
 
+#[cfg(test)]
+mod borrow_tests;
 #[cfg(test)]
 mod tests;

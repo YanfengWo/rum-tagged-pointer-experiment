@@ -50,6 +50,21 @@ fn integer_boundaries_and_full_i64() {
 }
 
 #[test]
+fn heap_tag_zero_and_noncanonical_big_variant_preserved() {
+    let value = CompactExpr::new(Expr::string("unmodified heap address"));
+    assert_eq!(value.tagged.addr().get() & MASK, 0);
+    assert_eq!(value.tagged.as_ptr().cast_const(), value.heap_ptr());
+    // Directly constructed Big(7) must stay Big, rather than being normalized.
+    let big = Expr::Atom(Atom::Integer(IntValue::Big(Box::new(BigInt::from(7)))));
+    let packed = CompactExpr::new(big);
+    assert!(!packed.is_inline());
+    assert!(matches!(
+        packed.into_expr(),
+        Expr::Atom(Atom::Integer(IntValue::Big(_)))
+    ));
+}
+
+#[test]
 fn deterministic_integer_round_trips() {
     let mut state = 0x1234_5678_9abc_def0_u64;
     for _ in 0..256 {

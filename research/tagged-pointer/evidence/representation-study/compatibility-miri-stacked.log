@@ -1,0 +1,13 @@
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+   Compiling rum-compact-expr-v1-hinted v0.0.0 (<RUM_ROOT>/research/tagged-pointer/representation-study/inline-control)
+   Compiling rum-compact-expr-v1 v0.0.0 (<RUM_ROOT>/research/tagged-pointer/representation-study/baseline)
+   Compiling rum-representation-study v0.0.0 (<RUM_ROOT>/research/tagged-pointer/representation-study)
+    Finished `test` profile [unoptimized] target(s) in 1.50s
+     Running tests/compatibility.rs (/tmp/rum-tagged-build-77029938/representation-study/miri/x86_64-unknown-linux-gnu/debug/build/rum-representation-study/8ac8f9d785b1b885/out/compatibility-8ac8f9d785b1b885)
+
+running 2 tests
+test all_representations_preserve_original_values ... ok
+test projected_heap_lengths_agree ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.54s
+

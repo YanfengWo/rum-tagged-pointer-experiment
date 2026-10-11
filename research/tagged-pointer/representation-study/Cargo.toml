@@ -1,0 +1,15 @@
+[package]
+name = "rum-representation-study"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace]
+exclude = ["baseline", "inline-control"]
+
+[dependencies]
+rum-core = { path = "../../../crates/rum-core" }
+rum-compact-expr = { path = "../compact-expr" }
+compact-v1 = { package = "rum-compact-expr-v1", path = "baseline" }
+compact-v1-hinted = { package = "rum-compact-expr-v1-hinted", path = "inline-control" }

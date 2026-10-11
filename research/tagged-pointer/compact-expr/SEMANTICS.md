@@ -12,10 +12,10 @@ An owner has exactly one of two private states on a 64-bit target:
 * I(n): low three bits are 001, the upper 61 bits encode the signed integer n,
   where -2^60 <= n < 2^60. The pointer has no allocation provenance and is
   never dereferenced or passed to Arc.
-* H(p): low three bits are 010, clearing them gives a live Arc<Payload> data
-  pointer p with its original provenance. The owner holds exactly one strong
+* H(p): low three bits are 000; the stored pointer is exactly the live
+  Arc<Payload> data pointer p with its original provenance. The owner holds one strong
   count. Payload is aligned to at least eight bytes and contains an immutable
-  original Expr. Tags other than 001 and 010 are unreachable through safe APIs.
+  original Expr. Tags other than 001 and 000 are unreachable through safe APIs.
 
 The abstraction relation alpha maps I(n) to Expr::small_integer(n) and H(p) to
 the expression in p. The safe control uses the same relation, immediate range,
@@ -36,11 +36,12 @@ with a numerically small value: preservation includes the original variant.
 
 `new` recognizes only the original Small variant within the range. In I it
 creates a nonzero provenance-free address. In H, Arc::new establishes ownership,
-Arc::into_raw transfers its count, and with_addr changes only the three reserved
-alignment bits. The original expression is moved intact into Payload.
+Arc::into_raw transfers its count. The aligned, nonzero data pointer is stored
+unchanged, so no heap address restoration is needed. The original expression
+is moved intact into Payload.
 
-`view` decodes I without touching memory. In H, with_addr clears the tag while
-preserving provenance. The owning count keeps Payload initialized and alive;
+`view` decodes I without touching memory. In H, it uses the unchanged Arc pointer
+with its original provenance. The owning count keeps Payload initialized and alive;
 the returned immutable reference has the borrow lifetime of &self. A caller
 cannot drop that owner while using its borrow. Another owner can be dropped
 concurrently because it releases only its own count. No mutable alias is exposed.
@@ -65,6 +66,17 @@ unwinding still releases that count. Both cases preserve alpha and child COW.
 exactly the owner's count. Arc releases the payload at the last strong drop and
 keeps weak metadata alive for remaining Weak observers. A forgotten owner leaks
 its count safely; eventual deallocation is not a soundness precondition.
+
+`borrow` projects `view` into ExprRef / AtomRef / IntRef entirely in safe Rust.
+An immediate becomes IntRef::Small(n). Heap Small integers, including values
+outside the inline range, are also projected by value; a manual Big(7) stays
+IntRef::Big and its as_i64 result stays None. Strings, BigInt and rationals borrow
+their original storage. Symbols copy the original static-text/identity handle.
+Calls borrow the original SharedExpr and SharedArgs handles, preserving child
+identity and Weak liveness. No owned clone or allocation occurs in projection.
+All references are lifetime-bounded by the original immutable view; copying the
+view does not extend a reference's lifetime. The typed string escape is checked
+by a separate compile-fail doc test. Recursive children still use original Expr.
 
 `Send` and `Sync` rely on immutable Payload containing Send + Sync Expr, enforced
 in production by a compile-time bound. No thread-local state or non-atomic
@@ -91,3 +103,15 @@ string construction/unique conversion can therefore cost more than original
 Expr. Recursively compact children, borrowing pattern matches, equality/hashing,
 serde, weak handles, deep drop behavior, and the HostSession embedding API still
 need migration design and evaluator-level rum-vs-rum performance gates.
+
+## Encoding refinement from v1
+
+The published v1 stored H(p) at address p | 010 and recovered p by clearing
+the low three bits with with_addr. V2 stores H(p) unchanged with low bits 000.
+The abstraction relation alpha, integer encoding, payload and strong-count
+ownership are unchanged. Alignment and Arc's non-null invariant distinguish
+H(p) from I(n) with the same low-bit test, so each public operation simulates
+the same original operation. Encoded addresses are private and are not serialized
+or observable through the API. This removes a heap masking operation and a
+provenance-preservation obligation; it does not eliminate raw Arc obligations.
+The pinned v1 source and same-process comparison harness are retained separately.

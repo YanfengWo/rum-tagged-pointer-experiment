@@ -1,0 +1,5 @@
+{
+  "derived_from": "ff3327b74b0381bd1dce7ff51bb5b92f37c69251",
+  "change": "Only add #[inline] to private heap_ptr; heap tag remains 010",
+  "source_sha256": "71a9b5f9398edae85f3cb91481a4173e1dcb3d1dca533bcdb39f1cfdf143f42f"
+}

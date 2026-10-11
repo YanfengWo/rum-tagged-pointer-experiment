@@ -1,0 +1,11 @@
+[package]
+name = "rum-compact-expr-v1-hinted"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace]
+
+[dependencies]
+rum-core = { path = "../../../../crates/rum-core" }

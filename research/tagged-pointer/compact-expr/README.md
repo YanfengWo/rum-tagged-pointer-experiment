@@ -1,5 +1,13 @@
 # CompactExpr external prototype
 
+## Current V2 revision
+
+The current implementation keeps heap addresses unchanged and provides a full typed borrowed view. See [V2 diagnosis, tests and paired timings](../representation-study/README.md) and [current semantics](SEMANTICS.md). There are 13 unit tests and two compile-fail doc tests; the current source differs from the V1 snapshot below.
+
+## Historical V1 record
+
+The following measurements describe ff3327b7; its source is retained in representation-study/baseline. The evidence/compact/ files describe that revision.
+
 Date: 2026-10-10. Pinned upstream: `77029938f999b14dbe5b0755bebdf98e51517ae6`.
 The runtime remains unchanged. This standalone crate wraps original Expr values;
 it is an experiment before evaluator migration, not a completed optimized rum.

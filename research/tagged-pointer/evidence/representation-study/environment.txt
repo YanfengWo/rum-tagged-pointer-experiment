@@ -1,0 +1,1 @@
+CPU affinity: 0; rounds: 1 warmup + 15 measured; runs: 3; five representations interleaved; release: default
