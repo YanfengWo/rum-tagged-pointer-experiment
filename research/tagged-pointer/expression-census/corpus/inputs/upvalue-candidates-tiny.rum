@@ -1,0 +1,4 @@
+(
+    gMicroUpvalueNonce = gMicroUpvalueNonce + 1;
+    gMicroUpvalueProbe[a, b, c, d, gMicroUpvalueNonce]
+  )

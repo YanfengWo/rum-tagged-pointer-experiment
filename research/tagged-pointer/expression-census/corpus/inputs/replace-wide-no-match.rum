@@ -1,0 +1,1 @@
+Replace[gMicroWideTraversal, z -> 0, {1}]

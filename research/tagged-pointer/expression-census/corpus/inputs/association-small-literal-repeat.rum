@@ -1,0 +1,4 @@
+Do[
+    <|a -> gMicroAssociationSmallLiteralRepeat, b -> 2|>,
+    {gMicroAssociationSmallLiteralRepeat, 1, 500 * rumMicroScale}
+  ]

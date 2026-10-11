@@ -1,0 +1,35 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling syn v2.0.117
+   Compiling num-integer v0.1.46
+   Compiling thiserror v2.0.18
+   Compiling zmij v1.0.21
+   Compiling serde_json v1.0.149
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.0
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling rum-derive v0.2.0 (<RUM_ROOT>/crates/rum-derive)
+   Compiling rum-syntax v0.2.0 (<RUM_ROOT>/crates/rum-syntax)
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<RUM_ROOT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/compact-expr)
+   Compiling rum-runtime v0.2.0 (<RUM_ROOT>/crates/rum-runtime)
+   Compiling rum-recursive-expr v0.0.0 (<RUM_ROOT>/research/tagged-pointer/recursive-expr)
+   Compiling rum-stdlib v0.2.0 (<RUM_ROOT>/crates/rum-stdlib)
+   Compiling rum-expression-census v0.0.0 (<RUM_ROOT>/research/tagged-pointer/expression-census)
+    Finished `test` profile [unoptimized] target(s) in 36.71s
+     Running unittests src/main.rs (/tmp/rum-tagged-build-77029938/base/debug/deps/rum_expression_census-35a4bcfa7e160bd3)
+
+running 3 tests
+test graph::tests::shared_physical_slots_and_logical_multiplicity_differ ... ok
+test graph::tests::variants_identity_and_capacity_are_counted_without_normalization ... ok
+test graph::tests::nested_dag_depth_and_saturating_counts_without_expansion ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,9 @@
+gMicroRetainedModuleGcRoots = Append[
+      gMicroRetainedModuleGcRoots,
+      With[{n = gMicroRetainedModuleGcBatchSize},
+        Reap[Do[
+          Module[{x = 1}, Sow[Hold[x]]],
+          {n}
+        ]]
+      ]
+    ]

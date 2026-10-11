@@ -1,0 +1,6860 @@
+[
+  {
+    "entry": {
+      "file": "results/gMicroAssociationPartWidth32000.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroAssociationPartWidth32000",
+      "source_end": 5259,
+      "source_start": 5214
+    },
+    "graph": {
+      "argument_capacity_sum": 137728,
+      "argument_length_sum": 96000,
+      "call_arity_histogram": [
+        0,
+        0,
+        32000,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 32001,
+        "inline_integer": 64000,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 32001
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 128002,
+      "max_arity": 32000,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 32001,
+        "inline_integer": 64000,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 32001
+      },
+      "physical_nodes": 128002,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 32001,
+      "unique_heads": 32001,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroAssociationPartWidth4000.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroAssociationPartWidth4000",
+      "source_end": 5178,
+      "source_start": 5135
+    },
+    "graph": {
+      "argument_capacity_sum": 17216,
+      "argument_length_sum": 12000,
+      "call_arity_histogram": [
+        0,
+        0,
+        4000,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4001,
+        "inline_integer": 8000,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4001
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 16002,
+      "max_arity": 4000,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 4001,
+        "inline_integer": 8000,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4001
+      },
+      "physical_nodes": 16002,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4001,
+      "unique_heads": 4001,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroReplacePartRules.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroReplacePartRules",
+      "source_end": 5326,
+      "source_start": 5286
+    },
+    "graph": {
+      "argument_capacity_sum": 4804,
+      "argument_length_sum": 4801,
+      "call_arity_histogram": [
+        0,
+        1600,
+        1600,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3201,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3201
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9602,
+      "max_arity": 1600,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 3201,
+        "inline_integer": 1601,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1602
+      },
+      "physical_nodes": 6404,
+      "repeated_argument_handles": 1599,
+      "repeated_head_handles": 1599,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1602,
+      "unique_heads": 1602,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroSortCallbackLarge.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroSortCallbackLarge",
+      "source_end": 160455,
+      "source_start": 160425
+    },
+    "graph": {
+      "argument_capacity_sum": 200,
+      "argument_length_sum": 200,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 202,
+      "max_arity": 200,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 202,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroSortCallbackSmall.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroSortCallbackSmall",
+      "source_end": 160397,
+      "source_start": 160367
+    },
+    "graph": {
+      "argument_capacity_sum": 100,
+      "argument_length_sum": 100,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 100,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 102,
+      "max_arity": 100,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 100,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 102,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroSortDefaultWide.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroSortDefaultWide",
+      "source_end": 160744,
+      "source_start": 160713
+    },
+    "graph": {
+      "argument_capacity_sum": 1600,
+      "argument_length_sum": 1600,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1602,
+      "max_arity": 1600,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 1602,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroSortSymbolWidth16000.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroSortSymbolWidth16000",
+      "source_end": 161094,
+      "source_start": 161006
+    },
+    "graph": {
+      "argument_capacity_sum": 16000,
+      "argument_length_sum": 16000,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 16001
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 16002,
+      "max_arity": 16000,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 16001
+      },
+      "physical_nodes": 16002,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 16001
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroSortSymbolWidth4000.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroSortSymbolWidth4000",
+      "source_end": 160975,
+      "source_start": 160888
+    },
+    "graph": {
+      "argument_capacity_sum": 4000,
+      "argument_length_sum": 4000,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4001
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4002,
+      "max_arity": 4000,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4001
+      },
+      "physical_nodes": 4002,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 4001
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroStringLiteralHaystack.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroStringLiteralHaystack",
+      "source_end": 5535,
+      "source_start": 5472
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 316,
+      "string_length_sum": 316,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 1,
+      "unique_symbols": 0
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroStringTrimLiteralList32000.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroStringTrimLiteralList32000",
+      "source_end": 5979,
+      "source_start": 5929
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 32000,
+      "string_length_sum": 32000,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 1,
+      "unique_symbols": 0
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroStringTrimLiteralList4000.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroStringTrimLiteralList4000",
+      "source_end": 5892,
+      "source_start": 5843
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 4000,
+      "string_length_sum": 4000,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 1,
+      "unique_symbols": 0
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroWideAssociation.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroWideAssociation",
+      "source_end": 5100,
+      "source_start": 5029
+    },
+    "graph": {
+      "argument_capacity_sum": 7808,
+      "argument_length_sum": 4800,
+      "call_arity_histogram": [
+        0,
+        0,
+        1600,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1601,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1601
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6402,
+      "max_arity": 1600,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1601,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1601
+      },
+      "physical_nodes": 6402,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1601,
+      "unique_heads": 1601,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "results/gMicroWideTraversal.rum",
+      "kind": "evaluated-result",
+      "label": "gMicroWideTraversal",
+      "source_end": 5003,
+      "source_start": 4981
+    },
+    "graph": {
+      "argument_capacity_sum": 1600,
+      "argument_length_sum": 1600,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1602,
+      "max_arity": 1600,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 1602,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "results/list10.rum",
+      "kind": "evaluated-result",
+      "label": "list10",
+      "source_end": 4772,
+      "source_start": 4742
+    },
+    "graph": {
+      "argument_capacity_sum": 16,
+      "argument_length_sum": 10,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 10,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 12,
+      "max_arity": 10,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 10,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 12,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "results/rulesSimple.rum",
+      "kind": "evaluated-result",
+      "label": "rulesSimple",
+      "source_end": 4812,
+      "source_start": 4788
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/appendto-list-incremental-large.rum",
+      "kind": "lowered-input",
+      "label": "appendto-list-incremental-large",
+      "source_end": 54582,
+      "source_start": 54473
+    },
+    "graph": {
+      "argument_capacity_sum": 20,
+      "argument_length_sum": 13,
+      "call_arity_histogram": [
+        1,
+        0,
+        5,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 21,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "physical_nodes": 21,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 7,
+      "unique_heads": 7,
+      "unique_string_values": 0,
+      "unique_symbols": 9
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/appendto-list-incremental-small.rum",
+      "kind": "lowered-input",
+      "label": "appendto-list-incremental-small",
+      "source_end": 54398,
+      "source_start": 54289
+    },
+    "graph": {
+      "argument_capacity_sum": 20,
+      "argument_length_sum": 13,
+      "call_arity_histogram": [
+        1,
+        0,
+        5,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 21,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "physical_nodes": 21,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 7,
+      "unique_heads": 7,
+      "unique_string_values": 0,
+      "unique_symbols": 9
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/appendto-part-outer1000-large.rum",
+      "kind": "lowered-input",
+      "label": "appendto-part-outer1000-large",
+      "source_end": 55058,
+      "source_start": 54893
+    },
+    "graph": {
+      "argument_capacity_sum": 32,
+      "argument_length_sum": 18,
+      "call_arity_histogram": [
+        1,
+        1,
+        7,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 10,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 15
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 29,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 10,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 15
+      },
+      "physical_nodes": 29,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 10,
+      "unique_heads": 10,
+      "unique_string_values": 0,
+      "unique_symbols": 11
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/appendto-part-outer1000-small.rum",
+      "kind": "lowered-input",
+      "label": "appendto-part-outer1000-small",
+      "source_end": 54820,
+      "source_start": 54655
+    },
+    "graph": {
+      "argument_capacity_sum": 32,
+      "argument_length_sum": 18,
+      "call_arity_histogram": [
+        1,
+        1,
+        7,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 10,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 15
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 29,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 10,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 15
+      },
+      "physical_nodes": 29,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 10,
+      "unique_heads": 10,
+      "unique_string_values": 0,
+      "unique_symbols": 11
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-part-key-read-width32000.rum",
+      "kind": "lowered-input",
+      "label": "association-part-key-read-width32000",
+      "source_end": 7318,
+      "source_start": 7223
+    },
+    "graph": {
+      "argument_capacity_sum": 20,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        2,
+        2,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 15,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "physical_nodes": 15,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 5,
+      "unique_heads": 5,
+      "unique_string_values": 0,
+      "unique_symbols": 7
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-part-key-read-width4000.rum",
+      "kind": "lowered-input",
+      "label": "association-part-key-read-width4000",
+      "source_end": 7056,
+      "source_start": 6963
+    },
+    "graph": {
+      "argument_capacity_sum": 20,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        2,
+        2,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 15,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "physical_nodes": 15,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 5,
+      "unique_heads": 5,
+      "unique_string_values": 0,
+      "unique_symbols": 7
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-part-positional-read-width32000.rum",
+      "kind": "lowered-input",
+      "label": "association-part-positional-read-width32000",
+      "source_end": 7796,
+      "source_start": 7725
+    },
+    "graph": {
+      "argument_capacity_sum": 16,
+      "argument_length_sum": 8,
+      "call_arity_histogram": [
+        0,
+        1,
+        2,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 13,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 13,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-part-positional-read-width4000.rum",
+      "kind": "lowered-input",
+      "label": "association-part-positional-read-width4000",
+      "source_end": 7563,
+      "source_start": 7494
+    },
+    "graph": {
+      "argument_capacity_sum": 16,
+      "argument_length_sum": 8,
+      "call_arity_histogram": [
+        0,
+        1,
+        2,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 13,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 13,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-set-key-incremental-large.rum",
+      "kind": "lowered-input",
+      "label": "association-set-key-incremental-large",
+      "source_end": 55458,
+      "source_start": 55339
+    },
+    "graph": {
+      "argument_capacity_sum": 22,
+      "argument_length_sum": 14,
+      "call_arity_histogram": [
+        1,
+        1,
+        5,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 8,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 13
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 23,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 8,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 13
+      },
+      "physical_nodes": 23,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 8,
+      "unique_heads": 8,
+      "unique_string_values": 0,
+      "unique_symbols": 9
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-set-key-incremental-small.rum",
+      "kind": "lowered-input",
+      "label": "association-set-key-incremental-small",
+      "source_end": 55258,
+      "source_start": 55139
+    },
+    "graph": {
+      "argument_capacity_sum": 22,
+      "argument_length_sum": 14,
+      "call_arity_histogram": [
+        1,
+        1,
+        5,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 8,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 13
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 23,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 8,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 13
+      },
+      "physical_nodes": 23,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 8,
+      "unique_heads": 8,
+      "unique_string_values": 0,
+      "unique_symbols": 9
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/association-small-literal-repeat.rum",
+      "kind": "lowered-input",
+      "label": "association-small-literal-repeat",
+      "source_end": 55665,
+      "source_start": 55534
+    },
+    "graph": {
+      "argument_capacity_sum": 18,
+      "argument_length_sum": 13,
+      "call_arity_histogram": [
+        0,
+        0,
+        5,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 11
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 20,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 11
+      },
+      "physical_nodes": 20,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 6,
+      "unique_heads": 6,
+      "unique_string_values": 0,
+      "unique_symbols": 9
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/block-init-null-repeat.rum",
+      "kind": "lowered-input",
+      "label": "block-init-null-repeat",
+      "source_end": 23904,
+      "source_start": 23856
+    },
+    "graph": {
+      "argument_capacity_sum": 20,
+      "argument_length_sum": 10,
+      "call_arity_histogram": [
+        0,
+        2,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 9
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 17,
+      "max_arity": 2,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 9
+      },
+      "physical_nodes": 17,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 6,
+      "unique_heads": 6,
+      "unique_string_values": 0,
+      "unique_symbols": 8
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/block-init-read-repeat.rum",
+      "kind": "lowered-input",
+      "label": "block-init-read-repeat",
+      "source_end": 24008,
+      "source_start": 23963
+    },
+    "graph": {
+      "argument_capacity_sum": 20,
+      "argument_length_sum": 10,
+      "call_arity_histogram": [
+        0,
+        2,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 9
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 17,
+      "max_arity": 2,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 9
+      },
+      "physical_nodes": 17,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 6,
+      "unique_heads": 6,
+      "unique_string_values": 0,
+      "unique_symbols": 7
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/block-local.rum",
+      "kind": "lowered-input",
+      "label": "block-local",
+      "source_end": 23692,
+      "source_start": 23665
+    },
+    "graph": {
+      "argument_capacity_sum": 12,
+      "argument_length_sum": 7,
+      "call_arity_histogram": [
+        0,
+        1,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 12,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 12,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/block-symbol-only-repeat.rum",
+      "kind": "lowered-input",
+      "label": "block-symbol-only-repeat",
+      "source_end": 23797,
+      "source_start": 23753
+    },
+    "graph": {
+      "argument_capacity_sum": 18,
+      "argument_length_sum": 8,
+      "call_arity_histogram": [
+        0,
+        2,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 5,
+      "unique_heads": 5,
+      "unique_string_values": 0,
+      "unique_symbols": 7
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/cases-wide-no-match.rum",
+      "kind": "lowered-input",
+      "label": "cases-wide-no-match",
+      "source_end": 51502,
+      "source_start": 51462
+    },
+    "graph": {
+      "argument_capacity_sum": 9,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/character-range-small.rum",
+      "kind": "lowered-input",
+      "label": "character-range-small",
+      "source_end": 52590,
+      "source_start": 52566
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 1
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 2,
+      "string_length_sum": 2,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 2,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/count-wide-no-match.rum",
+      "kind": "lowered-input",
+      "label": "count-wide-no-match",
+      "source_end": 51606,
+      "source_start": 51566
+    },
+    "graph": {
+      "argument_capacity_sum": 9,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/default-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "default-guarded-hit",
+      "source_end": 25701,
+      "source_start": 25679
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 2,
+      "max_arity": 0,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 2,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/default-unguarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "default-unguarded-hit",
+      "source_end": 25536,
+      "source_start": 25518
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 2,
+      "max_arity": 0,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 2,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/default-unguarded-miss.rum",
+      "kind": "lowered-input",
+      "label": "default-unguarded-miss",
+      "source_end": 25615,
+      "source_start": 25596
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 2,
+      "max_arity": 0,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 2,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/deletecases-wide-association-no-match.rum",
+      "kind": "lowered-input",
+      "label": "deletecases-wide-association-no-match",
+      "source_end": 51962,
+      "source_start": 51914
+    },
+    "graph": {
+      "argument_capacity_sum": 9,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/deletecases-wide-no-match.rum",
+      "kind": "lowered-input",
+      "label": "deletecases-wide-no-match",
+      "source_end": 51832,
+      "source_start": 51786
+    },
+    "graph": {
+      "argument_capacity_sum": 9,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/do-count-null.rum",
+      "kind": "lowered-input",
+      "label": "do-count-null",
+      "source_end": 8013,
+      "source_start": 7980
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        1,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/do-iterator-null.rum",
+      "kind": "lowered-input",
+      "label": "do-iterator-null",
+      "source_end": 8101,
+      "source_start": 8066
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 6,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 10,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 10,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/do-small.rum",
+      "kind": "lowered-input",
+      "label": "do-small",
+      "source_end": 24423,
+      "source_start": 24383
+    },
+    "graph": {
+      "argument_capacity_sum": 24,
+      "argument_length_sum": 14,
+      "call_arity_histogram": [
+        0,
+        1,
+        5,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 22,
+      "max_arity": 3,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "physical_nodes": 22,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 7,
+      "unique_heads": 7,
+      "unique_string_values": 0,
+      "unique_symbols": 7
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-exact-hit.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-exact-hit",
+      "source_end": 24490,
+      "source_start": 24481
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-exact-miss.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-exact-miss",
+      "source_end": 24557,
+      "source_start": 24548
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-exact-miss-repeat.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-exact-miss-repeat",
+      "source_end": 24801,
+      "source_start": 24764
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 6,
+      "call_arity_histogram": [
+        0,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 11,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 11,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-guarded-decline-fallback.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-guarded-decline-fallback",
+      "source_end": 25077,
+      "source_start": 25057
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-guarded-hit",
+      "source_end": 24978,
+      "source_start": 24967
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-pattern-hit.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-pattern-hit",
+      "source_end": 24627,
+      "source_start": 24616
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-pattern-miss.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-pattern-miss",
+      "source_end": 24700,
+      "source_start": 24687
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/downvalue-pattern-miss-repeat.rum",
+      "kind": "lowered-input",
+      "label": "downvalue-pattern-miss-repeat",
+      "source_end": 24908,
+      "source_start": 24867
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 6,
+      "call_arity_histogram": [
+        0,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 11,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 5
+      },
+      "physical_nodes": 11,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 1,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/head-list.rum",
+      "kind": "lowered-input",
+      "label": "head-list",
+      "source_end": 8835,
+      "source_start": 8823
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/if-true.rum",
+      "kind": "lowered-input",
+      "label": "if-true",
+      "source_end": 9147,
+      "source_start": 9133
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 3,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/keysort-callback-large.rum",
+      "kind": "lowered-input",
+      "label": "keysort-callback-large",
+      "source_end": 163250,
+      "source_start": 163209
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/keysort-callback-small.rum",
+      "kind": "lowered-input",
+      "label": "keysort-callback-small",
+      "source_end": 163034,
+      "source_start": 162993
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/keysort-default-wide.rum",
+      "kind": "lowered-input",
+      "label": "keysort-default-wide",
+      "source_end": 164769,
+      "source_start": 164736
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/keysortby-callback-large.rum",
+      "kind": "lowered-input",
+      "label": "keysortby-callback-large",
+      "source_end": 163714,
+      "source_start": 163659
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 3,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 4
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/keysortby-callback-small.rum",
+      "kind": "lowered-input",
+      "label": "keysortby-callback-small",
+      "source_end": 163483,
+      "source_start": 163428
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 3,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 4
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/keysortby-default-wide.rum",
+      "kind": "lowered-input",
+      "label": "keysortby-default-wide",
+      "source_end": 164996,
+      "source_start": 164949
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/length-list.rum",
+      "kind": "lowered-input",
+      "label": "length-list",
+      "source_end": 8898,
+      "source_start": 8884
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/list-literal-small.rum",
+      "kind": "lowered-input",
+      "label": "list-literal-small",
+      "source_end": 8776,
+      "source_start": 8764
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 4,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6,
+      "max_arity": 4,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 6,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/literal-integer.rum",
+      "kind": "lowered-input",
+      "label": "literal-integer",
+      "source_end": 8433,
+      "source_start": 8430
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 0
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 0
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 0,
+      "unique_symbols": 0
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/literal-string.rum",
+      "kind": "lowered-input",
+      "label": "literal-string",
+      "source_end": 8490,
+      "source_start": 8485
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 3,
+      "string_length_sum": 3,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 1,
+      "unique_symbols": 0
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/loop-empty.rum",
+      "kind": "lowered-input",
+      "label": "loop-empty",
+      "source_end": 7929,
+      "source_start": 7925
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/matcher-single-tiny.rum",
+      "kind": "lowered-input",
+      "label": "matcher-single-tiny",
+      "source_end": 25992,
+      "source_start": 25924
+    },
+    "graph": {
+      "argument_capacity_sum": 12,
+      "argument_length_sum": 10,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        2,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 8,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 4,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 8,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/matcher-single-wide-large.rum",
+      "kind": "lowered-input",
+      "label": "matcher-single-wide-large",
+      "source_end": 51059,
+      "source_start": 34029
+    },
+    "graph": {
+      "argument_capacity_sum": 4100,
+      "argument_length_sum": 3202,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        2
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3206,
+      "max_arity": 1600,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 3206,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/matcher-single-wide-small.rum",
+      "kind": "lowered-input",
+      "label": "matcher-single-wide-small",
+      "source_end": 33924,
+      "source_start": 26096
+    },
+    "graph": {
+      "argument_capacity_sum": 2052,
+      "argument_length_sum": 1602,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        2,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1606,
+      "max_arity": 800,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 1606,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/matchq-integer-fail.rum",
+      "kind": "lowered-input",
+      "label": "matchq-integer-fail",
+      "source_end": 25860,
+      "source_start": 25839
+    },
+    "graph": {
+      "argument_capacity_sum": 5,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 3
+      },
+      "physical_nodes": 6,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 1,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/matchq-integer-success.rum",
+      "kind": "lowered-input",
+      "label": "matchq-integer-success",
+      "source_end": 25782,
+      "source_start": 25763
+    },
+    "graph": {
+      "argument_capacity_sum": 5,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 6,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/module-chain-escape-large.rum",
+      "kind": "lowered-input",
+      "label": "module-chain-escape-large",
+      "source_end": 23616,
+      "source_start": 14029
+    },
+    "graph": {
+      "argument_capacity_sum": 1412,
+      "argument_length_sum": 770,
+      "call_arity_histogram": [
+        0,
+        192,
+        193,
+        0,
+        0,
+        1,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 386,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 770
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1157,
+      "max_arity": 192,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 386,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 770
+      },
+      "physical_nodes": 1157,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 386,
+      "unique_heads": 386,
+      "unique_string_values": 0,
+      "unique_symbols": 196
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/module-chain-escape-small.rum",
+      "kind": "lowered-input",
+      "label": "module-chain-escape-small",
+      "source_end": 13971,
+      "source_start": 9274
+    },
+    "graph": {
+      "argument_capacity_sum": 708,
+      "argument_length_sum": 386,
+      "call_arity_histogram": [
+        0,
+        96,
+        97,
+        0,
+        0,
+        1,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 194,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 386
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 581,
+      "max_arity": 96,
+      "max_depth_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 194,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 386
+      },
+      "physical_nodes": 581,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 194,
+      "unique_heads": 194,
+      "unique_string_values": 0,
+      "unique_symbols": 100
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/module-local.rum",
+      "kind": "lowered-input",
+      "label": "module-local",
+      "source_end": 9218,
+      "source_start": 9196
+    },
+    "graph": {
+      "argument_capacity_sum": 12,
+      "argument_length_sum": 7,
+      "call_arity_histogram": [
+        0,
+        1,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 12,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 12,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/module-retained-gensym-gc-batch.rum",
+      "kind": "lowered-input",
+      "label": "module-retained-gensym-gc-batch",
+      "source_end": 444073,
+      "source_start": 443854
+    },
+    "graph": {
+      "argument_capacity_sum": 46,
+      "argument_length_sum": 20,
+      "call_arity_histogram": [
+        0,
+        6,
+        7,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 13,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 20
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 34,
+      "max_arity": 2,
+      "max_depth_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 13,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 20
+      },
+      "physical_nodes": 34,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 13,
+      "unique_heads": 13,
+      "unique_string_values": 0,
+      "unique_symbols": 13
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/part-list.rum",
+      "kind": "lowered-input",
+      "label": "part-list",
+      "source_end": 8956,
+      "source_start": 8945
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/position-wide-no-match.rum",
+      "kind": "lowered-input",
+      "label": "position-wide-no-match",
+      "source_end": 51716,
+      "source_start": 51673
+    },
+    "graph": {
+      "argument_capacity_sum": 9,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/replace-wide-no-match.rum",
+      "kind": "lowered-input",
+      "label": "replace-wide-no-match",
+      "source_end": 52069,
+      "source_start": 52028
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 6,
+      "call_arity_histogram": [
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 10,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 10,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/replaceall-simple.rum",
+      "kind": "lowered-input",
+      "label": "replaceall-simple",
+      "source_end": 51176,
+      "source_start": 51160
+    },
+    "graph": {
+      "argument_capacity_sum": 2,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/replacepart-guarded-decline-fallback.rum",
+      "kind": "lowered-input",
+      "label": "replacepart-guarded-decline-fallback",
+      "source_end": 52430,
+      "source_start": 52375
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 6,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/replacepart-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "replacepart-guarded-hit",
+      "source_end": 52294,
+      "source_start": 52248
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 6,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/replacepart-wide-rule-list.rum",
+      "kind": "lowered-input",
+      "label": "replacepart-wide-rule-list",
+      "source_end": 52180,
+      "source_start": 52140
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 6,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 6,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/reversesort-callback-large.rum",
+      "kind": "lowered-input",
+      "label": "reversesort-callback-large",
+      "source_end": 162855,
+      "source_start": 162806
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/reversesort-callback-small.rum",
+      "kind": "lowered-input",
+      "label": "reversesort-callback-small",
+      "source_end": 162664,
+      "source_start": 162615
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/reversesort-default-wide.rum",
+      "kind": "lowered-input",
+      "label": "reversesort-default-wide",
+      "source_end": 164598,
+      "source_start": 164557
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/rewrite-guarded-decline-fallback.rum",
+      "kind": "lowered-input",
+      "label": "rewrite-guarded-decline-fallback",
+      "source_end": 51398,
+      "source_start": 51352
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/rewrite-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "rewrite-guarded-hit",
+      "source_end": 51275,
+      "source_start": 51239
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sameq-integer.rum",
+      "kind": "lowered-input",
+      "label": "sameq-integer",
+      "source_end": 9018,
+      "source_start": 9007
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sameq-list.rum",
+      "kind": "lowered-input",
+      "label": "sameq-list",
+      "source_end": 9087,
+      "source_start": 9066
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/set-ownvalue.rum",
+      "kind": "lowered-input",
+      "label": "set-ownvalue",
+      "source_end": 8707,
+      "source_start": 8697
+    },
+    "graph": {
+      "argument_capacity_sum": 2,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/set-part-fill-large.rum",
+      "kind": "lowered-input",
+      "label": "set-part-fill-large",
+      "source_end": 56264,
+      "source_start": 56216
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/set-part-fill-small.rum",
+      "kind": "lowered-input",
+      "label": "set-part-fill-small",
+      "source_end": 56122,
+      "source_start": 56074
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/set-part-fixed100-len100.rum",
+      "kind": "lowered-input",
+      "label": "set-part-fixed100-len100",
+      "source_end": 55823,
+      "source_start": 55770
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/set-part-fixed100-len800.rum",
+      "kind": "lowered-input",
+      "label": "set-part-fixed100-len800",
+      "source_end": 55980,
+      "source_start": 55927
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 9,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 14,
+      "max_arity": 3,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "physical_nodes": 14,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sort-callback-large.rum",
+      "kind": "lowered-input",
+      "label": "sort-callback-large",
+      "source_end": 162128,
+      "source_start": 162093
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sort-callback-small.rum",
+      "kind": "lowered-input",
+      "label": "sort-callback-small",
+      "source_end": 161967,
+      "source_start": 161932
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sort-default-wide.rum",
+      "kind": "lowered-input",
+      "label": "sort-default-wide",
+      "source_end": 163913,
+      "source_start": 163886
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sort-symbol-default-width16000.rum",
+      "kind": "lowered-input",
+      "label": "sort-symbol-default-width16000",
+      "source_end": 164243,
+      "source_start": 164211
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sort-symbol-default-width4000.rum",
+      "kind": "lowered-input",
+      "label": "sort-symbol-default-width4000",
+      "source_end": 164071,
+      "source_start": 164040
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sortby-callback-large.rum",
+      "kind": "lowered-input",
+      "label": "sortby-callback-large",
+      "source_end": 162482,
+      "source_start": 162433
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 3,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 4
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sortby-callback-small.rum",
+      "kind": "lowered-input",
+      "label": "sortby-callback-small",
+      "source_end": 162305,
+      "source_start": 162256
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 3,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 3,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 4
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/sortby-default-wide.rum",
+      "kind": "lowered-input",
+      "label": "sortby-default-wide",
+      "source_end": 164424,
+      "source_start": 164383
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/string-repeat-small.rum",
+      "kind": "lowered-input",
+      "label": "string-repeat-small",
+      "source_end": 52508,
+      "source_start": 52488
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringreplace-guarded-decline-fallback.rum",
+      "kind": "lowered-input",
+      "label": "stringreplace-guarded-decline-fallback",
+      "source_end": 54213,
+      "source_start": 54159
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 3,
+      "string_length_sum": 3,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringreplace-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "stringreplace-guarded-hit",
+      "source_end": 54076,
+      "source_start": 54031
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 3,
+      "string_length_sum": 3,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringreplace-pattern-unguarded.rum",
+      "kind": "lowered-input",
+      "label": "stringreplace-pattern-unguarded",
+      "source_end": 53961,
+      "source_start": 53916
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 3,
+      "string_length_sum": 3,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringreplace-single-literal-unguarded.rum",
+      "kind": "lowered-input",
+      "label": "stringreplace-single-literal-unguarded",
+      "source_end": 53840,
+      "source_start": 53773
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringtrim-literal-list-32000.rum",
+      "kind": "lowered-input",
+      "label": "stringtrim-literal-list-32000",
+      "source_end": 52907,
+      "source_start": 52851
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 4,
+      "call_arity_histogram": [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 7,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 3
+      },
+      "physical_nodes": 7,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 2,
+      "string_length_sum": 2,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 2,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringtrim-literal-list-4000.rum",
+      "kind": "lowered-input",
+      "label": "stringtrim-literal-list-4000",
+      "source_end": 52717,
+      "source_start": 52662
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 4,
+      "call_arity_histogram": [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 3
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 7,
+      "max_arity": 2,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 3
+      },
+      "physical_nodes": 7,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 2,
+      "string_length_sum": 2,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 2,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringtrim-single-literal-32000.rum",
+      "kind": "lowered-input",
+      "label": "stringtrim-single-literal-32000",
+      "source_end": 53280,
+      "source_start": 53229
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringtrim-single-literal-4000.rum",
+      "kind": "lowered-input",
+      "label": "stringtrim-single-literal-4000",
+      "source_end": 53093,
+      "source_start": 53043
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 1,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringtrim-whitespace-32000.rum",
+      "kind": "lowered-input",
+      "label": "stringtrim-whitespace-32000",
+      "source_end": 53629,
+      "source_start": 53586
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/stringtrim-whitespace-4000.rum",
+      "kind": "lowered-input",
+      "label": "stringtrim-whitespace-4000",
+      "source_end": 53454,
+      "source_start": 53412
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/subvalue-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "subvalue-guarded-hit",
+      "source_end": 25458,
+      "source_start": 25431
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 1,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/subvalue-unguarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "subvalue-unguarded-hit",
+      "source_end": 25275,
+      "source_start": 25255
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 1,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/subvalue-unguarded-miss.rum",
+      "kind": "lowered-input",
+      "label": "subvalue-unguarded-miss",
+      "source_end": 25365,
+      "source_start": 25343
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 5,
+      "max_arity": 1,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "physical_nodes": 5,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 1,
+      "string_length_sum": 1,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 1,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/symbol-ownvalue-guarded-read.rum",
+      "kind": "lowered-input",
+      "label": "symbol-ownvalue-guarded-read",
+      "source_end": 8646,
+      "source_start": 8625
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/symbol-ownvalue-read.rum",
+      "kind": "lowered-input",
+      "label": "symbol-ownvalue-read",
+      "source_end": 8552,
+      "source_start": 8548
+    },
+    "graph": {
+      "argument_capacity_sum": 0,
+      "argument_length_sum": 0,
+      "call_arity_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1,
+      "max_arity": 0,
+      "max_depth_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "physical_nodes": 1,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 0,
+      "unique_heads": 0,
+      "unique_string_values": 0,
+      "unique_symbols": 1
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/table-count-null.rum",
+      "kind": "lowered-input",
+      "label": "table-count-null",
+      "source_end": 8189,
+      "source_start": 8154
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        1,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 9,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "physical_nodes": 9,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/table-iterator-null.rum",
+      "kind": "lowered-input",
+      "label": "table-iterator-null",
+      "source_end": 8283,
+      "source_start": 8245
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 6,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 10,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 10,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/table-iterator-pair-list.rum",
+      "kind": "lowered-input",
+      "label": "table-iterator-pair-list",
+      "source_end": 24338,
+      "source_start": 24298
+    },
+    "graph": {
+      "argument_capacity_sum": 14,
+      "argument_length_sum": 8,
+      "call_arity_histogram": [
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 13,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "physical_nodes": 13,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/table-iterator-plus.rum",
+      "kind": "lowered-input",
+      "label": "table-iterator-plus",
+      "source_end": 24237,
+      "source_start": 24198
+    },
+    "graph": {
+      "argument_capacity_sum": 12,
+      "argument_length_sum": 8,
+      "call_arity_histogram": [
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 13,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "physical_nodes": 13,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 6
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/table-iterator-symbol.rum",
+      "kind": "lowered-input",
+      "label": "table-iterator-symbol",
+      "source_end": 8376,
+      "source_start": 8341
+    },
+    "graph": {
+      "argument_capacity_sum": 10,
+      "argument_length_sum": 6,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 10,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 10,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 3,
+      "unique_heads": 3,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/table-small.rum",
+      "kind": "lowered-input",
+      "label": "table-small",
+      "source_end": 24142,
+      "source_start": 24123
+    },
+    "graph": {
+      "argument_capacity_sum": 8,
+      "argument_length_sum": 5,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 8,
+      "max_arity": 3,
+      "max_depth_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "physical_nodes": 8,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 2,
+      "unique_heads": 2,
+      "unique_string_values": 0,
+      "unique_symbols": 3
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/upvalue-candidates-tiny.rum",
+      "kind": "lowered-input",
+      "label": "upvalue-candidates-tiny",
+      "source_end": 56531,
+      "source_start": 56422
+    },
+    "graph": {
+      "argument_capacity_sum": 16,
+      "argument_length_sum": 11,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 11
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 16,
+      "max_arity": 5,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 11
+      },
+      "physical_nodes": 16,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 9
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/upvalue-candidates-wide-large.rum",
+      "kind": "lowered-input",
+      "label": "upvalue-candidates-wide-large",
+      "source_end": 160237,
+      "source_start": 90847
+    },
+    "graph": {
+      "argument_capacity_sum": 4104,
+      "argument_length_sum": 3207,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3207
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3212,
+      "max_arity": 3201,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3207
+      },
+      "physical_nodes": 3212,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 3205
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/upvalue-candidates-wide-small.rum",
+      "kind": "lowered-input",
+      "label": "upvalue-candidates-wide-small",
+      "source_end": 90784,
+      "source_start": 56594
+    },
+    "graph": {
+      "argument_capacity_sum": 2056,
+      "argument_length_sum": 1607,
+      "call_arity_histogram": [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        1
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1607
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 1612,
+      "max_arity": 1601,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1607
+      },
+      "physical_nodes": 1612,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 1605
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/upvalue-guarded-hit.rum",
+      "kind": "lowered-input",
+      "label": "upvalue-guarded-hit",
+      "source_end": 25194,
+      "source_start": 25142
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 2,
+      "call_arity_histogram": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 4,
+      "max_arity": 2,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 4,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/valueq-undefined-symbol-definitions-2000.rum",
+      "kind": "lowered-input",
+      "label": "valueq-undefined-symbol-definitions-2000",
+      "source_end": 233106,
+      "source_start": 233077
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/valueq-undefined-symbol-definitions-8000.rum",
+      "kind": "lowered-input",
+      "label": "valueq-undefined-symbol-definitions-8000",
+      "source_end": 443327,
+      "source_start": 443298
+    },
+    "graph": {
+      "argument_capacity_sum": 4,
+      "argument_length_sum": 1,
+      "call_arity_histogram": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 3,
+      "max_arity": 1,
+      "max_depth_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "physical_nodes": 3,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 1,
+      "unique_heads": 1,
+      "unique_string_values": 0,
+      "unique_symbols": 2
+    }
+  },
+  {
+    "entry": {
+      "file": "inputs/with-local.rum",
+      "kind": "lowered-input",
+      "label": "with-local",
+      "source_end": 24075,
+      "source_start": 24055
+    },
+    "graph": {
+      "argument_capacity_sum": 12,
+      "argument_length_sum": 7,
+      "call_arity_histogram": [
+        0,
+        1,
+        3,
+        0,
+        0,
+        0,
+        0
+      ],
+      "generated_symbol_occurrences": 0,
+      "logical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "logical_counts_saturated": false,
+      "logical_nodes": 12,
+      "max_arity": 2,
+      "max_depth_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "physical_nodes": 12,
+      "repeated_argument_handles": 0,
+      "repeated_head_handles": 0,
+      "string_capacity_sum": 0,
+      "string_length_sum": 0,
+      "unique_argument_lists": 4,
+      "unique_heads": 4,
+      "unique_string_values": 0,
+      "unique_symbols": 5
+    }
+  }
+]

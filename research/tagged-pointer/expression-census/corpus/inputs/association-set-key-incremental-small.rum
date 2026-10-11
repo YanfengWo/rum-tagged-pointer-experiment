@@ -1,0 +1,4 @@
+(
+    gMicroAssociationSetKeySmall = <||>;
+    Do[gMicroAssociationSetKeySmall[i] = i, {i, 1, 100 * rumMicroScale}]
+  )

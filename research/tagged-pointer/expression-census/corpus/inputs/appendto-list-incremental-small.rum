@@ -1,0 +1,4 @@
+(
+    gMicroAppendListSmall = {};
+    Do[AppendTo[gMicroAppendListSmall, i], {i, 1, 250 * rumMicroScale}]
+  )

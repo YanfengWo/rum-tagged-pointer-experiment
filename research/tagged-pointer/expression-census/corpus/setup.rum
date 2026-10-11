@@ -1,0 +1,2 @@
+rumMicroScale = 1;
+rumMicroN[n_Integer] := n * rumMicroScale;

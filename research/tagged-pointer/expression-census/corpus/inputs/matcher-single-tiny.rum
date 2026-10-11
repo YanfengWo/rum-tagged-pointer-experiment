@@ -1,0 +1,1 @@
+MatchQ[gMicroWideMatcher[1, 2, 3, 4], gMicroWideMatcher[1, 2, 3, 4]]

@@ -1,0 +1,4 @@
+Reverse[Table[
+  Symbol[StringJoin["gMicroSortSymbol", ToString[i]]],
+  {i, 1, 16000}
+]]

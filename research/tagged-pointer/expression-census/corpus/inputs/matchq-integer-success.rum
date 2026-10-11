@@ -1,0 +1,1 @@
+MatchQ[1, _Integer]

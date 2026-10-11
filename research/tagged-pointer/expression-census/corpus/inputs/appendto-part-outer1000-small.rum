@@ -1,0 +1,7 @@
+(
+    gMicroAppendPartOuter1000Small = Table[{}, {1000}];
+    Do[
+      AppendTo[gMicroAppendPartOuter1000Small[[1]], i],
+      {i, 1, 100 * rumMicroScale}
+    ]
+  )

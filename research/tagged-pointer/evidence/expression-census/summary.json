@@ -1,0 +1,4023 @@
+{
+  "status": "PASS",
+  "recorded_on": "2026-10-10",
+  "checks": {
+    "native.log": 3,
+    "native-all-features.log": 3,
+    "roundtrip_equalities_per_command": 254,
+    "format.log": "PASS",
+    "allocation_windows_returned_to_baseline": 381,
+    "physical_layout_delta_equalities": 127,
+    "selected_result_shape_checks": 15,
+    "pinned_dependency_sources": "PASS"
+  },
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "recursive_prototype_commit": "209b08afa2061b65289e8731bb6fcbb71e15475a",
+  "kernel_integration_implemented": false,
+  "allocation_counter": "System requested bytes; retained heap excludes root stack, input graph, pre-existing symbol intern pool and allocator overhead; not RSS",
+  "normalization": "Fresh original graph via Safe roundtrip preserves Head/Args alias classes; Vec/String spare capacity discarded. Original bridge peak/call count includes two bridges and is not a fair construction comparator.",
+  "sampling": "112 lowered benchmark bodies and 15 selected evaluated setup RHS snapshots at scale 1; no dynamic allocation trace, workload-frequency weighting or evaluator timing",
+  "aggregates": {
+    "lowered-input": {
+      "snapshots": 112,
+      "physical_counts_sum": {
+        "inline_integer": 4918,
+        "other_small_integer": 0,
+        "big_integer": 0,
+        "rational": 0,
+        "string": 17,
+        "symbol": 6433,
+        "call": 861
+      },
+      "compact_heap_comparison_counts": {
+        "less": 4,
+        "equal": 1,
+        "more": 107
+      }
+    },
+    "evaluated-result": {
+      "snapshots": 15,
+      "physical_counts_sum": {
+        "inline_integer": 80314,
+        "other_small_integer": 0,
+        "big_integer": 0,
+        "rational": 0,
+        "string": 3,
+        "symbol": 59219,
+        "call": 40815
+      },
+      "compact_heap_comparison_counts": {
+        "less": 5,
+        "equal": 0,
+        "more": 10
+      }
+    }
+  },
+  "rows": [
+    {
+      "label": "gMicroAssociationPartWidth32000",
+      "kind": "evaluated-result",
+      "physical_nodes": 128002,
+      "physical": {
+        "big_integer": 0,
+        "call": 32001,
+        "inline_integer": 64000,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 32001
+      },
+      "depth": 3,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 5888088,
+        "safe": 6912168,
+        "compact": 5888160
+      },
+      "compact_over_original_normalized": 1.000012228078113,
+      "safe_over_original_normalized": 1.1739240310267103,
+      "layout_delta_check": {
+        "boxed_nodes": 64002,
+        "boxed_node_requested_bytes": 3072096,
+        "compact_slot_saving_bytes": 3072024,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "gMicroAssociationPartWidth4000",
+      "kind": "evaluated-result",
+      "physical_nodes": 16002,
+      "physical": {
+        "big_integer": 0,
+        "call": 4001,
+        "inline_integer": 8000,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4001
+      },
+      "depth": 3,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 736088,
+        "safe": 864168,
+        "compact": 736160
+      },
+      "compact_over_original_normalized": 1.0000978143917576,
+      "safe_over_original_normalized": 1.1740009346708546,
+      "layout_delta_check": {
+        "boxed_nodes": 8002,
+        "boxed_node_requested_bytes": 384096,
+        "compact_slot_saving_bytes": 384024,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "gMicroReplacePartRules",
+      "kind": "evaluated-result",
+      "physical_nodes": 6404,
+      "physical": {
+        "big_integer": 0,
+        "call": 3201,
+        "inline_integer": 1601,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1602
+      },
+      "depth": 4,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 294608,
+        "safe": 422704,
+        "compact": 371480
+      },
+      "compact_over_original_normalized": 1.260929777874328,
+      "safe_over_original_normalized": 1.4348014989409656,
+      "layout_delta_check": {
+        "boxed_nodes": 4803,
+        "boxed_node_requested_bytes": 230544,
+        "compact_slot_saving_bytes": 153672,
+        "compact_net_heap_change": 76872
+      }
+    },
+    {
+      "label": "gMicroSortCallbackLarge",
+      "kind": "evaluated-result",
+      "physical_nodes": 202,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 6488,
+        "safe": 3368,
+        "compact": 1760
+      },
+      "compact_over_original_normalized": 0.2712700369913687,
+      "safe_over_original_normalized": 0.5191122071516646,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 4824,
+        "compact_net_heap_change": -4728
+      }
+    },
+    {
+      "label": "gMicroSortCallbackSmall",
+      "kind": "evaluated-result",
+      "physical_nodes": 102,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 100,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 3288,
+        "safe": 1768,
+        "compact": 960
+      },
+      "compact_over_original_normalized": 0.291970802919708,
+      "safe_over_original_normalized": 0.537712895377129,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 2424,
+        "compact_net_heap_change": -2328
+      }
+    },
+    {
+      "label": "gMicroSortDefaultWide",
+      "kind": "evaluated-result",
+      "physical_nodes": 1602,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 51288,
+        "safe": 25768,
+        "compact": 12960
+      },
+      "compact_over_original_normalized": 0.2526906878802059,
+      "safe_over_original_normalized": 0.5024177195445328,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 38424,
+        "compact_net_heap_change": -38328
+      }
+    },
+    {
+      "label": "gMicroSortSymbolWidth16000",
+      "kind": "evaluated-result",
+      "physical_nodes": 16002,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 16001
+      },
+      "depth": 2,
+      "unique_symbols": 16001,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 512088,
+        "safe": 1024168,
+        "compact": 896160
+      },
+      "compact_over_original_normalized": 1.750011716736186,
+      "safe_over_original_normalized": 1.9999843776850854,
+      "layout_delta_check": {
+        "boxed_nodes": 16002,
+        "boxed_node_requested_bytes": 768096,
+        "compact_slot_saving_bytes": 384024,
+        "compact_net_heap_change": 384072
+      }
+    },
+    {
+      "label": "gMicroSortSymbolWidth4000",
+      "kind": "evaluated-result",
+      "physical_nodes": 4002,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4001
+      },
+      "depth": 2,
+      "unique_symbols": 4001,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 128088,
+        "safe": 256168,
+        "compact": 224160
+      },
+      "compact_over_original_normalized": 1.750046842795578,
+      "safe_over_original_normalized": 1.9999375429392292,
+      "layout_delta_check": {
+        "boxed_nodes": 4002,
+        "boxed_node_requested_bytes": 192096,
+        "compact_slot_saving_bytes": 96024,
+        "compact_net_heap_change": 96072
+      }
+    },
+    {
+      "label": "gMicroStringLiteralHaystack",
+      "kind": "evaluated-result",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "depth": 1,
+      "unique_symbols": 0,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 316,
+        "safe": 364,
+        "compact": 364
+      },
+      "compact_over_original_normalized": 1.1518987341772151,
+      "safe_over_original_normalized": 1.1518987341772151,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "gMicroStringTrimLiteralList32000",
+      "kind": "evaluated-result",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "depth": 1,
+      "unique_symbols": 0,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 32000,
+        "safe": 32048,
+        "compact": 32048
+      },
+      "compact_over_original_normalized": 1.0015,
+      "safe_over_original_normalized": 1.0015,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "gMicroStringTrimLiteralList4000",
+      "kind": "evaluated-result",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "depth": 1,
+      "unique_symbols": 0,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 4000,
+        "safe": 4048,
+        "compact": 4048
+      },
+      "compact_over_original_normalized": 1.012,
+      "safe_over_original_normalized": 1.012,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "gMicroWideAssociation",
+      "kind": "evaluated-result",
+      "physical_nodes": 6402,
+      "physical": {
+        "big_integer": 0,
+        "call": 1601,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1601
+      },
+      "depth": 3,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 294488,
+        "safe": 345768,
+        "compact": 294560
+      },
+      "compact_over_original_normalized": 1.000244492135503,
+      "safe_over_original_normalized": 1.1741327320637853,
+      "layout_delta_check": {
+        "boxed_nodes": 3202,
+        "boxed_node_requested_bytes": 153696,
+        "compact_slot_saving_bytes": 153624,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "gMicroWideTraversal",
+      "kind": "evaluated-result",
+      "physical_nodes": 1602,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 51288,
+        "safe": 25768,
+        "compact": 12960
+      },
+      "compact_over_original_normalized": 0.2526906878802059,
+      "safe_over_original_normalized": 0.5024177195445328,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 38424,
+        "compact_net_heap_change": -38328
+      }
+    },
+    {
+      "label": "list10",
+      "kind": "evaluated-result",
+      "physical_nodes": 12,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 10,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 408,
+        "safe": 328,
+        "compact": 240
+      },
+      "compact_over_original_normalized": 0.5882352941176471,
+      "safe_over_original_normalized": 0.803921568627451,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 264,
+        "compact_net_heap_change": -168
+      }
+    },
+    {
+      "label": "rulesSimple",
+      "kind": "evaluated-result",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe": 960,
+        "compact": 856
+      },
+      "compact_over_original_normalized": 1.3375,
+      "safe_over_original_normalized": 1.5,
+      "layout_delta_check": {
+        "boxed_nodes": 11,
+        "boxed_node_requested_bytes": 528,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "appendto-list-incremental-large",
+      "kind": "lowered-input",
+      "physical_nodes": 21,
+      "physical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "depth": 5,
+      "unique_symbols": 9,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1032,
+        "safe": 1624,
+        "compact": 1464
+      },
+      "compact_over_original_normalized": 1.4186046511627908,
+      "safe_over_original_normalized": 1.573643410852713,
+      "layout_delta_check": {
+        "boxed_nodes": 19,
+        "boxed_node_requested_bytes": 912,
+        "compact_slot_saving_bytes": 480,
+        "compact_net_heap_change": 432
+      }
+    },
+    {
+      "label": "appendto-list-incremental-small",
+      "kind": "lowered-input",
+      "physical_nodes": 21,
+      "physical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "depth": 5,
+      "unique_symbols": 9,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1032,
+        "safe": 1624,
+        "compact": 1464
+      },
+      "compact_over_original_normalized": 1.4186046511627908,
+      "safe_over_original_normalized": 1.573643410852713,
+      "layout_delta_check": {
+        "boxed_nodes": 19,
+        "boxed_node_requested_bytes": 912,
+        "compact_slot_saving_bytes": 480,
+        "compact_net_heap_change": 432
+      }
+    },
+    {
+      "label": "appendto-part-outer1000-large",
+      "kind": "lowered-input",
+      "physical_nodes": 29,
+      "physical": {
+        "big_integer": 0,
+        "call": 10,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 15
+      },
+      "depth": 5,
+      "unique_symbols": 11,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1456,
+        "safe": 2208,
+        "compact": 1984
+      },
+      "compact_over_original_normalized": 1.3626373626373627,
+      "safe_over_original_normalized": 1.5164835164835164,
+      "layout_delta_check": {
+        "boxed_nodes": 25,
+        "boxed_node_requested_bytes": 1200,
+        "compact_slot_saving_bytes": 672,
+        "compact_net_heap_change": 528
+      }
+    },
+    {
+      "label": "appendto-part-outer1000-small",
+      "kind": "lowered-input",
+      "physical_nodes": 29,
+      "physical": {
+        "big_integer": 0,
+        "call": 10,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 15
+      },
+      "depth": 5,
+      "unique_symbols": 11,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1456,
+        "safe": 2208,
+        "compact": 1984
+      },
+      "compact_over_original_normalized": 1.3626373626373627,
+      "safe_over_original_normalized": 1.5164835164835164,
+      "layout_delta_check": {
+        "boxed_nodes": 25,
+        "boxed_node_requested_bytes": 1200,
+        "compact_slot_saving_bytes": 672,
+        "compact_net_heap_change": 528
+      }
+    },
+    {
+      "label": "association-part-key-read-width32000",
+      "kind": "lowered-input",
+      "physical_nodes": 15,
+      "physical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "depth": 4,
+      "unique_symbols": 7,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 728,
+        "safe": 1080,
+        "compact": 968
+      },
+      "compact_over_original_normalized": 1.3296703296703296,
+      "safe_over_original_normalized": 1.4835164835164836,
+      "layout_delta_check": {
+        "boxed_nodes": 12,
+        "boxed_node_requested_bytes": 576,
+        "compact_slot_saving_bytes": 336,
+        "compact_net_heap_change": 240
+      }
+    },
+    {
+      "label": "association-part-key-read-width4000",
+      "kind": "lowered-input",
+      "physical_nodes": 15,
+      "physical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "depth": 4,
+      "unique_symbols": 7,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 728,
+        "safe": 1080,
+        "compact": 968
+      },
+      "compact_over_original_normalized": 1.3296703296703296,
+      "safe_over_original_normalized": 1.4835164835164836,
+      "layout_delta_check": {
+        "boxed_nodes": 12,
+        "boxed_node_requested_bytes": 576,
+        "compact_slot_saving_bytes": 336,
+        "compact_net_heap_change": 240
+      }
+    },
+    {
+      "label": "association-part-positional-read-width32000",
+      "kind": "lowered-input",
+      "physical_nodes": 13,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe": 896,
+        "compact": 800
+      },
+      "compact_over_original_normalized": 1.3157894736842106,
+      "safe_over_original_normalized": 1.4736842105263157,
+      "layout_delta_check": {
+        "boxed_nodes": 10,
+        "boxed_node_requested_bytes": 480,
+        "compact_slot_saving_bytes": 288,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "association-part-positional-read-width4000",
+      "kind": "lowered-input",
+      "physical_nodes": 13,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe": 896,
+        "compact": 800
+      },
+      "compact_over_original_normalized": 1.3157894736842106,
+      "safe_over_original_normalized": 1.4736842105263157,
+      "layout_delta_check": {
+        "boxed_nodes": 10,
+        "boxed_node_requested_bytes": 480,
+        "compact_slot_saving_bytes": 288,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "association-set-key-incremental-large",
+      "kind": "lowered-input",
+      "physical_nodes": 23,
+      "physical": {
+        "big_integer": 0,
+        "call": 8,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 13
+      },
+      "depth": 5,
+      "unique_symbols": 9,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1152,
+        "safe": 1808,
+        "compact": 1632
+      },
+      "compact_over_original_normalized": 1.4166666666666667,
+      "safe_over_original_normalized": 1.5694444444444444,
+      "layout_delta_check": {
+        "boxed_nodes": 21,
+        "boxed_node_requested_bytes": 1008,
+        "compact_slot_saving_bytes": 528,
+        "compact_net_heap_change": 480
+      }
+    },
+    {
+      "label": "association-set-key-incremental-small",
+      "kind": "lowered-input",
+      "physical_nodes": 23,
+      "physical": {
+        "big_integer": 0,
+        "call": 8,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 13
+      },
+      "depth": 5,
+      "unique_symbols": 9,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1152,
+        "safe": 1808,
+        "compact": 1632
+      },
+      "compact_over_original_normalized": 1.4166666666666667,
+      "safe_over_original_normalized": 1.5694444444444444,
+      "layout_delta_check": {
+        "boxed_nodes": 21,
+        "boxed_node_requested_bytes": 1008,
+        "compact_slot_saving_bytes": 528,
+        "compact_net_heap_change": 480
+      }
+    },
+    {
+      "label": "association-small-literal-repeat",
+      "kind": "lowered-input",
+      "physical_nodes": 20,
+      "physical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 11
+      },
+      "depth": 4,
+      "unique_symbols": 9,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 944,
+        "safe": 1456,
+        "compact": 1304
+      },
+      "compact_over_original_normalized": 1.38135593220339,
+      "safe_over_original_normalized": 1.5423728813559323,
+      "layout_delta_check": {
+        "boxed_nodes": 17,
+        "boxed_node_requested_bytes": 816,
+        "compact_slot_saving_bytes": 456,
+        "compact_net_heap_change": 360
+      }
+    },
+    {
+      "label": "block-init-null-repeat",
+      "kind": "lowered-input",
+      "physical_nodes": 17,
+      "physical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 9
+      },
+      "depth": 5,
+      "unique_symbols": 8,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 848,
+        "safe": 1312,
+        "compact": 1184
+      },
+      "compact_over_original_normalized": 1.3962264150943395,
+      "safe_over_original_normalized": 1.5471698113207548,
+      "layout_delta_check": {
+        "boxed_nodes": 15,
+        "boxed_node_requested_bytes": 720,
+        "compact_slot_saving_bytes": 384,
+        "compact_net_heap_change": 336
+      }
+    },
+    {
+      "label": "block-init-read-repeat",
+      "kind": "lowered-input",
+      "physical_nodes": 17,
+      "physical": {
+        "big_integer": 0,
+        "call": 6,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 9
+      },
+      "depth": 5,
+      "unique_symbols": 7,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 848,
+        "safe": 1312,
+        "compact": 1184
+      },
+      "compact_over_original_normalized": 1.3962264150943395,
+      "safe_over_original_normalized": 1.5471698113207548,
+      "layout_delta_check": {
+        "boxed_nodes": 15,
+        "boxed_node_requested_bytes": 720,
+        "compact_slot_saving_bytes": 384,
+        "compact_net_heap_change": 336
+      }
+    },
+    {
+      "label": "block-local",
+      "kind": "lowered-input",
+      "physical_nodes": 12,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 576,
+        "safe": 880,
+        "compact": 792
+      },
+      "compact_over_original_normalized": 1.375,
+      "safe_over_original_normalized": 1.5277777777777777,
+      "layout_delta_check": {
+        "boxed_nodes": 10,
+        "boxed_node_requested_bytes": 480,
+        "compact_slot_saving_bytes": 264,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "block-symbol-only-repeat",
+      "kind": "lowered-input",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 5,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "depth": 4,
+      "unique_symbols": 7,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 696,
+        "safe": 1112,
+        "compact": 1008
+      },
+      "compact_over_original_normalized": 1.4482758620689655,
+      "safe_over_original_normalized": 1.5977011494252873,
+      "layout_delta_check": {
+        "boxed_nodes": 13,
+        "boxed_node_requested_bytes": 624,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": 312
+      }
+    },
+    {
+      "label": "cases-wide-no-match",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "character-range-small",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 2,
+      "retained_requested_bytes": {
+        "original-normalized": 154,
+        "safe": 298,
+        "compact": 274
+      },
+      "compact_over_original_normalized": 1.7792207792207793,
+      "safe_over_original_normalized": 1.9350649350649352,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "count-wide-no-match",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "default-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 88,
+        "safe": 168,
+        "compact": 160
+      },
+      "compact_over_original_normalized": 1.8181818181818181,
+      "safe_over_original_normalized": 1.9090909090909092,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 24,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "default-unguarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 88,
+        "safe": 168,
+        "compact": 160
+      },
+      "compact_over_original_normalized": 1.8181818181818181,
+      "safe_over_original_normalized": 1.9090909090909092,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 24,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "default-unguarded-miss",
+      "kind": "lowered-input",
+      "physical_nodes": 2,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 88,
+        "safe": 168,
+        "compact": 160
+      },
+      "compact_over_original_normalized": 1.8181818181818181,
+      "safe_over_original_normalized": 1.9090909090909092,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 24,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "deletecases-wide-association-no-match",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "deletecases-wide-no-match",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "do-count-null",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "do-iterator-null",
+      "kind": "lowered-input",
+      "physical_nodes": 10,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe": 744,
+        "compact": 672
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 9,
+        "boxed_node_requested_bytes": 432,
+        "compact_slot_saving_bytes": 216,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "do-small",
+      "kind": "lowered-input",
+      "physical_nodes": 22,
+      "physical": {
+        "big_integer": 0,
+        "call": 7,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 12
+      },
+      "depth": 5,
+      "unique_symbols": 7,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1064,
+        "safe": 1640,
+        "compact": 1472
+      },
+      "compact_over_original_normalized": 1.3834586466165413,
+      "safe_over_original_normalized": 1.5413533834586466,
+      "layout_delta_check": {
+        "boxed_nodes": 19,
+        "boxed_node_requested_bytes": 912,
+        "compact_slot_saving_bytes": 504,
+        "compact_net_heap_change": 408
+      }
+    },
+    {
+      "label": "downvalue-exact-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 184,
+        "compact": 168
+      },
+      "compact_over_original_normalized": 1.4,
+      "safe_over_original_normalized": 1.5333333333333334,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "downvalue-exact-miss",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 184,
+        "compact": 168
+      },
+      "compact_over_original_normalized": 1.4,
+      "safe_over_original_normalized": 1.5333333333333334,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "downvalue-exact-miss-repeat",
+      "kind": "lowered-input",
+      "physical_nodes": 11,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 544,
+        "safe": 816,
+        "compact": 736
+      },
+      "compact_over_original_normalized": 1.3529411764705883,
+      "safe_over_original_normalized": 1.5,
+      "layout_delta_check": {
+        "boxed_nodes": 9,
+        "boxed_node_requested_bytes": 432,
+        "compact_slot_saving_bytes": 240,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "downvalue-guarded-decline-fallback",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 184,
+        "compact": 168
+      },
+      "compact_over_original_normalized": 1.4,
+      "safe_over_original_normalized": 1.5333333333333334,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "downvalue-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 184,
+        "compact": 168
+      },
+      "compact_over_original_normalized": 1.4,
+      "safe_over_original_normalized": 1.5333333333333334,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "downvalue-pattern-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 184,
+        "compact": 168
+      },
+      "compact_over_original_normalized": 1.4,
+      "safe_over_original_normalized": 1.5333333333333334,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "downvalue-pattern-miss",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 121,
+        "safe": 233,
+        "compact": 217
+      },
+      "compact_over_original_normalized": 1.7933884297520661,
+      "safe_over_original_normalized": 1.9256198347107438,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "downvalue-pattern-miss-repeat",
+      "kind": "lowered-input",
+      "physical_nodes": 11,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 5
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 545,
+        "safe": 865,
+        "compact": 785
+      },
+      "compact_over_original_normalized": 1.4403669724770642,
+      "safe_over_original_normalized": 1.5871559633027523,
+      "layout_delta_check": {
+        "boxed_nodes": 10,
+        "boxed_node_requested_bytes": 480,
+        "compact_slot_saving_bytes": 240,
+        "compact_net_heap_change": 240
+      }
+    },
+    {
+      "label": "head-list",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "if-true",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe": 264,
+        "compact": 232
+      },
+      "compact_over_original_normalized": 1.2608695652173914,
+      "safe_over_original_normalized": 1.434782608695652,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "keysort-callback-large",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "keysort-callback-small",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "keysort-default-wide",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "keysortby-callback-large",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "depth": 2,
+      "unique_symbols": 4,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe": 360,
+        "compact": 328
+      },
+      "compact_over_original_normalized": 1.7826086956521738,
+      "safe_over_original_normalized": 1.9565217391304348,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 144
+      }
+    },
+    {
+      "label": "keysortby-callback-small",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "depth": 2,
+      "unique_symbols": 4,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe": 360,
+        "compact": 328
+      },
+      "compact_over_original_normalized": 1.7826086956521738,
+      "safe_over_original_normalized": 1.9565217391304348,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 144
+      }
+    },
+    {
+      "label": "keysortby-default-wide",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "length-list",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "list-literal-small",
+      "kind": "lowered-input",
+      "physical_nodes": 6,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 4,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 216,
+        "safe": 232,
+        "compact": 192
+      },
+      "compact_over_original_normalized": 0.8888888888888888,
+      "safe_over_original_normalized": 1.0740740740740742,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 120,
+        "compact_net_heap_change": -24
+      }
+    },
+    {
+      "label": "literal-integer",
+      "kind": "lowered-input",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 0
+      },
+      "depth": 1,
+      "unique_symbols": 0,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe": 0,
+        "compact": 0
+      },
+      "compact_over_original_normalized": null,
+      "safe_over_original_normalized": null,
+      "layout_delta_check": {
+        "boxed_nodes": 0,
+        "boxed_node_requested_bytes": 0,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 0
+      }
+    },
+    {
+      "label": "literal-string",
+      "kind": "lowered-input",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 0
+      },
+      "depth": 1,
+      "unique_symbols": 0,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 3,
+        "safe": 51,
+        "compact": 51
+      },
+      "compact_over_original_normalized": 17.0,
+      "safe_over_original_normalized": 17.0,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "loop-empty",
+      "kind": "lowered-input",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 1,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe": 48,
+        "compact": 48
+      },
+      "compact_over_original_normalized": null,
+      "safe_over_original_normalized": null,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "matcher-single-tiny",
+      "kind": "lowered-input",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 8,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 584,
+        "safe": 664,
+        "compact": 560
+      },
+      "compact_over_original_normalized": 0.958904109589041,
+      "safe_over_original_normalized": 1.1369863013698631,
+      "layout_delta_check": {
+        "boxed_nodes": 6,
+        "boxed_node_requested_bytes": 288,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": -24
+      }
+    },
+    {
+      "label": "matcher-single-wide-large",
+      "kind": "lowered-input",
+      "physical_nodes": 3206,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 3200,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 102728,
+        "safe": 51736,
+        "compact": 26096
+      },
+      "compact_over_original_normalized": 0.25403005996417727,
+      "safe_over_original_normalized": 0.5036212133011447,
+      "layout_delta_check": {
+        "boxed_nodes": 6,
+        "boxed_node_requested_bytes": 288,
+        "compact_slot_saving_bytes": 76920,
+        "compact_net_heap_change": -76632
+      }
+    },
+    {
+      "label": "matcher-single-wide-small",
+      "kind": "lowered-input",
+      "physical_nodes": 1606,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1600,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 51528,
+        "safe": 26136,
+        "compact": 13296
+      },
+      "compact_over_original_normalized": 0.25803446669771773,
+      "safe_over_original_normalized": 0.5072193758733116,
+      "layout_delta_check": {
+        "boxed_nodes": 6,
+        "boxed_node_requested_bytes": 288,
+        "compact_slot_saving_bytes": 38520,
+        "compact_net_heap_change": -38232
+      }
+    },
+    {
+      "label": "matchq-integer-fail",
+      "kind": "lowered-input",
+      "physical_nodes": 6,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 273,
+        "safe": 481,
+        "compact": 441
+      },
+      "compact_over_original_normalized": 1.6153846153846154,
+      "safe_over_original_normalized": 1.7619047619047619,
+      "layout_delta_check": {
+        "boxed_nodes": 6,
+        "boxed_node_requested_bytes": 288,
+        "compact_slot_saving_bytes": 120,
+        "compact_net_heap_change": 168
+      }
+    },
+    {
+      "label": "matchq-integer-success",
+      "kind": "lowered-input",
+      "physical_nodes": 6,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe": 432,
+        "compact": 392
+      },
+      "compact_over_original_normalized": 1.4411764705882353,
+      "safe_over_original_normalized": 1.588235294117647,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 120,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "module-chain-escape-large",
+      "kind": "lowered-input",
+      "physical_nodes": 1157,
+      "physical": {
+        "big_integer": 0,
+        "call": 386,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 770
+      },
+      "depth": 5,
+      "unique_symbols": 196,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 58608,
+        "safe": 95600,
+        "compact": 86352
+      },
+      "compact_over_original_normalized": 1.4733824733824734,
+      "safe_over_original_normalized": 1.6311766311766311,
+      "layout_delta_check": {
+        "boxed_nodes": 1156,
+        "boxed_node_requested_bytes": 55488,
+        "compact_slot_saving_bytes": 27744,
+        "compact_net_heap_change": 27744
+      }
+    },
+    {
+      "label": "module-chain-escape-small",
+      "kind": "lowered-input",
+      "physical_nodes": 581,
+      "physical": {
+        "big_integer": 0,
+        "call": 194,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 386
+      },
+      "depth": 5,
+      "unique_symbols": 100,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 29424,
+        "safe": 47984,
+        "compact": 43344
+      },
+      "compact_over_original_normalized": 1.473083197389886,
+      "safe_over_original_normalized": 1.6307775965198477,
+      "layout_delta_check": {
+        "boxed_nodes": 580,
+        "boxed_node_requested_bytes": 27840,
+        "compact_slot_saving_bytes": 13920,
+        "compact_net_heap_change": 13920
+      }
+    },
+    {
+      "label": "module-local",
+      "kind": "lowered-input",
+      "physical_nodes": 12,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 576,
+        "safe": 880,
+        "compact": 792
+      },
+      "compact_over_original_normalized": 1.375,
+      "safe_over_original_normalized": 1.5277777777777777,
+      "layout_delta_check": {
+        "boxed_nodes": 10,
+        "boxed_node_requested_bytes": 480,
+        "compact_slot_saving_bytes": 264,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "module-retained-gensym-gc-batch",
+      "kind": "lowered-input",
+      "physical_nodes": 34,
+      "physical": {
+        "big_integer": 0,
+        "call": 13,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 20
+      },
+      "depth": 9,
+      "unique_symbols": 13,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 1784,
+        "safe": 2840,
+        "compact": 2576
+      },
+      "compact_over_original_normalized": 1.4439461883408071,
+      "safe_over_original_normalized": 1.5919282511210762,
+      "layout_delta_check": {
+        "boxed_nodes": 33,
+        "boxed_node_requested_bytes": 1584,
+        "compact_slot_saving_bytes": 792,
+        "compact_net_heap_change": 792
+      }
+    },
+    {
+      "label": "part-list",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 248,
+        "compact": 224
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "position-wide-no-match",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "replace-wide-no-match",
+      "kind": "lowered-input",
+      "physical_nodes": 10,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 3,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe": 696,
+        "compact": 624
+      },
+      "compact_over_original_normalized": 1.368421052631579,
+      "safe_over_original_normalized": 1.5263157894736843,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 216,
+        "compact_net_heap_change": 168
+      }
+    },
+    {
+      "label": "replaceall-simple",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "replacepart-guarded-decline-fallback",
+      "kind": "lowered-input",
+      "physical_nodes": 6,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe": 432,
+        "compact": 392
+      },
+      "compact_over_original_normalized": 1.4411764705882353,
+      "safe_over_original_normalized": 1.588235294117647,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 120,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "replacepart-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 6,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe": 432,
+        "compact": 392
+      },
+      "compact_over_original_normalized": 1.4411764705882353,
+      "safe_over_original_normalized": 1.588235294117647,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 120,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "replacepart-wide-rule-list",
+      "kind": "lowered-input",
+      "physical_nodes": 6,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 272,
+        "safe": 432,
+        "compact": 392
+      },
+      "compact_over_original_normalized": 1.4411764705882353,
+      "safe_over_original_normalized": 1.588235294117647,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 120,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "reversesort-callback-large",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "reversesort-callback-small",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "reversesort-default-wide",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "rewrite-guarded-decline-fallback",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 248,
+        "compact": 224
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "rewrite-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 248,
+        "compact": 224
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "sameq-integer",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 200,
+        "compact": 176
+      },
+      "compact_over_original_normalized": 1.1578947368421053,
+      "safe_over_original_normalized": 1.3157894736842106,
+      "layout_delta_check": {
+        "boxed_nodes": 2,
+        "boxed_node_requested_bytes": 96,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 24
+      }
+    },
+    {
+      "label": "sameq-list",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "set-ownvalue",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 248,
+        "compact": 224
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "set-part-fill-large",
+      "kind": "lowered-input",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe": 1008,
+        "compact": 904
+      },
+      "compact_over_original_normalized": 1.4125,
+      "safe_over_original_normalized": 1.575,
+      "layout_delta_check": {
+        "boxed_nodes": 12,
+        "boxed_node_requested_bytes": 576,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": 264
+      }
+    },
+    {
+      "label": "set-part-fill-small",
+      "kind": "lowered-input",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe": 1008,
+        "compact": 904
+      },
+      "compact_over_original_normalized": 1.4125,
+      "safe_over_original_normalized": 1.575,
+      "layout_delta_check": {
+        "boxed_nodes": 12,
+        "boxed_node_requested_bytes": 576,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": 264
+      }
+    },
+    {
+      "label": "set-part-fixed100-len100",
+      "kind": "lowered-input",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe": 960,
+        "compact": 856
+      },
+      "compact_over_original_normalized": 1.3375,
+      "safe_over_original_normalized": 1.5,
+      "layout_delta_check": {
+        "boxed_nodes": 11,
+        "boxed_node_requested_bytes": 528,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "set-part-fixed100-len800",
+      "kind": "lowered-input",
+      "physical_nodes": 14,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 3,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 640,
+        "safe": 960,
+        "compact": 856
+      },
+      "compact_over_original_normalized": 1.3375,
+      "safe_over_original_normalized": 1.5,
+      "layout_delta_check": {
+        "boxed_nodes": 11,
+        "boxed_node_requested_bytes": 528,
+        "compact_slot_saving_bytes": 312,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "sort-callback-large",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "sort-callback-small",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "sort-default-wide",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "sort-symbol-default-width16000",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "sort-symbol-default-width4000",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "sortby-callback-large",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "depth": 2,
+      "unique_symbols": 4,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe": 360,
+        "compact": 328
+      },
+      "compact_over_original_normalized": 1.7826086956521738,
+      "safe_over_original_normalized": 1.9565217391304348,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 144
+      }
+    },
+    {
+      "label": "sortby-callback-small",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "depth": 2,
+      "unique_symbols": 4,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 184,
+        "safe": 360,
+        "compact": 328
+      },
+      "compact_over_original_normalized": 1.7826086956521738,
+      "safe_over_original_normalized": 1.9565217391304348,
+      "layout_delta_check": {
+        "boxed_nodes": 5,
+        "boxed_node_requested_bytes": 240,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 144
+      }
+    },
+    {
+      "label": "sortby-default-wide",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "string-repeat-small",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "depth": 2,
+      "unique_symbols": 1,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 153,
+        "safe": 249,
+        "compact": 225
+      },
+      "compact_over_original_normalized": 1.4705882352941178,
+      "safe_over_original_normalized": 1.6274509803921569,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "stringreplace-guarded-decline-fallback",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 155,
+        "safe": 299,
+        "compact": 275
+      },
+      "compact_over_original_normalized": 1.7741935483870968,
+      "safe_over_original_normalized": 1.929032258064516,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "stringreplace-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 155,
+        "safe": 299,
+        "compact": 275
+      },
+      "compact_over_original_normalized": 1.7741935483870968,
+      "safe_over_original_normalized": 1.929032258064516,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "stringreplace-pattern-unguarded",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 155,
+        "safe": 299,
+        "compact": 275
+      },
+      "compact_over_original_normalized": 1.7741935483870968,
+      "safe_over_original_normalized": 1.929032258064516,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "stringreplace-single-literal-unguarded",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3
+      },
+      "depth": 2,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 296,
+        "compact": 272
+      },
+      "compact_over_original_normalized": 1.7894736842105263,
+      "safe_over_original_normalized": 1.9473684210526316,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "stringtrim-literal-list-32000",
+      "kind": "lowered-input",
+      "physical_nodes": 7,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 2,
+      "retained_requested_bytes": {
+        "original-normalized": 306,
+        "safe": 546,
+        "compact": 498
+      },
+      "compact_over_original_normalized": 1.6274509803921569,
+      "safe_over_original_normalized": 1.7843137254901962,
+      "layout_delta_check": {
+        "boxed_nodes": 7,
+        "boxed_node_requested_bytes": 336,
+        "compact_slot_saving_bytes": 144,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "stringtrim-literal-list-4000",
+      "kind": "lowered-input",
+      "physical_nodes": 7,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 2,
+        "symbol": 3
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 2,
+      "retained_requested_bytes": {
+        "original-normalized": 306,
+        "safe": 546,
+        "compact": 498
+      },
+      "compact_over_original_normalized": 1.6274509803921569,
+      "safe_over_original_normalized": 1.7843137254901962,
+      "layout_delta_check": {
+        "boxed_nodes": 7,
+        "boxed_node_requested_bytes": 336,
+        "compact_slot_saving_bytes": 144,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "stringtrim-single-literal-32000",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 153,
+        "safe": 297,
+        "compact": 273
+      },
+      "compact_over_original_normalized": 1.7843137254901962,
+      "safe_over_original_normalized": 1.9411764705882353,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "stringtrim-single-literal-4000",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 153,
+        "safe": 297,
+        "compact": 273
+      },
+      "compact_over_original_normalized": 1.7843137254901962,
+      "safe_over_original_normalized": 1.9411764705882353,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "stringtrim-whitespace-32000",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "stringtrim-whitespace-4000",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "subvalue-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 3,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 240,
+        "safe": 320,
+        "compact": 288
+      },
+      "compact_over_original_normalized": 1.2,
+      "safe_over_original_normalized": 1.3333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "subvalue-unguarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 3,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 240,
+        "safe": 320,
+        "compact": 288
+      },
+      "compact_over_original_normalized": 1.2,
+      "safe_over_original_normalized": 1.3333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "subvalue-unguarded-miss",
+      "kind": "lowered-input",
+      "physical_nodes": 5,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 1,
+        "symbol": 1
+      },
+      "depth": 3,
+      "unique_symbols": 1,
+      "unique_string_values": 1,
+      "retained_requested_bytes": {
+        "original-normalized": 241,
+        "safe": 369,
+        "compact": 337
+      },
+      "compact_over_original_normalized": 1.3983402489626555,
+      "safe_over_original_normalized": 1.5311203319502074,
+      "layout_delta_check": {
+        "boxed_nodes": 4,
+        "boxed_node_requested_bytes": 192,
+        "compact_slot_saving_bytes": 96,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "symbol-ownvalue-guarded-read",
+      "kind": "lowered-input",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 1,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe": 48,
+        "compact": 48
+      },
+      "compact_over_original_normalized": null,
+      "safe_over_original_normalized": null,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "symbol-ownvalue-read",
+      "kind": "lowered-input",
+      "physical_nodes": 1,
+      "physical": {
+        "big_integer": 0,
+        "call": 0,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1
+      },
+      "depth": 1,
+      "unique_symbols": 1,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 0,
+        "safe": 48,
+        "compact": 48
+      },
+      "compact_over_original_normalized": null,
+      "safe_over_original_normalized": null,
+      "layout_delta_check": {
+        "boxed_nodes": 1,
+        "boxed_node_requested_bytes": 48,
+        "compact_slot_saving_bytes": 0,
+        "compact_net_heap_change": 48
+      }
+    },
+    {
+      "label": "table-count-null",
+      "kind": "lowered-input",
+      "physical_nodes": 9,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 5
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 424,
+        "safe": 680,
+        "compact": 616
+      },
+      "compact_over_original_normalized": 1.4528301886792452,
+      "safe_over_original_normalized": 1.6037735849056605,
+      "layout_delta_check": {
+        "boxed_nodes": 8,
+        "boxed_node_requested_bytes": 384,
+        "compact_slot_saving_bytes": 192,
+        "compact_net_heap_change": 192
+      }
+    },
+    {
+      "label": "table-iterator-null",
+      "kind": "lowered-input",
+      "physical_nodes": 10,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe": 744,
+        "compact": 672
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 9,
+        "boxed_node_requested_bytes": 432,
+        "compact_slot_saving_bytes": 216,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "table-iterator-pair-list",
+      "kind": "lowered-input",
+      "physical_nodes": 13,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 8
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe": 992,
+        "compact": 896
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 12,
+        "boxed_node_requested_bytes": 576,
+        "compact_slot_saving_bytes": 288,
+        "compact_net_heap_change": 288
+      }
+    },
+    {
+      "label": "table-iterator-plus",
+      "kind": "lowered-input",
+      "physical_nodes": 13,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 7
+      },
+      "depth": 4,
+      "unique_symbols": 6,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 608,
+        "safe": 944,
+        "compact": 848
+      },
+      "compact_over_original_normalized": 1.394736842105263,
+      "safe_over_original_normalized": 1.5526315789473684,
+      "layout_delta_check": {
+        "boxed_nodes": 11,
+        "boxed_node_requested_bytes": 528,
+        "compact_slot_saving_bytes": 288,
+        "compact_net_heap_change": 240
+      }
+    },
+    {
+      "label": "table-iterator-symbol",
+      "kind": "lowered-input",
+      "physical_nodes": 10,
+      "physical": {
+        "big_integer": 0,
+        "call": 3,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 456,
+        "safe": 744,
+        "compact": 672
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 9,
+        "boxed_node_requested_bytes": 432,
+        "compact_slot_saving_bytes": 216,
+        "compact_net_heap_change": 216
+      }
+    },
+    {
+      "label": "table-small",
+      "kind": "lowered-input",
+      "physical_nodes": 8,
+      "physical": {
+        "big_integer": 0,
+        "call": 2,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 4
+      },
+      "depth": 3,
+      "unique_symbols": 3,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 336,
+        "safe": 512,
+        "compact": 456
+      },
+      "compact_over_original_normalized": 1.3571428571428572,
+      "safe_over_original_normalized": 1.5238095238095237,
+      "layout_delta_check": {
+        "boxed_nodes": 6,
+        "boxed_node_requested_bytes": 288,
+        "compact_slot_saving_bytes": 168,
+        "compact_net_heap_change": 120
+      }
+    },
+    {
+      "label": "upvalue-candidates-tiny",
+      "kind": "lowered-input",
+      "physical_nodes": 16,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 11
+      },
+      "depth": 4,
+      "unique_symbols": 9,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 704,
+        "safe": 1184,
+        "compact": 1064
+      },
+      "compact_over_original_normalized": 1.5113636363636365,
+      "safe_over_original_normalized": 1.6818181818181819,
+      "layout_delta_check": {
+        "boxed_nodes": 15,
+        "boxed_node_requested_bytes": 720,
+        "compact_slot_saving_bytes": 360,
+        "compact_net_heap_change": 360
+      }
+    },
+    {
+      "label": "upvalue-candidates-wide-large",
+      "kind": "lowered-input",
+      "physical_nodes": 3212,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 3207
+      },
+      "depth": 4,
+      "unique_symbols": 3205,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 102976,
+        "safe": 205728,
+        "compact": 180040
+      },
+      "compact_over_original_normalized": 1.7483685518955874,
+      "safe_over_original_normalized": 1.997824735860783,
+      "layout_delta_check": {
+        "boxed_nodes": 3211,
+        "boxed_node_requested_bytes": 154128,
+        "compact_slot_saving_bytes": 77064,
+        "compact_net_heap_change": 77064
+      }
+    },
+    {
+      "label": "upvalue-candidates-wide-small",
+      "kind": "lowered-input",
+      "physical_nodes": 1612,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 1607
+      },
+      "depth": 4,
+      "unique_symbols": 1605,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 51776,
+        "safe": 103328,
+        "compact": 90440
+      },
+      "compact_over_original_normalized": 1.7467552533992583,
+      "safe_over_original_normalized": 1.995673671199011,
+      "layout_delta_check": {
+        "boxed_nodes": 1611,
+        "boxed_node_requested_bytes": 77328,
+        "compact_slot_saving_bytes": 38664,
+        "compact_net_heap_change": 38664
+      }
+    },
+    {
+      "label": "upvalue-guarded-hit",
+      "kind": "lowered-input",
+      "physical_nodes": 4,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 1,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 152,
+        "safe": 248,
+        "compact": 224
+      },
+      "compact_over_original_normalized": 1.4736842105263157,
+      "safe_over_original_normalized": 1.631578947368421,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 72,
+        "compact_net_heap_change": 72
+      }
+    },
+    {
+      "label": "valueq-undefined-symbol-definitions-2000",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "valueq-undefined-symbol-definitions-8000",
+      "kind": "lowered-input",
+      "physical_nodes": 3,
+      "physical": {
+        "big_integer": 0,
+        "call": 1,
+        "inline_integer": 0,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 2
+      },
+      "depth": 2,
+      "unique_symbols": 2,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 120,
+        "safe": 232,
+        "compact": 216
+      },
+      "compact_over_original_normalized": 1.8,
+      "safe_over_original_normalized": 1.9333333333333333,
+      "layout_delta_check": {
+        "boxed_nodes": 3,
+        "boxed_node_requested_bytes": 144,
+        "compact_slot_saving_bytes": 48,
+        "compact_net_heap_change": 96
+      }
+    },
+    {
+      "label": "with-local",
+      "kind": "lowered-input",
+      "physical_nodes": 12,
+      "physical": {
+        "big_integer": 0,
+        "call": 4,
+        "inline_integer": 2,
+        "other_small_integer": 0,
+        "rational": 0,
+        "string": 0,
+        "symbol": 6
+      },
+      "depth": 4,
+      "unique_symbols": 5,
+      "unique_string_values": 0,
+      "retained_requested_bytes": {
+        "original-normalized": 576,
+        "safe": 880,
+        "compact": 792
+      },
+      "compact_over_original_normalized": 1.375,
+      "safe_over_original_normalized": 1.5277777777777777,
+      "layout_delta_check": {
+        "boxed_nodes": 10,
+        "boxed_node_requested_bytes": 480,
+        "compact_slot_saving_bytes": 264,
+        "compact_net_heap_change": 216
+      }
+    }
+  ],
+  "source_hashes": {
+    "analyze.py": "e2dc4c83fe53879820c792504e91915ebda91c83c7399cfc675c8b23d28dcfe8",
+    "Cargo.lock": "ec03e35fcf9ef87e18ec19f016e5216a91e9f2c58296f355e8d6637dd5a005c3",
+    "Cargo.toml": "6859f30476288818411f0dc2faf807f558e3507035017c1ca400f873c6962bfe",
+    "corpus/index.json": "717e01ee47a0f44d4f958867153b6a5fed109b6d6bec46aba77beccbf2387660",
+    "corpus/inputs/appendto-list-incremental-large.rum": "e7f73797b5143b378329c08e7420be293b43c806609052b5a25cfa408c7988af",
+    "corpus/inputs/appendto-list-incremental-small.rum": "5615387e786d3caad94db6d76f0eade4899fd1c5525cb59c69ac1b0b0b287e23",
+    "corpus/inputs/appendto-part-outer1000-large.rum": "ac097176de14549098f31fe2c1ef0cd1283053cb35df7a8a3663d9cadfbc4849",
+    "corpus/inputs/appendto-part-outer1000-small.rum": "6e8a396a80b39fdd8a86d729b2d32715ea6679b889fa30b95f47b9f40f10ab8a",
+    "corpus/inputs/association-part-key-read-width32000.rum": "c8e78dfae231d9d07b4ee406234a3f45ac218f535bfd7e04bf1a3648538383f7",
+    "corpus/inputs/association-part-key-read-width4000.rum": "44148dc37b52c1981a930dbadfa03d4a86513d6319504dd125de805f5e75359b",
+    "corpus/inputs/association-part-positional-read-width32000.rum": "4b1cd1200ff97d895a9bff6139a525ddb3564e13c85db77add8eb09c8663b23e",
+    "corpus/inputs/association-part-positional-read-width4000.rum": "35c875bf08541ee56e7afba05b18e3596b59c163e1544554b14442dc9618a635",
+    "corpus/inputs/association-set-key-incremental-large.rum": "1ca32128fef3f3ffd45be7041e57a2271761c3b39b7c68eb6cee16cc3c837d83",
+    "corpus/inputs/association-set-key-incremental-small.rum": "ca459f6a0e5537db3b89d97241bfdc15a64a478be31d1d5dbd83683aaa20503c",
+    "corpus/inputs/association-small-literal-repeat.rum": "948a6d97264041f03a4904bc89c9554c72ddb593af7294c34a90f1db12e0a5af",
+    "corpus/inputs/block-init-null-repeat.rum": "bca2cd1962453e1a88490c20e5030852168d93a1f665ec103027a226966e7439",
+    "corpus/inputs/block-init-read-repeat.rum": "64cb3faf859e396fd3a32c93e43035f50636de0348193d88b8ba43930f348acb",
+    "corpus/inputs/block-local.rum": "f4153a219a50f45a49fb2f668937e265f0b8b08d285131793fab1cdbb01668e9",
+    "corpus/inputs/block-symbol-only-repeat.rum": "3678e9e5fb56843d2458861d0c84c38250e67761c406540a155d92943fcd12f4",
+    "corpus/inputs/cases-wide-no-match.rum": "d6a81939a6d80c8b43c20b0dee0d7a924f26945b94bfbfaaa44d67883fc8e751",
+    "corpus/inputs/character-range-small.rum": "e7b20bf0c9b3094943bf354add1f9dc4b8042ff1de259ba552ba4a3795056d34",
+    "corpus/inputs/count-wide-no-match.rum": "45f23cd6f4799cda7da210c29d5db72a4522202db11a3cd6ba7a48cc2d5db68e",
+    "corpus/inputs/default-guarded-hit.rum": "5a023889ead23bb03e58d7ea16b0ce9200407522c33674b0e253bb9f5d1051d4",
+    "corpus/inputs/default-unguarded-hit.rum": "9f5746fd8ee7c23fb79c312f8edaf8b79947640ed41267522ef36341296d9ae1",
+    "corpus/inputs/default-unguarded-miss.rum": "806854ab4ae849a71ec2981e75ecbe69f00eed58c23c3a48e62eaef42fde1580",
+    "corpus/inputs/deletecases-wide-association-no-match.rum": "46e9e8ce1b9d4bd83e4d1aa3a28f96fe4e5118c1f2b047c89616556a2210d7f5",
+    "corpus/inputs/deletecases-wide-no-match.rum": "d549dac1475f3d91358561facc53782679854afcd6b2293a4b669cd8e6224c74",
+    "corpus/inputs/do-count-null.rum": "6987fb82e89912e84bcbe80146137acdd9573ec78e12ed9fb35577aa1aa0c6a8",
+    "corpus/inputs/do-iterator-null.rum": "693a8922a872c19fa8b8315b5b0aef4e8ec31350c54ca37862067c12369f59bd",
+    "corpus/inputs/do-small.rum": "f4de48f07b7450581c931dc4b575ceb3d91a88f3d5e47f9a7f08ec5eff63ce15",
+    "corpus/inputs/downvalue-exact-hit.rum": "973dc5a30bf0b2dffd30bce3f2bce238a7f2089f0a3a5be72e41a9fa4e20a74c",
+    "corpus/inputs/downvalue-exact-miss-repeat.rum": "2b5d5e9373820930fe4521fb6ea604ebed9421f2e3ebfefaaffaa261b9876f62",
+    "corpus/inputs/downvalue-exact-miss.rum": "254efe68eca626e715801e9d320a3b0ce66fa04a566e22ab6e9bd29720c8152a",
+    "corpus/inputs/downvalue-guarded-decline-fallback.rum": "21291724b12ec128f534af87db29a7c75290c41d29af96a74596c8ec289374ef",
+    "corpus/inputs/downvalue-guarded-hit.rum": "5b9aa21932a810da396e1439b69be1555946b69691aca371e7e982ecb1373915",
+    "corpus/inputs/downvalue-pattern-hit.rum": "d52161538d25f0c1d7f3a954816bfeadcb614c1ea2c81d2fec838b6d844a106d",
+    "corpus/inputs/downvalue-pattern-miss-repeat.rum": "2d69af6d42b379d464eceb154f16f0fb912864b126e082fbfc51397c30815d24",
+    "corpus/inputs/downvalue-pattern-miss.rum": "ae95ab8c699238a870ad7ed086c13fd362402ae8b2e22d2358d9bd4f21a92156",
+    "corpus/inputs/head-list.rum": "ec4f8d00edafd996751a276bd4fb4d13367d74bc95e62e94a7d39a6eae906c6f",
+    "corpus/inputs/if-true.rum": "25468b31006fb3fdc4e7578fc0549ed59a75a0ec6a6fed1e182a65d283f5c92a",
+    "corpus/inputs/keysort-callback-large.rum": "789414ae06947bfa4a79d978ab6f74ddb2321bfd54426d8ec3ac761cb68cc46e",
+    "corpus/inputs/keysort-callback-small.rum": "e52c90673ae1ba61bd0204a613cba94681dc76f03d445df11fe1ecb25be19c67",
+    "corpus/inputs/keysort-default-wide.rum": "994c2aebc489ec781c233073df16078f09af205af9dc09fa46f953a332cc57e0",
+    "corpus/inputs/keysortby-callback-large.rum": "7d289c9a63cb49f4574229d785095d61355f94e3e53ffd72f52de5598254a0f3",
+    "corpus/inputs/keysortby-callback-small.rum": "236d01553d6d5eb4e15ef88bb42151e9f275eebb42a463cbd4820df574abd2af",
+    "corpus/inputs/keysortby-default-wide.rum": "095da17694c40a8faedb010efcd400b138dd41939047316bc40a67bb5915d279",
+    "corpus/inputs/length-list.rum": "b49a1a930b50e539c2b4008d3af74d844db757a836b1c6f33f8cbc33245767c3",
+    "corpus/inputs/list-literal-small.rum": "aeab57ee831142c54cbed94a5eebb09aa9af922f5dbd2cfac3e896965db67d5e",
+    "corpus/inputs/literal-integer.rum": "181210f8f9c779c26da1d9b2075bde0127302ee0e3fca38c9a83f5b1dd8e5d3b",
+    "corpus/inputs/literal-string.rum": "a4fb58ab9e76dcf8d9b2638c78dc2ba08b72447170604684d3f1adfb9842f950",
+    "corpus/inputs/loop-empty.rum": "a002524d8279a757abff9705262271831c988b48b06dbee7e143b4179da4abde",
+    "corpus/inputs/matcher-single-tiny.rum": "a3ad3ba939e4cda748db35e5c82668a53c0d75deb3befc3942e4a550fe82d5bd",
+    "corpus/inputs/matcher-single-wide-large.rum": "ecf060528ff929e4173d3c9bb0152589a40e014b7ec85040275fd60b8b3c7063",
+    "corpus/inputs/matcher-single-wide-small.rum": "5e52db389603d1d6d93c1440a02b219a2deef81bd6de08a3495dfe513f09a104",
+    "corpus/inputs/matchq-integer-fail.rum": "6409854d9beda2fb09cae96c3f22a7dbaf7149060bd5583207d02e482ba2618e",
+    "corpus/inputs/matchq-integer-success.rum": "5807a99adc85ad70a34785260ff87a31273b3c418f6db058f75785ac918a5d25",
+    "corpus/inputs/module-chain-escape-large.rum": "916ccd2de658e6b19322fb687514a602234d95c5cc8f93569c6ae32d3dd93c7f",
+    "corpus/inputs/module-chain-escape-small.rum": "df9b3d68fb421747a955498c8cb8de74f420b7bbdb9040057fc1d7a12568d851",
+    "corpus/inputs/module-local.rum": "a80e6d79f11c9901c3072ce7f14696065f76ebd1facfff3b7e4e165dbd71a0cb",
+    "corpus/inputs/module-retained-gensym-gc-batch.rum": "162009b994e8a2ad2f167d242d279c987c50d4bebab78ff7283c19ca4109f6af",
+    "corpus/inputs/part-list.rum": "93cd59eb57b7c13d67e26f5b0e9bf2edd9b61fdbd7db680b838192bac3836461",
+    "corpus/inputs/position-wide-no-match.rum": "99590060657825ce20fdca7621e7459b9c5f00a0426745d33af99013ad737030",
+    "corpus/inputs/replace-wide-no-match.rum": "dc3cfbc60c4033bb00195d353a204fc500df6ea55b1c814ef3ecd91b393b9b7e",
+    "corpus/inputs/replaceall-simple.rum": "e9945234995deae6c4e235f42d6026e493477e79edc5fcd23482e248c4664a8d",
+    "corpus/inputs/replacepart-guarded-decline-fallback.rum": "0b5966ebd24c0d28c3b4acddc85477b6d97f7ca69b0df5442d3fea73e5b030fc",
+    "corpus/inputs/replacepart-guarded-hit.rum": "08b37e29fbeab6881509ed5237a615e0e4d442b7b8c63f9ab7381bed5e9e686b",
+    "corpus/inputs/replacepart-wide-rule-list.rum": "7e5338eba7bfeb9e2e0460aede8eb43801bfe5c288c4b821ad4250de099011da",
+    "corpus/inputs/reversesort-callback-large.rum": "e231796e544e9841b4612c647652539c44dbd14d70bd2378e450a8a810115195",
+    "corpus/inputs/reversesort-callback-small.rum": "9e031f7bdcc3a782d3d72660e91661371488f0a4640a879fe4a1433a94cf23a7",
+    "corpus/inputs/reversesort-default-wide.rum": "3ec0a983a244f234bb0af0cf66cbd16ba167103b279a79c5dc3f600b7f76afee",
+    "corpus/inputs/rewrite-guarded-decline-fallback.rum": "74acdfe804e02dbed38d10e50b851f559f735d8fada50b36b36e9e2f24a438b0",
+    "corpus/inputs/rewrite-guarded-hit.rum": "8b9a05e52c84154739ee59b9eba03437129a183e3e4c1ceff764108d70a83498",
+    "corpus/inputs/sameq-integer.rum": "f8331279348a63399ab10e2a8ddabe77df73e5ab8275ed79acf270056d113871",
+    "corpus/inputs/sameq-list.rum": "cd0f6397ea9b7f3cb357c35a6d967a1f25a9d22ae444507332c835cdcdab7bc1",
+    "corpus/inputs/set-ownvalue.rum": "a45d8bef1e2c8f07cb18fc5cef44d35becdc14ae2858354695256915cfaed89e",
+    "corpus/inputs/set-part-fill-large.rum": "04a0915a9e253882c4dd0161a41274fa70cd05ab14002bae7d27f13f1ecc3bc8",
+    "corpus/inputs/set-part-fill-small.rum": "132b0b89643599d6d6633cc16d8cb12d526467616d8baca9db14a3a796a7d4a8",
+    "corpus/inputs/set-part-fixed100-len100.rum": "6ff5b69cea7e8c2102e89cea16a2917899a418df985d6282e7974edc30f164c3",
+    "corpus/inputs/set-part-fixed100-len800.rum": "4368eace09487fa1edeaca4796fe14ee7223471d635b63ce41e70199d9edb26d",
+    "corpus/inputs/sort-callback-large.rum": "81199f5330cc9edf00a18ba61faca42b5092fb913169a76f375942ae5ba90b8b",
+    "corpus/inputs/sort-callback-small.rum": "010d6c3f7719869cb6100fcfb3aadac4119b296541e0c4026c5a1a6182059fb0",
+    "corpus/inputs/sort-default-wide.rum": "29ff79328fd75eae6bb5e425d6b730ed77add649b5e37bd7c4c9729ffaeabb7f",
+    "corpus/inputs/sort-symbol-default-width16000.rum": "5398f7d445e44c58b881a7281d1158d89898285a3b92c0bd51dcf5ce7d355f1b",
+    "corpus/inputs/sort-symbol-default-width4000.rum": "db2ffd2b308e25c8ad1a199fd476c2f00bae0cc1878400b656d479f57ec72583",
+    "corpus/inputs/sortby-callback-large.rum": "7cbb6cfef4e26ae7c92229a884a5af8a43666a751116debdbb2d457c25716fa8",
+    "corpus/inputs/sortby-callback-small.rum": "a5fab2f1ec2699c232da5eea48c05630ef1cc224b89fb645d4a8c11ccdb7be09",
+    "corpus/inputs/sortby-default-wide.rum": "206d35423ab066bb4c35e82394623850dc9a9006084c1fe51042fb7c4a02eb9e",
+    "corpus/inputs/string-repeat-small.rum": "00aa47aa37d1243cfc6e5a32596c5d08a3e3f9de6235d504d896a586bff34d86",
+    "corpus/inputs/stringreplace-guarded-decline-fallback.rum": "3898810d5b559ac5b7c381255d513ecb2973486238e234f0b906de79c4df0ad8",
+    "corpus/inputs/stringreplace-guarded-hit.rum": "227698f6f1a6916988dd90582bebc869cc68a70ec56bf67c9c7cea335c240c20",
+    "corpus/inputs/stringreplace-pattern-unguarded.rum": "f66ff0b9574b15f711e001bf6b6df3c5ea69d523413f88c9b8e80c6858f602cb",
+    "corpus/inputs/stringreplace-single-literal-unguarded.rum": "0a1a9f78ffc4e0c1a2a673445c1d66020a6cea5e097ade66f1af843b23d96132",
+    "corpus/inputs/stringtrim-literal-list-32000.rum": "4844c74a2d3fc1be5d83d8b3adc5f9fb43279755c80bbb9fe665779bcf3ee155",
+    "corpus/inputs/stringtrim-literal-list-4000.rum": "a01e31fd8774ac96162596b24d12a0110f2f1287fbbe4d3519a1aa66bd37a6a2",
+    "corpus/inputs/stringtrim-single-literal-32000.rum": "51741f7c888004c99261bc0f3a50b3f51639a45574781a2c7e248242302983ae",
+    "corpus/inputs/stringtrim-single-literal-4000.rum": "72f5c341c271e38c246b21ef29b35f9d76d3698248de05b5d9c74e44fe0475b7",
+    "corpus/inputs/stringtrim-whitespace-32000.rum": "d5b387f4060ec36cb9f3d410ca666dfc9cc812a98900a04898a76c31e02fb823",
+    "corpus/inputs/stringtrim-whitespace-4000.rum": "4d8ba8f439253f2622245c3a959290f0a6d1286e104a54c46311cbcbbcd5687d",
+    "corpus/inputs/subvalue-guarded-hit.rum": "9059c698c5c77338333ba5fa7dcf51fac32cc5c75900485184cfb8ca527eec70",
+    "corpus/inputs/subvalue-unguarded-hit.rum": "8eb1df4930db79d0504374b3ccc7266c651f2a9dda30ebcff6639cbe08ce6729",
+    "corpus/inputs/subvalue-unguarded-miss.rum": "3d8c48b2ffababd86e4ed46d6acc62c2d0d3bd2dbeb2734047f5d65c90165735",
+    "corpus/inputs/symbol-ownvalue-guarded-read.rum": "67463e699b3d965646a1198e00463b4af15d6b944335e8dc139548338a8ee18a",
+    "corpus/inputs/symbol-ownvalue-read.rum": "9df8b515f7d0fe0b7caec16fb1a4c37db1a472bb1e5b29fdc24f30b1ced46b54",
+    "corpus/inputs/table-count-null.rum": "0bdf56a6351d17119be42033651aa398e8bb5805de2b3ec3e50b1a674cfc013a",
+    "corpus/inputs/table-iterator-null.rum": "66c4d6e08439ca9a00284547f6cc4c05aaa86f68bfbbc1e6ad21ce187991e450",
+    "corpus/inputs/table-iterator-pair-list.rum": "9d9cbc0b21ecd23d78271f0d760cb4f78875ae0ac42839e9a0d52f528243f386",
+    "corpus/inputs/table-iterator-plus.rum": "c1a4f33d70cd08146527d2ab6f312549427cf63fa274e37ffc062f15e57532b4",
+    "corpus/inputs/table-iterator-symbol.rum": "85329ab38e2a3af4d38c668715f4059c76aecfc2e4689f89045a5909e81eb8b5",
+    "corpus/inputs/table-small.rum": "9ac6d5a2d323b8071da0adaf53b41098f25a62d5394c8c2111a75747868125bd",
+    "corpus/inputs/upvalue-candidates-tiny.rum": "6e17f348e461126fd81466715ce3a130cc25dea8e78318aaf43ad69054a44bca",
+    "corpus/inputs/upvalue-candidates-wide-large.rum": "c9e81f0f5526c6680b9a9bf44f1b31d55552f557a90c34bf99971cf3377a8cb9",
+    "corpus/inputs/upvalue-candidates-wide-small.rum": "0591ff7ab48fb2d58fa99d14948baccd2f39892990c6fc6f65e074adfe82d3e5",
+    "corpus/inputs/upvalue-guarded-hit.rum": "8abeb063a6db4d45c5eded87146fdd3b3ce1aca91964830219018b9cc4882192",
+    "corpus/inputs/valueq-undefined-symbol-definitions-2000.rum": "291ed69cfe06ef95cd9a7a0029e0e966b6113cf2cc55ed5cf965c360f11321c9",
+    "corpus/inputs/valueq-undefined-symbol-definitions-8000.rum": "291ed69cfe06ef95cd9a7a0029e0e966b6113cf2cc55ed5cf965c360f11321c9",
+    "corpus/inputs/with-local.rum": "5894af64fe13dae0f1b13eba31ce99c4fca289776e8e2b1a31db4b462bea85bc",
+    "corpus/PIN.json": "c499810b6efe745c1966ad415aae60e5452880f52d2726b136f840b888162f60",
+    "corpus/results/gMicroAssociationPartWidth32000.rum": "87210514538a7589967ac61861dc9ffa064326e34945ca0abc51fbab4399288c",
+    "corpus/results/gMicroAssociationPartWidth4000.rum": "e3e4fc4b151ce25827820481b07ca4fdaba5a816cb5804741c307e931f9368dc",
+    "corpus/results/gMicroReplacePartRules.rum": "3f000ed88f05aae8eed22e1d085047e05014301f815cc51ddb73134b24ea8375",
+    "corpus/results/gMicroSortCallbackLarge.rum": "793412587e3ccee067bde0294eafbc199a81c84f2f3d120990d665ea176f5bc1",
+    "corpus/results/gMicroSortCallbackSmall.rum": "710b7341b3c163d7b074bc41762ad9fa18f3217ec194ba850231faa755da7e4e",
+    "corpus/results/gMicroSortDefaultWide.rum": "02782bbef1560298069794d71918697d90e0d8bb772ddafcb45bc859b2ae6937",
+    "corpus/results/gMicroSortSymbolWidth16000.rum": "8267b62ba4afbd20af948dbfb8b566a560283b770d57996281a80dd43572b4c1",
+    "corpus/results/gMicroSortSymbolWidth4000.rum": "addee7c93c7e2730c838d0804dc8b69899a09776b91491cf2108fb7edeb959ad",
+    "corpus/results/gMicroStringLiteralHaystack.rum": "77a3efd4f86ad28a12d2a54fe5e5872ec7a2c24abf65e61c1e3a01a06fc73ae7",
+    "corpus/results/gMicroStringTrimLiteralList32000.rum": "6e357cff1d2df140426a451fbcd2d8d3cf10c15cb30a9f069b2ef728da96aed0",
+    "corpus/results/gMicroStringTrimLiteralList4000.rum": "79ca461cad1d5e220c6403d7cf0ccba8891d2fc44c15ea7de80cd00968b63c43",
+    "corpus/results/gMicroWideAssociation.rum": "3c22d8d7fe2b1f9371d3c05ff64e0f4bd5400f4037c2bee6b866b0552a6a79b5",
+    "corpus/results/gMicroWideTraversal.rum": "51a65ca912d49ee14011bd05692be4e6f36faf1273cf9e3b51cd3856db47ac0b",
+    "corpus/results/list10.rum": "327a313e3cc250eae19d2a82563408bde7a1430d8c21406a6bc336299a9aa95f",
+    "corpus/results/rulesSimple.rum": "f1118d0c5e34d71f37295067db896c53be035c23f26c543c8e8d9da42eee4a5e",
+    "corpus/setup.rum": "dc436f68302e43bbc700f9560fc290ef293b0673269c9578349da5d3887c0d2d",
+    "run-study.sh": "6fb766b0ebe9c8438121feacc283706943974c78e028496b3d1c9578864cedf9",
+    "src/corpus.rs": "5f60da43899528e790b6a1faae6abe0c67471e2a2245d0c1135a837e32f46a60",
+    "src/graph.rs": "561247cf98dda41fe8b2c52af4dc234284900a5160a3138044934171131a7b48",
+    "src/main.rs": "a97ced01714fd59184fb536c54b9f12858c882919f6ab82fdc8fb17fa2fde1b5",
+    "src/shape.rs": "5d0eb96d81ac111bb3ab7b5b0a2f998e1007bd19ef1815ecc650b4586adc819e"
+  },
+  "raw_evidence_hashes": {
+    "allocation-build.log": "f9b53f61262c9ad89f2ddc48871ba5fbcb7a7195615bdca08a7a8905ab70392b",
+    "allocations.json": "e8a896c621aa493798828f63b2f4e1f480068e448b78a70cd32f75d943e2f4b1",
+    "allocations.log": "4aeca1514cbabb8250955a5a5338c8a80533d8992272d38699957a80ba109e8a",
+    "build.log": "13a208b25d2362a2b038874880c8666be87c5d295d9aa07758f5981c287d2f31",
+    "census.json": "6b2dbed5a692449ee026bc857211685a9160af7f957c2f6a9e7e181fc2edaf33",
+    "census.log": "4aeca1514cbabb8250955a5a5338c8a80533d8992272d38699957a80ba109e8a",
+    "extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-all-features.log": "d66bf337a45444107afffcc1680a95f0bd1a884c2b4646732ec5289b4e5df6cc",
+    "native.log": "a2011467f961057e64c80c12b7c0b97c62f89f6bf9b97412eefd5885cefb06e8",
+    "status.txt": "c26de83abdc9496cd1301470918ec39ecca1cf389ef0ae1c6504da1800d1c431"
+  },
+  "diagnostic_paths_redacted": true,
+  "raw_evidence_hash_scope": "Committed redacted raw files; local paths do not affect technical measurements"
+}

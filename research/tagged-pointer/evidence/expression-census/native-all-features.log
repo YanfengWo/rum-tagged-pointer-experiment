@@ -1,0 +1,11 @@
+   Compiling rum-expression-census v0.0.0 (<RUM_ROOT>/research/tagged-pointer/expression-census)
+    Finished `test` profile [unoptimized] target(s) in 5.04s
+     Running unittests src/main.rs (/tmp/rum-tagged-build-77029938/base/debug/deps/rum_expression_census-0aa41af2ed481cdb)
+
+running 3 tests
+test graph::tests::shared_physical_slots_and_logical_multiplicity_differ ... ok
+test graph::tests::variants_identity_and_capacity_are_counted_without_normalization ... ok
+test graph::tests::nested_dag_depth_and_saturating_counts_without_expansion ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

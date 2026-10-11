@@ -1,0 +1,1 @@
+Do[fExact[2], {5000 * rumMicroScale}]

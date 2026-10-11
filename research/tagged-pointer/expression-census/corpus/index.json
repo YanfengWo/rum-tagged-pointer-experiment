@@ -1,0 +1,891 @@
+[
+  {
+    "label": "gMicroAssociationPartWidth32000",
+    "kind": "evaluated-result",
+    "file": "results/gMicroAssociationPartWidth32000.rum",
+    "source_start": 5214,
+    "source_end": 5259
+  },
+  {
+    "label": "gMicroAssociationPartWidth4000",
+    "kind": "evaluated-result",
+    "file": "results/gMicroAssociationPartWidth4000.rum",
+    "source_start": 5135,
+    "source_end": 5178
+  },
+  {
+    "label": "gMicroReplacePartRules",
+    "kind": "evaluated-result",
+    "file": "results/gMicroReplacePartRules.rum",
+    "source_start": 5286,
+    "source_end": 5326
+  },
+  {
+    "label": "gMicroSortCallbackLarge",
+    "kind": "evaluated-result",
+    "file": "results/gMicroSortCallbackLarge.rum",
+    "source_start": 160425,
+    "source_end": 160455
+  },
+  {
+    "label": "gMicroSortCallbackSmall",
+    "kind": "evaluated-result",
+    "file": "results/gMicroSortCallbackSmall.rum",
+    "source_start": 160367,
+    "source_end": 160397
+  },
+  {
+    "label": "gMicroSortDefaultWide",
+    "kind": "evaluated-result",
+    "file": "results/gMicroSortDefaultWide.rum",
+    "source_start": 160713,
+    "source_end": 160744
+  },
+  {
+    "label": "gMicroSortSymbolWidth16000",
+    "kind": "evaluated-result",
+    "file": "results/gMicroSortSymbolWidth16000.rum",
+    "source_start": 161006,
+    "source_end": 161094
+  },
+  {
+    "label": "gMicroSortSymbolWidth4000",
+    "kind": "evaluated-result",
+    "file": "results/gMicroSortSymbolWidth4000.rum",
+    "source_start": 160888,
+    "source_end": 160975
+  },
+  {
+    "label": "gMicroStringLiteralHaystack",
+    "kind": "evaluated-result",
+    "file": "results/gMicroStringLiteralHaystack.rum",
+    "source_start": 5472,
+    "source_end": 5535
+  },
+  {
+    "label": "gMicroStringTrimLiteralList32000",
+    "kind": "evaluated-result",
+    "file": "results/gMicroStringTrimLiteralList32000.rum",
+    "source_start": 5929,
+    "source_end": 5979
+  },
+  {
+    "label": "gMicroStringTrimLiteralList4000",
+    "kind": "evaluated-result",
+    "file": "results/gMicroStringTrimLiteralList4000.rum",
+    "source_start": 5843,
+    "source_end": 5892
+  },
+  {
+    "label": "gMicroWideAssociation",
+    "kind": "evaluated-result",
+    "file": "results/gMicroWideAssociation.rum",
+    "source_start": 5029,
+    "source_end": 5100
+  },
+  {
+    "label": "gMicroWideTraversal",
+    "kind": "evaluated-result",
+    "file": "results/gMicroWideTraversal.rum",
+    "source_start": 4981,
+    "source_end": 5003
+  },
+  {
+    "label": "list10",
+    "kind": "evaluated-result",
+    "file": "results/list10.rum",
+    "source_start": 4742,
+    "source_end": 4772
+  },
+  {
+    "label": "rulesSimple",
+    "kind": "evaluated-result",
+    "file": "results/rulesSimple.rum",
+    "source_start": 4788,
+    "source_end": 4812
+  },
+  {
+    "label": "appendto-list-incremental-large",
+    "kind": "lowered-input",
+    "file": "inputs/appendto-list-incremental-large.rum",
+    "source_start": 54473,
+    "source_end": 54582
+  },
+  {
+    "label": "appendto-list-incremental-small",
+    "kind": "lowered-input",
+    "file": "inputs/appendto-list-incremental-small.rum",
+    "source_start": 54289,
+    "source_end": 54398
+  },
+  {
+    "label": "appendto-part-outer1000-large",
+    "kind": "lowered-input",
+    "file": "inputs/appendto-part-outer1000-large.rum",
+    "source_start": 54893,
+    "source_end": 55058
+  },
+  {
+    "label": "appendto-part-outer1000-small",
+    "kind": "lowered-input",
+    "file": "inputs/appendto-part-outer1000-small.rum",
+    "source_start": 54655,
+    "source_end": 54820
+  },
+  {
+    "label": "association-part-key-read-width32000",
+    "kind": "lowered-input",
+    "file": "inputs/association-part-key-read-width32000.rum",
+    "source_start": 7223,
+    "source_end": 7318
+  },
+  {
+    "label": "association-part-key-read-width4000",
+    "kind": "lowered-input",
+    "file": "inputs/association-part-key-read-width4000.rum",
+    "source_start": 6963,
+    "source_end": 7056
+  },
+  {
+    "label": "association-part-positional-read-width32000",
+    "kind": "lowered-input",
+    "file": "inputs/association-part-positional-read-width32000.rum",
+    "source_start": 7725,
+    "source_end": 7796
+  },
+  {
+    "label": "association-part-positional-read-width4000",
+    "kind": "lowered-input",
+    "file": "inputs/association-part-positional-read-width4000.rum",
+    "source_start": 7494,
+    "source_end": 7563
+  },
+  {
+    "label": "association-set-key-incremental-large",
+    "kind": "lowered-input",
+    "file": "inputs/association-set-key-incremental-large.rum",
+    "source_start": 55339,
+    "source_end": 55458
+  },
+  {
+    "label": "association-set-key-incremental-small",
+    "kind": "lowered-input",
+    "file": "inputs/association-set-key-incremental-small.rum",
+    "source_start": 55139,
+    "source_end": 55258
+  },
+  {
+    "label": "association-small-literal-repeat",
+    "kind": "lowered-input",
+    "file": "inputs/association-small-literal-repeat.rum",
+    "source_start": 55534,
+    "source_end": 55665
+  },
+  {
+    "label": "block-init-null-repeat",
+    "kind": "lowered-input",
+    "file": "inputs/block-init-null-repeat.rum",
+    "source_start": 23856,
+    "source_end": 23904
+  },
+  {
+    "label": "block-init-read-repeat",
+    "kind": "lowered-input",
+    "file": "inputs/block-init-read-repeat.rum",
+    "source_start": 23963,
+    "source_end": 24008
+  },
+  {
+    "label": "block-local",
+    "kind": "lowered-input",
+    "file": "inputs/block-local.rum",
+    "source_start": 23665,
+    "source_end": 23692
+  },
+  {
+    "label": "block-symbol-only-repeat",
+    "kind": "lowered-input",
+    "file": "inputs/block-symbol-only-repeat.rum",
+    "source_start": 23753,
+    "source_end": 23797
+  },
+  {
+    "label": "cases-wide-no-match",
+    "kind": "lowered-input",
+    "file": "inputs/cases-wide-no-match.rum",
+    "source_start": 51462,
+    "source_end": 51502
+  },
+  {
+    "label": "character-range-small",
+    "kind": "lowered-input",
+    "file": "inputs/character-range-small.rum",
+    "source_start": 52566,
+    "source_end": 52590
+  },
+  {
+    "label": "count-wide-no-match",
+    "kind": "lowered-input",
+    "file": "inputs/count-wide-no-match.rum",
+    "source_start": 51566,
+    "source_end": 51606
+  },
+  {
+    "label": "default-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/default-guarded-hit.rum",
+    "source_start": 25679,
+    "source_end": 25701
+  },
+  {
+    "label": "default-unguarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/default-unguarded-hit.rum",
+    "source_start": 25518,
+    "source_end": 25536
+  },
+  {
+    "label": "default-unguarded-miss",
+    "kind": "lowered-input",
+    "file": "inputs/default-unguarded-miss.rum",
+    "source_start": 25596,
+    "source_end": 25615
+  },
+  {
+    "label": "deletecases-wide-association-no-match",
+    "kind": "lowered-input",
+    "file": "inputs/deletecases-wide-association-no-match.rum",
+    "source_start": 51914,
+    "source_end": 51962
+  },
+  {
+    "label": "deletecases-wide-no-match",
+    "kind": "lowered-input",
+    "file": "inputs/deletecases-wide-no-match.rum",
+    "source_start": 51786,
+    "source_end": 51832
+  },
+  {
+    "label": "do-count-null",
+    "kind": "lowered-input",
+    "file": "inputs/do-count-null.rum",
+    "source_start": 7980,
+    "source_end": 8013
+  },
+  {
+    "label": "do-iterator-null",
+    "kind": "lowered-input",
+    "file": "inputs/do-iterator-null.rum",
+    "source_start": 8066,
+    "source_end": 8101
+  },
+  {
+    "label": "do-small",
+    "kind": "lowered-input",
+    "file": "inputs/do-small.rum",
+    "source_start": 24383,
+    "source_end": 24423
+  },
+  {
+    "label": "downvalue-exact-hit",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-exact-hit.rum",
+    "source_start": 24481,
+    "source_end": 24490
+  },
+  {
+    "label": "downvalue-exact-miss",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-exact-miss.rum",
+    "source_start": 24548,
+    "source_end": 24557
+  },
+  {
+    "label": "downvalue-exact-miss-repeat",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-exact-miss-repeat.rum",
+    "source_start": 24764,
+    "source_end": 24801
+  },
+  {
+    "label": "downvalue-guarded-decline-fallback",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-guarded-decline-fallback.rum",
+    "source_start": 25057,
+    "source_end": 25077
+  },
+  {
+    "label": "downvalue-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-guarded-hit.rum",
+    "source_start": 24967,
+    "source_end": 24978
+  },
+  {
+    "label": "downvalue-pattern-hit",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-pattern-hit.rum",
+    "source_start": 24616,
+    "source_end": 24627
+  },
+  {
+    "label": "downvalue-pattern-miss",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-pattern-miss.rum",
+    "source_start": 24687,
+    "source_end": 24700
+  },
+  {
+    "label": "downvalue-pattern-miss-repeat",
+    "kind": "lowered-input",
+    "file": "inputs/downvalue-pattern-miss-repeat.rum",
+    "source_start": 24867,
+    "source_end": 24908
+  },
+  {
+    "label": "head-list",
+    "kind": "lowered-input",
+    "file": "inputs/head-list.rum",
+    "source_start": 8823,
+    "source_end": 8835
+  },
+  {
+    "label": "if-true",
+    "kind": "lowered-input",
+    "file": "inputs/if-true.rum",
+    "source_start": 9133,
+    "source_end": 9147
+  },
+  {
+    "label": "keysort-callback-large",
+    "kind": "lowered-input",
+    "file": "inputs/keysort-callback-large.rum",
+    "source_start": 163209,
+    "source_end": 163250
+  },
+  {
+    "label": "keysort-callback-small",
+    "kind": "lowered-input",
+    "file": "inputs/keysort-callback-small.rum",
+    "source_start": 162993,
+    "source_end": 163034
+  },
+  {
+    "label": "keysort-default-wide",
+    "kind": "lowered-input",
+    "file": "inputs/keysort-default-wide.rum",
+    "source_start": 164736,
+    "source_end": 164769
+  },
+  {
+    "label": "keysortby-callback-large",
+    "kind": "lowered-input",
+    "file": "inputs/keysortby-callback-large.rum",
+    "source_start": 163659,
+    "source_end": 163714
+  },
+  {
+    "label": "keysortby-callback-small",
+    "kind": "lowered-input",
+    "file": "inputs/keysortby-callback-small.rum",
+    "source_start": 163428,
+    "source_end": 163483
+  },
+  {
+    "label": "keysortby-default-wide",
+    "kind": "lowered-input",
+    "file": "inputs/keysortby-default-wide.rum",
+    "source_start": 164949,
+    "source_end": 164996
+  },
+  {
+    "label": "length-list",
+    "kind": "lowered-input",
+    "file": "inputs/length-list.rum",
+    "source_start": 8884,
+    "source_end": 8898
+  },
+  {
+    "label": "list-literal-small",
+    "kind": "lowered-input",
+    "file": "inputs/list-literal-small.rum",
+    "source_start": 8764,
+    "source_end": 8776
+  },
+  {
+    "label": "literal-integer",
+    "kind": "lowered-input",
+    "file": "inputs/literal-integer.rum",
+    "source_start": 8430,
+    "source_end": 8433
+  },
+  {
+    "label": "literal-string",
+    "kind": "lowered-input",
+    "file": "inputs/literal-string.rum",
+    "source_start": 8485,
+    "source_end": 8490
+  },
+  {
+    "label": "loop-empty",
+    "kind": "lowered-input",
+    "file": "inputs/loop-empty.rum",
+    "source_start": 7925,
+    "source_end": 7929
+  },
+  {
+    "label": "matcher-single-tiny",
+    "kind": "lowered-input",
+    "file": "inputs/matcher-single-tiny.rum",
+    "source_start": 25924,
+    "source_end": 25992
+  },
+  {
+    "label": "matcher-single-wide-large",
+    "kind": "lowered-input",
+    "file": "inputs/matcher-single-wide-large.rum",
+    "source_start": 34029,
+    "source_end": 51059
+  },
+  {
+    "label": "matcher-single-wide-small",
+    "kind": "lowered-input",
+    "file": "inputs/matcher-single-wide-small.rum",
+    "source_start": 26096,
+    "source_end": 33924
+  },
+  {
+    "label": "matchq-integer-fail",
+    "kind": "lowered-input",
+    "file": "inputs/matchq-integer-fail.rum",
+    "source_start": 25839,
+    "source_end": 25860
+  },
+  {
+    "label": "matchq-integer-success",
+    "kind": "lowered-input",
+    "file": "inputs/matchq-integer-success.rum",
+    "source_start": 25763,
+    "source_end": 25782
+  },
+  {
+    "label": "module-chain-escape-large",
+    "kind": "lowered-input",
+    "file": "inputs/module-chain-escape-large.rum",
+    "source_start": 14029,
+    "source_end": 23616
+  },
+  {
+    "label": "module-chain-escape-small",
+    "kind": "lowered-input",
+    "file": "inputs/module-chain-escape-small.rum",
+    "source_start": 9274,
+    "source_end": 13971
+  },
+  {
+    "label": "module-local",
+    "kind": "lowered-input",
+    "file": "inputs/module-local.rum",
+    "source_start": 9196,
+    "source_end": 9218
+  },
+  {
+    "label": "module-retained-gensym-gc-batch",
+    "kind": "lowered-input",
+    "file": "inputs/module-retained-gensym-gc-batch.rum",
+    "source_start": 443854,
+    "source_end": 444073
+  },
+  {
+    "label": "part-list",
+    "kind": "lowered-input",
+    "file": "inputs/part-list.rum",
+    "source_start": 8945,
+    "source_end": 8956
+  },
+  {
+    "label": "position-wide-no-match",
+    "kind": "lowered-input",
+    "file": "inputs/position-wide-no-match.rum",
+    "source_start": 51673,
+    "source_end": 51716
+  },
+  {
+    "label": "replace-wide-no-match",
+    "kind": "lowered-input",
+    "file": "inputs/replace-wide-no-match.rum",
+    "source_start": 52028,
+    "source_end": 52069
+  },
+  {
+    "label": "replaceall-simple",
+    "kind": "lowered-input",
+    "file": "inputs/replaceall-simple.rum",
+    "source_start": 51160,
+    "source_end": 51176
+  },
+  {
+    "label": "replacepart-guarded-decline-fallback",
+    "kind": "lowered-input",
+    "file": "inputs/replacepart-guarded-decline-fallback.rum",
+    "source_start": 52375,
+    "source_end": 52430
+  },
+  {
+    "label": "replacepart-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/replacepart-guarded-hit.rum",
+    "source_start": 52248,
+    "source_end": 52294
+  },
+  {
+    "label": "replacepart-wide-rule-list",
+    "kind": "lowered-input",
+    "file": "inputs/replacepart-wide-rule-list.rum",
+    "source_start": 52140,
+    "source_end": 52180
+  },
+  {
+    "label": "reversesort-callback-large",
+    "kind": "lowered-input",
+    "file": "inputs/reversesort-callback-large.rum",
+    "source_start": 162806,
+    "source_end": 162855
+  },
+  {
+    "label": "reversesort-callback-small",
+    "kind": "lowered-input",
+    "file": "inputs/reversesort-callback-small.rum",
+    "source_start": 162615,
+    "source_end": 162664
+  },
+  {
+    "label": "reversesort-default-wide",
+    "kind": "lowered-input",
+    "file": "inputs/reversesort-default-wide.rum",
+    "source_start": 164557,
+    "source_end": 164598
+  },
+  {
+    "label": "rewrite-guarded-decline-fallback",
+    "kind": "lowered-input",
+    "file": "inputs/rewrite-guarded-decline-fallback.rum",
+    "source_start": 51352,
+    "source_end": 51398
+  },
+  {
+    "label": "rewrite-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/rewrite-guarded-hit.rum",
+    "source_start": 51239,
+    "source_end": 51275
+  },
+  {
+    "label": "sameq-integer",
+    "kind": "lowered-input",
+    "file": "inputs/sameq-integer.rum",
+    "source_start": 9007,
+    "source_end": 9018
+  },
+  {
+    "label": "sameq-list",
+    "kind": "lowered-input",
+    "file": "inputs/sameq-list.rum",
+    "source_start": 9066,
+    "source_end": 9087
+  },
+  {
+    "label": "set-ownvalue",
+    "kind": "lowered-input",
+    "file": "inputs/set-ownvalue.rum",
+    "source_start": 8697,
+    "source_end": 8707
+  },
+  {
+    "label": "set-part-fill-large",
+    "kind": "lowered-input",
+    "file": "inputs/set-part-fill-large.rum",
+    "source_start": 56216,
+    "source_end": 56264
+  },
+  {
+    "label": "set-part-fill-small",
+    "kind": "lowered-input",
+    "file": "inputs/set-part-fill-small.rum",
+    "source_start": 56074,
+    "source_end": 56122
+  },
+  {
+    "label": "set-part-fixed100-len100",
+    "kind": "lowered-input",
+    "file": "inputs/set-part-fixed100-len100.rum",
+    "source_start": 55770,
+    "source_end": 55823
+  },
+  {
+    "label": "set-part-fixed100-len800",
+    "kind": "lowered-input",
+    "file": "inputs/set-part-fixed100-len800.rum",
+    "source_start": 55927,
+    "source_end": 55980
+  },
+  {
+    "label": "sort-callback-large",
+    "kind": "lowered-input",
+    "file": "inputs/sort-callback-large.rum",
+    "source_start": 162093,
+    "source_end": 162128
+  },
+  {
+    "label": "sort-callback-small",
+    "kind": "lowered-input",
+    "file": "inputs/sort-callback-small.rum",
+    "source_start": 161932,
+    "source_end": 161967
+  },
+  {
+    "label": "sort-default-wide",
+    "kind": "lowered-input",
+    "file": "inputs/sort-default-wide.rum",
+    "source_start": 163886,
+    "source_end": 163913
+  },
+  {
+    "label": "sort-symbol-default-width16000",
+    "kind": "lowered-input",
+    "file": "inputs/sort-symbol-default-width16000.rum",
+    "source_start": 164211,
+    "source_end": 164243
+  },
+  {
+    "label": "sort-symbol-default-width4000",
+    "kind": "lowered-input",
+    "file": "inputs/sort-symbol-default-width4000.rum",
+    "source_start": 164040,
+    "source_end": 164071
+  },
+  {
+    "label": "sortby-callback-large",
+    "kind": "lowered-input",
+    "file": "inputs/sortby-callback-large.rum",
+    "source_start": 162433,
+    "source_end": 162482
+  },
+  {
+    "label": "sortby-callback-small",
+    "kind": "lowered-input",
+    "file": "inputs/sortby-callback-small.rum",
+    "source_start": 162256,
+    "source_end": 162305
+  },
+  {
+    "label": "sortby-default-wide",
+    "kind": "lowered-input",
+    "file": "inputs/sortby-default-wide.rum",
+    "source_start": 164383,
+    "source_end": 164424
+  },
+  {
+    "label": "string-repeat-small",
+    "kind": "lowered-input",
+    "file": "inputs/string-repeat-small.rum",
+    "source_start": 52488,
+    "source_end": 52508
+  },
+  {
+    "label": "stringreplace-guarded-decline-fallback",
+    "kind": "lowered-input",
+    "file": "inputs/stringreplace-guarded-decline-fallback.rum",
+    "source_start": 54159,
+    "source_end": 54213
+  },
+  {
+    "label": "stringreplace-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/stringreplace-guarded-hit.rum",
+    "source_start": 54031,
+    "source_end": 54076
+  },
+  {
+    "label": "stringreplace-pattern-unguarded",
+    "kind": "lowered-input",
+    "file": "inputs/stringreplace-pattern-unguarded.rum",
+    "source_start": 53916,
+    "source_end": 53961
+  },
+  {
+    "label": "stringreplace-single-literal-unguarded",
+    "kind": "lowered-input",
+    "file": "inputs/stringreplace-single-literal-unguarded.rum",
+    "source_start": 53773,
+    "source_end": 53840
+  },
+  {
+    "label": "stringtrim-literal-list-32000",
+    "kind": "lowered-input",
+    "file": "inputs/stringtrim-literal-list-32000.rum",
+    "source_start": 52851,
+    "source_end": 52907
+  },
+  {
+    "label": "stringtrim-literal-list-4000",
+    "kind": "lowered-input",
+    "file": "inputs/stringtrim-literal-list-4000.rum",
+    "source_start": 52662,
+    "source_end": 52717
+  },
+  {
+    "label": "stringtrim-single-literal-32000",
+    "kind": "lowered-input",
+    "file": "inputs/stringtrim-single-literal-32000.rum",
+    "source_start": 53229,
+    "source_end": 53280
+  },
+  {
+    "label": "stringtrim-single-literal-4000",
+    "kind": "lowered-input",
+    "file": "inputs/stringtrim-single-literal-4000.rum",
+    "source_start": 53043,
+    "source_end": 53093
+  },
+  {
+    "label": "stringtrim-whitespace-32000",
+    "kind": "lowered-input",
+    "file": "inputs/stringtrim-whitespace-32000.rum",
+    "source_start": 53586,
+    "source_end": 53629
+  },
+  {
+    "label": "stringtrim-whitespace-4000",
+    "kind": "lowered-input",
+    "file": "inputs/stringtrim-whitespace-4000.rum",
+    "source_start": 53412,
+    "source_end": 53454
+  },
+  {
+    "label": "subvalue-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/subvalue-guarded-hit.rum",
+    "source_start": 25431,
+    "source_end": 25458
+  },
+  {
+    "label": "subvalue-unguarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/subvalue-unguarded-hit.rum",
+    "source_start": 25255,
+    "source_end": 25275
+  },
+  {
+    "label": "subvalue-unguarded-miss",
+    "kind": "lowered-input",
+    "file": "inputs/subvalue-unguarded-miss.rum",
+    "source_start": 25343,
+    "source_end": 25365
+  },
+  {
+    "label": "symbol-ownvalue-guarded-read",
+    "kind": "lowered-input",
+    "file": "inputs/symbol-ownvalue-guarded-read.rum",
+    "source_start": 8625,
+    "source_end": 8646
+  },
+  {
+    "label": "symbol-ownvalue-read",
+    "kind": "lowered-input",
+    "file": "inputs/symbol-ownvalue-read.rum",
+    "source_start": 8548,
+    "source_end": 8552
+  },
+  {
+    "label": "table-count-null",
+    "kind": "lowered-input",
+    "file": "inputs/table-count-null.rum",
+    "source_start": 8154,
+    "source_end": 8189
+  },
+  {
+    "label": "table-iterator-null",
+    "kind": "lowered-input",
+    "file": "inputs/table-iterator-null.rum",
+    "source_start": 8245,
+    "source_end": 8283
+  },
+  {
+    "label": "table-iterator-pair-list",
+    "kind": "lowered-input",
+    "file": "inputs/table-iterator-pair-list.rum",
+    "source_start": 24298,
+    "source_end": 24338
+  },
+  {
+    "label": "table-iterator-plus",
+    "kind": "lowered-input",
+    "file": "inputs/table-iterator-plus.rum",
+    "source_start": 24198,
+    "source_end": 24237
+  },
+  {
+    "label": "table-iterator-symbol",
+    "kind": "lowered-input",
+    "file": "inputs/table-iterator-symbol.rum",
+    "source_start": 8341,
+    "source_end": 8376
+  },
+  {
+    "label": "table-small",
+    "kind": "lowered-input",
+    "file": "inputs/table-small.rum",
+    "source_start": 24123,
+    "source_end": 24142
+  },
+  {
+    "label": "upvalue-candidates-tiny",
+    "kind": "lowered-input",
+    "file": "inputs/upvalue-candidates-tiny.rum",
+    "source_start": 56422,
+    "source_end": 56531
+  },
+  {
+    "label": "upvalue-candidates-wide-large",
+    "kind": "lowered-input",
+    "file": "inputs/upvalue-candidates-wide-large.rum",
+    "source_start": 90847,
+    "source_end": 160237
+  },
+  {
+    "label": "upvalue-candidates-wide-small",
+    "kind": "lowered-input",
+    "file": "inputs/upvalue-candidates-wide-small.rum",
+    "source_start": 56594,
+    "source_end": 90784
+  },
+  {
+    "label": "upvalue-guarded-hit",
+    "kind": "lowered-input",
+    "file": "inputs/upvalue-guarded-hit.rum",
+    "source_start": 25142,
+    "source_end": 25194
+  },
+  {
+    "label": "valueq-undefined-symbol-definitions-2000",
+    "kind": "lowered-input",
+    "file": "inputs/valueq-undefined-symbol-definitions-2000.rum",
+    "source_start": 233077,
+    "source_end": 233106
+  },
+  {
+    "label": "valueq-undefined-symbol-definitions-8000",
+    "kind": "lowered-input",
+    "file": "inputs/valueq-undefined-symbol-definitions-8000.rum",
+    "source_start": 443298,
+    "source_end": 443327
+  },
+  {
+    "label": "with-local",
+    "kind": "lowered-input",
+    "file": "inputs/with-local.rum",
+    "source_start": 24055,
+    "source_end": 24075
+  }
+]
