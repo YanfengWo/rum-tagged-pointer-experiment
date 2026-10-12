@@ -39,6 +39,10 @@ load id from text because both pointer words are occupied.
 
 SymbolKey is opaque, has no raw public constructor and no conversion back to
 Symbol. Its equality/hash pair agrees with core Symbol's id/identity pair.
+Its derived Hash is valid for maps of SymbolKey, but does not produce the same
+hasher input as core Symbol's specialized Hash. No cross-type Borrow lookup or
+hash-stream compatibility is provided. The key scan measures reading numeric
+identity fields, not a real hash table or matching operation.
 It deliberately has no Ord: core Symbol ordering uses context/name, so dense
 numeric ids must not substitute for lexical ordering. Keys belong to the live
 process interner; they are not serialization identities or cross-process keys.

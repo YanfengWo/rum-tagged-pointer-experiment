@@ -2533,8 +2533,8 @@
     },
     {
       "path": "typed-layout/DESIGN.md",
-      "bytes": 4929,
-      "sha256": "49bcd694cf9640c154385e98c60f79aeda7d8e522431e72c6ec0aaf2404232bc"
+      "bytes": 5226,
+      "sha256": "3fcc692f4cca29434cb67080564631ee7fdf5bfa6ba6bc805a991139e7d940b4"
     },
     {
       "path": "typed-layout/prepare-overlay.py",
@@ -2553,8 +2553,8 @@
     },
     {
       "path": "typed-layout/SEMANTICS.md",
-      "bytes": 6457,
-      "sha256": "efa9770b5b85cbfad1b2823932b27d8a34e96ad789ffd84646cc5efefa4faff8"
+      "bytes": 6698,
+      "sha256": "6337e99b545262281e45aca08c5a68f7acf604d1ec700d886ce4e90e57335c3a"
     },
     {
       "path": "typed-layout/src/bin/census.rs",

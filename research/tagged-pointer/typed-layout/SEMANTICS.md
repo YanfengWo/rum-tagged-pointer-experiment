@@ -62,6 +62,9 @@ Inspect's scalar key agrees with Symbol's equality/hash pair; it is intentionall
 not a refinement of name lookup or lexical Ord. Full view and D continue using
 the authentic text, not the cached id to manufacture a Symbol. Plain cache
 consistency is inductively maintained by construction and word-preserving clone.
+Here hash agreement means equal keys hash equally within the key type, not that
+SymbolKey and Symbol feed identical bytes to a hasher. Their Hash implementations
+differ; heterogeneous map lookup and hash-operation speed are not established.
 
 Consumption suppresses the old owner using ManuallyDrop and transfers each raw
 count to an exact typed Arc local. Call transfers both to Head/Args. The sized
