@@ -1,0 +1,25 @@
+[package]
+name = "rum-typed-layout"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+autobins = false
+[workspace]
+[dependencies]
+rum-core = { path = "../../../crates/rum-core" }
+rum-compact-expr = { path = "../compact-expr" }
+rum-recursive-expr = { path = "../recursive-expr" }
+rum-layout-design = { path = "../layout-design" }
+rum-runtime = { path = "../../../crates/rum-runtime", optional = true }
+rum-stdlib = { path = "../../../crates/rum-stdlib", default-features = false, optional = true }
+rum-syntax = { path = "../../../crates/rum-syntax", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "=1.0.149", optional = true }
+[features]
+allocation-count = []
+corpus = ["dep:rum-runtime", "dep:rum-stdlib", "dep:rum-syntax", "dep:serde", "dep:serde_json"]
+[[bin]]
+name = "typed-study"
+path = "src/bin/layout-study.rs"
+required-features = ["corpus"]

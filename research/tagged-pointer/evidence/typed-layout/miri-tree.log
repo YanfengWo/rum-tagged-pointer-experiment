@@ -1,0 +1,21 @@
+    Finished `test` profile [unoptimized] target(s) in 0.37s
+     Running unittests src/lib.rs (<BUILD_CACHE>/typed/miri/x86_64-unknown-linux-gnu/debug/build/rum-typed-layout/f3fad511400ab76e/out/rum_typed_layout-f3fad511400ab76e)
+
+running 14 tests
+test tests::aliases_cow_weak_and_changed_value_are_preserved ... ok
+test tests::context_plain_and_full_generated_identity_are_distinct ... ok
+test tests::deep_explicit_release_keeps_last_owner_rule ... ok
+test tests::expected_sizes_and_thread_bounds ... ok
+test tests::full_i64_and_immediate_boundaries_preserve_variants ... ok
+test tests::original_copy_preserves_values_and_alias_classes_in_one_pass ... ok
+test tests::shared_dag_conversion_and_release_do_not_unfold ... ok
+test tests::shared_owned_extraction_preserves_big_string_and_rational ... ok
+test tests::viewing_does_not_acquire_counts_and_consumption_transfers_handles ... ok
+test tests::weak_only_cow_invalidates_previous_allocation ... ok
+test typed_tests::cached_keys_preserve_context_and_all_identity_bits ... ok
+test typed_tests::moved_and_borrowed_preserve_typed_leaves_and_small_big_variant ... ok
+test typed_tests::typed_payloads_cross_threads_with_safe_readers ... ok
+test typed_tests::typed_utf8_empty_boundaries_shared_extract ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.85s
+

@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Typed 16-byte payload study
+
+Added cached ordinary-symbol identity observations, typed shared String/Big/Rational payloads and direct borrowed construction. Compare the unchanged previous16 and same-policy Safe24; full projections and COW remain checked. See [implementation, conditional semantics and measured limits](typed-layout/README.md). The evaluator is unchanged.
+
 ## 三种布局方案比较
 
 新增 24 字节 safe 存储、16 字节双字标签与 8 字节静态符号标签方案，直接消除普通符号的新增分配；16 字节方案还消除外层 Call 分配。以原版单次构建算法作对照，覆盖完整整数、生成符号、共享、借用与 COW。结果与局限见 [实现、条件性语义论证和实测](layout-design/README.md)，尚未接入求值器。

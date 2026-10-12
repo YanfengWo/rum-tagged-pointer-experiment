@@ -1,0 +1,19 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "overlay_path": "<OUTPUT>",
+  "default_core_unchanged": true,
+  "isolated_additive_safe_api": true,
+  "copied_research_stages": [
+    "compact-expr",
+    "recursive-expr",
+    "symbol-sharing",
+    "expression-census",
+    "layout-design",
+    "typed-layout"
+  ],
+  "original_expr_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+  "extension_sha256": "2a36f59cb26eaf9771810b109391d5eeb1ec797d674208b0b26865e129ae8ae9",
+  "overlay_expr_sha256": "b9249ef8fd0f851ec39233e323784be57c7a45233ae9a5eb25d79882c0fe17c9",
+  "patched_file": "crates/rum-core/src/expr.rs",
+  "extension_file": "research/tagged-pointer/typed-layout/symbol-access.rs"
+}

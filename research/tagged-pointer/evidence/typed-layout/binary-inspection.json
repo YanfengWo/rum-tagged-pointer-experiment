@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "binary_sha256": "3f8a72de8c5c631cfa4c65619efb769e1461742183110a43177b998f3a8ace6f",
+  "allocation_module_absent": true,
+  "features": "corpus, without allocation-count",
+  "binary_not_committed": true
+}

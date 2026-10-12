@@ -1,0 +1,3 @@
+PASS: prepared persistent pinned source copy with the additive safe Symbol API
+Usage: bash run-study.sh --overlay NEW_SOURCE_DIR --evidence NEW_EVIDENCE_DIR [--cpu CPU] [--native-toolchain NAME] [--miri-toolchain NAME]
+PASS: persistent preparation, exact study files, safe patch hash, Python and shell syntax: 25 files
