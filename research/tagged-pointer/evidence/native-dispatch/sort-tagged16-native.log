@@ -1,0 +1,27 @@
+     Locking 12 packages to latest Rust 1.85 compatible versions
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling num-traits v0.2.19
+   Compiling num-integer v0.1.46
+   Compiling syn v2.0.119
+   Compiling serde_derive v1.0.228
+   Compiling serde v1.0.228
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-native-sort v0.0.0 (<NATIVE_TEMP>
+    Finished `test` profile [unoptimized] target(s) in 12.06s
+     Running unittests src/lib.rs (<NATIVE_TEMP>
+
+running 2 tests
+test tests::threshold_mixed_late_empty_and_thread_transfer ... ok
+test tests::exact_qualified_order_full_identity_and_stable_ties ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rum_native_sort
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

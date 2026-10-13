@@ -1,0 +1,18 @@
+probeNativeSymbols = Reverse[Join[
+  Table[ToExpression["Global`probeNative" <> ToString[i]], {i, 20}],
+  Table[ToExpression["System`probeNative" <> ToString[i]], {i, 20}],
+  Table[ToExpression["Other`probeNative" <> ToString[i]], {i, 20}],
+  Table[ToExpression["Nested`Other`probeNative" <> ToString[i]], {i, 20}]
+]];
+If[SameQ[Sort[probeNativeSymbols], SortBy[probeNativeSymbols, ToString]], Null, Exit[2]];
+probeNativeGenerated = Table[Unique["probeGenerated"], {i, 80}];
+If[SameQ[Sort[probeNativeGenerated], SortBy[probeNativeGenerated, ToString]], Null, Exit[2]];
+probeNativeRepeated = ConstantArray[Global`probeNative1, 80];
+If[SameQ[Sort[probeNativeRepeated], probeNativeRepeated], Null, Exit[2]];
+probeNativeLateMixed = Append[probeNativeSymbols, 0];
+If[SameQ[Sort[probeNativeLateMixed], SortBy[probeNativeLateMixed, ToString]], Null, Exit[2]];
+If[SameQ[Sort[{Global`probeNative2, Global`probeNative1}], {Global`probeNative1, Global`probeNative2}], Null, Exit[2]];
+probeNativeOriginal = probeNativeSymbols;
+probeNativeSorted = Sort[probeNativeSymbols];
+If[SameQ[probeNativeSymbols, probeNativeOriginal], Null, Exit[2]];
+Print["NATIVE_SORT_ACCEPTANCE_PASS"];

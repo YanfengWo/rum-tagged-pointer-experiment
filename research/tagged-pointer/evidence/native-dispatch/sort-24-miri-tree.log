@@ -1,0 +1,15 @@
+    Finished `test` profile [unoptimized] target(s) in 0.30s
+     Running unittests src/lib.rs (<NATIVE_TEMP>
+
+running 2 tests
+test tests::exact_qualified_order_full_identity_and_stable_ties ... ok
+test tests::threshold_mixed_late_empty_and_thread_transfer ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 41.92s
+
+   Doc-tests rum_native_sort
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

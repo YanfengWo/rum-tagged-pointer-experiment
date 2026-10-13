@@ -1,0 +1,34 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "mode": "safe24",
+  "overlay_path": "<NATIVE_TEMP>",
+  "patched_files": {
+    "crates/rum-core/src/expr.rs": {
+      "base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+      "patched_sha256": "c0355f26d649edd732a8ae99ecc33600509fa4cd5164f6157e5e173577c31273",
+      "before_format_sha256": "b9c9a701e302358838026c5c4db8864cf9319f05b160f6c562844d13df4ca6e9"
+    },
+    "Cargo.toml": {
+      "base_sha256": "719ff5ea8901236eb8cc5165eda1cc06d659b71dd7f69ce6d7a884d7ad0931a9",
+      "patched_sha256": "b1174d4ad5592101a759c2182c5a8e1450b697ac7e90ed542980fd2c4be1dda5"
+    },
+    "crates/rum-cli/Cargo.toml": {
+      "base_sha256": "9c3f2c0511ab8307f1c641a4356c962fd64d3efccaf18908f2a0119bd4f2682d",
+      "patched_sha256": "b9b2177a1e0b058fc18ad4eee9b50dd10468cd077ae1f4e5ff81bd7b0e5dc55d"
+    },
+    "crates/rum-host/Cargo.toml": {
+      "base_sha256": "0d84b87dc6f41138c881f5bb42c26c2901d1bca13c89caaa5a40aa2e460ffd86",
+      "patched_sha256": "e9d9b1019454a062ab34d00afc0e0b7e1834429e0f2bd51a9a883f75b67f0383"
+    },
+    "crates/rum-runtime/Cargo.toml": {
+      "base_sha256": "0e4e53de07cf9aeed6b9b53281efe827d915d05e18f251af93a54cfe92128cb2",
+      "patched_sha256": "6f6a979112be19a79a615d9add2ce4ee49a057ec10e1e7ad43176123adf56363"
+    },
+    "crates/rum-runtime/src/runtime/model/cache.rs": {
+      "base_sha256": "6e4f299bf26ad105407ca31999c3a4a6088dd053e26480c92c08a6fe17b18f00",
+      "patched_sha256": "f6a24e000335aa7516e160afb4f58ebace6d599ae7375f5a1264132212b7390a"
+    }
+  },
+  "default_checkout_unchanged": true,
+  "integration_scope": "Native builtin cache or wide symbol Sort temporary values; evaluator Expr representation remains original"
+}

@@ -1,0 +1,14 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "mode": "sort-api",
+  "overlay_path": "<NATIVE_TEMP>",
+  "patched_files": {
+    "crates/rum-core/src/expr.rs": {
+      "base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+      "patched_sha256": "732c161297560a3b56ca93d1f3608344adfbae6efe7a55d7faa1cc1071cb51ab",
+      "before_format_sha256": "5afc0b23dba810bb5cebd8f27555375fd0776f348bbda241b8ad33fee6478e41"
+    }
+  },
+  "default_checkout_unchanged": true,
+  "integration_scope": "Native builtin cache or wide symbol Sort temporary values; evaluator Expr representation remains original"
+}

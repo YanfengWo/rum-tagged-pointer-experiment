@@ -1,0 +1,54 @@
+     Locking 6 packages to latest Rust 1.85 compatible versions
+      Adding rum-compact-expr v0.0.0 (<NATIVE_TEMP>
+      Adding rum-layout-design v0.0.0 (<NATIVE_TEMP>
+      Adding rum-native-dispatch v0.0.0 (<NATIVE_TEMP>
+      Adding rum-recursive-expr v0.0.0 (<NATIVE_TEMP>
+      Adding rum-symbol-sharing v0.0.0 (<NATIVE_TEMP>
+      Adding rum-typed-layout v0.0.0 (<NATIVE_TEMP>
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling syn v2.0.117
+   Compiling num-integer v0.1.46
+   Compiling version_check v0.9.5
+   Compiling typenum v1.20.1
+   Compiling generic-array v0.14.7
+   Compiling thiserror v2.0.18
+   Compiling cfg-if v1.0.4
+   Compiling cpufeatures v0.2.17
+   Compiling crc32fast v1.5.0
+   Compiling hashbrown v0.16.1
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.9
+   Compiling sha2 v0.10.9
+   Compiling cc v1.2.63
+   Compiling md-5 v0.10.6
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling rum-derive v0.2.0 (<NATIVE_TEMP>
+   Compiling sha1 v0.10.6
+   Compiling libmimalloc-sys v0.1.49
+   Compiling rum-syntax v0.2.0 (<NATIVE_TEMP>
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-compact-expr v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-recursive-expr v0.0.0 (<NATIVE_TEMP>
+   Compiling mimalloc v0.1.52
+   Compiling rum-symbol-sharing v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-layout-design v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-typed-layout v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-native-dispatch v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-runtime v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-stdlib v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-host v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-terminal v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-repl v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-cli v0.2.0 (<NATIVE_TEMP>
+    Finished `release` profile [optimized] target(s) in 39.81s

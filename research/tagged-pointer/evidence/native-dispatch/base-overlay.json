@@ -1,0 +1,8 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "mode": "base",
+  "overlay_path": "<NATIVE_TEMP>",
+  "patched_files": {},
+  "default_checkout_unchanged": true,
+  "integration_scope": "Only native builtin dispatch cache keys; evaluator Expr representation remains original"
+}

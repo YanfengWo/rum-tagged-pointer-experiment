@@ -1,0 +1,34 @@
+     Locking 18 packages to latest Rust 1.85 compatible versions
+      Adding hashbrown v0.16.1 (available: v0.17.1)
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling num-traits v0.2.19
+   Compiling num-integer v0.1.46
+   Compiling syn v2.0.119
+   Compiling serde_derive v1.0.228
+   Compiling serde v1.0.228
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<NATIVE_TEMP>
+   Compiling rum-compact-expr v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-recursive-expr v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-symbol-sharing v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-layout-design v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-typed-layout v0.0.0 (<NATIVE_TEMP>
+   Compiling rum-native-dispatch v0.0.0 (<NATIVE_TEMP>
+    Finished `test` profile [unoptimized] target(s) in 12.98s
+     Running unittests src/lib.rs (<NATIVE_TEMP>
+
+running 3 tests
+test tests::complete_identity_collision_overwrite_and_cached_none ... ok
+test tests::exact_core_hash_stream_and_size ... ok
+test tests::native_random_map_large_and_repeated_values ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests rum_native_dispatch
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

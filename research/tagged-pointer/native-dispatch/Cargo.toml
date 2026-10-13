@@ -1,0 +1,15 @@
+[package]
+name = "rum-native-dispatch"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+[workspace]
+[dependencies]
+rum-core = { path = "../../../crates/rum-core" }
+rum-typed-layout = { path = "../typed-layout" }
+hashbrown = { version = "=0.16.1", default-features = false, features = ["inline-more"] }
+[features]
+safe24 = []
+packed16 = []
+tagged16 = []

@@ -1,0 +1,11 @@
+     Locking 6 packages to latest Rust 1.85 compatible versions
+      Adding rum-compact-expr v0.0.0 (<NATIVE_TEMP>
+      Adding rum-layout-design v0.0.0 (<NATIVE_TEMP>
+      Adding rum-native-dispatch v0.0.0 (<NATIVE_TEMP>
+      Adding rum-recursive-expr v0.0.0 (<NATIVE_TEMP>
+      Adding rum-symbol-sharing v0.0.0 (<NATIVE_TEMP>
+      Adding rum-typed-layout v0.0.0 (<NATIVE_TEMP>
+error: failed to download `hashbrown v0.16.1`
+
+Caused by:
+  attempting to make an HTTP request, but --offline was specified

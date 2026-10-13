@@ -1,0 +1,16 @@
+    Finished `test` profile [unoptimized] target(s) in 0.32s
+     Running unittests src/lib.rs (<NATIVE_TEMP>
+
+running 3 tests
+test tests::complete_identity_collision_overwrite_and_cached_none ... ok
+test tests::exact_core_hash_stream_and_size ... ok
+test tests::native_random_map_large_and_repeated_values ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.97s
+
+   Doc-tests rum_native_dispatch
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Native integration decisive experiment
+
+Ten real language integration modes and 112 labels show no broad no-regression winner. A safe Symbol24 specialized Sort has the clearest local gain; 16-byte tagged operands do not beat it. See [native integration and complete negative results](native-dispatch/README.md). Default kernel source remains unchanged.
+
 ## Symbol operation benefit verification
 
 The real adaptive symbol-uniqueness algorithm has no general time gain in the tested full-output pipeline, including conversion/reuse controls. All ordered results agree with the unmodified runtime collector. See [verification and negative results](symbol-operations/README.md).
