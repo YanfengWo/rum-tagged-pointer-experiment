@@ -1,0 +1,9 @@
+CPU 0; 3 rotating runs; 1 warmup + 9 measured rounds; run2 reversed; shared per-process RandomState seeds across representations; counters absent
+Linux 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64
+rustc 1.85.0 (4d91de4e4 2025-02-17)
+binary: rustc
+commit-hash: 4d91de4e48198da2e33413efdcd9cd2cc0c46688
+commit-date: 2025-02-17
+host: x86_64-unknown-linux-gnu
+release: 1.85.0
+LLVM version: 19.1.7

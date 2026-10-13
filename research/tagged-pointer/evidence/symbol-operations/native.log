@@ -1,0 +1,22 @@
+     Locking 27 packages to latest Rust 1.85 compatible versions
+   Compiling rum-syntax v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-syntax)
+   Compiling rum-derive v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-derive)
+   Compiling rum-core v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/compact-expr)
+   Compiling rum-recursive-expr v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/recursive-expr)
+   Compiling rum-symbol-sharing v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/symbol-sharing)
+   Compiling rum-layout-design v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/layout-design)
+   Compiling rum-typed-layout v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/typed-layout)
+   Compiling rum-runtime v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-runtime)
+   Compiling rum-stdlib v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-stdlib)
+   Compiling rum-symbol-operations v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/symbol-operations)
+    Finished `test` profile [unoptimized] target(s) in 17.64s
+     Running unittests src/main.rs (<BUILD_CACHE>/symbol-operations/debug/deps/rum_symbol_operations-d4739844f5adde47)
+
+running 3 tests
+test tests::compatible_key_hash_has_exact_core_input_stream ... ok
+test tests::small_collector_output_retains_first_seen_order ... ok
+test tests::complete_order_identity_thresholds_and_empty ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,16 @@
+[package]
+name = "rum-symbol-operations"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+[workspace]
+[dependencies]
+rum-core = { path = "../../../crates/rum-core" }
+rum-typed-layout = { path = "../typed-layout" }
+rum-layout-design = { path = "../layout-design" }
+rum-runtime = { path = "../../../crates/rum-runtime" }
+rum-stdlib = { path = "../../../crates/rum-stdlib", default-features = false }
+rum-syntax = { path = "../../../crates/rum-syntax" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "=1.0.149"

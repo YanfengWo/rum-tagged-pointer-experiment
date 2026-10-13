@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Symbol operation benefit verification
+
+The real adaptive symbol-uniqueness algorithm has no general time gain in the tested full-output pipeline, including conversion/reuse controls. All ordered results agree with the unmodified runtime collector. See [verification and negative results](symbol-operations/README.md).
+
 ## Typed 16-byte payload study
 
 Added cached ordinary-symbol identity observations, typed shared String/Big/Rational payloads and direct borrowed construction. Compare the unchanged previous16 and same-policy Safe24; full projections and COW remain checked. See [implementation, conditional semantics and measured limits](typed-layout/README.md). The evaluator is unchanged.

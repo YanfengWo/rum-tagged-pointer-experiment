@@ -1,0 +1,39 @@
+warning: unused import: `super::super::*`
+ --> <OVERLAY-ATTEMPT>/crates/rum-runtime/src/runtime/evaluation_cache/profile/report.rs:1:5
+  |
+1 | use super::super::*;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `super::super::*`
+ --> <OVERLAY-ATTEMPT>/crates/rum-runtime/src/runtime/evaluation_cache/profile/source.rs:1:5
+  |
+1 | use super::super::*;
+  |     ^^^^^^^^^^^^^^^
+
+warning: function pointer comparisons do not produce meaningful results since their addresses are not guaranteed to be unique
+   --> <OVERLAY-ATTEMPT>/crates/rum-runtime/src/runtime/session/session_state.rs:142:5
+    |
+139 | #[derive(Clone, Copy, Debug, PartialEq, Eq, FrameRootTrace)]
+    |                              --------- in this derive macro expansion
+...
+142 |     pub(in crate::runtime) handler: Option<BuiltinFn>,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: the address of the same function can vary between different codegen units
+    = note: furthermore, different functions could have the same address after being merged together
+    = note: for more information visit <https://doc.rust-lang.org/nightly/core/ptr/fn.fn_addr_eq.html>
+    = note: `#[warn(unpredictable_function_pointer_comparisons)]` on by default
+
+warning: `rum-runtime` (lib) generated 3 warnings (run `cargo fix --lib -p rum-runtime` to apply 2 suggestions)
+    Finished `test` profile [unoptimized] target(s) in 0.46s
+     Running unittests src/main.rs (<BUILD_CACHE>/symbol-operations/miri/x86_64-unknown-linux-gnu/debug/build/rum-symbol-operations/832f04c4d5678c37/out/rum_symbol_operations-832f04c4d5678c37)
+
+running 3 tests
+test tests::compatible_key_hash_has_exact_core_input_stream ... ok
+test tests::complete_order_identity_thresholds_and_empty ... ok
+test tests::small_collector_output_retains_first_seen_order ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.35s
+

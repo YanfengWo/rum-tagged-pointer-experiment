@@ -1,0 +1,55 @@
+     Locking 27 packages to latest Rust 1.85 compatible versions
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling serde_core v1.0.228
+   Compiling autocfg v1.5.0
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling syn v2.0.119
+   Compiling thiserror v2.0.18
+   Compiling zmij v1.0.21
+   Compiling num-integer v0.1.46
+   Compiling serde_json v1.0.149
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling rum-derive v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-derive)
+   Compiling rum-syntax v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-syntax)
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-core)
+   Compiling rum-compact-expr v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/compact-expr)
+   Compiling rum-runtime v0.2.0 (<OVERLAY-ATTEMPT>/crates/rum-runtime)
+   Compiling rum-recursive-expr v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/recursive-expr)
+   Compiling rum-symbol-sharing v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/symbol-sharing)
+   Compiling rum-layout-design v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/layout-design)
+   Compiling rum-typed-layout v0.0.0 (<OVERLAY-ATTEMPT>/research/tagged-pointer/typed-layout)
+error[E0412]: cannot find type `Symbol` in this scope
+  --> <OVERLAY-ATTEMPT>/crates/rum-runtime/src/runtime/definitions/mod.rs:30:50
+   |
+30 | pub(super) fn research_unique_symbols(symbols: &[Symbol], hint: usize) -> Vec<Symbol> {
+   |                                                  ^^^^^^ not found in this scope
+   |
+help: consider importing one of these structs
+   |
+16 + use crate::runtime::Symbol;
+   |
+16 + use rum_core::Symbol;
+   |
+
+error[E0412]: cannot find type `Symbol` in this scope
+  --> <OVERLAY-ATTEMPT>/crates/rum-runtime/src/runtime/definitions/mod.rs:30:79
+   |
+30 | pub(super) fn research_unique_symbols(symbols: &[Symbol], hint: usize) -> Vec<Symbol> {
+   |                                                                               ^^^^^^ not found in this scope
+   |
+help: consider importing one of these structs
+   |
+16 + use crate::runtime::Symbol;
+   |
+16 + use rum_core::Symbol;
+   |
+
+For more information about this error, try `rustc --explain E0412`.
+error: could not compile `rum-runtime` (lib) due to 2 previous errors

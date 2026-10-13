@@ -1,0 +1,3 @@
+PASS: prepared persistent pinned source copy with the additive safe Symbol API
+PASS: runtime oracle exports are safe, unused by default evaluator; original collector unchanged
+PASS: persistent source copy, exact study sources, unchanged oracle, safe export hashes, Python/shell syntax; 14 files
