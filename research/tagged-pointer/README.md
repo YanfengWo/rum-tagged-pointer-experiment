@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Scoped copy attribution and safe rewrite experiment
+
+Call-stack and vector-length diagnostics separate one wide traversal copy from two-element normalization copies. A small safe-Rust candidate defers traversal source materialization until suspension. See [semantic checks and complete measured results](copy-attribution/README.md). The default checkout remains unchanged.
+
 ## Balanced measurement and structural diagnostics
 
 Same-binary A/A and position-balanced native Sort replication separate repeatability from earlier three-run signals. [Measurement results](measurement-validation/README.md) and [structural diagnostics](hotspot-validation/README.md) retain all labels and distinguish instrumented counts from speedup evidence. Default kernel source remains unchanged.

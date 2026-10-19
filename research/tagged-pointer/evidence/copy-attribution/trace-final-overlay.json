@@ -1,0 +1,28 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "mode": "trace",
+  "overlay_path": "<BUILD_OR_SOURCE>",
+  "patched_files": {
+    "crates/rum-runtime/src/runtime/tests/copy_attribution_regression.rs": {
+      "base_sha256": null,
+      "patched_sha256": "2d53d99c16eb0f593be1987bcf742f6ded262d45ea043e1f53de0fce3e856504"
+    },
+    "crates/rum-runtime/src/runtime/tests/mod.rs": {
+      "base_sha256": "651c2eba05080d087ba23a5c3f948d956318577a4c476fc1e92528398a5e85d6",
+      "patched_sha256": "f48a791fcdd6fd7e95b504a634bec826f6f1eb8ee3d0c8b2ec04e55374b095a5"
+    },
+    "crates/rum-core/src/expr.rs": {
+      "base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+      "patched_sha256": "1d834bb8629086cd375cfec48c5bf67330befc7a3b4f35ae19a6f06e93ebaa24"
+    },
+    "crates/rum-core/src/lib.rs": {
+      "base_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+      "patched_sha256": "7b1abc542ef0f10cd20b631822f282296dffd9c2215dddeca7a95b85906b1cf0"
+    },
+    "crates/rum-core/src/copy_attribution.rs": {
+      "base_sha256": null,
+      "patched_sha256": "5598a5bebf4cbc4951af62ea4badb3c1d6df670dabffb7c49e7fde58693a9d98"
+    }
+  },
+  "default_source_changed": false
+}

@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "source_root": "<BUILD_OR_SOURCE>",
+  "baseline_binary_sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+  "baseline_source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+  "changed_file": "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs",
+  "candidate_expected_source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b",
+  "same_local_source_root": true,
+  "dependency_artifacts_reused": true,
+  "candidate_binary_sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+  "baseline_source_restored": true,
+  "baseline_binary_unchanged": true
+}

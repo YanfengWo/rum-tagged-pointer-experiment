@@ -1,0 +1,48 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling autocfg v1.5.0
+   Compiling serde_core v1.0.228
+   Compiling num-traits v0.2.19
+   Compiling serde v1.0.228
+   Compiling syn v2.0.117
+   Compiling thiserror v2.0.18
+   Compiling num-integer v0.1.46
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling rum-derive v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-syntax v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling num-bigint v0.4.6
+   Compiling rum-core v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-runtime v0.2.0 (<BUILD_OR_SOURCE>
+warning: function `register_test_if_builtin` is never used
+   --> crates/rum-runtime/src/runtime/test_builtins.rs:296:27
+    |
+296 | pub(in crate::runtime) fn register_test_if_builtin(session: &mut Session) {
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: function `register_test_return_builtin` is never used
+   --> crates/rum-runtime/src/runtime/test_builtins.rs:305:27
+    |
+305 | pub(in crate::runtime) fn register_test_return_builtin(session: &mut Session) {
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `register_test_vm_template_builtins` is never used
+   --> crates/rum-runtime/src/runtime/test_builtins.rs:330:27
+    |
+330 | pub(in crate::runtime) fn register_test_vm_template_builtins(session: &mut Session) {
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `rum-runtime` (lib test) generated 3 warnings
+    Finished `test` profile [unoptimized] target(s) in 24.88s
+     Running unittests src/lib.rs (<BUILD_OR_SOURCE>
+
+running 3 tests
+test runtime::tests::copy_attribution_regression::replace_level_one_finishes_guard_scan_before_result_body_evaluation ... ok
+test runtime::tests::copy_attribution_regression::replace_repeated_compound_binding_isolates_later_branch_mutation ... ok
+test runtime::tests::copy_attribution_regression::replace_shared_children_preserve_input_aliases_and_reusable_rules ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 905 filtered out; finished in 0.01s
+

@@ -1,0 +1,23 @@
+Print["DEBUG_START"];
+copySource = {f[1, 2], f[3, 4]};
+copyAlias = copySource;
+copyRule = f[x_Integer, y_Integer] :> g[y, x];
+copyFirst = Replace[copySource, copyRule, {1}];
+copySecond = Replace[copyAlias, copyRule, {1}];
+Print["SHARING_RESULT", {copySource, copyAlias, copyFirst, copySecond}];
+
+copySource = {h[1, 2], h[3, 4]};
+copyAlias = copySource;
+copyRule = x_h :> f[x, x];
+copyResult = Replace[copySource, copyRule, {1}];
+Print["BINDING_BEFORE", copyResult];
+copyResult[[1, 1, 1]] = 99;
+Print["BINDING_RESULT", {copySource, copyAlias, copyResult, Replace[copySource, copyRule, {1}]}];
+
+c = 1;
+guardOrder = 0;
+copyResult = Replace[{1, 2},
+  x_Integer :> ((c = c + 1; x + c) /;
+    (guardOrder = guardOrder * 10 + c; True)), {1}];
+Print["ORDER_RESULT", {copyResult, c, guardOrder}];
+Print["DEBUG_END"];

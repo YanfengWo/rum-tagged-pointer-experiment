@@ -1,0 +1,112 @@
+{
+  "recorded_on": "2026-10-19",
+  "modes": [
+    "old-a",
+    "fresh-base",
+    "candidate",
+    "old-b"
+  ],
+  "blocks": 8,
+  "orders": [
+    [
+      "old-a",
+      "fresh-base",
+      "candidate",
+      "old-b"
+    ],
+    [
+      "fresh-base",
+      "candidate",
+      "old-b",
+      "old-a"
+    ],
+    [
+      "candidate",
+      "old-b",
+      "old-a",
+      "fresh-base"
+    ],
+    [
+      "old-b",
+      "old-a",
+      "fresh-base",
+      "candidate"
+    ],
+    [
+      "old-b",
+      "candidate",
+      "fresh-base",
+      "old-a"
+    ],
+    [
+      "old-a",
+      "old-b",
+      "candidate",
+      "fresh-base"
+    ],
+    [
+      "fresh-base",
+      "old-a",
+      "old-b",
+      "candidate"
+    ],
+    [
+      "candidate",
+      "fresh-base",
+      "old-a",
+      "old-b"
+    ]
+  ],
+  "binaries": {
+    "old-a": {
+      "binary": "<BUILD_OR_SOURCE>",
+      "sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d"
+    },
+    "old-b": {
+      "binary": "<BUILD_OR_SOURCE>",
+      "sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d"
+    },
+    "fresh-base": {
+      "binary": "<BUILD_OR_SOURCE>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    "candidate": {
+      "binary": "<BUILD_OR_SOURCE>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    }
+  },
+  "cpu": 0,
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "machine": "x86_64",
+  "cpu_model": "AMD Ryzen 7 9800X3D 8-Core Processor",
+  "aslr": "2",
+  "script_sha256": "9295fa8ebade810474105027cc31593f5f43ff13469cd39bb244184ce01b555b",
+  "scale": 5,
+  "reps": 9,
+  "focus_reps": 11,
+  "focus_labels": [
+    "rewrite-hit-4000",
+    "rewrite-hit-16000",
+    "rewrite-identity-4000",
+    "rewrite-identity-16000",
+    "rewrite-miss-4000",
+    "rewrite-miss-16000",
+    "rewrite-compound-miss-4000",
+    "rewrite-compound-miss-16000"
+  ],
+  "focus_source_sha256": "4164e1c655bb13b42a1f611e0bfe022e8b04bc47814ea33ca659ffe580a01785",
+  "suite_focus_labels": [
+    "replace-wide-no-match",
+    "replaceall-simple",
+    "replacepart-wide-rule-list",
+    "deletecases-wide-no-match",
+    "cases-wide-no-match",
+    "count-wide-no-match",
+    "position-wide-no-match"
+  ],
+  "started_utc": "2026-10-19T12:20:18.786135+00:00",
+  "inherited_RUM_environment": "All RUM_* variables removed, then retained GC batches fixed at 3; original suite sets its own profiling-off variables.",
+  "method": "Eight position-balanced paired blocks, no concurrent project build/diagnostic. Complete unchanged min9 suite plus focused corpus with one warm evaluation and eleven retained monotonic samples per label. Focus primary: within-process median then candidate/fresh-base per block. Original A/A controls and fresh-base/original-pair recorded. No equal-label whole-program average.",
+  "matched_source_root": "<BUILD_OR_SOURCE>",
+  "limits": "Same machine/toolchain. Baseline local crates recompiled with unchanged bytes via updated mtimes. Production candidate built at that exact source root with only the candidate patch; baseline bytes restored afterward. Third-party dependency artifacts reused. Position balance does not fully balance carryover. Eight blocks, not 88 independent focused repetitions. No general significance or no-regression theorem."
+}

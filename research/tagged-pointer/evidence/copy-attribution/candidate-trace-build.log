@@ -1,0 +1,10 @@
+   Compiling rum-core v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-syntax v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-derive v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-runtime v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-stdlib v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-host v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-terminal v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-repl v0.2.0 (<BUILD_OR_SOURCE>
+   Compiling rum-cli v0.2.0 (<BUILD_OR_SOURCE>
+    Finished `release` profile [optimized] target(s) in 36.88s

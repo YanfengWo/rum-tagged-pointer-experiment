@@ -1,0 +1,371 @@
+rum-profile lexical snapshot label=before
+rum-profile lexical summary definition_rhs_eval_count=0 definition_rhs_eval_total_ns=0 definition_rhs_eval_avg_ns=0
+rum-profile lexical summary eval_module_count=0 eval_module_total_ns=0 eval_module_avg_ns=0
+rum-profile lexical summary module_resume_entries=0 module_resume_max_index=0
+rum-profile lexical summary module_init_substitution_count=0 module_init_substitution_total_ns=0 module_init_substitution_avg_ns=0
+rum-profile lexical summary module_body_substitution_count=0 module_body_substitution_total_ns=0 module_body_substitution_avg_ns=0
+rum-profile lexical summary lexical_substitutions=0 lexical_substitution_timed=0 lexical_substitution_total_ns=0 lexical_substitution_avg_ns=0
+rum-profile lexical summary lexical_changed=0 lexical_unchanged=0 binding_empty=0 binding_single=0 binding_multi=0 shadowed_nonempty=0 binding_max_count=0
+rum-profile lexical summary arg_list_substitutions=0 arg_list_total_args=0 arg_list_max_len=0 arg_prefilter_skip=0 arg_prefilter_maybe=0
+rum-profile lexical summary arg_substitution_attempts=0 arg_substitution_total_ns=0 arg_substitution_avg_ns=0 arg_substitution_changed=0 arg_substitution_unchanged=0
+rum-profile lexical summary presence_single_scans=0 presence_single_nodes=0 presence_single_timed=0 presence_single_total_ns=0 presence_single_avg_ns=0 presence_single_true=0 presence_single_false=0
+rum-profile lexical summary presence_multi_scans=0 presence_multi_nodes=0 presence_multi_timed=0 presence_multi_total_ns=0 presence_multi_avg_ns=0 presence_multi_true=0 presence_multi_false=0
+rum-profile repr into_vec_total=0 into_vec_clone=0 into_owned_total=0 into_owned_clone=0 shared_args_alloc=13 shared_expr_alloc=13
+rum-copy event kind=into_owned slots=1 shallow_slot_bytes=32 strong=3 weak=0 caller=crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs:384
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-profile lexical snapshot label=after
+rum-profile lexical summary definition_rhs_eval_count=0 definition_rhs_eval_total_ns=0 definition_rhs_eval_avg_ns=0
+rum-profile lexical summary eval_module_count=0 eval_module_total_ns=0 eval_module_avg_ns=0
+rum-profile lexical summary module_resume_entries=0 module_resume_max_index=0
+rum-profile lexical summary module_init_substitution_count=0 module_init_substitution_total_ns=0 module_init_substitution_avg_ns=0
+rum-profile lexical summary module_body_substitution_count=0 module_body_substitution_total_ns=0 module_body_substitution_avg_ns=0
+rum-profile lexical summary lexical_substitutions=0 lexical_substitution_timed=0 lexical_substitution_total_ns=0 lexical_substitution_avg_ns=0
+rum-profile lexical summary lexical_changed=0 lexical_unchanged=0 binding_empty=0 binding_single=0 binding_multi=0 shadowed_nonempty=0 binding_max_count=0
+rum-profile lexical summary arg_list_substitutions=0 arg_list_total_args=0 arg_list_max_len=0 arg_prefilter_skip=0 arg_prefilter_maybe=0
+rum-profile lexical summary arg_substitution_attempts=0 arg_substitution_total_ns=0 arg_substitution_avg_ns=0 arg_substitution_changed=0 arg_substitution_unchanged=0
+rum-profile lexical summary presence_single_scans=0 presence_single_nodes=0 presence_single_timed=0 presence_single_total_ns=0 presence_single_avg_ns=0 presence_single_true=0 presence_single_false=0
+rum-profile lexical summary presence_multi_scans=0 presence_multi_nodes=0 presence_multi_timed=0 presence_multi_total_ns=0 presence_multi_avg_ns=0 presence_multi_true=0 presence_multi_false=0
+rum-profile runtime-path-timing rank=1 phase=evaluate.total source=- calls=267 total_ns=21006719 avg_ns=78676 self_total_ns=104626 self_avg_ns=391 ok=267 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=2 phase=evaluate.once_unstable source=- calls=262 total_ns=20812098 avg_ns=79435 self_total_ns=43864 self_avg_ns=167 ok=262 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=3 phase=evaluate_inner_unstable.total source=- calls=262 total_ns=20768234 avg_ns=79268 self_total_ns=25419 self_avg_ns=97 ok=262 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=4 phase=evaluate_inner_unstable.call source=- calls=261 total_ns=20742163 avg_ns=79471 self_total_ns=25205 self_avg_ns=96 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=5 phase=evaluate_call.total source=- calls=261 total_ns=20716958 avg_ns=79375 self_total_ns=43600 self_avg_ns=167 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=6 phase=evaluate_call.resume_after_head source=- calls=261 total_ns=20620836 avg_ns=79007 self_total_ns=38932 self_avg_ns=149 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=7 phase=evaluate_call.dispatch source=- calls=261 total_ns=20548523 avg_ns=78729 self_total_ns=84051 self_avg_ns=322 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=8 phase=call.stage.special_form source=- calls=3 total_ns=8568995 avg_ns=2856331 self_total_ns=122140 self_avg_ns=40713 ok=3 err=0 some=3 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=9 phase=call.stage.prepare_arguments source=- calls=260 total_ns=7421908 avg_ns=28545 self_total_ns=2985565 self_avg_ns=11482 ok=260 err=0 some=0 none=260 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=10 phase=call.stage.ordinary_builtin source=- calls=257 total_ns=4423633 avg_ns=17212 self_total_ns=135068 self_avg_ns=525 ok=257 err=0 some=257 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=11 phase=prepare_arguments.total source=- calls=260 total_ns=4321192 avg_ns=16619 self_total_ns=130853 self_avg_ns=503 ok=260 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=12 phase=compound.item.evaluate source=- calls=3 total_ns=4288997 avg_ns=1429665 self_total_ns=404 self_avg_ns=134 ok=3 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=13 phase=set.rhs.evaluate source=- calls=1 total_ns=4282284 avg_ns=4282284 self_total_ns=184 self_avg_ns=184 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=14 phase=prepare_arguments.evaluate_arg source=- calls=769 total_ns=4138568 avg_ns=5381 self_total_ns=62132 self_avg_ns=80 ok=769 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=15 phase=evaluate_atom_fast_path.total source=- calls=1032 total_ns=4107087 avg_ns=3979 self_total_ns=77718 self_avg_ns=75 ok=1032 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=16 phase=evaluate_atom_fast_path.call source=- calls=256 total_ns=4007024 avg_ns=15652 self_total_ns=27166 self_avg_ns=106 ok=256 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=17 phase=prepare_arguments.normalize.total source=- calls=255 total_ns=115151 avg_ns=451 self_total_ns=71684 self_avg_ns=281 ok=255 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=18 phase=evaluate.stability_check source=- calls=532 total_ns=65985 avg_ns=124 self_total_ns=65985 self_avg_ns=124 ok=532 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=19 phase=evaluate_call.head_eval source=- calls=263 total_ns=52844 avg_ns=200 self_total_ns=22193 self_avg_ns=84 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=20 phase=call.stage.listable source=- calls=256 total_ns=51001 avg_ns=199 self_total_ns=51001 self_avg_ns=199 ok=256 err=0 some=0 none=256 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=21 phase=prepare_arguments.plan_arg source=- calls=773 total_ns=36279 avg_ns=46 self_total_ns=36279 self_avg_ns=46 ok=773 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=22 phase=evaluate_call.build_dispatch_plan source=- calls=263 total_ns=33491 avg_ns=127 self_total_ns=33491 self_avg_ns=127 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=23 phase=prepare_arguments.normalize.flat source=- calls=255 total_ns=23747 avg_ns=93 self_total_ns=23747 self_avg_ns=93 ok=255 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=24 phase=prepare_arguments.normalize.orderless source=- calls=255 total_ns=19720 avg_ns=77 self_total_ns=19720 self_avg_ns=77 ok=255 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=25 phase=prepare_arguments.append_arg source=- calls=256 total_ns=15492 avg_ns=60 self_total_ns=15492 self_avg_ns=60 ok=256 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=26 phase=evaluate.trace_update source=- calls=263 total_ns=14702 avg_ns=55 self_total_ns=14702 self_avg_ns=55 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=27 phase=evaluate_atom_fast_path.atom source=- calls=513 total_ns=13665 avg_ns=26 self_total_ns=13665 self_avg_ns=26 ok=513 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=28 phase=evaluate.fixed_point_equal source=- calls=264 total_ns=10026 avg_ns=37 self_total_ns=10026 self_avg_ns=37 ok=264 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=29 phase=evaluate_atom_fast_path.stable_symbol source=- calls=263 total_ns=8680 avg_ns=33 self_total_ns=8680 self_avg_ns=33 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=30 phase=set.finish source=- calls=1 total_ns=2966 avg_ns=2966 self_total_ns=330 self_avg_ns=330 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=31 phase=set.try_symbol_own_value source=- calls=1 total_ns=2636 avg_ns=2636 self_total_ns=1012 self_avg_ns=1012 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=32 phase=evaluate_inner_unstable.symbol source=- calls=1 total_ns=652 avg_ns=652 self_total_ns=459 self_avg_ns=459 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=33 phase=set.symbol_own_value.store source=- calls=1 total_ns=642 avg_ns=642 self_total_ns=642 self_avg_ns=642 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=34 phase=set.symbol_own_value.epoch_bump source=- calls=1 total_ns=606 avg_ns=606 self_total_ns=606 self_avg_ns=606 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=35 phase=set.symbol_own_value.protected_check source=- calls=1 total_ns=257 avg_ns=257 self_total_ns=257 self_avg_ns=257 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=36 phase=compound.item.suspend source=- calls=4 total_ns=138 avg_ns=34 self_total_ns=138 self_avg_ns=34 ok=4 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=37 phase=set.symbol_own_value.trace source=- calls=1 total_ns=64 avg_ns=64 self_total_ns=64 self_avg_ns=64 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=38 phase=set.symbol_own_value.lvalue source=- calls=1 total_ns=55 avg_ns=55 self_total_ns=55 self_avg_ns=55 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=39 phase=set.rhs.suspend source=- calls=1 total_ns=45 avg_ns=45 self_total_ns=45 self_avg_ns=45 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=1 phase=call.stage.prepare_arguments source=- calls=260 self_total_ns=2985565 self_avg_ns=11482 total_ns=7421908 avg_ns=28545 ok=260 err=0 some=0 none=260 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=2 phase=call.stage.ordinary_builtin source=- calls=257 self_total_ns=135068 self_avg_ns=525 total_ns=4423633 avg_ns=17212 ok=257 err=0 some=257 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=3 phase=prepare_arguments.total source=- calls=260 self_total_ns=130853 self_avg_ns=503 total_ns=4321192 avg_ns=16619 ok=260 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=4 phase=call.stage.special_form source=- calls=3 self_total_ns=122140 self_avg_ns=40713 total_ns=8568995 avg_ns=2856331 ok=3 err=0 some=3 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=5 phase=evaluate.total source=- calls=267 self_total_ns=104626 self_avg_ns=391 total_ns=21006719 avg_ns=78676 ok=267 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=6 phase=evaluate_call.dispatch source=- calls=261 self_total_ns=84051 self_avg_ns=322 total_ns=20548523 avg_ns=78729 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=7 phase=evaluate_atom_fast_path.total source=- calls=1032 self_total_ns=77718 self_avg_ns=75 total_ns=4107087 avg_ns=3979 ok=1032 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=8 phase=prepare_arguments.normalize.total source=- calls=255 self_total_ns=71684 self_avg_ns=281 total_ns=115151 avg_ns=451 ok=255 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=9 phase=evaluate.stability_check source=- calls=532 self_total_ns=65985 self_avg_ns=124 total_ns=65985 avg_ns=124 ok=532 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=10 phase=prepare_arguments.evaluate_arg source=- calls=769 self_total_ns=62132 self_avg_ns=80 total_ns=4138568 avg_ns=5381 ok=769 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=11 phase=call.stage.listable source=- calls=256 self_total_ns=51001 self_avg_ns=199 total_ns=51001 avg_ns=199 ok=256 err=0 some=0 none=256 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=12 phase=evaluate.once_unstable source=- calls=262 self_total_ns=43864 self_avg_ns=167 total_ns=20812098 avg_ns=79435 ok=262 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=13 phase=evaluate_call.total source=- calls=261 self_total_ns=43600 self_avg_ns=167 total_ns=20716958 avg_ns=79375 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=14 phase=evaluate_call.resume_after_head source=- calls=261 self_total_ns=38932 self_avg_ns=149 total_ns=20620836 avg_ns=79007 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=15 phase=prepare_arguments.plan_arg source=- calls=773 self_total_ns=36279 self_avg_ns=46 total_ns=36279 avg_ns=46 ok=773 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=16 phase=evaluate_call.build_dispatch_plan source=- calls=263 self_total_ns=33491 self_avg_ns=127 total_ns=33491 avg_ns=127 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=17 phase=evaluate_atom_fast_path.call source=- calls=256 self_total_ns=27166 self_avg_ns=106 total_ns=4007024 avg_ns=15652 ok=256 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=18 phase=evaluate_inner_unstable.total source=- calls=262 self_total_ns=25419 self_avg_ns=97 total_ns=20768234 avg_ns=79268 ok=262 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=19 phase=evaluate_inner_unstable.call source=- calls=261 self_total_ns=25205 self_avg_ns=96 total_ns=20742163 avg_ns=79471 ok=261 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=20 phase=prepare_arguments.normalize.flat source=- calls=255 self_total_ns=23747 self_avg_ns=93 total_ns=23747 avg_ns=93 ok=255 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=21 phase=evaluate_call.head_eval source=- calls=263 self_total_ns=22193 self_avg_ns=84 total_ns=52844 avg_ns=200 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=22 phase=prepare_arguments.normalize.orderless source=- calls=255 self_total_ns=19720 self_avg_ns=77 total_ns=19720 avg_ns=77 ok=255 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=23 phase=prepare_arguments.append_arg source=- calls=256 self_total_ns=15492 self_avg_ns=60 total_ns=15492 avg_ns=60 ok=256 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=24 phase=evaluate.trace_update source=- calls=263 self_total_ns=14702 self_avg_ns=55 total_ns=14702 avg_ns=55 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=25 phase=evaluate_atom_fast_path.atom source=- calls=513 self_total_ns=13665 self_avg_ns=26 total_ns=13665 avg_ns=26 ok=513 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=26 phase=evaluate.fixed_point_equal source=- calls=264 self_total_ns=10026 self_avg_ns=37 total_ns=10026 avg_ns=37 ok=264 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=27 phase=evaluate_atom_fast_path.stable_symbol source=- calls=263 self_total_ns=8680 self_avg_ns=33 total_ns=8680 avg_ns=33 ok=263 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=28 phase=set.try_symbol_own_value source=- calls=1 self_total_ns=1012 self_avg_ns=1012 total_ns=2636 avg_ns=2636 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=29 phase=set.symbol_own_value.store source=- calls=1 self_total_ns=642 self_avg_ns=642 total_ns=642 avg_ns=642 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=30 phase=set.symbol_own_value.epoch_bump source=- calls=1 self_total_ns=606 self_avg_ns=606 total_ns=606 avg_ns=606 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=31 phase=evaluate_inner_unstable.symbol source=- calls=1 self_total_ns=459 self_avg_ns=459 total_ns=652 avg_ns=652 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=32 phase=compound.item.evaluate source=- calls=3 self_total_ns=404 self_avg_ns=134 total_ns=4288997 avg_ns=1429665 ok=3 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=33 phase=set.finish source=- calls=1 self_total_ns=330 self_avg_ns=330 total_ns=2966 avg_ns=2966 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=34 phase=set.symbol_own_value.protected_check source=- calls=1 self_total_ns=257 self_avg_ns=257 total_ns=257 avg_ns=257 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=35 phase=set.rhs.evaluate source=- calls=1 self_total_ns=184 self_avg_ns=184 total_ns=4282284 avg_ns=4282284 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=36 phase=compound.item.suspend source=- calls=4 self_total_ns=138 self_avg_ns=34 total_ns=138 avg_ns=34 ok=4 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=37 phase=set.symbol_own_value.trace source=- calls=1 self_total_ns=64 self_avg_ns=64 total_ns=64 avg_ns=64 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=38 phase=set.symbol_own_value.lvalue source=- calls=1 self_total_ns=55 self_avg_ns=55 total_ns=55 avg_ns=55 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=39 phase=set.rhs.suspend source=- calls=1 self_total_ns=45 self_avg_ns=45 total_ns=45 avg_ns=45 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile builtin-timing rank=1 symbol=CompoundExpression source=- arg_count=2 calls=1 total_ns=4289236 avg_ns=4289236 self_total_ns=3388 self_avg_ns=3388 ok=1 err=0
+rum-profile builtin-timing rank=2 symbol=Set source=- arg_count=2 calls=1 total_ns=4285848 avg_ns=4285848 self_total_ns=7660 self_avg_ns=7660 ok=1 err=0
+rum-profile builtin-timing rank=3 symbol=Replace source=- arg_count=3 calls=1 total_ns=4278188 avg_ns=4278188 self_total_ns=4221717 self_avg_ns=4221717 ok=1 err=0
+rum-profile builtin-timing rank=4 symbol=Plus source=- arg_count=2 calls=256 total_ns=53312 avg_ns=208 self_total_ns=53312 self_avg_ns=208 ok=256 err=0
+rum-profile builtin-timing rank=5 symbol=RuleDelayed source=- arg_count=2 calls=1 total_ns=3159 avg_ns=3159 self_total_ns=3159 self_avg_ns=3159 ok=1 err=0
+rum-profile builtin-self-timing rank=1 symbol=Replace source=- arg_count=3 calls=1 self_total_ns=4221717 self_avg_ns=4221717 total_ns=4278188 avg_ns=4278188 ok=1 err=0
+rum-profile builtin-self-timing rank=2 symbol=Plus source=- arg_count=2 calls=256 self_total_ns=53312 self_avg_ns=208 total_ns=53312 avg_ns=208 ok=256 err=0
+rum-profile builtin-self-timing rank=3 symbol=Set source=- arg_count=2 calls=1 self_total_ns=7660 self_avg_ns=7660 total_ns=4285848 avg_ns=4285848 ok=1 err=0
+rum-profile builtin-self-timing rank=4 symbol=CompoundExpression source=- arg_count=2 calls=1 self_total_ns=3388 self_avg_ns=3388 total_ns=4289236 avg_ns=4289236 ok=1 err=0
+rum-profile builtin-self-timing rank=5 symbol=RuleDelayed source=- arg_count=2 calls=1 self_total_ns=3159 self_avg_ns=3159 total_ns=3159 avg_ns=3159 ok=1 err=0
+rum-profile rewrite-rule prefilter summary candidates=256 would_reject=0 would_matcher=256 matcher_misses=0 matches=256 false_rejects=0 reject_rate_per_mille=0 false_reject_rate_per_mille=0
+rum-profile repr into_vec_total=255 into_vec_clone=255 into_owned_total=1 into_owned_clone=1 shared_args_alloc=543 shared_expr_alloc=287

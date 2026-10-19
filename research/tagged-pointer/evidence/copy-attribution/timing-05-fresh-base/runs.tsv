@@ -1,0 +1,2 @@
+engine	status	exit_code	elapsed_seconds	stdout	stderr
+rum	ok	0	5.664189	<EXPERIMENT>/evidence/copy-attribution/timing-05-fresh-base/raw/rum.stdout	<EXPERIMENT>/evidence/copy-attribution/timing-05-fresh-base/raw/rum.stderr

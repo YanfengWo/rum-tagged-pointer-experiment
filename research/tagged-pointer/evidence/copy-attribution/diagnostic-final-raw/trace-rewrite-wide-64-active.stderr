@@ -1,0 +1,180 @@
+rum-profile lexical snapshot label=before
+rum-profile lexical summary definition_rhs_eval_count=0 definition_rhs_eval_total_ns=0 definition_rhs_eval_avg_ns=0
+rum-profile lexical summary eval_module_count=0 eval_module_total_ns=0 eval_module_avg_ns=0
+rum-profile lexical summary module_resume_entries=0 module_resume_max_index=0
+rum-profile lexical summary module_init_substitution_count=0 module_init_substitution_total_ns=0 module_init_substitution_avg_ns=0
+rum-profile lexical summary module_body_substitution_count=0 module_body_substitution_total_ns=0 module_body_substitution_avg_ns=0
+rum-profile lexical summary lexical_substitutions=0 lexical_substitution_timed=0 lexical_substitution_total_ns=0 lexical_substitution_avg_ns=0
+rum-profile lexical summary lexical_changed=0 lexical_unchanged=0 binding_empty=0 binding_single=0 binding_multi=0 shadowed_nonempty=0 binding_max_count=0
+rum-profile lexical summary arg_list_substitutions=0 arg_list_total_args=0 arg_list_max_len=0 arg_prefilter_skip=0 arg_prefilter_maybe=0
+rum-profile lexical summary arg_substitution_attempts=0 arg_substitution_total_ns=0 arg_substitution_avg_ns=0 arg_substitution_changed=0 arg_substitution_unchanged=0
+rum-profile lexical summary presence_single_scans=0 presence_single_nodes=0 presence_single_timed=0 presence_single_total_ns=0 presence_single_avg_ns=0 presence_single_true=0 presence_single_false=0
+rum-profile lexical summary presence_multi_scans=0 presence_multi_nodes=0 presence_multi_timed=0 presence_multi_total_ns=0 presence_multi_avg_ns=0 presence_multi_true=0 presence_multi_false=0
+rum-profile repr into_vec_total=0 into_vec_clone=0 into_owned_total=0 into_owned_clone=0 shared_args_alloc=13 shared_expr_alloc=13
+rum-copy event kind=into_owned slots=1 shallow_slot_bytes=32 strong=3 weak=0 caller=crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs:384
+rum-copy event kind=into_vec slots=64 shallow_slot_bytes=2048 strong=3 weak=0 caller=crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs:385
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-profile lexical snapshot label=after
+rum-profile lexical summary definition_rhs_eval_count=0 definition_rhs_eval_total_ns=0 definition_rhs_eval_avg_ns=0
+rum-profile lexical summary eval_module_count=0 eval_module_total_ns=0 eval_module_avg_ns=0
+rum-profile lexical summary module_resume_entries=0 module_resume_max_index=0
+rum-profile lexical summary module_init_substitution_count=0 module_init_substitution_total_ns=0 module_init_substitution_avg_ns=0
+rum-profile lexical summary module_body_substitution_count=0 module_body_substitution_total_ns=0 module_body_substitution_avg_ns=0
+rum-profile lexical summary lexical_substitutions=0 lexical_substitution_timed=0 lexical_substitution_total_ns=0 lexical_substitution_avg_ns=0
+rum-profile lexical summary lexical_changed=0 lexical_unchanged=0 binding_empty=0 binding_single=0 binding_multi=0 shadowed_nonempty=0 binding_max_count=0
+rum-profile lexical summary arg_list_substitutions=0 arg_list_total_args=0 arg_list_max_len=0 arg_prefilter_skip=0 arg_prefilter_maybe=0
+rum-profile lexical summary arg_substitution_attempts=0 arg_substitution_total_ns=0 arg_substitution_avg_ns=0 arg_substitution_changed=0 arg_substitution_unchanged=0
+rum-profile lexical summary presence_single_scans=0 presence_single_nodes=0 presence_single_timed=0 presence_single_total_ns=0 presence_single_avg_ns=0 presence_single_true=0 presence_single_false=0
+rum-profile lexical summary presence_multi_scans=0 presence_multi_nodes=0 presence_multi_timed=0 presence_multi_total_ns=0 presence_multi_avg_ns=0 presence_multi_true=0 presence_multi_false=0
+rum-profile runtime-path-timing rank=1 phase=evaluate.total source=- calls=75 total_ns=5180835 avg_ns=69077 self_total_ns=30285 self_avg_ns=403 ok=75 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=2 phase=evaluate.once_unstable source=- calls=70 total_ns=5122409 avg_ns=73177 self_total_ns=12139 self_avg_ns=173 ok=70 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=3 phase=evaluate_inner_unstable.total source=- calls=70 total_ns=5110270 avg_ns=73003 self_total_ns=6913 self_avg_ns=98 ok=70 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=4 phase=evaluate_inner_unstable.call source=- calls=69 total_ns=5100301 avg_ns=73917 self_total_ns=6820 self_avg_ns=98 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=5 phase=evaluate_call.total source=- calls=69 total_ns=5093481 avg_ns=73818 self_total_ns=12197 self_avg_ns=176 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=6 phase=evaluate_call.resume_after_head source=- calls=69 total_ns=5065582 avg_ns=73414 self_total_ns=10412 self_avg_ns=150 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=7 phase=evaluate_call.dispatch source=- calls=69 total_ns=5047926 avg_ns=73158 self_total_ns=20583 self_avg_ns=298 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=8 phase=call.stage.special_form source=- calls=3 total_ns=2175458 avg_ns=725152 self_total_ns=100782 self_avg_ns=33594 ok=3 err=0 some=3 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=9 phase=call.stage.prepare_arguments source=- calls=68 total_ns=1712637 avg_ns=25185 self_total_ns=674609 self_avg_ns=9920 ok=68 err=0 some=0 none=68 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=10 phase=call.stage.ordinary_builtin source=- calls=65 total_ns=1125105 avg_ns=17309 self_total_ns=33765 self_avg_ns=519 ok=65 err=0 some=65 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=11 phase=compound.item.evaluate source=- calls=3 total_ns=1091671 avg_ns=363890 self_total_ns=481 self_avg_ns=160 ok=3 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=12 phase=set.rhs.evaluate source=- calls=1 total_ns=1085079 avg_ns=1085079 self_total_ns=200 self_avg_ns=200 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=13 phase=prepare_arguments.total source=- calls=68 total_ns=1010801 avg_ns=14864 self_total_ns=34717 self_avg_ns=510 ok=68 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=14 phase=prepare_arguments.evaluate_arg source=- calls=193 total_ns=962570 avg_ns=4987 self_total_ns=17123 self_avg_ns=88 ok=193 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=15 phase=evaluate_atom_fast_path.total source=- calls=264 total_ns=954642 avg_ns=3616 self_total_ns=22145 self_avg_ns=83 ok=264 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=16 phase=evaluate_atom_fast_path.call source=- calls=64 total_ns=926666 avg_ns=14479 self_total_ns=6614 self_avg_ns=103 ok=64 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=17 phase=prepare_arguments.normalize.total source=- calls=63 total_ns=27227 avg_ns=432 self_total_ns=17150 self_avg_ns=272 ok=63 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=18 phase=evaluate.stability_check source=- calls=148 total_ns=21676 avg_ns=146 self_total_ns=21676 self_avg_ns=146 ok=148 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=19 phase=evaluate_call.head_eval source=- calls=71 total_ns=16073 avg_ns=226 self_total_ns=6878 self_avg_ns=96 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=20 phase=call.stage.listable source=- calls=64 total_ns=15626 avg_ns=244 self_total_ns=15626 self_avg_ns=244 ok=64 err=0 some=0 none=64 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=21 phase=prepare_arguments.plan_arg source=- calls=197 total_ns=9161 avg_ns=46 self_total_ns=9161 self_avg_ns=46 ok=197 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=22 phase=evaluate_call.build_dispatch_plan source=- calls=71 total_ns=7364 avg_ns=103 self_total_ns=7364 self_avg_ns=103 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=23 phase=prepare_arguments.normalize.flat source=- calls=63 total_ns=5459 avg_ns=86 self_total_ns=5459 self_avg_ns=86 ok=63 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=24 phase=prepare_arguments.normalize.orderless source=- calls=63 total_ns=4618 avg_ns=73 self_total_ns=4618 self_avg_ns=73 ok=63 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=25 phase=prepare_arguments.append_arg source=- calls=64 total_ns=4353 avg_ns=68 self_total_ns=4353 self_avg_ns=68 ok=64 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=26 phase=evaluate.trace_update source=- calls=71 total_ns=4181 avg_ns=58 self_total_ns=4181 self_avg_ns=58 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=27 phase=evaluate_atom_fast_path.atom source=- calls=129 total_ns=3647 avg_ns=28 self_total_ns=3647 self_avg_ns=28 ok=129 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=28 phase=evaluate_inner_unstable.symbol source=- calls=1 total_ns=3056 avg_ns=3056 self_total_ns=2695 self_avg_ns=2695 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=29 phase=evaluate.fixed_point_equal source=- calls=72 total_ns=2966 avg_ns=41 self_total_ns=2966 self_avg_ns=41 ok=72 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=30 phase=set.finish source=- calls=1 total_ns=2334 avg_ns=2334 self_total_ns=220 self_avg_ns=220 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=31 phase=evaluate_atom_fast_path.stable_symbol source=- calls=71 total_ns=2184 avg_ns=30 self_total_ns=2184 self_avg_ns=30 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=32 phase=set.try_symbol_own_value source=- calls=1 total_ns=2114 avg_ns=2114 self_total_ns=701 self_avg_ns=701 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=33 phase=set.symbol_own_value.store source=- calls=1 total_ns=601 avg_ns=601 self_total_ns=601 self_avg_ns=601 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=34 phase=set.symbol_own_value.epoch_bump source=- calls=1 total_ns=411 avg_ns=411 self_total_ns=411 self_avg_ns=411 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=35 phase=set.symbol_own_value.protected_check source=- calls=1 total_ns=271 avg_ns=271 self_total_ns=271 self_avg_ns=271 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=36 phase=compound.item.suspend source=- calls=4 total_ns=130 avg_ns=32 self_total_ns=130 self_avg_ns=32 ok=4 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=37 phase=set.rhs.suspend source=- calls=1 total_ns=71 avg_ns=71 self_total_ns=71 self_avg_ns=71 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=38 phase=set.symbol_own_value.lvalue source=- calls=1 total_ns=70 avg_ns=70 self_total_ns=70 self_avg_ns=70 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=39 phase=set.symbol_own_value.trace source=- calls=1 total_ns=60 avg_ns=60 self_total_ns=60 self_avg_ns=60 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=1 phase=call.stage.prepare_arguments source=- calls=68 self_total_ns=674609 self_avg_ns=9920 total_ns=1712637 avg_ns=25185 ok=68 err=0 some=0 none=68 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=2 phase=call.stage.special_form source=- calls=3 self_total_ns=100782 self_avg_ns=33594 total_ns=2175458 avg_ns=725152 ok=3 err=0 some=3 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=3 phase=prepare_arguments.total source=- calls=68 self_total_ns=34717 self_avg_ns=510 total_ns=1010801 avg_ns=14864 ok=68 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=4 phase=call.stage.ordinary_builtin source=- calls=65 self_total_ns=33765 self_avg_ns=519 total_ns=1125105 avg_ns=17309 ok=65 err=0 some=65 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=5 phase=evaluate.total source=- calls=75 self_total_ns=30285 self_avg_ns=403 total_ns=5180835 avg_ns=69077 ok=75 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=6 phase=evaluate_atom_fast_path.total source=- calls=264 self_total_ns=22145 self_avg_ns=83 total_ns=954642 avg_ns=3616 ok=264 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=7 phase=evaluate.stability_check source=- calls=148 self_total_ns=21676 self_avg_ns=146 total_ns=21676 avg_ns=146 ok=148 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=8 phase=evaluate_call.dispatch source=- calls=69 self_total_ns=20583 self_avg_ns=298 total_ns=5047926 avg_ns=73158 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=9 phase=prepare_arguments.normalize.total source=- calls=63 self_total_ns=17150 self_avg_ns=272 total_ns=27227 avg_ns=432 ok=63 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=10 phase=prepare_arguments.evaluate_arg source=- calls=193 self_total_ns=17123 self_avg_ns=88 total_ns=962570 avg_ns=4987 ok=193 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=11 phase=call.stage.listable source=- calls=64 self_total_ns=15626 self_avg_ns=244 total_ns=15626 avg_ns=244 ok=64 err=0 some=0 none=64 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=12 phase=evaluate_call.total source=- calls=69 self_total_ns=12197 self_avg_ns=176 total_ns=5093481 avg_ns=73818 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=13 phase=evaluate.once_unstable source=- calls=70 self_total_ns=12139 self_avg_ns=173 total_ns=5122409 avg_ns=73177 ok=70 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=14 phase=evaluate_call.resume_after_head source=- calls=69 self_total_ns=10412 self_avg_ns=150 total_ns=5065582 avg_ns=73414 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=15 phase=prepare_arguments.plan_arg source=- calls=197 self_total_ns=9161 self_avg_ns=46 total_ns=9161 avg_ns=46 ok=197 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=16 phase=evaluate_call.build_dispatch_plan source=- calls=71 self_total_ns=7364 self_avg_ns=103 total_ns=7364 avg_ns=103 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=17 phase=evaluate_inner_unstable.total source=- calls=70 self_total_ns=6913 self_avg_ns=98 total_ns=5110270 avg_ns=73003 ok=70 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=18 phase=evaluate_call.head_eval source=- calls=71 self_total_ns=6878 self_avg_ns=96 total_ns=16073 avg_ns=226 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=19 phase=evaluate_inner_unstable.call source=- calls=69 self_total_ns=6820 self_avg_ns=98 total_ns=5100301 avg_ns=73917 ok=69 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=20 phase=evaluate_atom_fast_path.call source=- calls=64 self_total_ns=6614 self_avg_ns=103 total_ns=926666 avg_ns=14479 ok=64 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=21 phase=prepare_arguments.normalize.flat source=- calls=63 self_total_ns=5459 self_avg_ns=86 total_ns=5459 avg_ns=86 ok=63 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=22 phase=prepare_arguments.normalize.orderless source=- calls=63 self_total_ns=4618 self_avg_ns=73 total_ns=4618 avg_ns=73 ok=63 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=23 phase=prepare_arguments.append_arg source=- calls=64 self_total_ns=4353 self_avg_ns=68 total_ns=4353 avg_ns=68 ok=64 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=24 phase=evaluate.trace_update source=- calls=71 self_total_ns=4181 self_avg_ns=58 total_ns=4181 avg_ns=58 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=25 phase=evaluate_atom_fast_path.atom source=- calls=129 self_total_ns=3647 self_avg_ns=28 total_ns=3647 avg_ns=28 ok=129 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=26 phase=evaluate.fixed_point_equal source=- calls=72 self_total_ns=2966 self_avg_ns=41 total_ns=2966 avg_ns=41 ok=72 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=27 phase=evaluate_inner_unstable.symbol source=- calls=1 self_total_ns=2695 self_avg_ns=2695 total_ns=3056 avg_ns=3056 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=28 phase=evaluate_atom_fast_path.stable_symbol source=- calls=71 self_total_ns=2184 self_avg_ns=30 total_ns=2184 avg_ns=30 ok=71 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=29 phase=set.try_symbol_own_value source=- calls=1 self_total_ns=701 self_avg_ns=701 total_ns=2114 avg_ns=2114 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=30 phase=set.symbol_own_value.store source=- calls=1 self_total_ns=601 self_avg_ns=601 total_ns=601 avg_ns=601 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=31 phase=compound.item.evaluate source=- calls=3 self_total_ns=481 self_avg_ns=160 total_ns=1091671 avg_ns=363890 ok=3 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=32 phase=set.symbol_own_value.epoch_bump source=- calls=1 self_total_ns=411 self_avg_ns=411 total_ns=411 avg_ns=411 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=33 phase=set.symbol_own_value.protected_check source=- calls=1 self_total_ns=271 self_avg_ns=271 total_ns=271 avg_ns=271 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=34 phase=set.finish source=- calls=1 self_total_ns=220 self_avg_ns=220 total_ns=2334 avg_ns=2334 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=35 phase=set.rhs.evaluate source=- calls=1 self_total_ns=200 self_avg_ns=200 total_ns=1085079 avg_ns=1085079 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=36 phase=compound.item.suspend source=- calls=4 self_total_ns=130 self_avg_ns=32 total_ns=130 avg_ns=32 ok=4 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=37 phase=set.rhs.suspend source=- calls=1 self_total_ns=71 self_avg_ns=71 total_ns=71 avg_ns=71 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=38 phase=set.symbol_own_value.lvalue source=- calls=1 self_total_ns=70 self_avg_ns=70 total_ns=70 avg_ns=70 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=39 phase=set.symbol_own_value.trace source=- calls=1 self_total_ns=60 self_avg_ns=60 total_ns=60 avg_ns=60 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile builtin-timing rank=1 symbol=CompoundExpression source=- arg_count=2 calls=1 total_ns=1092203 avg_ns=1092203 self_total_ns=4098 self_avg_ns=4098 ok=1 err=0
+rum-profile builtin-timing rank=2 symbol=Set source=- arg_count=2 calls=1 total_ns=1088105 avg_ns=1088105 self_total_ns=8375 self_avg_ns=8375 ok=1 err=0
+rum-profile builtin-timing rank=3 symbol=Replace source=- arg_count=3 calls=1 total_ns=1079730 avg_ns=1079730 self_total_ns=1060543 self_avg_ns=1060543 ok=1 err=0
+rum-profile builtin-timing rank=4 symbol=Plus source=- arg_count=2 calls=64 total_ns=14198 avg_ns=221 self_total_ns=14198 self_avg_ns=221 ok=64 err=0
+rum-profile builtin-timing rank=5 symbol=RuleDelayed source=- arg_count=2 calls=1 total_ns=4989 avg_ns=4989 self_total_ns=4989 self_avg_ns=4989 ok=1 err=0
+rum-profile builtin-self-timing rank=1 symbol=Replace source=- arg_count=3 calls=1 self_total_ns=1060543 self_avg_ns=1060543 total_ns=1079730 avg_ns=1079730 ok=1 err=0
+rum-profile builtin-self-timing rank=2 symbol=Plus source=- arg_count=2 calls=64 self_total_ns=14198 self_avg_ns=221 total_ns=14198 avg_ns=221 ok=64 err=0
+rum-profile builtin-self-timing rank=3 symbol=Set source=- arg_count=2 calls=1 self_total_ns=8375 self_avg_ns=8375 total_ns=1088105 avg_ns=1088105 ok=1 err=0
+rum-profile builtin-self-timing rank=4 symbol=RuleDelayed source=- arg_count=2 calls=1 self_total_ns=4989 self_avg_ns=4989 total_ns=4989 avg_ns=4989 ok=1 err=0
+rum-profile builtin-self-timing rank=5 symbol=CompoundExpression source=- arg_count=2 calls=1 self_total_ns=4098 self_avg_ns=4098 total_ns=1092203 avg_ns=1092203 ok=1 err=0
+rum-profile rewrite-rule prefilter summary candidates=64 would_reject=0 would_matcher=64 matcher_misses=0 matches=64 false_rejects=0 reject_rate_per_mille=0 false_reject_rate_per_mille=0
+rum-profile repr into_vec_total=64 into_vec_clone=64 into_owned_total=1 into_owned_clone=1 shared_args_alloc=159 shared_expr_alloc=95

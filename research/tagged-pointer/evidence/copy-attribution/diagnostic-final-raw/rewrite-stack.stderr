@@ -1,0 +1,676 @@
+rum-profile lexical snapshot label=before
+rum-profile lexical summary definition_rhs_eval_count=0 definition_rhs_eval_total_ns=0 definition_rhs_eval_avg_ns=0
+rum-profile lexical summary eval_module_count=0 eval_module_total_ns=0 eval_module_avg_ns=0
+rum-profile lexical summary module_resume_entries=0 module_resume_max_index=0
+rum-profile lexical summary module_init_substitution_count=0 module_init_substitution_total_ns=0 module_init_substitution_avg_ns=0
+rum-profile lexical summary module_body_substitution_count=0 module_body_substitution_total_ns=0 module_body_substitution_avg_ns=0
+rum-profile lexical summary lexical_substitutions=0 lexical_substitution_timed=0 lexical_substitution_total_ns=0 lexical_substitution_avg_ns=0
+rum-profile lexical summary lexical_changed=0 lexical_unchanged=0 binding_empty=0 binding_single=0 binding_multi=0 shadowed_nonempty=0 binding_max_count=0
+rum-profile lexical summary arg_list_substitutions=0 arg_list_total_args=0 arg_list_max_len=0 arg_prefilter_skip=0 arg_prefilter_maybe=0
+rum-profile lexical summary arg_substitution_attempts=0 arg_substitution_total_ns=0 arg_substitution_avg_ns=0 arg_substitution_changed=0 arg_substitution_unchanged=0
+rum-profile lexical summary presence_single_scans=0 presence_single_nodes=0 presence_single_timed=0 presence_single_total_ns=0 presence_single_avg_ns=0 presence_single_true=0 presence_single_false=0
+rum-profile lexical summary presence_multi_scans=0 presence_multi_nodes=0 presence_multi_timed=0 presence_multi_total_ns=0 presence_multi_avg_ns=0 presence_multi_true=0 presence_multi_false=0
+rum-profile repr into_vec_total=0 into_vec_clone=0 into_owned_total=0 into_owned_clone=0 shared_args_alloc=13 shared_expr_alloc=13
+rum-copy event kind=into_owned slots=1 shallow_slot_bytes=32 strong=3 weak=0 caller=crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs:384
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedExpr::into_owned
+   2: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::replace_children_owned
+   3: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::replace_owned
+   4: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+   5: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+   6: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+   7: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+   8: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+   9: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  10: rum_stdlib::rewrite_builtins::eval_replace
+  11: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  13: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  15: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  16: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  17: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  18: rum_runtime::runtime::builtin_adapters::builtin_set
+  19: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  20: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  21: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  22: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  23: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  24: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  25: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  26: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  27: rum_stdlib::control_flow::eval_compound_expression
+  28: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  29: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  30: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  31: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  32: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  33: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  34: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  35: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  36: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  37: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  38: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  39: rum_host::session::HostSession::eval_file
+  40: rum_cli::run
+  41: rum_cli::main
+  42: std::sys::backtrace::__rust_begin_short_backtrace
+  43: std::rt::lang_start::{{closure}}
+  44: std::rt::lang_start_internal
+  45: main
+  46: <unknown>
+  47: __libc_start_main
+  48: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=8 shallow_slot_bytes=256 strong=3 weak=0 caller=crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs:385
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::replace_children_owned
+   3: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::replace_owned
+   4: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+   5: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+   6: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+   7: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+   8: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+   9: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  10: rum_stdlib::rewrite_builtins::eval_replace
+  11: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  13: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  15: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  16: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  17: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  18: rum_runtime::runtime::builtin_adapters::builtin_set
+  19: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  20: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  21: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  22: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  23: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  24: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  25: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  26: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  27: rum_stdlib::control_flow::eval_compound_expression
+  28: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  29: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  30: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  31: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  32: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  33: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  34: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  35: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  36: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  37: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  38: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  39: rum_host::session::HostSession::eval_file
+  40: rum_cli::run
+  41: rum_cli::main
+  42: std::sys::backtrace::__rust_begin_short_backtrace
+  43: std::rt::lang_start::{{closure}}
+  44: std::rt::lang_start_internal
+  45: main
+  46: <unknown>
+  47: __libc_start_main
+  48: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-copy event kind=into_vec slots=2 shallow_slot_bytes=64 strong=6 weak=0 caller=crates/rum-core/src/expr.rs:863
+rum-copy stack-begin
+   0: rum_core::copy_attribution::record
+   1: rum_core::expr::SharedArgs::into_vec
+   2: rum_core::expr::Expr::unwrap_shared_args
+   3: rum_runtime::runtime::call_preparation::<impl rum_runtime::runtime::model::session::Session>::normalize_call_args_shared
+   4: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+   5: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+   6: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+   7: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+   8: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+   9: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_atom_fast_path
+  10: rum_runtime::runtime::eval_call_prepare::<impl rum_runtime::runtime::model::session::Session>::prepare_arguments_for_call_with_unevaluated_restore
+  11: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  12: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  13: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  14: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  15: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  16: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_levels_resolution
+  17: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::finish_replace_heads_resolution
+  18: rum_runtime::runtime::kernel_data::rewrite_data::replace::once::<impl rum_runtime::runtime::model::session::Session>::resume_replace_after_rule_exprs
+  19: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::RewriteRuleExprContinuation::resume
+  20: rum_runtime::runtime::definitions::definition_catalog::rewrite_rules::<impl rum_runtime::runtime::model::session::Session>::drive_rewrite_rule_exprs_owned
+  21: rum_runtime::runtime::kernel_data::rewrite_data::<impl rum_runtime::runtime::model::session::Session>::eval_rewrite_data_builtin
+  22: rum_stdlib::rewrite_builtins::eval_replace
+  23: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  24: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  25: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  26: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  27: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  28: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  29: rum_runtime::runtime::definitions::definitions::<impl rum_runtime::runtime::model::session::Session>::eval_set
+  30: rum_runtime::runtime::builtin_adapters::builtin_set
+  31: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  32: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  33: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  34: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  35: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  36: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  37: rum_runtime::runtime::kernel_data::control_data::branching_loops::<impl rum_runtime::runtime::model::session::Session>::resume_compound_expression_from_index
+  38: rum_runtime::runtime::kernel_data::control_data::<impl rum_runtime::runtime::model::session::Session>::eval_control_data_builtin
+  39: rum_stdlib::control_flow::eval_compound_expression
+  40: rum_runtime::runtime::eval_dispatch::<impl rum_runtime::runtime::model::session::Session>::try_dispatch_builtin_call
+  41: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  42: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_with_dispatch_plan
+  43: rum_runtime::runtime::eval_core::call::<impl rum_runtime::runtime::model::session::Session>::resume_call_after_head
+  44: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_inner_unstable
+  45: rum_runtime::runtime::eval_core::<impl rum_runtime::runtime::model::session::Session>::evaluate_once_unstable_after_input_check_with_cycle_tracking
+  46: rum_runtime::runtime::resolution::<impl rum_runtime::runtime::model::session::Session>::evaluate
+  47: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_input_with_terminated_handling
+  48: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_with_terminated_handling
+  49: rum_runtime::runtime::session::session_eval::<impl rum_runtime::runtime::model::session::Session>::eval_script_for_loader
+  50: rum_runtime::runtime::session::session_requests::<impl rum_runtime::runtime::model::session::Session>::eval_file_request
+  51: rum_host::session::HostSession::eval_file
+  52: rum_cli::run
+  53: rum_cli::main
+  54: std::sys::backtrace::__rust_begin_short_backtrace
+  55: std::rt::lang_start::{{closure}}
+  56: std::rt::lang_start_internal
+  57: main
+  58: <unknown>
+  59: __libc_start_main
+  60: _start
+
+rum-copy stack-end
+rum-profile lexical snapshot label=after
+rum-profile lexical summary definition_rhs_eval_count=0 definition_rhs_eval_total_ns=0 definition_rhs_eval_avg_ns=0
+rum-profile lexical summary eval_module_count=0 eval_module_total_ns=0 eval_module_avg_ns=0
+rum-profile lexical summary module_resume_entries=0 module_resume_max_index=0
+rum-profile lexical summary module_init_substitution_count=0 module_init_substitution_total_ns=0 module_init_substitution_avg_ns=0
+rum-profile lexical summary module_body_substitution_count=0 module_body_substitution_total_ns=0 module_body_substitution_avg_ns=0
+rum-profile lexical summary lexical_substitutions=0 lexical_substitution_timed=0 lexical_substitution_total_ns=0 lexical_substitution_avg_ns=0
+rum-profile lexical summary lexical_changed=0 lexical_unchanged=0 binding_empty=0 binding_single=0 binding_multi=0 shadowed_nonempty=0 binding_max_count=0
+rum-profile lexical summary arg_list_substitutions=0 arg_list_total_args=0 arg_list_max_len=0 arg_prefilter_skip=0 arg_prefilter_maybe=0
+rum-profile lexical summary arg_substitution_attempts=0 arg_substitution_total_ns=0 arg_substitution_avg_ns=0 arg_substitution_changed=0 arg_substitution_unchanged=0
+rum-profile lexical summary presence_single_scans=0 presence_single_nodes=0 presence_single_timed=0 presence_single_total_ns=0 presence_single_avg_ns=0 presence_single_true=0 presence_single_false=0
+rum-profile lexical summary presence_multi_scans=0 presence_multi_nodes=0 presence_multi_timed=0 presence_multi_total_ns=0 presence_multi_avg_ns=0 presence_multi_true=0 presence_multi_false=0
+rum-profile runtime-path-timing rank=1 phase=evaluate.total source=- calls=19 total_ns=26727183 avg_ns=1406693 self_total_ns=9042 self_avg_ns=475 ok=19 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=2 phase=evaluate.once_unstable source=- calls=14 total_ns=26704005 avg_ns=1907428 self_total_ns=4323 self_avg_ns=308 ok=14 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=3 phase=evaluate_inner_unstable.total source=- calls=14 total_ns=26699682 avg_ns=1907120 self_total_ns=2536 self_avg_ns=181 ok=14 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=4 phase=evaluate_inner_unstable.call source=- calls=13 total_ns=26695171 avg_ns=2053474 self_total_ns=2018 self_avg_ns=155 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=5 phase=evaluate_call.total source=- calls=13 total_ns=26693153 avg_ns=2053319 self_total_ns=3456 self_avg_ns=265 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=6 phase=evaluate_call.resume_after_head source=- calls=13 total_ns=26685162 avg_ns=2052704 self_total_ns=2773 self_avg_ns=213 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=7 phase=evaluate_call.dispatch source=- calls=13 total_ns=26679219 avg_ns=2052247 self_total_ns=6158 self_avg_ns=473 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=8 phase=call.stage.special_form source=- calls=3 total_ns=12176888 avg_ns=4058962 self_total_ns=1848526 self_avg_ns=616175 ok=3 err=0 some=3 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=9 phase=call.stage.prepare_arguments source=- calls=12 total_ns=8379964 avg_ns=698330 self_total_ns=4139736 self_avg_ns=344978 ok=12 err=0 some=0 none=12 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=10 phase=call.stage.ordinary_builtin source=- calls=9 total_ns=6109818 avg_ns=678868 self_total_ns=17246 self_avg_ns=1916 ok=9 err=0 some=9 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=11 phase=compound.item.evaluate source=- calls=3 total_ns=6092976 avg_ns=2030992 self_total_ns=533 self_avg_ns=177 ok=3 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=12 phase=set.rhs.evaluate source=- calls=1 total_ns=6085638 avg_ns=6085638 self_total_ns=276 self_avg_ns=276 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=13 phase=prepare_arguments.total source=- calls=12 total_ns=4229484 avg_ns=352457 self_total_ns=8109 self_avg_ns=675 ok=12 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=14 phase=prepare_arguments.evaluate_arg source=- calls=25 total_ns=4218106 avg_ns=168724 self_total_ns=3408 self_avg_ns=136 ok=25 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=15 phase=evaluate_atom_fast_path.total source=- calls=40 total_ns=4217461 avg_ns=105436 self_total_ns=4810 self_avg_ns=120 ok=40 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=16 phase=evaluate_atom_fast_path.call source=- calls=8 total_ns=4211530 avg_ns=526441 self_total_ns=1479 self_avg_ns=184 ok=8 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=17 phase=evaluate.stability_check source=- calls=36 total_ns=12542 avg_ns=348 self_total_ns=12542 self_avg_ns=348 ok=36 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=18 phase=prepare_arguments.normalize.total source=- calls=7 total_ns=10744 avg_ns=1534 self_total_ns=6842 self_avg_ns=977 ok=7 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=19 phase=call.stage.listable source=- calls=8 total_ns=8394 avg_ns=1049 self_total_ns=8394 self_avg_ns=1049 ok=8 err=0 some=0 none=8 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=20 phase=evaluate_call.head_eval source=- calls=15 total_ns=5114 avg_ns=340 self_total_ns=2351 self_avg_ns=156 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=21 phase=evaluate_call.build_dispatch_plan source=- calls=15 total_ns=3547 avg_ns=236 self_total_ns=3547 self_avg_ns=236 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=22 phase=set.finish source=- calls=1 total_ns=2489 avg_ns=2489 self_total_ns=239 self_avg_ns=239 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=23 phase=set.try_symbol_own_value source=- calls=1 total_ns=2250 avg_ns=2250 self_total_ns=808 self_avg_ns=808 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=24 phase=prepare_arguments.plan_arg source=- calls=29 total_ns=2232 avg_ns=76 self_total_ns=2232 self_avg_ns=76 ok=29 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=25 phase=prepare_arguments.normalize.flat source=- calls=7 total_ns=2175 avg_ns=310 self_total_ns=2175 self_avg_ns=310 ok=7 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=26 phase=evaluate_inner_unstable.symbol source=- calls=1 total_ns=1975 avg_ns=1975 self_total_ns=1782 self_avg_ns=1782 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=27 phase=prepare_arguments.normalize.orderless source=- calls=7 total_ns=1727 avg_ns=246 self_total_ns=1727 self_avg_ns=246 ok=7 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=28 phase=evaluate.trace_update source=- calls=15 total_ns=1371 avg_ns=91 self_total_ns=1371 self_avg_ns=91 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=29 phase=evaluate.fixed_point_equal source=- calls=16 total_ns=1095 avg_ns=68 self_total_ns=1095 self_avg_ns=68 ok=16 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=30 phase=prepare_arguments.append_arg source=- calls=8 total_ns=1037 avg_ns=129 self_total_ns=1037 self_avg_ns=129 ok=8 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=31 phase=evaluate_atom_fast_path.stable_symbol source=- calls=15 total_ns=607 avg_ns=40 self_total_ns=607 self_avg_ns=40 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=32 phase=set.symbol_own_value.store source=- calls=1 total_ns=542 avg_ns=542 self_total_ns=542 self_avg_ns=542 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=33 phase=evaluate_atom_fast_path.atom source=- calls=17 total_ns=514 avg_ns=30 self_total_ns=514 self_avg_ns=30 ok=17 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=34 phase=set.symbol_own_value.epoch_bump source=- calls=1 total_ns=395 avg_ns=395 self_total_ns=395 self_avg_ns=395 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=35 phase=set.symbol_own_value.protected_check source=- calls=1 total_ns=367 avg_ns=367 self_total_ns=367 self_avg_ns=367 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=36 phase=compound.item.suspend source=- calls=4 total_ns=138 avg_ns=34 self_total_ns=138 self_avg_ns=34 ok=4 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=37 phase=set.symbol_own_value.trace source=- calls=1 total_ns=73 avg_ns=73 self_total_ns=73 self_avg_ns=73 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=38 phase=set.symbol_own_value.lvalue source=- calls=1 total_ns=65 avg_ns=65 self_total_ns=65 self_avg_ns=65 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-timing rank=39 phase=set.rhs.suspend source=- calls=1 total_ns=46 avg_ns=46 self_total_ns=46 self_avg_ns=46 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=1 phase=call.stage.prepare_arguments source=- calls=12 self_total_ns=4139736 self_avg_ns=344978 total_ns=8379964 avg_ns=698330 ok=12 err=0 some=0 none=12 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=2 phase=call.stage.special_form source=- calls=3 self_total_ns=1848526 self_avg_ns=616175 total_ns=12176888 avg_ns=4058962 ok=3 err=0 some=3 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=3 phase=call.stage.ordinary_builtin source=- calls=9 self_total_ns=17246 self_avg_ns=1916 total_ns=6109818 avg_ns=678868 ok=9 err=0 some=9 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=4 phase=evaluate.stability_check source=- calls=36 self_total_ns=12542 self_avg_ns=348 total_ns=12542 avg_ns=348 ok=36 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=5 phase=evaluate.total source=- calls=19 self_total_ns=9042 self_avg_ns=475 total_ns=26727183 avg_ns=1406693 ok=19 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=6 phase=call.stage.listable source=- calls=8 self_total_ns=8394 self_avg_ns=1049 total_ns=8394 avg_ns=1049 ok=8 err=0 some=0 none=8 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=7 phase=prepare_arguments.total source=- calls=12 self_total_ns=8109 self_avg_ns=675 total_ns=4229484 avg_ns=352457 ok=12 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=8 phase=prepare_arguments.normalize.total source=- calls=7 self_total_ns=6842 self_avg_ns=977 total_ns=10744 avg_ns=1534 ok=7 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=9 phase=evaluate_call.dispatch source=- calls=13 self_total_ns=6158 self_avg_ns=473 total_ns=26679219 avg_ns=2052247 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=10 phase=evaluate_atom_fast_path.total source=- calls=40 self_total_ns=4810 self_avg_ns=120 total_ns=4217461 avg_ns=105436 ok=40 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=11 phase=evaluate.once_unstable source=- calls=14 self_total_ns=4323 self_avg_ns=308 total_ns=26704005 avg_ns=1907428 ok=14 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=12 phase=evaluate_call.build_dispatch_plan source=- calls=15 self_total_ns=3547 self_avg_ns=236 total_ns=3547 avg_ns=236 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=13 phase=evaluate_call.total source=- calls=13 self_total_ns=3456 self_avg_ns=265 total_ns=26693153 avg_ns=2053319 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=14 phase=prepare_arguments.evaluate_arg source=- calls=25 self_total_ns=3408 self_avg_ns=136 total_ns=4218106 avg_ns=168724 ok=25 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=15 phase=evaluate_call.resume_after_head source=- calls=13 self_total_ns=2773 self_avg_ns=213 total_ns=26685162 avg_ns=2052704 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=16 phase=evaluate_inner_unstable.total source=- calls=14 self_total_ns=2536 self_avg_ns=181 total_ns=26699682 avg_ns=1907120 ok=14 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=17 phase=evaluate_call.head_eval source=- calls=15 self_total_ns=2351 self_avg_ns=156 total_ns=5114 avg_ns=340 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=18 phase=prepare_arguments.plan_arg source=- calls=29 self_total_ns=2232 self_avg_ns=76 total_ns=2232 avg_ns=76 ok=29 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=19 phase=prepare_arguments.normalize.flat source=- calls=7 self_total_ns=2175 self_avg_ns=310 total_ns=2175 avg_ns=310 ok=7 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=20 phase=evaluate_inner_unstable.call source=- calls=13 self_total_ns=2018 self_avg_ns=155 total_ns=26695171 avg_ns=2053474 ok=13 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=21 phase=evaluate_inner_unstable.symbol source=- calls=1 self_total_ns=1782 self_avg_ns=1782 total_ns=1975 avg_ns=1975 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=22 phase=prepare_arguments.normalize.orderless source=- calls=7 self_total_ns=1727 self_avg_ns=246 total_ns=1727 avg_ns=246 ok=7 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=23 phase=evaluate_atom_fast_path.call source=- calls=8 self_total_ns=1479 self_avg_ns=184 total_ns=4211530 avg_ns=526441 ok=8 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=24 phase=evaluate.trace_update source=- calls=15 self_total_ns=1371 self_avg_ns=91 total_ns=1371 avg_ns=91 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=25 phase=evaluate.fixed_point_equal source=- calls=16 self_total_ns=1095 self_avg_ns=68 total_ns=1095 avg_ns=68 ok=16 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=26 phase=prepare_arguments.append_arg source=- calls=8 self_total_ns=1037 self_avg_ns=129 total_ns=1037 avg_ns=129 ok=8 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=27 phase=set.try_symbol_own_value source=- calls=1 self_total_ns=808 self_avg_ns=808 total_ns=2250 avg_ns=2250 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=28 phase=evaluate_atom_fast_path.stable_symbol source=- calls=15 self_total_ns=607 self_avg_ns=40 total_ns=607 avg_ns=40 ok=15 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=29 phase=set.symbol_own_value.store source=- calls=1 self_total_ns=542 self_avg_ns=542 total_ns=542 avg_ns=542 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=30 phase=compound.item.evaluate source=- calls=3 self_total_ns=533 self_avg_ns=177 total_ns=6092976 avg_ns=2030992 ok=3 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=31 phase=evaluate_atom_fast_path.atom source=- calls=17 self_total_ns=514 self_avg_ns=30 total_ns=514 avg_ns=30 ok=17 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=32 phase=set.symbol_own_value.epoch_bump source=- calls=1 self_total_ns=395 self_avg_ns=395 total_ns=395 avg_ns=395 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=33 phase=set.symbol_own_value.protected_check source=- calls=1 self_total_ns=367 self_avg_ns=367 total_ns=367 avg_ns=367 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=34 phase=set.rhs.evaluate source=- calls=1 self_total_ns=276 self_avg_ns=276 total_ns=6085638 avg_ns=6085638 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=35 phase=set.finish source=- calls=1 self_total_ns=239 self_avg_ns=239 total_ns=2489 avg_ns=2489 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=36 phase=compound.item.suspend source=- calls=4 self_total_ns=138 self_avg_ns=34 total_ns=138 avg_ns=34 ok=4 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=37 phase=set.symbol_own_value.trace source=- calls=1 self_total_ns=73 self_avg_ns=73 total_ns=73 avg_ns=73 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=38 phase=set.symbol_own_value.lvalue source=- calls=1 self_total_ns=65 self_avg_ns=65 total_ns=65 avg_ns=65 ok=1 err=0 some=1 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile runtime-path-self-timing rank=39 phase=set.rhs.suspend source=- calls=1 self_total_ns=46 self_avg_ns=46 total_ns=46 avg_ns=46 ok=1 err=0 some=0 none=0 return_err=0 throw_err=0 input_required=0
+rum-profile builtin-timing rank=1 symbol=CompoundExpression source=- arg_count=2 calls=1 total_ns=6093389 avg_ns=6093389 self_total_ns=4537 self_avg_ns=4537 ok=1 err=0
+rum-profile builtin-timing rank=2 symbol=Set source=- arg_count=2 calls=1 total_ns=6088852 avg_ns=6088852 self_total_ns=8403 self_avg_ns=8403 ok=1 err=0
+rum-profile builtin-timing rank=3 symbol=Replace source=- arg_count=3 calls=1 total_ns=6080449 avg_ns=6080449 self_total_ns=6068502 self_avg_ns=6068502 ok=1 err=0
+rum-profile builtin-timing rank=4 symbol=Plus source=- arg_count=2 calls=8 total_ns=7447 avg_ns=930 self_total_ns=7447 self_avg_ns=930 ok=8 err=0
+rum-profile builtin-timing rank=5 symbol=RuleDelayed source=- arg_count=2 calls=1 total_ns=4500 avg_ns=4500 self_total_ns=4500 self_avg_ns=4500 ok=1 err=0
+rum-profile builtin-self-timing rank=1 symbol=Replace source=- arg_count=3 calls=1 self_total_ns=6068502 self_avg_ns=6068502 total_ns=6080449 avg_ns=6080449 ok=1 err=0
+rum-profile builtin-self-timing rank=2 symbol=Set source=- arg_count=2 calls=1 self_total_ns=8403 self_avg_ns=8403 total_ns=6088852 avg_ns=6088852 ok=1 err=0
+rum-profile builtin-self-timing rank=3 symbol=Plus source=- arg_count=2 calls=8 self_total_ns=7447 self_avg_ns=930 total_ns=7447 avg_ns=930 ok=8 err=0
+rum-profile builtin-self-timing rank=4 symbol=CompoundExpression source=- arg_count=2 calls=1 self_total_ns=4537 self_avg_ns=4537 total_ns=6093389 avg_ns=6093389 ok=1 err=0
+rum-profile builtin-self-timing rank=5 symbol=RuleDelayed source=- arg_count=2 calls=1 self_total_ns=4500 self_avg_ns=4500 total_ns=4500 avg_ns=4500 ok=1 err=0
+rum-profile rewrite-rule prefilter summary candidates=8 would_reject=0 would_matcher=8 matcher_misses=0 matches=8 false_rejects=0 reject_rate_per_mille=0 false_reject_rate_per_mille=0
+rum-profile repr into_vec_total=8 into_vec_clone=8 into_owned_total=1 into_owned_clone=1 shared_args_alloc=47 shared_expr_alloc=39

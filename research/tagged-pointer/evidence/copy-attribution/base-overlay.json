@@ -1,0 +1,7 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "mode": "base",
+  "overlay_path": "<BUILD_OR_SOURCE>",
+  "patched_files": {},
+  "default_source_changed": false
+}

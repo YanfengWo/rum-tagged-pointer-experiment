@@ -1,0 +1,2 @@
+usage: run-diagnostics.py [-h] [--trace TRACE] [--suffix SUFFIX] evidence
+run-diagnostics.py: error: argument --suffix: expected one argument

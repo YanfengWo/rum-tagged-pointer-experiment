@@ -1,0 +1,33 @@
+(* Expected values confirmed on the pinned baseline by this acceptance probe. *)
+copySource = {f[1, 2], f[3, 4]};
+copyAlias = copySource;
+copyRule = f[x_Integer, y_Integer] :> g[y, x];
+copyFirst = Replace[copySource, copyRule, {1}];
+copySecond = Replace[copyAlias, copyRule, {1}];
+If[SameQ[
+  {copySource, copyAlias, copyFirst, copySecond},
+  {{f[1, 2], f[3, 4]}, {f[1, 2], f[3, 4]},
+   {g[2, 1], g[4, 3]}, {g[2, 1], g[4, 3]}}
+], Null, Exit[2]];
+
+(* Part assignment requires plain Lists along the mutation path. *)
+copySource = {{1, 2}, {3, 4}};
+copyAlias = copySource;
+copyRule = x_List :> {x, x};
+copyResult = Replace[copySource, copyRule, {1}];
+copyResult[[1, 1, 1]] = 99;
+If[SameQ[
+  {copySource, copyAlias, copyResult, Replace[copySource, copyRule, {1}]},
+  {{{1, 2}, {3, 4}}, {{1, 2}, {3, 4}},
+   {{{99, 2}, {1, 2}}, {{3, 4}, {3, 4}}},
+   {{{1, 2}, {1, 2}}, {{3, 4}, {3, 4}}}}
+], Null, Exit[2]];
+
+(* Both guards run before either materialized result body is evaluated. *)
+c = 1;
+guardOrder = 0;
+copyResult = Replace[{1, 2},
+  x_Integer :> ((c = c + 1; x + c) /;
+    (guardOrder = guardOrder * 10 + c; True)), {1}];
+If[SameQ[{copyResult, c, guardOrder}, {{3, 5}, 3, 11}], Null, Exit[2]];
+Print["COPY_ATTRIBUTION_ACCEPTANCE_PASS"];

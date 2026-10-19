@@ -1,0 +1,267 @@
+{
+  "status": "PASS",
+  "runs": [
+    {
+      "name": "base-append-part-1024-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "35f04b4ffcd0427ed60cff8e19bb26841cb09334b0cdf3cd5013693aa92b359a",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-1024-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-append-part-1024-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "35f04b4ffcd0427ed60cff8e19bb26841cb09334b0cdf3cd5013693aa92b359a",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-1024-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-append-part-1024-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "6aa6a0119f3130ac8864f8e1bd1e64e449ca02b798d4fe24b6363e7c66ac8603",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-1024-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-append-part-1024-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "6aa6a0119f3130ac8864f8e1bd1e64e449ca02b798d4fe24b6363e7c66ac8603",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-1024-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-append-part-256-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "229baf88322370a767ee242d082ddcb279a810db919f8374c56b9518b1baed50",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-256-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-append-part-256-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "229baf88322370a767ee242d082ddcb279a810db919f8374c56b9518b1baed50",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-256-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-append-part-256-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "5a2e2012d06c4d6d9f313b0e2001c629da6b23f0b6066c1ee9743c399d5aa892",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-256-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-append-part-256-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "5a2e2012d06c4d6d9f313b0e2001c629da6b23f0b6066c1ee9743c399d5aa892",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-256-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-append-part-64-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "b94e5eabb34ccf5dc430cc78d869f966dcfbb1eda16ea88b9861776a46885c37",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-64-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-append-part-64-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "b94e5eabb34ccf5dc430cc78d869f966dcfbb1eda16ea88b9861776a46885c37",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-64-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-append-part-64-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "6222a1e648fa656ae4c0b0de2dd951eddf34216f970e07e1cff65bddd590cf81",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-64-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-append-part-64-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "6222a1e648fa656ae4c0b0de2dd951eddf34216f970e07e1cff65bddd590cf81",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/append-part-64-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-rewrite-wide-1024-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "4cb0c2956ba5b9076214f9a4c1aea80574d975c1e7e54b64751072921b75f92b",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-1024-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-rewrite-wide-1024-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "4cb0c2956ba5b9076214f9a4c1aea80574d975c1e7e54b64751072921b75f92b",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-1024-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-rewrite-wide-1024-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "1c99dc1df7b939c8b6463813fa57ff2d2c121245dce3d0db8a6d9f37cac38f3c",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-1024-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-rewrite-wide-1024-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "1c99dc1df7b939c8b6463813fa57ff2d2c121245dce3d0db8a6d9f37cac38f3c",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-1024-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-rewrite-wide-256-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "a027f0cbd1fa868a85e2ae0a9ea0ef1704e23ccddc4082d5cbe1dbf66913a76d",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-256-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-rewrite-wide-256-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "a027f0cbd1fa868a85e2ae0a9ea0ef1704e23ccddc4082d5cbe1dbf66913a76d",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-256-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-rewrite-wide-256-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "324c035e4dc42cc6cae232eb5769f4c08f80d4f6abe03addc1e9e38b7cd73d70",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-256-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-rewrite-wide-256-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "324c035e4dc42cc6cae232eb5769f4c08f80d4f6abe03addc1e9e38b7cd73d70",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-256-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-rewrite-wide-64-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "a35f95f514e57dbfcb2e861cf3353959f5ea54b2edcf2e10c822476224a5d9ee",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-64-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-rewrite-wide-64-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "a35f95f514e57dbfcb2e861cf3353959f5ea54b2edcf2e10c822476224a5d9ee",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-64-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-rewrite-wide-64-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "498f1baae26100d2b9e9c15074584a5e83d6b1a3dc6e202a8a9c4ccaec751805",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-64-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-rewrite-wide-64-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "498f1baae26100d2b9e9c15074584a5e83d6b1a3dc6e202a8a9c4ccaec751805",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/rewrite-wide-64-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-table-pairs-1024-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "276fb2ddced3e1c63f87668ee7368260ecd4a1a577df299b4a2b29699d9abb25",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-1024-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-table-pairs-1024-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "276fb2ddced3e1c63f87668ee7368260ecd4a1a577df299b4a2b29699d9abb25",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-1024-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-table-pairs-1024-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "e60a09d2e30b6383a8ed075f05b94097e9ed1bfd1e0bf1c8881d4dea486277a4",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-1024-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-table-pairs-1024-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "e60a09d2e30b6383a8ed075f05b94097e9ed1bfd1e0bf1c8881d4dea486277a4",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-1024-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-table-pairs-256-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "17dae22e3185ec9f49bdda9a9798e29fce58bdd220cac6fb08f8891b1f4cafe8",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-256-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-table-pairs-256-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "17dae22e3185ec9f49bdda9a9798e29fce58bdd220cac6fb08f8891b1f4cafe8",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-256-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-table-pairs-256-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "58dca93be657650a83f74a31432788bc1c9f18769c3773f820099baba4bc51ea",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-256-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-table-pairs-256-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "58dca93be657650a83f74a31432788bc1c9f18769c3773f820099baba4bc51ea",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-256-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-table-pairs-64-active",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "4685fe19aa9423d346a8ee824925217689c5daca4f11af58a1b0691b0a7acc55",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-64-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-table-pairs-64-active",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "4685fe19aa9423d346a8ee824925217689c5daca4f11af58a1b0691b0a7acc55",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-64-active.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "base-table-pairs-64-control",
+      "binary_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+      "source_sha256": "2272bf340fa2e51c5133656f5091c5a383ae3b96d6781bebe04170b64c9e99d0",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-64-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "trace-table-pairs-64-control",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "2272bf340fa2e51c5133656f5091c5a383ae3b96d6781bebe04170b64c9e99d0",
+      "source": "<EXPERIMENT>/evidence/hotspot-validation/inputs/table-pairs-64-control.rum",
+      "exit_code": 0
+    },
+    {
+      "name": "rewrite-stack",
+      "binary_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c",
+      "source_sha256": "b40b4295da3b8f4b20e2ca88ba2684d95afd8ee6f59cdbebfed433f2cbe5e75f",
+      "source": "<EXPERIMENT>/evidence/copy-attribution/rewrite-stack.rum",
+      "exit_code": 0
+    }
+  ],
+  "diagnostic_only": true,
+  "baseline_sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d",
+  "trace_sha256": "b77f32b61aa99984143778ad041fb60f86ac5ae30437918bc32a001f8561d83c"
+}

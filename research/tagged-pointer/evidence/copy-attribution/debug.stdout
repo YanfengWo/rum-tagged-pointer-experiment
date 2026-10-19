@@ -1,0 +1,7 @@
+DEBUG_START
+SHARING_RESULT{{f[1, 2], f[3, 4]}, {f[1, 2], f[3, 4]}, {g[2, 1], g[4, 3]}, {g[2, 1], g[4, 3]}}
+BINDING_BEFORE{f[h[1, 2], h[1, 2]], f[h[3, 4], h[3, 4]]}
+BINDING_RESULT{{h[1, 2], h[3, 4]}, {h[1, 2], h[3, 4]}, {f[h[1, 2], h[1, 2]], f[h[3, 4], h[3, 4]]}, {f[h[1, 2], h[1, 2]], f[h[3, 4], h[3, 4]]}}
+ORDER_RESULT{{3, 5}, 3, 11}
+DEBUG_END
+Null
