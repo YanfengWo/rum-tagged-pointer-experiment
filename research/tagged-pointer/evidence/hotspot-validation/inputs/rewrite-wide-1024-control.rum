@@ -1,0 +1,7 @@
+(* Diagnostic input, not an uninstrumented performance benchmark. *)
+gHotInput = Range[1024]; gHotResult = Null;
+RumProfileSnapshot["before"];
+RumProfileReset[];
+Null;
+RumProfileSnapshot["after"];
+Print["RUM_HOTSPOT_PASS\trewrite-wide\t1024\tcontrol"];

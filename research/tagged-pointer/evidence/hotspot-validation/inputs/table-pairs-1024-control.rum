@@ -1,0 +1,7 @@
+(* Diagnostic input, not an uninstrumented performance benchmark. *)
+gHotResult = Null;
+RumProfileSnapshot["before"];
+RumProfileReset[];
+Null;
+RumProfileSnapshot["after"];
+Print["RUM_HOTSPOT_PASS\ttable-pairs\t1024\tcontrol"];

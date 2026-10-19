@@ -1,0 +1,7 @@
+(* Diagnostic input, not an uninstrumented performance benchmark. *)
+gHotOuter = Table[{}, {1000}];
+RumProfileSnapshot["before"];
+RumProfileReset[];
+Null;
+RumProfileSnapshot["after"];
+Print["RUM_HOTSPOT_PASS\tappend-part\t1024\tcontrol"];

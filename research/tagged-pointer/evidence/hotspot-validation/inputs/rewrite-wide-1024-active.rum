@@ -1,0 +1,8 @@
+(* Diagnostic input, not an uninstrumented performance benchmark. *)
+gHotInput = Range[1024]; gHotResult = Null;
+RumProfileSnapshot["before"];
+RumProfileReset[];
+gHotResult = Replace[gHotInput, x_Integer :> x + 1, {1}];
+RumProfileSnapshot["after"];
+If[SameQ[gHotInput, Range[1024]] && SameQ[gHotResult, Range[2, 1025]], Null, Exit[2]];
+Print["RUM_HOTSPOT_PASS\trewrite-wide\t1024\tactive"];

@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Balanced measurement and structural diagnostics
+
+Same-binary A/A and position-balanced native Sort replication separate repeatability from earlier three-run signals. [Measurement results](measurement-validation/README.md) and [structural diagnostics](hotspot-validation/README.md) retain all labels and distinguish instrumented counts from speedup evidence. Default kernel source remains unchanged.
+
 ## Native integration decisive experiment
 
 Ten real language integration modes and 112 labels show no broad no-regression winner. A safe Symbol24 specialized Sort has the clearest local gain; 16-byte tagged operands do not beat it. See [native integration and complete negative results](native-dispatch/README.md). Default kernel source remains unchanged.

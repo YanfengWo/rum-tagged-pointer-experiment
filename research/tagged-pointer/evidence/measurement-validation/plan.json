@@ -1,0 +1,124 @@
+{
+  "recorded_on": "2026-10-19",
+  "modes": [
+    "base-a",
+    "api",
+    "base-b",
+    "sort-api",
+    "sort-24"
+  ],
+  "orders": [
+    [
+      "base-a",
+      "api",
+      "base-b",
+      "sort-api",
+      "sort-24"
+    ],
+    [
+      "api",
+      "base-b",
+      "sort-api",
+      "sort-24",
+      "base-a"
+    ],
+    [
+      "base-b",
+      "sort-api",
+      "sort-24",
+      "base-a",
+      "api"
+    ],
+    [
+      "sort-api",
+      "sort-24",
+      "base-a",
+      "api",
+      "base-b"
+    ],
+    [
+      "sort-24",
+      "base-a",
+      "api",
+      "base-b",
+      "sort-api"
+    ],
+    [
+      "sort-24",
+      "sort-api",
+      "base-b",
+      "api",
+      "base-a"
+    ],
+    [
+      "base-a",
+      "sort-24",
+      "sort-api",
+      "base-b",
+      "api"
+    ],
+    [
+      "api",
+      "base-a",
+      "sort-24",
+      "sort-api",
+      "base-b"
+    ],
+    [
+      "base-b",
+      "api",
+      "base-a",
+      "sort-24",
+      "sort-api"
+    ],
+    [
+      "sort-api",
+      "base-b",
+      "api",
+      "base-a",
+      "sort-24"
+    ]
+  ],
+  "blocks": 10,
+  "cpu": 0,
+  "scale": 5,
+  "reps": 9,
+  "binaries": {
+    "base-a": {
+      "binary": "<NATIVE_TEMP>",
+      "sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d"
+    },
+    "api": {
+      "binary": "<NATIVE_TEMP>",
+      "sha256": "7ad3a21d2b5e5d12b9ea4b73d71d6823b98509a07c603c1df7e721356cbe114c"
+    },
+    "base-b": {
+      "binary": "<NATIVE_TEMP>",
+      "sha256": "2a621c6a0d25dba987d2a517391867869b84de50a2a976879879e25dfd14a54d"
+    },
+    "sort-api": {
+      "binary": "<NATIVE_TEMP>",
+      "sha256": "171fa23eff2f5afbba77ac02980b6dec2f6e32189df4538688f32a93a31645c7"
+    },
+    "sort-24": {
+      "binary": "<NATIVE_TEMP>",
+      "sha256": "88b7eb76e1f6d1fd02298b0ac1eee777073354e9f19a94a09a5287e8d0a617cb"
+    }
+  },
+  "script_sha256": "9295fa8ebade810474105027cc31593f5f43ff13469cd39bb244184ce01b555b",
+  "focus_labels": [
+    "sort-symbol-default-width4000",
+    "sort-symbol-default-width16000",
+    "association-part-key-read-width4000",
+    "association-part-key-read-width32000"
+  ],
+  "purpose": "Same exact binary A/A noise, API-only controls and native safe Symbol24 Sort replication",
+  "limits": "Same host, existing build artifacts; no independent rebuild, new compiler, real-application corpus or causal proof of code-layout effects. Timings use original per-label minimum of repetitions and original GC convention.",
+  "comparison": "Within each block, candidate / sqrt(base-a * base-b); also base-b/base-a. All labels retained; no equal-label whole-application mean. Focus labels fixed before measurement.",
+  "screen": "Exploratory repeatable direction: >=8/10 block ratios same direction, median >=5% away from 1 and median absolute log effect exceeds label A/A 90th-percentile absolute log noise. This screen is not a significance test or a no-regression proof.",
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "machine": "x86_64",
+  "cpu_model": "AMD Ryzen 7 9800X3D 8-Core Processor",
+  "aslr": "2",
+  "started_utc": "2026-10-19T11:39:14.523599+00:00"
+}

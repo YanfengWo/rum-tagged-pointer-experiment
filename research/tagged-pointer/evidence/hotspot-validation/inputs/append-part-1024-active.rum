@@ -1,0 +1,8 @@
+(* Diagnostic input, not an uninstrumented performance benchmark. *)
+gHotOuter = Table[{}, {1000}];
+RumProfileSnapshot["before"];
+RumProfileReset[];
+Do[AppendTo[gHotOuter[[1]], i], {i, 1, 1024}];
+RumProfileSnapshot["after"];
+If[Length[gHotOuter] == 1000 && SameQ[gHotOuter[[1]], Range[1024]] && SameQ[Rest[gHotOuter], Table[{}, {999}]], Null, Exit[2]];
+Print["RUM_HOTSPOT_PASS\tappend-part\t1024\tactive"];
