@@ -1,0 +1,235 @@
+{
+  "status": "PASS",
+  "source_root": "<LAB_PATH_0003>",
+  "target_root": "<LAB_PATH_0014>",
+  "pin": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "jobs": 2,
+  "diagnostic_only": true,
+  "formal_performance_gate": "DEFERRED_USER_ACTIVE_DESKTOP",
+  "preserved_binaries": [
+    {
+      "path": "<LAB_PATH_0001>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    {
+      "path": "<LAB_PATH_0002>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    }
+  ],
+  "variants": [
+    {
+      "mode": "base",
+      "binary": "<LAB_PATH_0035>",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "patched_files": {
+        "crates/rum-core/src/expr.rs": {
+          "uninstrumented_base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2",
+          "bytes": 28484
+        },
+        "crates/rum-core/src/lib.rs": {
+          "uninstrumented_base_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90",
+          "bytes": 765
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "uninstrumented_base_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf",
+          "bytes": 21956
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "uninstrumented_base_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da",
+          "bytes": 15430
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "uninstrumented_base_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "b6f4966bde84f7568ba244e3d7cf5536040deb5bb11ef8fc64ff4eb04a73c5c4",
+          "bytes": 19354
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "uninstrumented_base_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "01babd1745a2f08d4a282e98a69c8a47ee22cad1b56a1c09f396c71b75f76a95",
+          "bytes": 14307
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "0a9640002564d1f9e61e53674ba9552781833d6364a9ec28a48a6ed694f475cc",
+          "bytes": 34231
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "uninstrumented_base_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de",
+          "bytes": 24813
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "uninstrumented_base_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e",
+          "bytes": 27220
+        }
+      },
+      "ledger_module_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+    },
+    {
+      "mode": "wide",
+      "binary": "<LAB_PATH_0037>",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "patched_files": {
+        "crates/rum-core/src/expr.rs": {
+          "uninstrumented_base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2",
+          "bytes": 28484
+        },
+        "crates/rum-core/src/lib.rs": {
+          "uninstrumented_base_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90",
+          "bytes": 765
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "uninstrumented_base_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf",
+          "bytes": 21956
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "uninstrumented_base_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da",
+          "bytes": 15430
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "uninstrumented_base_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "b6f4966bde84f7568ba244e3d7cf5536040deb5bb11ef8fc64ff4eb04a73c5c4",
+          "bytes": 19354
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "uninstrumented_base_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "01babd1745a2f08d4a282e98a69c8a47ee22cad1b56a1c09f396c71b75f76a95",
+          "bytes": 14307
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "da038211b81d4a8a0156ce0a7fee2572ad6d8a0497949a8a51f0f14363cc9dc7",
+          "bytes": 34210
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "uninstrumented_base_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de",
+          "bytes": 24813
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "uninstrumented_base_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e",
+          "bytes": 27220
+        }
+      },
+      "ledger_module_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+    },
+    {
+      "mode": "wide-flat",
+      "binary": "<LAB_PATH_0038>",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "patched_files": {
+        "crates/rum-core/src/expr.rs": {
+          "uninstrumented_base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2",
+          "bytes": 28484
+        },
+        "crates/rum-core/src/lib.rs": {
+          "uninstrumented_base_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90",
+          "bytes": 765
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "uninstrumented_base_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf",
+          "bytes": 21956
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "uninstrumented_base_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da",
+          "bytes": 15430
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "uninstrumented_base_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "b6f4966bde84f7568ba244e3d7cf5536040deb5bb11ef8fc64ff4eb04a73c5c4",
+          "bytes": 19354
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "uninstrumented_base_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "ebfe846f36a144dbd70958db020203470d99ae885e35da36757246eb51c74075",
+          "bytes": 14703
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "da038211b81d4a8a0156ce0a7fee2572ad6d8a0497949a8a51f0f14363cc9dc7",
+          "bytes": 34210
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "uninstrumented_base_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de",
+          "bytes": 24813
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "uninstrumented_base_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e",
+          "bytes": 27220
+        }
+      },
+      "ledger_module_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+    },
+    {
+      "mode": "flat",
+      "binary": "<LAB_PATH_0036>",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "patched_files": {
+        "crates/rum-core/src/expr.rs": {
+          "uninstrumented_base_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2",
+          "bytes": 28484
+        },
+        "crates/rum-core/src/lib.rs": {
+          "uninstrumented_base_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90",
+          "bytes": 765
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "uninstrumented_base_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf",
+          "bytes": 21956
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "uninstrumented_base_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da",
+          "bytes": 15430
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "uninstrumented_base_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "b6f4966bde84f7568ba244e3d7cf5536040deb5bb11ef8fc64ff4eb04a73c5c4",
+          "bytes": 19354
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "uninstrumented_base_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "ebfe846f36a144dbd70958db020203470d99ae885e35da36757246eb51c74075",
+          "bytes": 14703
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "0a9640002564d1f9e61e53674ba9552781833d6364a9ec28a48a6ed694f475cc",
+          "bytes": 34231
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "uninstrumented_base_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de",
+          "bytes": 24813
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "uninstrumented_base_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e",
+          "bytes": 27220
+        }
+      },
+      "ledger_module_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+    }
+  ],
+  "prior_binaries_preserved": true,
+  "default_checkout_changed": false
+}

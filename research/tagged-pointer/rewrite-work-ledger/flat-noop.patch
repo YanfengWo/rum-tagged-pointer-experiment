@@ -1,0 +1,12 @@
+diff --git a/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs b/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
+--- a/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
++++ b/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
+@@ -97,2 +97,8 @@
+ pub(super) fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> {
++    if args.capacity() == args.len() && !args.iter().any(|arg| {
++        matches!(arg, Expr::Call { head: nested_head, .. } if nested_head.as_ref() == head)
++    }) {
++        return args;
++    }
++
+     let mut flattened = Vec::new();

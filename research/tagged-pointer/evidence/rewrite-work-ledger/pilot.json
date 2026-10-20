@@ -1,0 +1,114 @@
+{
+  "status": "PASS",
+  "runs": [
+    {
+      "name": "pilot-base-flat-nested-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-flat-nested-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-identity-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-identity-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-increment-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-increment-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-increment-reversed-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-increment-reversed-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-miss-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-miss-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-opaque-body-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-opaque-body-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "pilot-base-resource",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+      "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+      "ledger_enabled": false,
+      "exit_code": 0
+    }
+  ],
+  "diagnostic_only": true,
+  "performance_gate": "DEFERRED_USER_ACTIVE_DESKTOP",
+  "no_clock_measurements": true,
+  "repetitions": 1,
+  "scope": "Generated workloads, single synchronous Replace per fresh process, exact deterministic operation counts and full expected values/aliases. External application usage is permitted; these data do not establish elapsed-time acceleration."
+}

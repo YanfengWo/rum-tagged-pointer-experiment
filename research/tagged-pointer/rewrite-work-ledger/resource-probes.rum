@@ -1,0 +1,35 @@
+(* Run separately from rewrite diagnostics. These are observations, not timings.
+   Memory proxy values are printed without requiring numerical equality between
+   implementations. Ordinary values and aliases must retain their behavior. *)
+
+SetAttributes[f, {Flat, Orderless}];
+Print[StringJoin["RESOURCE_PROBE\tmemory-before\t", ToString[MemoryInUse[]]]];
+
+resourceValue2 = f[b, a];
+Print[StringJoin["RESOURCE_PROBE\tbytecount-f2\t", ToString[ByteCount[resourceValue2]]]];
+Print[StringJoin["RESOURCE_PROBE\tmemory-after-f2\t", ToString[MemoryInUse[]]]];
+
+resourceValue3 = f[c, b, a];
+Print[StringJoin["RESOURCE_PROBE\tbytecount-f3\t", ToString[ByteCount[resourceValue3]]]];
+Print[StringJoin["RESOURCE_PROBE\tmemory-after-f3\t", ToString[MemoryInUse[]]]];
+
+resourceValue5 = f[e, d, c, b, a];
+Print[StringJoin["RESOURCE_PROBE\tbytecount-f5\t", ToString[ByteCount[resourceValue5]]]];
+Print[StringJoin["RESOURCE_PROBE\tmemory-after-f5\t", ToString[MemoryInUse[]]]];
+
+If[SameQ[resourceValue2, f[a, b]], Null, Exit[2]];
+If[SameQ[resourceValue3, f[a, b, c]], Null, Exit[2]];
+If[SameQ[resourceValue5, f[a, b, c, d, e]], Null, Exit[2]];
+
+(* Mutate an enclosing List through a supported Part assignment. The original
+   List, its duplicate entries, the standalone alias, and the untouched branch
+   must all keep their values. This does not claim that f supports Part writes. *)
+resourceAlias = resourceValue5;
+resourceWrapped = {resourceValue5, resourceAlias};
+resourceCopy = resourceWrapped;
+resourceCopy[[1]] = f[z];
+If[SameQ[resourceWrapped, {f[a, b, c, d, e], f[a, b, c, d, e]}], Null, Exit[2]];
+If[SameQ[resourceCopy, {f[z], f[a, b, c, d, e]}], Null, Exit[2]];
+If[SameQ[resourceAlias, f[a, b, c, d, e]], Null, Exit[2]];
+If[SameQ[resourceValue5, f[a, b, c, d, e]], Null, Exit[2]];
+Print["RESOURCE_PROBE_VALUE_ALIAS_PASS"];

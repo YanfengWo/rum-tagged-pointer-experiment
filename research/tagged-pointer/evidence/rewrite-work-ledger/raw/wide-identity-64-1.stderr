@@ -1,0 +1,35 @@
+rum-work	root	1	begin
+rum-work	row	1	replace	scope	7265706c616365	0	1
+rum-work	row	1	replace	shared-args-new	63617061636974792d736c6f7473	2	3
+rum-work	row	1	replace	shared-args-new	63617061636974792d736c6f7473	4	2
+rum-work	row	1	replace	shared-args-new	6c656e6774682d736c6f7473	1	2
+rum-work	row	1	replace	shared-args-new	6c656e6774682d736c6f7473	2	3
+rum-work	row	1	replace	shared-expr-new	6f776e6572	1	5
+rum-work	row	1	replace/result-evaluation	scope	726573756c742d6576616c756174696f6e	0	1
+rum-work	row	1	replace/target-evaluation	scope	7461726765742d6576616c756174696f6e	0	1
+rum-work	row	1	replace/traversal	into-owned-copy	6372617465732f72756d2d72756e74696d652f7372632f72756e74696d652f6b65726e656c5f646174612f726577726974655f646174612f7265706c6163652f6f6e63652e7273	1	1
+rum-work	row	1	replace/traversal	replace-depth-node	776974686f75742d6865616473	1	193
+rum-work	row	1	replace/traversal	replace-level-selected	656e747279	1	64
+rum-work	row	1	replace/traversal	replace-node	656e747279	1	65
+rum-work	row	1	replace/traversal	scope	74726176657273616c	0	1
+rum-work	row	1	replace/traversal	shared-args-new	63617061636974792d736c6f7473	64	1
+rum-work	row	1	replace/traversal	shared-args-new	6c656e6774682d736c6f7473	64	1
+rum-work	row	1	replace/traversal	shared-expr-new	6f776e6572	1	1
+rum-work	row	1	replace/traversal/rule-apply	rule-apply	72657175657374	1	64
+rum-work	row	1	replace/traversal/rule-apply	rule-match	686974	1	64
+rum-work	row	1	replace/traversal/rule-apply	rule-prefilter	70617373	1	64
+rum-work	row	1	replace/traversal/rule-apply	scope	72756c652d6170706c79	0	64
+rum-work	row	1	replace/traversal/rule-apply/matcher	binding-snapshot	63617074757265	1	64
+rum-work	row	1	replace/traversal/rule-apply/matcher	binding-snapshot	656e7472696573	1	64
+rum-work	row	1	replace/traversal/rule-apply/matcher	binding-snapshot	6e616d6573	1	64
+rum-work	row	1	replace/traversal/rule-apply/matcher	matcher	656e747279	1	64
+rum-work	row	1	replace/traversal/rule-apply/matcher	scope	6d617463686572	0	64
+rum-work	row	1	replace/traversal/rule-apply/matcher/matcher	binding-snapshot	63617074757265	1	64
+rum-work	row	1	replace/traversal/rule-apply/matcher/matcher	binding-snapshot	656e7472696573	0	64
+rum-work	row	1	replace/traversal/rule-apply/matcher/matcher	binding-snapshot	6e616d6573	0	64
+rum-work	row	1	replace/traversal/rule-apply/matcher/matcher	matcher	656e747279	1	64
+rum-work	row	1	replace/traversal/rule-apply/matcher/matcher	scope	6d617463686572	0	64
+rum-work	row	1	replace/traversal/rule-apply/rhs	rhs-substitution	62696e64696e6773	1	64
+rum-work	row	1	replace/traversal/rule-apply/rhs	rhs-substitution	72657175657374	1	64
+rum-work	row	1	replace/traversal/rule-apply/rhs	scope	726873	0	64
+rum-work	root	1	end

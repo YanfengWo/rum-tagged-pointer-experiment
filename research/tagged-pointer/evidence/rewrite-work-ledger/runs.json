@@ -1,0 +1,2346 @@
+{
+  "status": "PASS",
+  "runs": [
+    {
+      "name": "base-flat-nested-1024-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-1024-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-1024-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-256-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-256-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-256-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-64-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-64-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-64-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-8-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-flat-nested-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-1024-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-1024-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-1024-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-256-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-256-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-256-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-64-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-64-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-64-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-8-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-identity-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-1024-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-1024-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-1024-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-256-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-256-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-256-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-64-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-64-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-64-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-8-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-1024-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-1024-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-1024-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-256-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-256-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-256-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-64-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-64-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-64-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-8-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-increment-reversed-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-1024-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-1024-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-1024-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-256-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-256-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-256-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-64-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-64-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-64-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-8-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-miss-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-1024-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-1024-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-1024-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-256-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-256-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-256-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-64-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-64-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-64-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-8-1",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-8-2",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "base-opaque-body-8-off",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "base-resource",
+      "binary_sha256": "9868b00afa78982065bb8dd55717ba64f4da6a4b2b2b180129d83b271e2eb325",
+      "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+      "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-1024-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-1024-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-1024-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-256-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-256-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-256-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-64-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-64-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-64-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-8-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-8-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-nested-8-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-1024-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-1024-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-1024-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-256-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-256-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-256-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-64-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-64-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-64-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-8-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-8-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-identity-8-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-1024-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-1024-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-1024-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-256-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-256-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-256-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-64-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-64-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-64-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-8-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-8-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-8-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-1024-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-1024-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-1024-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-256-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-256-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-256-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-64-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-64-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-64-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-8-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-8-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-increment-reversed-8-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-1024-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-1024-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-1024-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-256-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-256-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-256-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-64-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-64-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-64-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-8-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-8-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-miss-8-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-1024-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-1024-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-1024-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-256-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-256-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-256-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-64-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-64-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-64-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-8-1",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-8-2",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-opaque-body-8-off",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-resource",
+      "binary_sha256": "e955bf3d92ba3496cbac6e26937b6fec9522ec66bab6c3b44c66344e518c5f8a",
+      "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+      "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-1024-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-1024-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-1024-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-256-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-256-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-256-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-64-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-64-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-64-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-8-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-8-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-flat-nested-8-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-1024-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-1024-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-1024-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-256-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-256-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-256-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-64-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-64-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-64-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-8-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-8-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-identity-8-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-1024-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-1024-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-1024-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-256-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-256-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-256-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-64-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-64-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-64-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-8-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-8-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-8-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-1024-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-1024-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-1024-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-256-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-256-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-256-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-64-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-64-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-64-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-8-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-8-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-increment-reversed-8-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-1024-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-1024-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-1024-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-256-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-256-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-256-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-64-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-64-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-64-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-8-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-8-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-miss-8-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-1024-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-1024-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-1024-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-256-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-256-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-256-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-64-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-64-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-64-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-8-1",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-8-2",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-opaque-body-8-off",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "wide-flat-resource",
+      "binary_sha256": "ff1cb1a752084e66c3398decf6c6c263d306193753daafa35728a2ede957a607",
+      "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+      "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-1024-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-1024-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-1024-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-1024.rum",
+      "source_sha256": "9d632930a96ccd40454e8ad49149eaee086a52ebff2faed232805ef99ea785f0",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-256-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-256-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-256-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-256.rum",
+      "source_sha256": "6b8aeaf44178c5a2162c000c1804b286a42ac5003965ff5047a65f45fa96053a",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-64-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-64-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-64-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-64.rum",
+      "source_sha256": "dfad68b0635e98c789b2e1c9248fa54db00cd51f85fab0fc1c68446c7e74c550",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-8-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-8-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-flat-nested-8-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/flat-nested-8.rum",
+      "source_sha256": "86d709926a32836e529b2f82a19f2609a18523d3792c2fb398c36be12321dbf8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-1024-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-1024-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-1024-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-1024.rum",
+      "source_sha256": "e7777d867f049934f755c0cd8f866dd92fb0fa3702e2904552d7b3094b7a8263",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-256-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-256-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-256-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-256.rum",
+      "source_sha256": "7141692db52211d34d6f3182c20f9ecf3369c2a9ebcc5964126367ffb2614974",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-64-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-64-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-64-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-64.rum",
+      "source_sha256": "56e690bf5c891326ea479e969c6fa3340a536f94b3e60d35b29e044f356345d4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-8-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-8-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-identity-8-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/identity-8.rum",
+      "source_sha256": "d346116821b817ee6353048dbcbf0ea802574d5113372e47311d221105211cca",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-1024-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-1024-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-1024-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-1024.rum",
+      "source_sha256": "b0afeb72268482e16aa4f85fef35d245c7932e501031ae2f6ddb6733ecc98572",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-256-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-256-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-256-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-256.rum",
+      "source_sha256": "d6e586146ecd19e605643b2e42f57ea11144d1eeb0b645a2876843d71e5c06e1",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-64-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-64-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-64-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-64.rum",
+      "source_sha256": "7c5ab9fb021651e4bf00876e0c8de7ae69de91882ec65f9ff61d37c18a83cbbb",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-8-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-8-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-8-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-8.rum",
+      "source_sha256": "4a7a88d6d3bb0f05c73cf5e40b575f901b6390f0ebd5807b40bc850c37d09e65",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-1024-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-1024-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-1024-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-1024.rum",
+      "source_sha256": "6c6c10ef012144bebc2e41f3933b3c6d4a5cc1fce2571d18f6268160cfc7da98",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-256-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-256-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-256-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-256.rum",
+      "source_sha256": "614b25267ad21fa1c9efcff4744a155288a2b7b344c84c0e7651015153ca295b",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-64-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-64-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-64-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-64.rum",
+      "source_sha256": "f52dd5054efcd131d0e8d20f6500bb95cb030c6ea98d7d79604808a46d64e6c4",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-8-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-8-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-increment-reversed-8-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/increment-reversed-8.rum",
+      "source_sha256": "0208219994a125fbc5a385c33911231ab0327572970031e58f2b29bc99c077d8",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-1024-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-1024-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-1024-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-1024.rum",
+      "source_sha256": "6326988fece3481c9b9084cb1c9ddbf72ae352f59619895de79bc8704b62d656",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-256-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-256-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-256-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-256.rum",
+      "source_sha256": "769c3a4f8d639edf871329934514b65f248054d75575e0ee1ff03d0366678dbf",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-64-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-64-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-64-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-64.rum",
+      "source_sha256": "64267404a9841b3d002178335a610f190b893ac383239ab3fa96e2bba78bd6ec",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-8-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-8-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-miss-8-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/miss-8.rum",
+      "source_sha256": "7d2ee902781160b714913648d4da3506320be90f83d5add31ce2efad106047c2",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-1024-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-1024-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-1024-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-1024.rum",
+      "source_sha256": "26a7f00aa4638046ecb6607f4b2077af9a99cb54de26067487d11b824486cc80",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-256-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-256-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-256-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-256.rum",
+      "source_sha256": "9c56bc2855505fb8515b0b32c37d18113a626b71ad9f0e16b50e2ac9a3245871",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-64-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-64-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-64-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-64.rum",
+      "source_sha256": "9a6a7277da441253bd35d4f1d8203269413aedd6eecbeb4a24ca4c19d250eeee",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-8-1",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-8-2",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": true,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-opaque-body-8-off",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<EXPERIMENT>/evidence/rewrite-work-ledger/inputs/opaque-body-8.rum",
+      "source_sha256": "576636e34baab497cb84bc3c38568cdd7d3d1e2ba3f4aa97f7603a9daf617484",
+      "ledger_enabled": false,
+      "exit_code": 0
+    },
+    {
+      "name": "flat-resource",
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+      "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+      "ledger_enabled": false,
+      "exit_code": 0
+    }
+  ],
+  "diagnostic_only": true,
+  "performance_gate": "DEFERRED_USER_ACTIVE_DESKTOP",
+  "no_clock_measurements": true,
+  "repetitions": 2,
+  "scope": "Generated workloads, single synchronous Replace per fresh process, exact deterministic operation counts and full expected values/aliases. External application usage is permitted; these data do not establish elapsed-time acceleration."
+}

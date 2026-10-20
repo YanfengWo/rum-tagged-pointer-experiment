@@ -1,0 +1,9 @@
+(* Resource observations are separate from abstract expression equality. *)
+SetAttributes[capacityHead, {Flat, Orderless}];
+capacityLiteral = capacityHead[2, 1];
+capacityApplied = Apply[capacityHead, Range[2]];
+If[SameQ[capacityLiteral, capacityApplied], Null, Exit[2]];
+If[SameQ[capacityLiteral, capacityHead[1, 2]], Null, Exit[2]];
+Print[StringJoin["CAPACITY_OBSERVATION\tliteral\t", ToString[ByteCount[capacityLiteral]]]];
+Print[StringJoin["CAPACITY_OBSERVATION\tapplied\t", ToString[ByteCount[capacityApplied]]]];
+Print["CAPACITY_VALUE_PASS"];

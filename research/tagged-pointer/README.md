@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Synchronous rewrite work ledger
+
+Exact phase counts identify redundant Flat output-vector reconstruction and validate a small safe prototype. Resource-observable values change; formal performance gates remain deferred. See [work counts and semantic boundaries](rewrite-work-ledger/README.md). Default runtime source remains unchanged.
+
 ## Rebuild controls and synthetic pipelines
 
 Deterministic base/candidate rebuild replay, complete rum-vs-rum regression checks, standalone ownership controls and synthetic complete programs. See [conditions, results and remaining regressions](regression-isolation/README.md). The default checkout remains unchanged.

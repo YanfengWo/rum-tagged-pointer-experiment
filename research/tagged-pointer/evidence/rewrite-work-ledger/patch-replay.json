@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "scope": "Whitespace-only patch repackaging; both patches apply to the same pinned helper and yield identical source bytes.",
+  "old_patch_sha256": "468595bd5cbebfe90f1aead626527e8d281056693d9c26bd47ab182e2e591a8e",
+  "new_patch_sha256": "58785ad729194bf6f860d14c7803cbb09f040e8c496a954ff8bae103cd2f71da",
+  "applied_source_sha256": "f576a3a6208888c9dbd40a52d59147a6ed6a70b253959921fe0209053c87b0f7"
+}

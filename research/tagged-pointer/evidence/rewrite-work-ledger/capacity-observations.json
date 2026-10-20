@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+  "results": {
+    "original": {
+      "binary_sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "values": {
+        "literal": 211,
+        "applied": 147
+      }
+    },
+    "flat": {
+      "binary_sha256": "2803e4c5affe3fe254f53db00c91f83ae15e36d00c1e5695b5df066646640d57",
+      "values": {
+        "literal": 147,
+        "applied": 147
+      }
+    }
+  },
+  "scope": "Both SameQ value checks pass before printing resource observations. No cross-version numerical-equivalence assumption or timing inference."
+}

@@ -1,0 +1,9 @@
+(* Deterministic work accounting; no elapsed-time measurements. *)
+SetAttributes[phaseF, Flat];
+phaseInput = Range[64];
+phaseAlias = phaseInput;
+phaseResult = Replace[phaseInput, phaseX_Integer :> phaseF[phaseF[phaseX], 1], {1}];
+If[SameQ[phaseResult, {phaseF[1,1],phaseF[2,1],phaseF[3,1],phaseF[4,1],phaseF[5,1],phaseF[6,1],phaseF[7,1],phaseF[8,1],phaseF[9,1],phaseF[10,1],phaseF[11,1],phaseF[12,1],phaseF[13,1],phaseF[14,1],phaseF[15,1],phaseF[16,1],phaseF[17,1],phaseF[18,1],phaseF[19,1],phaseF[20,1],phaseF[21,1],phaseF[22,1],phaseF[23,1],phaseF[24,1],phaseF[25,1],phaseF[26,1],phaseF[27,1],phaseF[28,1],phaseF[29,1],phaseF[30,1],phaseF[31,1],phaseF[32,1],phaseF[33,1],phaseF[34,1],phaseF[35,1],phaseF[36,1],phaseF[37,1],phaseF[38,1],phaseF[39,1],phaseF[40,1],phaseF[41,1],phaseF[42,1],phaseF[43,1],phaseF[44,1],phaseF[45,1],phaseF[46,1],phaseF[47,1],phaseF[48,1],phaseF[49,1],phaseF[50,1],phaseF[51,1],phaseF[52,1],phaseF[53,1],phaseF[54,1],phaseF[55,1],phaseF[56,1],phaseF[57,1],phaseF[58,1],phaseF[59,1],phaseF[60,1],phaseF[61,1],phaseF[62,1],phaseF[63,1],phaseF[64,1]}], Null, Print["WORK_LEDGER_FAIL\tflat-nested\t64\tresult"]; Exit[2]];
+If[SameQ[phaseInput, {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64}], Null, Print["WORK_LEDGER_FAIL\tflat-nested\t64\tinput"]; Exit[2]];
+If[SameQ[phaseAlias, {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64}], Null, Print["WORK_LEDGER_FAIL\tflat-nested\t64\talias"]; Exit[2]];
+Print["WORK_LEDGER_PASS\tflat-nested\t64"];
