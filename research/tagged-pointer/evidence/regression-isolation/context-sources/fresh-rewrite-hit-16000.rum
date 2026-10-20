@@ -1,0 +1,10 @@
+ctxInput = Range[16000]; ctxAlias = ctxInput;
+ctxResult = Replace[ctxInput, ctxX_Integer :> ctxX + 1, {1}];
+If[SameQ[ctxResult, Range[2, 16001]] && (SameQ[ctxInput, Range[16000]] && SameQ[ctxInput, ctxAlias]), Null, Exit[2]];
+Do[
+  ctxSeconds = First[AbsoluteTiming[ctxResult = Replace[ctxInput, ctxX_Integer :> ctxX + 1, {1}]]];
+  Print[StringJoin["ISO_TIME\t", "fresh-rewrite-hit-16000", "\t", ToString[ctxI], "\t", ToString[ctxSeconds]]];
+  If[SameQ[ctxResult, Range[2, 16001]] && (SameQ[ctxInput, Range[16000]] && SameQ[ctxInput, ctxAlias]), Null, Exit[2]],
+  {ctxI, 1, 11}
+];
+Print["ISO_CONTEXT_PASS"];

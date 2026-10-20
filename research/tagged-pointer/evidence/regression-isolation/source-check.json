@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "python_sources": {
+    "analyze.py": {
+      "bytes": 9950,
+      "sha256": "60665552e25695d013ed2957eab4216081b4dd49184aed7d76cd0edce9317044"
+    },
+    "build-controls.py": {
+      "bytes": 5527,
+      "sha256": "c24e5682e276b4b1a2a4579b3fbfeca8204f6bf18889804f41db66fbde79d222"
+    },
+    "check-sources.py": {
+      "bytes": 1814,
+      "sha256": "cc4e1f2866ed967bd0c27584b0eea6ba7d1216c22b05f2da9d88a45fa7573b14"
+    },
+    "context_analysis.py": {
+      "bytes": 1781,
+      "sha256": "066ed10f18db89fe639d19f56f83ac121517d263cbd7518d00322ec505207bce"
+    },
+    "control_cases.py": {
+      "bytes": 1546,
+      "sha256": "4aaf653d5620b28a0884ef386d9edae2576b051c711cfda2a7d3ed59e19f15c2"
+    },
+    "pipeline_cases.py": {
+      "bytes": 3553,
+      "sha256": "3a89cf88f47bde7f5ad2d45fe38eba0c09d7d2edf1662c75292065dcc439cd65"
+    },
+    "run-context.py": {
+      "bytes": 5516,
+      "sha256": "a4609148c4ee2716969731e33f79a9599b7910a89d3675b8a98831d22a8b6e1c"
+    },
+    "run-timings.py": {
+      "bytes": 7967,
+      "sha256": "f5b6936a076f986940194bd6c4d5b7d8d171ef39f2d10aabb2a8c5e0f46d39e0"
+    },
+    "static_compare.py": {
+      "bytes": 6059,
+      "sha256": "bf4067437ebd6d25ec796a3276b398a3e9f6a482bd21b3a326202c2e8b1b1129"
+    },
+    "statistics_helpers.py": {
+      "bytes": 2219,
+      "sha256": "4b9f91bdd4ae8bc86c3625e07fb2eda4843f4641fd24e7ce73f9c93ac3480d35"
+    }
+  },
+  "primary_corpus_generation_unchanged": true,
+  "selected_pipeline_generation_matches_fresh_case_evidence": true,
+  "scope": "AST and source/corpus provenance checks; not runtime semantic tests or formal proofs."
+}

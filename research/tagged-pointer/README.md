@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Rebuild controls and synthetic pipelines
+
+Deterministic base/candidate rebuild replay, complete rum-vs-rum regression checks, standalone ownership controls and synthetic complete programs. See [conditions, results and remaining regressions](regression-isolation/README.md). The default checkout remains unchanged.
+
 ## Scoped copy attribution and safe rewrite experiment
 
 Call-stack and vector-length diagnostics separate one wide traversal copy from two-element normalization copies. A small safe-Rust candidate defers traversal source materialization until suspension. See [semantic checks and complete measured results](copy-attribution/README.md). The default checkout remains unchanged.

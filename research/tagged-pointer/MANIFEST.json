@@ -3,8 +3,8 @@
   "files": [
     {
       "path": "README.md",
-      "bytes": 11733,
-      "sha256": "63b4ebc16322226f16921cb2e7145f0387f3f7e2b792a24f06c6d87054b0063d"
+      "bytes": 12051,
+      "sha256": "752c6993b018a1857dee64db6b91d669b9c0acfd36fb0bf77446e9d825e6f4fc"
     },
     {
       "path": "compact-expr/Cargo.lock",
@@ -7862,6 +7862,3561 @@
       "sha256": "c09ac6fef5f6bf2f5f71153b162ede23dd747390b826966b36a64a3984c9dcb4"
     },
     {
+      "path": "evidence/regression-isolation/base-0-acceptance.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/base-0-acceptance.stdout",
+      "bytes": 38,
+      "sha256": "2923c5fc86b1da59f31e7e7544ad4fbcbdbf4426bbd350c7664d83aec1dfd5de"
+    },
+    {
+      "path": "evidence/regression-isolation/base-0-build.log",
+      "bytes": 489,
+      "sha256": "790dc8238543015cf3ee39644184d3420cbef4a8847e1c752df97b678dd9b170"
+    },
+    {
+      "path": "evidence/regression-isolation/base-1-acceptance.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/base-1-acceptance.stdout",
+      "bytes": 38,
+      "sha256": "2923c5fc86b1da59f31e7e7544ad4fbcbdbf4426bbd350c7664d83aec1dfd5de"
+    },
+    {
+      "path": "evidence/regression-isolation/base-1-build.log",
+      "bytes": 347,
+      "sha256": "12ecaa069250ab22174c4a9d6d1e5930d486e128595549f21261d5d75c81e271"
+    },
+    {
+      "path": "evidence/regression-isolation/build-controls.json",
+      "bytes": 2521,
+      "sha256": "f95542d07356d20d8bb117c1fc8497a6e58ce79bcdb4218d3a00326881b0a283"
+    },
+    {
+      "path": "evidence/regression-isolation/candidate-0-acceptance.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/candidate-0-acceptance.stdout",
+      "bytes": 38,
+      "sha256": "2923c5fc86b1da59f31e7e7544ad4fbcbdbf4426bbd350c7664d83aec1dfd5de"
+    },
+    {
+      "path": "evidence/regression-isolation/candidate-0-build.log",
+      "bytes": 347,
+      "sha256": "9d54cd0ece6dab47c000ab9fbdb319214e557a4c391ce807e4d44489ba34c776"
+    },
+    {
+      "path": "evidence/regression-isolation/candidate-1-acceptance.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/candidate-1-acceptance.stdout",
+      "bytes": 38,
+      "sha256": "2923c5fc86b1da59f31e7e7544ad4fbcbdbf4426bbd350c7664d83aec1dfd5de"
+    },
+    {
+      "path": "evidence/regression-isolation/candidate-1-build.log",
+      "bytes": 347,
+      "sha256": "ca098d906e60c7ad692081834b55706fb56ff291a799632af57af90755e02ce0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-exact-part-400-null.stdout",
+      "bytes": 548,
+      "sha256": "06db213569ce5fb2014cac7e094fc09dd394aebedb419926f2245ad45130ad10"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-exact-sort-8000.stdout",
+      "bytes": 504,
+      "sha256": "dc6629702efd388c2d93ef4c760577768885b49cbc56e31c5ffa8ea375d35ea6"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 603,
+      "sha256": "59a1f078aed7434e70664a5ca18932b884d4ff899e872aafc844efeaaa796f2e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 660,
+      "sha256": "ac45b1eab019749e07fb6505b3906482b2acab9abf6a3e7e65608f63aa4b2e67"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 732,
+      "sha256": "c61989776d8aa2adc66bbc85f36946b0b6a3c871dd6a26759a44709a26c734e3"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-exact-part-400-null.stdout",
+      "bytes": 552,
+      "sha256": "99e904e26804359798c4e1c8122df76186e0e228caef83004706ada6c9e75e80"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-exact-sort-8000.stdout",
+      "bytes": 500,
+      "sha256": "46a6e8bef98bb251a3a99ee4424df36beb646c2f71552c9a8b0b6cd3f4b00fc8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "ddbb315cb2d673bc0f0f83c683f75747275135475efffd7dda0248f3ae587dbf"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 665,
+      "sha256": "a575c921404d7f6a6f08fbe9332dddc23da74724a753cc01b6cf3e71ddee328f"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 733,
+      "sha256": "3e66fd5d4e4609271874183005134ada4154f9df7da3bc5e127c0a305c7a7868"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-exact-part-400-null.stdout",
+      "bytes": 547,
+      "sha256": "75356832e4d37b5c89c276b80ea137d97027502c7fd68c5aad33b9a71a01f622"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-exact-sort-8000.stdout",
+      "bytes": 498,
+      "sha256": "16f01af1fdc51f2048f4b04e50449dbc10776e23a775a827f36508247ee8c09b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 605,
+      "sha256": "281c2b9163efb0c6570616fc94abb94ce342eeb2a1c6191b038b889b68bf8a92"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 665,
+      "sha256": "711e30f27c2b3eb77afd9b83be41bd328e77a9490300d74e03785471a84e446d"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "13e7598bc3419112edbb73e1cca8f75773395199e73e1c527d344da706aa78fe"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-exact-part-400-null.stdout",
+      "bytes": 547,
+      "sha256": "413e11d49ffe28e5c97fe794f9396449c3722270e80086f977a2ca8897535f37"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-exact-sort-8000.stdout",
+      "bytes": 499,
+      "sha256": "3fe35f7a756c32c4c02045731c1921d3be92cc99d01261e0533d2b9164d64226"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "916ba38ad7a5fbce0512b632b1842e5eebe4e74e15ceaccd7bd9e1511f89c1de"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 660,
+      "sha256": "5ca624bd63f59e07f7a1be3f87d12bcbc5e063f9fb0f6ce71c471476ed10837b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-01-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 727,
+      "sha256": "eda62a59bf4f308fb87f4fb09172d2e8cd16ee21c91a93b26e3b464c588bc650"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-exact-part-400-null.stdout",
+      "bytes": 553,
+      "sha256": "c0e87d0c671581d9497cc5f20cfbd4674053534964a056c59155480573b8f558"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-exact-sort-8000.stdout",
+      "bytes": 504,
+      "sha256": "6b6f7ec3ba95d6a81fa629095b08fa2628ea5dee9181df16ebc3229ffcbe1bd6"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 615,
+      "sha256": "43de8cc21dbb426645cea6b4a5f3246b26f27311b6cc9b798dc9f62ab124a1c6"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 661,
+      "sha256": "a547df7435e1af3be75213796adf0b58ce871013c1c14461c46a24eb83217caf"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 735,
+      "sha256": "ea319ae2c740767b11b46c11d45c20ff7fe5f762516993550ef4f75ceb916d32"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-exact-part-400-null.stdout",
+      "bytes": 552,
+      "sha256": "e46bf0c2e705b15de6dfc7bd3950d52fdced39607de57c3e0bd8ab8b586546ef"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-exact-sort-8000.stdout",
+      "bytes": 502,
+      "sha256": "7742dceaddb178f5e7e6ffca76286114c3c07c72c1d4b62d61fd950c787bb576"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "7c6b5e5ad0f35e733e2f398e849eaf6bd963b30b9b787a59f922a7eb428da40e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 657,
+      "sha256": "34fdddbe8995ddf89361ca5d7b74049a708b61ad901d2d55d87766afda15a005"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 716,
+      "sha256": "34d8a706d9fd67c7c20e372ae493a99e846791980933bb02b16b7fe0c0d6b12b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-exact-part-400-null.stdout",
+      "bytes": 549,
+      "sha256": "0f117ab1c63e244c6572fc006d3662c400128a761816d54fb5aa2ca495024e3b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-exact-sort-8000.stdout",
+      "bytes": 502,
+      "sha256": "e2fa2a3bb1462ffa222af5b6ffcb7478c796760d092b735392bb1606f2b76c9b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 621,
+      "sha256": "fc4acfe1f1e9545b69ea07930d4310de3c22d37c29c5506e259db3e04c40cf75"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 660,
+      "sha256": "05ee18743ba5a85ca51c4396a429c474fb9563f7e448f00fc4a7f09263167fa9"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "0be3e96176944d62d3ab613cb045e1562befb1a0e783912d666c91e9bd476911"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-exact-part-400-null.stdout",
+      "bytes": 552,
+      "sha256": "fe884c85506cd9c7ea5a9f88a21332a45cd9968b0229881d47c8469c57f09439"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-exact-sort-8000.stdout",
+      "bytes": 498,
+      "sha256": "7c5586607917bd3406f9fa8d4466771bdf4ec733262d0bc6ccc759f1dff5bca7"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 611,
+      "sha256": "08c541a68f705fb5a70ed21cf4545fcb09df472e8beb0f6b452915600ecbf3f8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 660,
+      "sha256": "38c5dd3e9413fd031649886949193815065fa89c03c533b8e9986495d4f42f78"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-02-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 733,
+      "sha256": "8f1b54f260541267b442e777139d6859fc2d034eb3e81865bb73ba15d660ec85"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-exact-part-400-null.stdout",
+      "bytes": 555,
+      "sha256": "9ff30a1a8dcd87640e754daf9536e707c31e9fc1d58d154d690ee43b802348cc"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-exact-sort-8000.stdout",
+      "bytes": 493,
+      "sha256": "e7ab128f82515c391dbffcdaaeca7480e4fc65a35d1f740150d37c9b223e8fa2"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 607,
+      "sha256": "cb84d4a84e612874bfce1ed955de10907c2bab033166909dd5ec5d213cacc019"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 655,
+      "sha256": "e51d8465a27596952cf6e4ce74414e78e477e4faaecd24a5e6f305302ae32e56"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 728,
+      "sha256": "8356a08d92ad64dd4909b3eafd4e511f0f30aac3466d991deaa2ab98837a062c"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-exact-part-400-null.stdout",
+      "bytes": 549,
+      "sha256": "20a664335489cd19994f1862618939345821b8ff0feac47e9c5e848d0b3bd06f"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-exact-sort-8000.stdout",
+      "bytes": 502,
+      "sha256": "42f14399ff93801031e4871d96bd6bf13792a5e7277273fb6e9725bc26f29283"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "1088b9239720245a6471363bca266b6ba0ac61646b54e41951a4453d9460b843"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 659,
+      "sha256": "77bf446394e52c06c238f90fb726c221a56c8be7366b97acdf2fd55c1317d45c"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 727,
+      "sha256": "f4a03fc2d4e9e079d7674522e911863030b514f6d707f95391b6f8d12c7d2139"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-exact-part-400-null.stdout",
+      "bytes": 552,
+      "sha256": "133ec4d5160a4cd8c70613392f23c62dc668b17068dd41bda4743a2606c1d379"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-exact-sort-8000.stdout",
+      "bytes": 499,
+      "sha256": "2d538184cdb92a09367a6100d11b18ac28744275fe98418c5230f51cad3bb385"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 619,
+      "sha256": "90a988023a1069fa8c4de2bb0515bbbdc6e54ad04f83b802ccf2290037775f0a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 669,
+      "sha256": "4d6d9ec4cb16dd77a7383399e28ffba7f70a34581f2b0ca38b8d059b47e6eb2f"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "1cc1a1600011a4066ea98850ad2f415fdea1cf2a69ad2231cc9aa27e110dacbe"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-exact-part-400-null.stdout",
+      "bytes": 557,
+      "sha256": "160439beda15dbc8c8afe383df603156078a0585d2a58d8c107a327e76a6f31f"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-exact-sort-8000.stdout",
+      "bytes": 498,
+      "sha256": "93d7865e2e646cbd66d958410c4c38133e35b658f3210cea799f4ad621acd38a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 617,
+      "sha256": "3dae787494acf7fa24dc2d19c83c529a59b8c44d58261282078b9c21b1b09dfa"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 667,
+      "sha256": "df84cdd72234f0d8eecb43c305d57843df1017a2d031dbce2234ef0ea1827e10"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-03-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 732,
+      "sha256": "264a4253a1a61c15ce3b7cdcb55231beedf2f302ede74ef6011e1b23dc51c130"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-exact-part-400-null.stdout",
+      "bytes": 545,
+      "sha256": "55076de11b93a1166b946a3092760249c43032331c4b383d3ee6364e047ed368"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-exact-sort-8000.stdout",
+      "bytes": 498,
+      "sha256": "1c7ac0ab76148c4acce25801f80cbe1e44ae4cfc8f3c128206ab8778e1fd843e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 613,
+      "sha256": "51a62eaaa2c78085c0464dc1c2968975292a9f9e1bfedf9de241349d979a9348"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 668,
+      "sha256": "7fae922d79981a15ab7b29dddde865720d282ac568286826f493fb3af3adf499"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 730,
+      "sha256": "c37ce075163fa71ba099b88a63ee81561ae123b320795616e28527df67cf7ef8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-exact-part-400-null.stdout",
+      "bytes": 551,
+      "sha256": "6decde44831f52bc3d3e6e10c9bb93e94d1add978ce7cfbcdfe8d20d9847d2b5"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-exact-sort-8000.stdout",
+      "bytes": 501,
+      "sha256": "d4107e2f6d2b859e4a78919e8bde50989f487ea867f01ddb729975a441f40467"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "58558232549937edebcf9974b8f45db1491eba2185e846ae5c71866fb9bb87a4"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 660,
+      "sha256": "4b222c18e5de110620880be087d257310e750d4352605438f9795495c16a1e4d"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 732,
+      "sha256": "74772e7f3d3277cff1d053fc8be4cb61abd6071abd29ecc0465ac0751ed13802"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-exact-part-400-null.stdout",
+      "bytes": 544,
+      "sha256": "34bbda1e6b17af917b0006fd8baf1b1fd89b962a94d9db7ee294ad992eb093ed"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-exact-sort-8000.stdout",
+      "bytes": 494,
+      "sha256": "b9e0ad13128b05c4870fe4b17ec59b6fade1a94f350e59c3d26dd2f75526f279"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 613,
+      "sha256": "6157a2e7d8e95db2d90a14e012b4e87e9a7f99e328c9089b4a95e246f86c4f4c"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 666,
+      "sha256": "e6f93ddf9952e5f36b582344d6b7f391bbf5e86597bba8b1d52a86824c2283b0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 729,
+      "sha256": "5fc84fd02d4912aae4f7eea3fdcff4b3cbba5695fb1b242ea38c57ef851411ac"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-exact-part-400-null.stdout",
+      "bytes": 545,
+      "sha256": "684615d2684d14f1f95db467eac9c00d380c6cba559b6ff60ce6ec3c82ce9678"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-exact-sort-8000.stdout",
+      "bytes": 499,
+      "sha256": "6bdd6c38105428cb87badcc03d1dcfb28d6c90b05d60d773970bbeadbfd6e8a3"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 611,
+      "sha256": "023e2a3169274317ffd02bceb936c7261b73baa48c8af84566dca1e249d7d7d6"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 664,
+      "sha256": "73d1d86be06f09d196e7960b0ca472d7cf4d1c1b76b2b714ab38b3776d3dc0ee"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-04-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 722,
+      "sha256": "72284881b7c90bfee4cb699166322974741aff7200f005b9b47ed4c496d6a5b0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-exact-part-400-null.stdout",
+      "bytes": 554,
+      "sha256": "7d3267ba8325088f5f060a6056fced7a6332bfb4ed85efa6f3026cf633589c46"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-exact-sort-8000.stdout",
+      "bytes": 501,
+      "sha256": "6446c87e7955ccf84cb7e9b21abc71e36263e873a24faee23d90de118e2d3be0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 621,
+      "sha256": "af66c60215e7b7df70ca674e8993974d04de9b1f7545468cb70d56b4584f08f4"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 667,
+      "sha256": "6d7c971c1b87bc565eca41c39e7bdea2d7985617eddda3cb331b002565d4767c"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "6145fbeb4521f21c09cd0ed4ac45ce9b5a2296ffa6ec7c881a40d48d8f62b649"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-exact-part-400-null.stdout",
+      "bytes": 550,
+      "sha256": "c014916e691c4744e11e88f2807cd198a363fbf9f9ff1e14263547396c015cb8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-exact-sort-8000.stdout",
+      "bytes": 498,
+      "sha256": "2e5189a6b2c337ae95700237020306ba444832398429e7a6d07525f8b031a848"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 603,
+      "sha256": "7f6c6817db25c06dbf37acb7f02758f690156497696b99ff3dc87725fc3dabc7"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 663,
+      "sha256": "ed0668f73e04314676a8567c7ec417b0c31d86a7099f8ed17b63cfb391ff566b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 733,
+      "sha256": "b498285a7dd4007144cb077d8bd52bb50c4656709d3699af91c47ae8d9413237"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-exact-part-400-null.stdout",
+      "bytes": 550,
+      "sha256": "5cc96861da79c1e78bc705460ef2841233b1b43cbd8bfcf98b34bc6311b39383"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-exact-sort-8000.stdout",
+      "bytes": 501,
+      "sha256": "e1579b7dfb0d9fe3cea65c4b9ec2f131674173f39def7716032cd955c39fb492"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "eced66d86135e3338261c6fff7d89187200b855334d9fd6b6484718b247b03c0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 661,
+      "sha256": "27bcb30bb1c0e7338f5129142a0b0e95cdf6d68f6a39fef4ae0c0d510e47c0d0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "a64aad058006108b482216373ade7949cff29e26f8818eef63ed1a15877d8adf"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-exact-part-400-null.stdout",
+      "bytes": 550,
+      "sha256": "d00290dd1305a2feba0afbe54e51481f5355fdbca045eaa4a8073928452df869"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-exact-sort-8000.stdout",
+      "bytes": 504,
+      "sha256": "ffcd16504de51163d28b72648e5adf55dda0787e3cc5fa0a65c73ebd574f7ead"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 617,
+      "sha256": "3ef5f93c98e624a4f17b7faa672f3b1ffb8d6fcbbfb13b0c14fc335ad228fef1"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 654,
+      "sha256": "b5fe6dba7d1b080674675d4189264e035fb9b981a2440672bdb0947039b62e2a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-05-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 730,
+      "sha256": "619b50c4894ff5fab36eecf1d2105fcd9436eb473e0fc4457c56160518e1e018"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-exact-part-400-null.stdout",
+      "bytes": 548,
+      "sha256": "0b589ebe5b901a3003028711976d001b7588d580e8be550470a530a8bbf186e7"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-exact-sort-8000.stdout",
+      "bytes": 504,
+      "sha256": "8037e7a594a1c9df65c5ee6a3ba2d35f5f6729a6f827e08d189b4f3186230f12"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 611,
+      "sha256": "ec59f1f1a3e88d97a9a9dad9ad65c49ac2417b03e80ba058118bc23f96ffc96e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 659,
+      "sha256": "9c8d73dfa91c1e5cf4e820d153b47d39149d4e7d0d0486720a86d2d5b8f65773"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 737,
+      "sha256": "39cb09bbf67a953a8080d2b8d44fba06d2c0287dabc4adfc53f7ad3bf80fb595"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-exact-part-400-null.stdout",
+      "bytes": 547,
+      "sha256": "3fdc2e60b6b19032dfabf2c05f82b71afc96de98e4eaf2d1df0045455fca9e82"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-exact-sort-8000.stdout",
+      "bytes": 500,
+      "sha256": "bc8b390397a1418a60b14c308f443ace22ec00df61eba78e28d749cf139d4b37"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 617,
+      "sha256": "2a8f9d443bbd0a5b4d1563d2c460ec588a1592348da5a828e31f6e1246802525"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 663,
+      "sha256": "58dfec786a0fd9b402744f46e9ff7bd850c1e356f9cd1da20fd5b33d2c1ae427"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "2c69dac087ce7e404d5629c99c84a69a5109ff167e7c3d31e53da9a2e6a5f0d6"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-exact-part-400-null.stdout",
+      "bytes": 550,
+      "sha256": "6693181d9cca916d6a64438b88fce87c5f79e7a878f357313ab3e20ede0f051f"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-exact-sort-8000.stdout",
+      "bytes": 500,
+      "sha256": "2071473d81256731fad410193a81dd57dac1bbe38df2ce791156d4332d962658"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 621,
+      "sha256": "99d5954577ddb20ae29e4edc002cf6eafc3f8e23b241f4357f74bb91c5205145"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 654,
+      "sha256": "27edee362b4d6ea22c925b48f369a6fff7c644d8342de789ad306fdc40cb8683"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "e4a4eb2e66283d858fef0fcc12638b93c973c0e52d5f897c1b0d44f8c74e3b03"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-exact-part-400-null.stdout",
+      "bytes": 547,
+      "sha256": "c83a60e1b7f9adef95194223c34ea128e5d4b9e6f2d0f013a19196088aa1c1b8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-exact-sort-8000.stdout",
+      "bytes": 497,
+      "sha256": "a89fead3f47d4adb1ce2fbe0544459ed8bea6d0542ced65adf4275f01a5044e3"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 609,
+      "sha256": "4ea0f51352b5ad5930af2ece7bc8c856620f9e19ba1e9ec01ad23d0b676eba4e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 664,
+      "sha256": "cabb5723814338ac8bd02490ba0d28bbbe25aa96fe64c0bb242fdaf2d11618b8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-06-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 730,
+      "sha256": "ec55d2fc2a1e6e0ee33d801612545fcf2952c8b5a660e78c3ca2a60fe9174f9a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-exact-part-400-null.stdout",
+      "bytes": 547,
+      "sha256": "1c6c8329771af19f49e77127762398654aa391ba191f34bce6e3abc537c4a114"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-exact-sort-8000.stdout",
+      "bytes": 495,
+      "sha256": "3ba545eabd39b3a46b84d6c5432cd26d998d169f152f6ef634145c47c500aeaf"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 611,
+      "sha256": "6aa400b99a475f6233c71b98ea7260c4d862508a091e0b1cd2f66ed0555a8380"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 670,
+      "sha256": "89f2e9e21874d6113dcc36b7cb04cea9828acd72be8aa52f7d170b2675a9b6ba"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "fa88143d4bcfe7f62976c643002cac5f0583941b05ade7b501b3de9df14b83fa"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-exact-part-400-null.stdout",
+      "bytes": 550,
+      "sha256": "78daf666a6f6ab67064d25534ffda39dede6854fb6734e1d45f044781257d511"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-exact-sort-8000.stdout",
+      "bytes": 499,
+      "sha256": "4c77cc428e9e0a10ed6de09e387316e536d9b1dd0457b4d956d8ee53bb12efa6"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 611,
+      "sha256": "78223219c666ca092f3bf0cca14497b23b73804529b1feb00598ffa5288476d1"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 660,
+      "sha256": "db40aeb498214674aa4d56aeff4b39070305e8f089a95642d3f7ca037b8617ca"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 718,
+      "sha256": "54eebdb7c08980c5e77404681361a66a8b402fadc5868e03989be5eca1d4c7b2"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-exact-part-400-null.stdout",
+      "bytes": 553,
+      "sha256": "91ab86fb88f8fe176edabe18453a52f7269d23368dc407cd7dfe1b632c1dbc5b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-exact-sort-8000.stdout",
+      "bytes": 501,
+      "sha256": "07a29bd93e0252a00e2af27ec4a73fa217b8efa5108d42348b125d8b82aba58c"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 607,
+      "sha256": "82066c71736482a2ea10f5924cdffeed340334e05ba9eaf3299d71c4e45f9ad8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 668,
+      "sha256": "d8f5547adaa925001a6d79eba42731d97ee73a9af12f98ee0fa4d296d59656ab"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "cd68bf71d639157359ba0e4e6dc1ef2590144fd2359e7b1825e1c01837f5f48e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-exact-part-400-null.stdout",
+      "bytes": 547,
+      "sha256": "f9073f77f3e10e9a9bc23da5b0cac7e93ae983616febad36dd199b268c3bc46a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-exact-sort-8000.stdout",
+      "bytes": 490,
+      "sha256": "ae28195257052ba6a90db4a4c04f2999c559432afcdf373d58c0575d01b4def3"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 613,
+      "sha256": "453f50017b99dddae8975a156447e7430ab973993654fb43d8926fed614db823"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 664,
+      "sha256": "7211f025a5be7f13e14585a2392bbc91fa0500211e8fb2ba5ecd6d8932d2eee8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-07-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 729,
+      "sha256": "99c734637d39043b7852186b1d1eabd7415706ff7469fb16fa4931702d3ef4a8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-exact-part-400-null.stdout",
+      "bytes": 554,
+      "sha256": "2f993af2de1d526f2536bd39346a47b1e75bea7fbb75dd67bf1179c164123284"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-exact-sort-8000.stdout",
+      "bytes": 490,
+      "sha256": "6ffe1ebdb2a4eb74192da3ef7788f786fcff9776d45d14491adc6fed0422b1ea"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 603,
+      "sha256": "6244419f800f13dccce1d5eb54aa04aba9fa139f304994116c4c9721b2aed3c5"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 657,
+      "sha256": "764ca4e2df1a6e455752eb0b23d94fafb9f7e3f00d386e855d527eef398627f9"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 734,
+      "sha256": "6efcb820a6705d53b2977b837dda703c89a4337f48b8b621aedd62047adeb620"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-exact-part-400-null.stdout",
+      "bytes": 548,
+      "sha256": "b937e5b0b4f3d2afb00629dba130f52aeefe29bcd5bc55977c4dc25a4f5e4054"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-exact-sort-8000.stdout",
+      "bytes": 499,
+      "sha256": "6963ec7802f36ae5308fb00b169aad7cd4fd5c2eb1362667a5fefb80dc4849db"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 623,
+      "sha256": "869b0a09f853b0e5c642a2211ed262f3640ed7354b5a11b0f743538cb3f732bb"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 657,
+      "sha256": "f3950551b3f17b6f94cee850652dd8ce0e1e584295bf0c82659785e6694f3905"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-base-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 726,
+      "sha256": "89ff0a1fe990fa8416603d7fddfe48870ad9c392af5d5c78847bfba52606d11e"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-exact-part-400-null.stdout",
+      "bytes": 553,
+      "sha256": "6b36d4fa701bd843739626f0a86e48d76a4b5656037317d814be07e2488756f8"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-exact-sort-8000.stdout",
+      "bytes": 502,
+      "sha256": "253ae65510f2e5105e3b9390b1e4791847de4420e4c773acb8b9d44b51ad9165"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-fresh-rewrite-hit-16000.stdout",
+      "bytes": 605,
+      "sha256": "949cd77fb9245dfdd8d99b1ceae02de895efdecdd5d76e048cabc33db73f5730"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-synthetic-mixed-control-16000.stdout",
+      "bytes": 664,
+      "sha256": "3861100c71ec59ced9996bc79fadd0bbe16cd3a98424222a6f2dc2ad422cc87a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-a-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 735,
+      "sha256": "d8ef39cb3e7d83e7b6589fb07543fe116814ec896cf0d9215a49383d6e567bbe"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-exact-part-400-null.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-exact-part-400-null.stdout",
+      "bytes": 556,
+      "sha256": "119d8f104a70798cfa0d92005c2bc1ad3f1501f789725811e41a9bb07deece46"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-exact-sort-8000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-exact-sort-8000.stdout",
+      "bytes": 504,
+      "sha256": "c39af2bf75458c2fac1e3a251f4d3d857534d31cb58bdfa0d2a13b91ee4ba425"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-fresh-rewrite-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-fresh-rewrite-hit-16000.stdout",
+      "bytes": 615,
+      "sha256": "091f9a8d9aa516722a1885dfacc10c3e4013694a24769b267e337c277045d8a0"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-synthetic-mixed-control-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-synthetic-mixed-control-16000.stdout",
+      "bytes": 664,
+      "sha256": "43ad777c9b86f904c03229658b7788f3cd6c32f664343c7d16539341694d737b"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-synthetic-rewrite-heavy-hit-16000.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/context-08-candidate-b-synthetic-rewrite-heavy-hit-16000.stdout",
+      "bytes": 731,
+      "sha256": "3f78208663175e5666dea44c4bfa331acf7657ab6926b776d3d3637a4cc1f57f"
+    },
+    {
+      "path": "evidence/regression-isolation/context-plan.json",
+      "bytes": 3890,
+      "sha256": "0042931a92e64b823c70b470b0bd21d9ffe94a757c9a8d79d8aa4afbf175ac34"
+    },
+    {
+      "path": "evidence/regression-isolation/context-progress.tsv",
+      "bytes": 14040,
+      "sha256": "dc5e03ccb45478ad59735bfcae81bb19634168b458b2219c821396ea2e2eac56"
+    },
+    {
+      "path": "evidence/regression-isolation/context-sources/exact-part-400-null.rum",
+      "bytes": 487,
+      "sha256": "c8f66449850aba0981dd8c82c2659330af07a61a7adec23d0bbdc4f17dcaa00a"
+    },
+    {
+      "path": "evidence/regression-isolation/context-sources/exact-sort-8000.rum",
+      "bytes": 548,
+      "sha256": "3fa432844bc180aa4faacddd82a37614a6759a2b594aa37e731966b53a5286db"
+    },
+    {
+      "path": "evidence/regression-isolation/context-sources/fresh-rewrite-hit-16000.rum",
+      "bytes": 608,
+      "sha256": "349324e634d501e020e9bcdcebf9849787bf3f891abda900c14516881e87d760"
+    },
+    {
+      "path": "evidence/regression-isolation/context-sources/synthetic-mixed-control-16000.rum",
+      "bytes": 1033,
+      "sha256": "adc2636f6d23b9135094b831d7a269c364a491a18b4e0e90edad94606dd6ea58"
+    },
+    {
+      "path": "evidence/regression-isolation/context-sources/synthetic-rewrite-heavy-hit-16000.rum",
+      "bytes": 1067,
+      "sha256": "e5aaccaf6b440624098a2fa8f0d0b271700b73a911a97f2c9d04ee0ee0fdeed1"
+    },
+    {
+      "path": "evidence/regression-isolation/context-status.txt",
+      "bytes": 13,
+      "sha256": "ccd03e00d4cd14f40725209fa3768a2bcd03628667d733d2d1f17a6c73aa8a60"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-base-a.stdout",
+      "bytes": 3353,
+      "sha256": "30aa0f2b26784b586060ad4120650cc1158982d0d0956900836cebed73de29d0"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-base-b.stdout",
+      "bytes": 3351,
+      "sha256": "bc49653b1e6785d44dead263f4cab1d8cc0bd85cbb8dce53663c1a8f25c3d77e"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-candidate-a.stdout",
+      "bytes": 3357,
+      "sha256": "bd9fcb409304a258188525a49437fa2d7ccbb49976dcb29c0a1a799f77722aca"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-01-candidate-b.stdout",
+      "bytes": 3354,
+      "sha256": "343e21844bc73f43bbe7852a6d9cfb3f06bba83be26e7a2749f2128e27f40031"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-base-a.stdout",
+      "bytes": 3345,
+      "sha256": "dbf9ad96cf6e6d349f9dab4511f2fa054764aa147991349478c9eeaf07cdf5f2"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-base-b.stdout",
+      "bytes": 3358,
+      "sha256": "6c63ea3cd143110dd7c21bc4fcf7e09e0a27d3a2945c53f154e7719b733df6e4"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-candidate-a.stdout",
+      "bytes": 3336,
+      "sha256": "9b4ac284f02e38c14d3c7c67c7937a2e713f5129199bdd7c58a157d11cec63c1"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-02-candidate-b.stdout",
+      "bytes": 3347,
+      "sha256": "614aaf2a5fca2cb04081d4a984e60117d702d1b3f0a8bb5eb509f152df81403f"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-base-a.stdout",
+      "bytes": 3350,
+      "sha256": "7e8a6b519c14ea6d5f03f687e913f4d2e93a949d2c1d032dc74cb63ba0b42094"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-base-b.stdout",
+      "bytes": 3349,
+      "sha256": "f916ab5bd27c8d6b20ab807c7b9aa53d7c5d4ef1b16dbae21b674f76a92948b4"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-candidate-a.stdout",
+      "bytes": 3356,
+      "sha256": "0c3f785d6a33fbc5231efc6ec791deaaa887fb983e438d2be99e2c03015938eb"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-03-candidate-b.stdout",
+      "bytes": 3321,
+      "sha256": "7f3f9c4e85fb4039cda21bffa12df88baaed79c51862bb3365eccdea65f47f82"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-base-a.stdout",
+      "bytes": 3345,
+      "sha256": "9b658d76a97a13b9c5b73f8eb8f8bb8b599a967455008eca4f6ceb3b11f73c62"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-base-b.stdout",
+      "bytes": 3342,
+      "sha256": "422b637c19ef4ccd604ce85d626311773f185a7bcd0d22e4d78bc07f851eb05e"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-candidate-a.stdout",
+      "bytes": 3348,
+      "sha256": "da2604507df60b5f673d17784c48c820df44eb312202899afe69e01328826e44"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-04-candidate-b.stdout",
+      "bytes": 3360,
+      "sha256": "94ba915857994ca6d38de03d6d553ad331d4368b037af9bcf425fd99a0d0a1e5"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-base-a.stdout",
+      "bytes": 3366,
+      "sha256": "e962806de57ff4d8967181816d081a375f86273f0cd0c995ec59ef89b5088bbb"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-base-b.stdout",
+      "bytes": 3336,
+      "sha256": "e32f9d2c38551ad0146682c51eb1c93dffdcae6042319a21fcb05517f81da56f"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-candidate-a.stdout",
+      "bytes": 3336,
+      "sha256": "193f942c2294ce5f4e8876e4cab23c1ac1ecd78d7347f9391b32eca1cf283030"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-05-candidate-b.stdout",
+      "bytes": 3335,
+      "sha256": "92458577daddad2490f324427293620bc6180f55aefecc0e3a46696db28e06bc"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-base-a.stdout",
+      "bytes": 3350,
+      "sha256": "f5873a3866b1a27c7d2fdbf46ccc6a2647d57a82ec6488279bf5a4da5d7c2d98"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-base-b.stdout",
+      "bytes": 3355,
+      "sha256": "b8f13c19f3b6cd30124341f6e49f654400a872f3f6d815169f0a8ad25e090ea6"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-candidate-a.stdout",
+      "bytes": 3365,
+      "sha256": "238e45945ecba07d32dbc2d33fe17455461fbcb002ed6cf550c6d0b0c9cf980b"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-06-candidate-b.stdout",
+      "bytes": 3334,
+      "sha256": "60fab1fc95a2b685615671b33b3ec6c5d5f9d6d68fea84af417284e462705a4c"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-base-a.stdout",
+      "bytes": 3369,
+      "sha256": "a8cde9108a76e5f1bbcdb47c027232e2a0816ff54bd2ccbd4bfd13f65832c7c0"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-base-b.stdout",
+      "bytes": 3357,
+      "sha256": "d2d9887f86073bbb5bca8e009fdfd35a78021b0a3f898b34adae0c0bd24e3e88"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-candidate-a.stdout",
+      "bytes": 3329,
+      "sha256": "f878cd43e69502255d38fda023818fc936f6de01edda2904cba623fb24db1669"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-07-candidate-b.stdout",
+      "bytes": 3333,
+      "sha256": "7d5f66f852893a97b9d427f1d20f9c32662322773c4c567a916698d40c019837"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-base-a.stdout",
+      "bytes": 3349,
+      "sha256": "93a8756a32a6a5fc512089fb477300552c3e7ca6ea75092192d581ffea74fb52"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-base-b.stdout",
+      "bytes": 3351,
+      "sha256": "aa6fd9d19fb9475aac56446247224ebf39b821016ec2df3ec631cf9e3043c660"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-candidate-a.stdout",
+      "bytes": 3357,
+      "sha256": "f67e00c24e5062108b2bf47794380f7d2c474eb0d79bf1d4b13c12036bd0bff0"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/control-08-candidate-b.stdout",
+      "bytes": 3343,
+      "sha256": "0de1011f79897e1655cd71dbaaa627abfa731303836bd16ca284565cbbab38bf"
+    },
+    {
+      "path": "evidence/regression-isolation/control-corpus.rum",
+      "bytes": 1424,
+      "sha256": "a011c5860c8beb7978868985f95944fe5838cf10b71317da737f185af1bf5583"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-base-a.stdout",
+      "bytes": 3903,
+      "sha256": "2375e27cd3774b82bf8120a14c4bd6170ff5f489f4e1e210cc05fc4421af7daf"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-base-b.stdout",
+      "bytes": 3896,
+      "sha256": "b2b0ce4725cb01f16621c80c344bfa2670ea0b8d2b410690fe76be3cc9a30a16"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-candidate-a.stdout",
+      "bytes": 3899,
+      "sha256": "160a8ee0d27eb5fad0c6c3244a15975dc17d4c7224f1d0c70713842c35326280"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-01-candidate-b.stdout",
+      "bytes": 3915,
+      "sha256": "6dea6ac0266c6492d63c382bf5cddf301424faedfa2f2246f186e099c255dd03"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-base-a.stdout",
+      "bytes": 3907,
+      "sha256": "164e52b3b4bd86704af7123e255432cc642b7499d5aded1169d7645a39d16675"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-base-b.stdout",
+      "bytes": 3886,
+      "sha256": "02304f0d7a3a034ffc4985356baf3e665399205a36309b754b6c412c9ff24c16"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-candidate-a.stdout",
+      "bytes": 3909,
+      "sha256": "43bd7adcd2ee087867d2a96af562fb229d80761efe116d461d723974a9e143d2"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-02-candidate-b.stdout",
+      "bytes": 3880,
+      "sha256": "7b08172b97359e1f936693f6b8d0aa0e4d4bada721af0df21437a2fa661d27c4"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-base-a.stdout",
+      "bytes": 3897,
+      "sha256": "d3f2137b2be42b4838dedb3409a0b059e2aa359f53d2d3a164129fb48588a2a8"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-base-b.stdout",
+      "bytes": 3909,
+      "sha256": "0a7fb4f5a45cbe9ecab6a3175d7d91e246f05ced01819e0fb103718b158f37a6"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-candidate-a.stdout",
+      "bytes": 3899,
+      "sha256": "a4e485bfc294e0e6634eb64192dc9e16380dc7c0804b3ce1649283b5167edd11"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-03-candidate-b.stdout",
+      "bytes": 3906,
+      "sha256": "35dd44cb901405fc019ab0b1d1c4381c69cdcc92a767867ef77f04669959a6a8"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-base-a.stdout",
+      "bytes": 3914,
+      "sha256": "0c6ef63b47e6155e5e2ed351a21718a84938fc3c7e14b8da89406c630724cc34"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-base-b.stdout",
+      "bytes": 3889,
+      "sha256": "5a61959c60fa67820b5898a5284ef48df40d49255b2079adc2b4afddbcc5ce0d"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-candidate-a.stdout",
+      "bytes": 3889,
+      "sha256": "c433749e9791fac2c14978e85466a147908704a11b7c421ed033468be8c13cf5"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-04-candidate-b.stdout",
+      "bytes": 3887,
+      "sha256": "d95c0d5b5ed7740dde0b7ac700962ff5d031a6727dc8170677649990dcb65244"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-base-a.stdout",
+      "bytes": 3892,
+      "sha256": "192ca3d1776cb389173dc4a383b1356109c2290ce404a77feb692fa7aa5435c5"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-base-b.stdout",
+      "bytes": 3903,
+      "sha256": "fed7553f5bd76c7f608d0460a5774bf7c1bad689199e538c739735186daeaa15"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-candidate-a.stdout",
+      "bytes": 3877,
+      "sha256": "a2057cfabc0ddfd7fd29f8810f911ab21dce74e16708eb34f243a9a13d805c43"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-05-candidate-b.stdout",
+      "bytes": 3899,
+      "sha256": "d49825ac36c7b542dd0fbca63ba0ddf2c569535840bdc7f25e251e94a8c5ec89"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-base-a.stdout",
+      "bytes": 3886,
+      "sha256": "bdff2268f11ccf1e1a8befeb687a554f269db7df485701a107a2fc93a17dcf46"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-base-b.stdout",
+      "bytes": 3909,
+      "sha256": "6426dbef86fb431160d4c3f8ee5f1a400c487883df77b427036837ea79439b54"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-candidate-a.stdout",
+      "bytes": 3913,
+      "sha256": "23a825a673d1e241f60e5ae82a0f2f58f743c93140700b98a64077377e8c4885"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-06-candidate-b.stdout",
+      "bytes": 3907,
+      "sha256": "2e40b47181f4bd3a67eaece5f8c45c8bca8d3a2e391999653f2a16783584e2b7"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-base-a.stdout",
+      "bytes": 3891,
+      "sha256": "4d785c3ddf95d450db65b71834fa4a9ec33e9d8774127440fa8a1944c9c85bfe"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-base-b.stdout",
+      "bytes": 3898,
+      "sha256": "aa55c45d9a60674ab9a043f9fa3a93207dd33478db92eeaa7807a5e8ba012874"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-candidate-a.stdout",
+      "bytes": 3890,
+      "sha256": "caea8380a60bc72e01953514a80f49a77f37518a3322ea19b5d65a167129131a"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-07-candidate-b.stdout",
+      "bytes": 3878,
+      "sha256": "0ddf264b31f833b581b70c8ce9e482840165e4b15b5e1d908e8e4b1d7900871b"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-base-a.stdout",
+      "bytes": 3876,
+      "sha256": "dd9118bfbd92dea19a5d46e80b2b31234dc5d1b8ccac4ebe308c0ace9dbc6342"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-base-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-base-b.stdout",
+      "bytes": 3892,
+      "sha256": "325c055e2ba7d5990925a9a8640250de05e17565baec60925e85694e09ef307a"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-candidate-a.stdout",
+      "bytes": 3901,
+      "sha256": "f372251f2c5456ddb7b1dd9e2e6596273747c3a9587197a6a1f86f8fd16a74e8"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-candidate-b.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-08-candidate-b.stdout",
+      "bytes": 3889,
+      "sha256": "df2f44a7092a2bdccd29e206938030e9e0bf32f7f42975c67191c2ed11608335"
+    },
+    {
+      "path": "evidence/regression-isolation/pipeline-corpus.rum",
+      "bytes": 3759,
+      "sha256": "58bb8ec2a0d18108f30f960b9cce0d45e030f0080b02ae3bf3acf28038b59ca8"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-control-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-control-base-a.stdout",
+      "bytes": 3324,
+      "sha256": "f56dd5b2d90ff8cd48725691d6d1667dbcd0e8598b77ee6eef8ce7ded534e7b1"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-control-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-control-candidate-a.stdout",
+      "bytes": 3352,
+      "sha256": "fa1e4a783b58ae74fc770ae6ac3ff31c158de71b017e437be355ee153cf9ba68"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-pipeline-base-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-pipeline-base-a.stdout",
+      "bytes": 3885,
+      "sha256": "88359b42d5f8bc3a87ddb1898209ac8f265ff9c8b6d6aa6d8cdf416d0a72c8d5"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-pipeline-candidate-a.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-pipeline-candidate-a.stdout",
+      "bytes": 3901,
+      "sha256": "503699b6ff92ad0cc601ba06f79e5444eb8489108fb4f0273fd42a278fd1c547"
+    },
+    {
+      "path": "evidence/regression-isolation/preflight-status.txt",
+      "bytes": 15,
+      "sha256": "5e6c3919a3603f66a2d2fcdda37d17b0ad1fe7793498311d5c5a7ae028363a56"
+    },
+    {
+      "path": "evidence/regression-isolation/report.md",
+      "bytes": 11132,
+      "sha256": "2e0487f739580214db3d2109011e108363a9edc532ef24f0bc770ef461448cff"
+    },
+    {
+      "path": "evidence/regression-isolation/source-check.json",
+      "bytes": 1635,
+      "sha256": "166f46e8a2cc0bfbbb5e280bdaae8baf5dcabcdbcc817e6c6606f42e5b753636"
+    },
+    {
+      "path": "evidence/regression-isolation/static-comparison.json",
+      "bytes": 1040948,
+      "sha256": "c2201e310813c736ace08d1190f1ff6c5f34aaef9b5253d46ba8f1ac6547e433"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a/measurements.tsv",
+      "bytes": 15213,
+      "sha256": "e8bd16bf62d7a09b6081c2056e37ded1a832067e272b922cfbda549d4127e33c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a/raw/rum.stdout",
+      "bytes": 6921,
+      "sha256": "0d1af400a3cd2686e6bd81adc4025682acfe4ef5aa0111226baf0588046d6389"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "1a6f1c2dc3b9ef32add4bd83577c6776d38c8e50365ceffd7b8ea22737012c78"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a/timings.tsv",
+      "bytes": 4524,
+      "sha256": "1d2498e8f91a6bfb5d6353ba3009602911bacf2ab7f77c411790b5d6546556d3"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-a.log",
+      "bytes": 83,
+      "sha256": "69435770e592c44087155c47dca8b86e804c78353973ef776a85aa8d160fc828"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b/measurements.tsv",
+      "bytes": 15243,
+      "sha256": "e226bf421a77b6225eece08fa72d1c4bdfa64630373741fcb26ea4e47fcfce1d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b/raw/rum.stdout",
+      "bytes": 6944,
+      "sha256": "0b84b2ecbea6ef503ba80b7858eea8cb64a61ee193047ee8a62c9f4f4aeb266c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "b69e2d63db35a64426e652313d74bc5f21316c26ba3432b0304f1d0b0dd8a654"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b/timings.tsv",
+      "bytes": 4531,
+      "sha256": "19b2646d965834a4602ff1ad33d49a9e7347baa54c9e7a76b47180c74885a18e"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-base-b.log",
+      "bytes": 83,
+      "sha256": "0ba047a57aa2ffb4f04acd861a86c4cb6591b7a9d1b0594ca537432c7a269acd"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a/measurements.tsv",
+      "bytes": 15810,
+      "sha256": "80d883b9dabcaf75a2fd1a264e79b2000ea1e36e6d6a1ac4837e53157facb26a"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a/raw/rum.stdout",
+      "bytes": 6953,
+      "sha256": "4d94fa507917f5eb19f4943a8d1b205290e70895aa06448eaffb0dccab153f2e"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "9f319814b0c4c53d930b22fa2e883788e2b025c3eedd465565c32e872ad1944f"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a/timings.tsv",
+      "bytes": 4529,
+      "sha256": "1a9103344903c81a976fffc3573148b5b6934847386ee8c0449d1854e671e99d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-a.log",
+      "bytes": 88,
+      "sha256": "027a58d2b03d397a4b8b9236bcacaff270c660ef4d10d783b6a5e7ec78d1bad4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b/measurements.tsv",
+      "bytes": 15812,
+      "sha256": "433f2ff3324b536341242d6d515d5982af74f39a76eaf12ca3bca3854b327b0d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b/raw/rum.stdout",
+      "bytes": 6954,
+      "sha256": "28302e7c5e7d651a2cbba947edcb3727eaddcbea4c636dbefab2db05099bbcb6"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "387312ca1ea4fcb6025fb59ea03f2a61cfa691e1c987a83ead89847211c2cdcd"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b/timings.tsv",
+      "bytes": 4530,
+      "sha256": "8f77c37b1fd5b786caf71b594aa2b62583bc47401c6175b240a6cdbd7aa23b78"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-01-candidate-b.log",
+      "bytes": 88,
+      "sha256": "b3c3b0c28835207eefe2b26138ed17824080e09c88e6125f399276a3c238d79c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a/measurements.tsv",
+      "bytes": 15265,
+      "sha256": "7fa1ff2316d38a2f3dbd6721ca49c26b7bd322da4605791233b85b8f470c1eb6"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a/raw/rum.stdout",
+      "bytes": 6963,
+      "sha256": "c6e952c028cb147d4c59e0254f42b2326b31206336d35b64cad1ff33546ec7d3"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "792d7e160ada58625c3f4c828e6c11dfe32e82ef454c3bcfe351357edec4add1"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a/timings.tsv",
+      "bytes": 4534,
+      "sha256": "7a350d92e82edd02dd152ac341e62408143d679891d7a0cb2a0eff37e5cf7bf8"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-a.log",
+      "bytes": 83,
+      "sha256": "b3177461ea4f5976b9ca7e0359a25a139726d5a88c15dc346651ca7552687196"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b/measurements.tsv",
+      "bytes": 15250,
+      "sha256": "fdc964130ab330e7f0dec9a31adb2977abcbc5f7aae6be2798c0ee5d655b28d1"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b/raw/rum.stdout",
+      "bytes": 6952,
+      "sha256": "43551fe98a73e80529930c52d6ef7f8517c5b9abb834ebfa52a3f28f0e8ae645"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "0e497bccc411c6c5e335fc4900802ff225c0f7fb043b331835a24d05fa90008c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b/timings.tsv",
+      "bytes": 4530,
+      "sha256": "8a84623b33402ab1a197172eb4e26f9194e9bd38c2033156e4dfd521866c0e74"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-base-b.log",
+      "bytes": 83,
+      "sha256": "cf4e0a0c1c044bb6d5cb3f0f156c0fe9abd6409c8773cfc4e26ede68e7a5a443"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a/measurements.tsv",
+      "bytes": 15820,
+      "sha256": "61a4271e0834ee75a93b43e70049ab51f1bb393bc01321bd514f951cf0c1d544"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a/raw/rum.stdout",
+      "bytes": 6966,
+      "sha256": "08a3f5265f040b341cb39037600170c83c5ce08e4f4f047f70a3c68390d83fd6"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "67542729f254533862e2ff5ba16d1eac1950cb7f4c87b48a9f6abaea17afdde8"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a/timings.tsv",
+      "bytes": 4526,
+      "sha256": "01cc3028aaf656c4cd068e7a192a6dff86cce6e0cc349ca415c489711e8c928a"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-a.log",
+      "bytes": 88,
+      "sha256": "785e97dbda896846ee6204525c44fb051a5e752b270de4583388f5dd2171013a"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b/measurements.tsv",
+      "bytes": 15801,
+      "sha256": "070162d04833335f9c496e5cb1a655602189f6a23a80b1b01840d6fbcbb663bd"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b/raw/rum.stdout",
+      "bytes": 6945,
+      "sha256": "38d9d838cc6452bebe917f696fb83cbbd20bb7de7f14d993a2ac97655a254c14"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "cd541f584c3e1aa52c5cf45e3f6668e3bc857c58858eb46f84b31c0d5e111829"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b/timings.tsv",
+      "bytes": 4528,
+      "sha256": "61cdf8f4a7c464a99daf425cb9634f81b3fd8933b60419d32b9c550f8fa2ac77"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-02-candidate-b.log",
+      "bytes": 88,
+      "sha256": "b22c34f030669e8f0360580e07b92bb2078b60d1fa6a0e707661b731f756b036"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a/measurements.tsv",
+      "bytes": 15247,
+      "sha256": "7a385918382c45a8ef141070b78aa2a17fb4c790b930fc908467815b7c82d3cd"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a/raw/rum.stdout",
+      "bytes": 6945,
+      "sha256": "36e97c2fdfccd5f6c8f7c6ef0bc22d76860373148849abe7d6cab225d40b9af1"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "58ae2eb601e83b893b1b5f3b23ee4f8ff63705dfb5a14a385d0708c917535ec9"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a/timings.tsv",
+      "bytes": 4534,
+      "sha256": "4592fc6406f677d37a1af630fe1c6423e35cf67df4fa69e5a7d4ec2acd18969d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-a.log",
+      "bytes": 83,
+      "sha256": "043b683debc3dde916f491eff907ba8653c4ce3d9f9b368bbda27232c3c3d034"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b/measurements.tsv",
+      "bytes": 15238,
+      "sha256": "559b3e802c72b6c549863ffd3618f8bdd18d36d2fc18d5e425f53750810ec0b3"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b/raw/rum.stdout",
+      "bytes": 6940,
+      "sha256": "583a11070470227deee017e02cbe8871c81e4f07e3d4f2cbfaff1a52faabcab8"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "868e5d029a291581b8139639f75b236da0bf2c0754baf6f72dde57ae26fb4772"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b/timings.tsv",
+      "bytes": 4530,
+      "sha256": "70d66b3722a0c1284f7abbd28f783e104e089bb0a0c37fad2fbe88a850a93d08"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-base-b.log",
+      "bytes": 83,
+      "sha256": "c64a25972d0692d706ea3199b99605be6f78d906d23260a01d134f76f9014eb0"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a/measurements.tsv",
+      "bytes": 15831,
+      "sha256": "44ee24f06b2e38eb1bc0c6eeed9a6a5a32523560cc8dac513defb1e1910fc4b2"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a/raw/rum.stdout",
+      "bytes": 6968,
+      "sha256": "f4a685007535e5d1434c0a623c1e21aeeb0b89a36db1f415ace19bf6f396d0f6"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "35e23a95a880cedb05a0e622c946ce652508a47387df2e576a0b81a722e46a4d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a/timings.tsv",
+      "bytes": 4535,
+      "sha256": "2f4d19332cab05940ecc38168868bf32fc4df47f306acd2602ad7b567ededd6b"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-a.log",
+      "bytes": 88,
+      "sha256": "b9d867b305a94fd6370b33fe8d1ae085f12295297ab090ffb135ac41a49721a8"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b/measurements.tsv",
+      "bytes": 15806,
+      "sha256": "2fec9d9d632379ad643bc6ae098856f1379617018decbc558cdbcd1877d682da"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b/raw/rum.stdout",
+      "bytes": 6946,
+      "sha256": "a2af7c1dd4336dc5cb288b7d5491021a77c7af6b28cf09dd2e7f490d6d0282db"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "8121bfd329be3dfa97adccce654522c9772d2c9ccc991dc3fa30f520aabf6602"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b/timings.tsv",
+      "bytes": 4532,
+      "sha256": "3b66b4ed2232eec12cf7357637be7f619a13d0c0bf2cad5bc49e940bb4fac801"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-03-candidate-b.log",
+      "bytes": 88,
+      "sha256": "8701a2fe03891257fab18e3be984fe630019bf7e6f09d624576131623c44a585"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a/measurements.tsv",
+      "bytes": 15254,
+      "sha256": "7aa65c5cfba3b9be4f8791242823cf499f07d1ab6068afd5d2bb1893159a1c69"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a/raw/rum.stdout",
+      "bytes": 6950,
+      "sha256": "b2a1f806f85af632b899b150a9ce7cb03fbcdc5066b08a09235463c876c496e2"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "8a2aabdac5a101a5225ad0e7acef66aced4473113e9c6135db519a84d67145da"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a/timings.tsv",
+      "bytes": 4536,
+      "sha256": "8d909c076f0a6c756d28912bb35bd3c9e1b2131b7e9b41cc2ab36137cb0c95e2"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-a.log",
+      "bytes": 83,
+      "sha256": "6d6b4ffaf6a1ca6545d4dac3f6561fba18d8e894249d4502fb4dc289e0fdd225"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b/measurements.tsv",
+      "bytes": 15253,
+      "sha256": "c3aec03ed0e46fdbcb5b4779241f0dbaaaabf7c74c8301b7b0280b758097edca"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b/raw/rum.stdout",
+      "bytes": 6958,
+      "sha256": "a323f419893a1a0844ba7a8c1f443b5d96711c7132c1c6376427e01a1dcafac3"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "20c662a8d435c76b79ee15632882511b904042df0a7f4e78a87a5e5a9da0924b"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b/timings.tsv",
+      "bytes": 4527,
+      "sha256": "f64c985e763636e5d248c98af16526c849f375163a2cbfa076a01e47fa5776be"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-base-b.log",
+      "bytes": 83,
+      "sha256": "e672bf301fa6da79fb40b08fa5f8001ccf714ad76b9b67a0a5f0cc677307977e"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a/measurements.tsv",
+      "bytes": 15804,
+      "sha256": "bad9a4705ee30d23a80bbede6badcc139c8d2a7b91b5782034352478e8d4e6af"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a/raw/rum.stdout",
+      "bytes": 6940,
+      "sha256": "e8ae6ddec389759ef73c7ca1c82985632760e332f9bc98ae5b71ee550b0ee81d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "80c65892752f738dcc88b9e9dc79178adf83c237b8164346c4eff3b1fe42f708"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a/timings.tsv",
+      "bytes": 4536,
+      "sha256": "40a5e31c3011f47c50ee35032cb1836500b1d96f498aa5e30b8a5e9b694aadf4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-a.log",
+      "bytes": 88,
+      "sha256": "4bc217d184f0b5e298dd1a2f720db976261b0e5199166be07308102d3923383d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b/measurements.tsv",
+      "bytes": 15812,
+      "sha256": "66121f6b3aee404f61776e07dc2e0c2028715717756b6e44a9a5105cb8959f37"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b/raw/rum.stdout",
+      "bytes": 6952,
+      "sha256": "961d90d85bf8e2f5ed2f1d632d747339fed6f0b127269ba19d8585e17a45abe5"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "2a7722b93b9e77b0f07434f945c44477417296cee4527552e7fcb3f062e4234b"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b/timings.tsv",
+      "bytes": 4532,
+      "sha256": "7232373b39e4f6d739f90c53ad26468bc3b64f7ad3bbb41b886c0e33b4214c1c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-04-candidate-b.log",
+      "bytes": 88,
+      "sha256": "d65ca03c55c243553905a8cac0156054f686dbed733167778f8d08e5cb6dfcd4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a/measurements.tsv",
+      "bytes": 15209,
+      "sha256": "8ae3a8b7ae9ec7fee7b5ec88e12d3a0f771ef9994015831266734b45c4df15f7"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a/raw/rum.stdout",
+      "bytes": 6910,
+      "sha256": "8e33dad275200ea9e5510bb768778685896a262548a9ac8c9d7210c2e3825492"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "d213264866ee3b5c18fc14b869dc96edc86614cb3a2a16d16cf94d1b1ee6906d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a/timings.tsv",
+      "bytes": 4531,
+      "sha256": "3308a2f45b7db21a489f837e81570c76b2c358191b27358c85b432accca7aa8b"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-a.log",
+      "bytes": 83,
+      "sha256": "9d2325fe0b42fd38fa9accddf06896ba02fbcf5a2271d611cc6fac7a6eadbdbc"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b/measurements.tsv",
+      "bytes": 15263,
+      "sha256": "d748116461dec72b0fbcecd6279856d990dbef3f434287f5dc77bcc7620cd116"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b/raw/rum.stdout",
+      "bytes": 6965,
+      "sha256": "5515699326f78c6df3c97e337a0bd134211c5942432b297fcc0dc8ea83296f7e"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "3a442e4279a4875043ea3fc19c19381dc34909efbd566eec7477cbed81aeb858"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b/timings.tsv",
+      "bytes": 4530,
+      "sha256": "83f5f4393ec3701c41247431b2be2ad4de6c3ae8f748750fb746291911211150"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-base-b.log",
+      "bytes": 83,
+      "sha256": "1ae38c18467de9dd594d5701eeff9ac8a7e3b9a262a5bcb04a164f822f2a6c27"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a/measurements.tsv",
+      "bytes": 15823,
+      "sha256": "0e3d2b65d639156e01c8f6d9880b5404631ac4c734bcaca50b7394c1480581bb"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a/raw/rum.stdout",
+      "bytes": 6959,
+      "sha256": "f14317868342633e41144c4937d16954c08996b4040e03e116234a2a5a2943c9"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "12c8cc25af570d47cdb0ef43d182832c2c96636851e51c37ac4e99bce824ed0f"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a/timings.tsv",
+      "bytes": 4536,
+      "sha256": "32eccf840fdbc9de76664781097ed90db4b6666b52abe6dcd95d0937d03ea497"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-a.log",
+      "bytes": 88,
+      "sha256": "d932d7da65051053b5d59b76ecc686a34f24f58e38e0a124ef8ab9bdc3917078"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b/measurements.tsv",
+      "bytes": 15773,
+      "sha256": "7de30ffec2bc49172c11026cce461e01cd96ad62b03a0de27d7d0ec179733bc5"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b/raw/rum.stdout",
+      "bytes": 6913,
+      "sha256": "c3672e9f347439584de049641551608e00666ab8498f9548732c857922577ce3"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "64276e88cb03b26cdfc83d03cdeedb0dd0e8c94dce74a7203394c598b3bb326c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b/timings.tsv",
+      "bytes": 4532,
+      "sha256": "47a6c291db0ebcee18049b89cf649f97c7d9e373f8812653ab2082c788b95179"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-05-candidate-b.log",
+      "bytes": 88,
+      "sha256": "4f465a2e3fd8c0756385d537fd1e12bb673c2af9d945ae84e0754e1b22174143"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a/measurements.tsv",
+      "bytes": 15208,
+      "sha256": "c7e79d1b69e34a6a86434fcb1969bc6794fbe44867af57a6887e38f63f58394a"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a/raw/rum.stdout",
+      "bytes": 6914,
+      "sha256": "a5a21280bc2c8fc5df34fbe30b23fe1a451e21cddebf88665f054b41a6e84702"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "1ebabf08b4caecb5e3670659eebcbaa00a145076b53bb54928cc2a9486f0b208"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a/timings.tsv",
+      "bytes": 4526,
+      "sha256": "ceaf13d88c34c6cb4a0bda6c71476c3f6c2246bf6c8a75c9dfe93091f1da50ff"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-a.log",
+      "bytes": 83,
+      "sha256": "1262f10e4575c90b23940cd517ef375f1d0ec75971b8a1dc8a94583976a9cefb"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b/measurements.tsv",
+      "bytes": 15246,
+      "sha256": "4c3a34f88c8e5f24f52d160068a462dfb5651e57695bc25ad5c983e512b78528"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b/raw/rum.stdout",
+      "bytes": 6942,
+      "sha256": "2ce77ea2429b9b121a1d26b04a14a1c7cdbbba1ca5780a6871ae2751c6f15163"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "0556818f8606173d1f289a063b56dec826e17c259cf4b7322a634ce3d8abe672"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b/timings.tsv",
+      "bytes": 4536,
+      "sha256": "6b8f7e3da183369f5696f44c97efcdfb1663e2d43790d25f467bbf64f738e158"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-base-b.log",
+      "bytes": 83,
+      "sha256": "0f7ebd469cce1833fa51de357cc18eb2abcbaeae1c24c8581f273ba3b6659e84"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a/measurements.tsv",
+      "bytes": 15792,
+      "sha256": "e3746879c7afb70f1e9b64f5243bdd8619b0d527459cb601db67e8bcc86937dc"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a/raw/rum.stdout",
+      "bytes": 6932,
+      "sha256": "ff1fbf8f32a48abf049bf7df7473d327a6f1bb87ac36838f75ddd2dc9f9b3e81"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "35fb0976edf03586849026f881013f43601a8be3825d64b909d66749495119e5"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a/timings.tsv",
+      "bytes": 4532,
+      "sha256": "09503b0410de387ce25c6f36b3c5186e11526901fe27279ed86cd1ef0f4ffd0e"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-a.log",
+      "bytes": 88,
+      "sha256": "34a9a3e89171e5ad125dfae0a9cb32d42a3bf089e2939c78ccc813d54907e9f0"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b/measurements.tsv",
+      "bytes": 15807,
+      "sha256": "a43aa26e7fb8aa005cfb2d4e1a8b525040ab0cfa3bb2bac011769730c045949f"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b/raw/rum.stdout",
+      "bytes": 6944,
+      "sha256": "e78d13b6b57da1dd50fd1727b1bb27c829035898f0c060cb4a49a450baaad7c4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "d5a5a8111640ff7c6aea42cc5d61e3aceb24f5d3dde7eb70d1996acba5209293"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b/timings.tsv",
+      "bytes": 4535,
+      "sha256": "a18dcaa884379e390009b709a652a069ce7c5becd27bb678f8a0925f686c61dc"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-06-candidate-b.log",
+      "bytes": 88,
+      "sha256": "50d6927f9de3fc0ebc020b26309c28d8bec65abf1d0514b9577f12b386aab588"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a/measurements.tsv",
+      "bytes": 15233,
+      "sha256": "b2fdea5d475a0d5b4e7878fc011bf31af3bde24904b22f6f6b1390b60a522839"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a/raw/rum.stdout",
+      "bytes": 6931,
+      "sha256": "bb6c7fa4924b4f433310a03f514ed0f31aa1f3f7a0a23a32b1ef2e2ee2d2fb07"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "dc2521a55ecbf13a25d4aed12f5550cdf034767998d20241a015d36ef1c0c84c"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a/timings.tsv",
+      "bytes": 4534,
+      "sha256": "f6566dbefe33272e87a6c4ea22fcce808e1f724cd4cbf9792f36b697ff58c3f3"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-a.log",
+      "bytes": 83,
+      "sha256": "d2eccc0d2c7c4881bc667df8ff10cadf340efee96c9eab0547f936ab0da07e98"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b/measurements.tsv",
+      "bytes": 15239,
+      "sha256": "a5e2a93cd80e7cd95f7378b31598a1e0b4f9852f870eee43d16d9a1565c44bae"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b/raw/rum.stdout",
+      "bytes": 6940,
+      "sha256": "4255fb8bbe362daff16620b2df52e2e340ad1c04c26cb1986767e35536dd4204"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "f3b0ca00656a2f14e8fce27a86727d14d1cc86702f31bb2d5ecafd134f93deb7"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b/timings.tsv",
+      "bytes": 4531,
+      "sha256": "1339282d4ff4c93500f6a2330487ca5452641d55e65bec89f925e35b448d4522"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-base-b.log",
+      "bytes": 83,
+      "sha256": "07cf8bfc206fd46951d0d7d9cd6ca12a4a9bea4e17724988419fe6bdd2d77aef"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a/measurements.tsv",
+      "bytes": 15809,
+      "sha256": "18c3551905f1a997da011f5d6e3e4f389f1426d0f62e41e2ad9dd1c095e6083d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a/raw/rum.stdout",
+      "bytes": 6945,
+      "sha256": "2084a0f4f24520076231655c060f75569053616644c3d0658c62eb826170b77d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "281a957d26d63492ef8036aeec435dc458f1be83bfbbfa5e97b78c2cc312589a"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a/timings.tsv",
+      "bytes": 4536,
+      "sha256": "d2fcc6683d9a10797472c8074828b51a1cdf87a6a930f4760cc404b620a531a9"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-a.log",
+      "bytes": 88,
+      "sha256": "e796e0a118fc90cb8cc84f39b4a3aad4edc7d2024d7c0ad97a032f764ee56a88"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b/measurements.tsv",
+      "bytes": 15788,
+      "sha256": "a46b2bbaa566da38e25113559cbd39aa8d3641951ddd59b9d12f44c9df070434"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b/raw/rum.stdout",
+      "bytes": 6927,
+      "sha256": "c1a8c158c54d1f71f5c557b1174e44581d6c2b8412ef2047d82e3860c5c94826"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "bb337b90ace568c7f2b2215817b558909abd4b09fe42e9627dd93d02e5b7c21d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b/timings.tsv",
+      "bytes": 4533,
+      "sha256": "cb001b8510236ef3ee01f9f2fbbe04624e6e5c554f413eec4f2acff3e407c1c7"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-07-candidate-b.log",
+      "bytes": 88,
+      "sha256": "c9c159a24fee03c223ee853f4fde73ab74a66311a14c1d688e5b9cdb1fb59987"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a/measurements.tsv",
+      "bytes": 15226,
+      "sha256": "81ffca01f86ce921890181e0781d3ef801645fd805c4b81cf61f30f5ab7eca52"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a/raw/rum.stdout",
+      "bytes": 6932,
+      "sha256": "975993175c32a203fc840c5a3d65000f816d1217bc2ffd60b625edd4e75094aa"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a/runs.tsv",
+      "bytes": 220,
+      "sha256": "1c0a0af2d09ee0945acb2e165675bc8cf1b45cead0bfb46ea0863201fea0e881"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a/timings.tsv",
+      "bytes": 4526,
+      "sha256": "158499984b2dca98b95b679c5293b9c92649603849416a536008827ffabe34f9"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-a.log",
+      "bytes": 83,
+      "sha256": "8797c6a77f6e9a18ccb0db2151ff5c9349854a4e053bf2f545302dbff431f80f"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b/measurements.tsv",
+      "bytes": 15232,
+      "sha256": "c59c3266d12d318fe7f643c069dde2114bef529ad11230a6d0e83a85d3ea8b25"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b/raw/rum.stdout",
+      "bytes": 6930,
+      "sha256": "6ba2c3fe8e8412e22926b121c10008d25aa79e99568a91430ae1545da73acc27"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b/runs.tsv",
+      "bytes": 220,
+      "sha256": "e2dd79e715509b57dc335ee00bb3fb3318578163dc99b64d878bdf9ed07b5461"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b/timings.tsv",
+      "bytes": 4534,
+      "sha256": "20de8f017026ebd519893da721d85da3c58b33e666806c436ad323ba04ca4fe4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-base-b.log",
+      "bytes": 83,
+      "sha256": "88582360f2a65ab20e0228cb90c16d59587533f2d0b34e8f837f7678e59d0598"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a/measurements.tsv",
+      "bytes": 15801,
+      "sha256": "d071034782722fce0bf457746dabd0801ab60f15979a99358fac714ee77dd704"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a/raw/rum.stdout",
+      "bytes": 6941,
+      "sha256": "7df04ea2fdeca063d018250ad50ebfb31b66cf33bdd2d5356d21fcb47562a8eb"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a/runs.tsv",
+      "bytes": 230,
+      "sha256": "eed48266d5781f75285cbe098a970b337e4a411d743118aa6a54a5666ee8241d"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a/timings.tsv",
+      "bytes": 4532,
+      "sha256": "c949d1d323055b5ff6b15b687ff852bfcdd8efd5a0e94efa83cb251b24865eb9"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-a.log",
+      "bytes": 88,
+      "sha256": "df8cf74c595746b6d455725192f9ba2d89301f5ecd8941a101df908456f05d49"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b/core-language-microbench.rum",
+      "bytes": 444433,
+      "sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b/measurements.tsv",
+      "bytes": 15806,
+      "sha256": "6ee9332d51f71b24ec187dcaa1662789fbef18f3ee915a26f9eabd0b85dafa25"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b/raw/rum.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b/raw/rum.stdout",
+      "bytes": 6944,
+      "sha256": "b93b830a6a7302069c76acba0b221e758f78fe51c7b71382df87d7ff2f9d62f2"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b/runs.tsv",
+      "bytes": 230,
+      "sha256": "d6e0d3b9520daa3bb8facc7736889e3924648323d6e3026815135b0c28d38589"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b/timings.tsv",
+      "bytes": 4534,
+      "sha256": "6f451ea2e6aa149dc79328530d86eed39b99fb866b76dec0132894808884daa7"
+    },
+    {
+      "path": "evidence/regression-isolation/suite-08-candidate-b.log",
+      "bytes": 88,
+      "sha256": "57f69b82dae8a35b036f9ba6ea0280e40b8a7429846c2f15ae30e7c1bf16d979"
+    },
+    {
+      "path": "evidence/regression-isolation/summary.json",
+      "bytes": 738504,
+      "sha256": "530027a84df5d594674c262cd166bf00e714f9c9684b26924cded2f213563dc4"
+    },
+    {
+      "path": "evidence/regression-isolation/timing-plan.json",
+      "bytes": 5047,
+      "sha256": "5d9842a33a793803bd5d90dc555218b7da1e5c27781675564fa286166e54234d"
+    },
+    {
+      "path": "evidence/regression-isolation/timing-progress.tsv",
+      "bytes": 3487,
+      "sha256": "73a02e435aa548f53a6116f37a502202f9262661427b9493ac3b56e0ad4a4efe"
+    },
+    {
+      "path": "evidence/regression-isolation/timing-status.txt",
+      "bytes": 13,
+      "sha256": "91061422373a188e56a360fea72d7e873d91f48113dab80d2175c421cdf491c7"
+    },
+    {
       "path": "evidence/representation-study/assembly-build.log",
       "bytes": 165,
       "sha256": "1bb03143536cf1006fab41066e2a9f964bdfab605490cb6e8ceac5299397cd26"
@@ -9497,6 +13052,61 @@
       "sha256": "bd88848f03e8886868630f7aa156703f7783a82d6cb93a76bb635a656ad6a2d6"
     },
     {
+      "path": "regression-isolation/README.md",
+      "bytes": 9246,
+      "sha256": "4df0bab977c7d5183d643b524f8190bd62380b60d76dc0641555a7a11f15abd0"
+    },
+    {
+      "path": "regression-isolation/analyze.py",
+      "bytes": 9950,
+      "sha256": "60665552e25695d013ed2957eab4216081b4dd49184aed7d76cd0edce9317044"
+    },
+    {
+      "path": "regression-isolation/build-controls.py",
+      "bytes": 5527,
+      "sha256": "c24e5682e276b4b1a2a4579b3fbfeca8204f6bf18889804f41db66fbde79d222"
+    },
+    {
+      "path": "regression-isolation/check-sources.py",
+      "bytes": 1814,
+      "sha256": "cc4e1f2866ed967bd0c27584b0eea6ba7d1216c22b05f2da9d88a45fa7573b14"
+    },
+    {
+      "path": "regression-isolation/context_analysis.py",
+      "bytes": 1781,
+      "sha256": "066ed10f18db89fe639d19f56f83ac121517d263cbd7518d00322ec505207bce"
+    },
+    {
+      "path": "regression-isolation/control_cases.py",
+      "bytes": 1546,
+      "sha256": "4aaf653d5620b28a0884ef386d9edae2576b051c711cfda2a7d3ed59e19f15c2"
+    },
+    {
+      "path": "regression-isolation/pipeline_cases.py",
+      "bytes": 3553,
+      "sha256": "3a89cf88f47bde7f5ad2d45fe38eba0c09d7d2edf1662c75292065dcc439cd65"
+    },
+    {
+      "path": "regression-isolation/run-context.py",
+      "bytes": 5516,
+      "sha256": "a4609148c4ee2716969731e33f79a9599b7910a89d3675b8a98831d22a8b6e1c"
+    },
+    {
+      "path": "regression-isolation/run-timings.py",
+      "bytes": 7967,
+      "sha256": "f5b6936a076f986940194bd6c4d5b7d8d171ef39f2d10aabb2a8c5e0f46d39e0"
+    },
+    {
+      "path": "regression-isolation/static_compare.py",
+      "bytes": 6059,
+      "sha256": "bf4067437ebd6d25ec796a3276b398a3e9f6a482bd21b3a326202c2e8b1b1129"
+    },
+    {
+      "path": "regression-isolation/statistics_helpers.py",
+      "bytes": 2219,
+      "sha256": "4b9f91bdd4ae8bc86c3625e07fb2eda4843f4641fd24e7ce73f9c93ac3480d35"
+    },
+    {
       "path": "representation-study/Cargo.lock",
       "bytes": 3184,
       "sha256": "69ee377e5e5ca89068d3e2cad875a25a95d192ece2454b8d05bfa56fbe43fc44"
@@ -9923,5 +13533,6 @@
   "default_kernel_changed": false,
   "measurement_validation_implemented": true,
   "structural_diagnostics_implemented": true,
-  "copy_attribution_and_shared_walk_implemented": true
+  "copy_attribution_and_shared_walk_implemented": true,
+  "rebuild_and_pipeline_verification_implemented": true
 }

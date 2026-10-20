@@ -1,0 +1,7 @@
+   Compiling rum-runtime v0.2.0 (<LAB_PATH_0007>
+   Compiling rum-stdlib v0.2.0 (<LAB_PATH_0008>
+   Compiling rum-host v0.2.0 (<LAB_PATH_0005>
+   Compiling rum-terminal v0.2.0 (<LAB_PATH_0010>
+   Compiling rum-repl v0.2.0 (<LAB_PATH_0006>
+   Compiling rum-cli v0.2.0 (<LAB_PATH_0002>
+    Finished `release` profile [optimized] target(s) in 28.63s

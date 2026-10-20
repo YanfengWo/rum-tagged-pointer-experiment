@@ -1,0 +1,114 @@
+{
+  "followup_reason": "Primary original-suite Part/Sort regressions persist; standalone Part retained a result alias unlike the suite, and synthetic mixed-control16k showed large same-binary A/A variation. Isolate session context rather than change implementation.",
+  "orders": [
+    [
+      "base-a",
+      "candidate-a",
+      "candidate-b",
+      "base-b"
+    ],
+    [
+      "candidate-a",
+      "base-b",
+      "base-a",
+      "candidate-b"
+    ],
+    [
+      "base-b",
+      "candidate-b",
+      "candidate-a",
+      "base-a"
+    ],
+    [
+      "candidate-b",
+      "base-a",
+      "base-b",
+      "candidate-a"
+    ],
+    [
+      "candidate-b",
+      "base-a",
+      "base-b",
+      "candidate-a"
+    ],
+    [
+      "base-b",
+      "candidate-b",
+      "candidate-a",
+      "base-a"
+    ],
+    [
+      "candidate-a",
+      "base-b",
+      "base-a",
+      "candidate-b"
+    ],
+    [
+      "base-a",
+      "candidate-a",
+      "candidate-b",
+      "base-b"
+    ]
+  ],
+  "binaries": {
+    "base-a": {
+      "mode": "base-0",
+      "binary": "<LAB_PATH_0015>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "text_sha256": "9d7141eef3e61aac32c117ef3ed0c4513147921b301373a0ba666dae8752ebd4",
+      "text_bytes": 7880944,
+      "source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014"
+    },
+    "candidate-a": {
+      "mode": "candidate-0",
+      "binary": "<LAB_PATH_0017>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+      "text_sha256": "de6df333875be8248140d4bf860c959882dcce2770d98cd183a1f1d1ed03b6cf",
+      "text_bytes": 7880592,
+      "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b"
+    },
+    "base-b": {
+      "mode": "base-1",
+      "binary": "<LAB_PATH_0016>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "text_sha256": "9d7141eef3e61aac32c117ef3ed0c4513147921b301373a0ba666dae8752ebd4",
+      "text_bytes": 7880944,
+      "source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014"
+    },
+    "candidate-b": {
+      "mode": "candidate-1",
+      "binary": "<LAB_PATH_0018>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+      "text_sha256": "de6df333875be8248140d4bf860c959882dcce2770d98cd183a1f1d1ed03b6cf",
+      "text_bytes": 7880592,
+      "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b"
+    }
+  },
+  "cpu": 0,
+  "repetitions": 11,
+  "blocks": 8,
+  "cases": {
+    "exact-part-400-null": {
+      "sha256": "c8f66449850aba0981dd8c82c2659330af07a61a7adec23d0bbdc4f17dcaa00a",
+      "sentinel": "ISO_CONTEXT_PASS"
+    },
+    "exact-sort-8000": {
+      "sha256": "3fa432844bc180aa4faacddd82a37614a6759a2b594aa37e731966b53a5286db",
+      "sentinel": "ISO_CONTEXT_PASS"
+    },
+    "fresh-rewrite-hit-16000": {
+      "sha256": "349324e634d501e020e9bcdcebf9849787bf3f891abda900c14516881e87d760",
+      "sentinel": "ISO_CONTEXT_PASS"
+    },
+    "synthetic-rewrite-heavy-hit-16000": {
+      "sha256": "e5aaccaf6b440624098a2fa8f0d0b271700b73a911a97f2c9d04ee0ee0fdeed1",
+      "sentinel": "ISO_PIPELINE_PASS"
+    },
+    "synthetic-mixed-control-16000": {
+      "sha256": "adc2636f6d23b9135094b831d7a269c364a491a18b4e0e90edad94606dd6ea58",
+      "sentinel": "ISO_PIPELINE_PASS"
+    }
+  },
+  "started_utc": "2026-10-20T00:07:42.895142+00:00",
+  "method": "Each mode/case is a fresh process, warm once then11 retained timings. Full expected results and aliases checked outside each window. Part returns Null and validates contents separately, matching the suite ownership pattern. Fresh pipelines use exactly the existing per-case generator. Eight balanced mode blocks with both A/A controls; descriptive followup selected after seeing primary outcomes, not a confirmatory independent trial."
+}

@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "source_root": "<LAB_PATH_0001>",
+  "target": "<LAB_PATH_0014>",
+  "baseline_source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+  "expected_candidate_source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b",
+  "preserved_binaries": {
+    "<LAB_PATH_0011>": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+    "<LAB_PATH_0013>": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+    "<LAB_PATH_0012>": "f9e3adcebb3da653c9b6b55391a776bc6952afb73aa37d29ca932e42d115e09c"
+  },
+  "builds": [
+    {
+      "mode": "base-0",
+      "binary": "<LAB_PATH_0015>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "text_sha256": "9d7141eef3e61aac32c117ef3ed0c4513147921b301373a0ba666dae8752ebd4",
+      "text_bytes": 7880944,
+      "source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014"
+    },
+    {
+      "mode": "candidate-0",
+      "binary": "<LAB_PATH_0017>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+      "text_sha256": "de6df333875be8248140d4bf860c959882dcce2770d98cd183a1f1d1ed03b6cf",
+      "text_bytes": 7880592,
+      "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b"
+    },
+    {
+      "mode": "base-1",
+      "binary": "<LAB_PATH_0016>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "text_sha256": "9d7141eef3e61aac32c117ef3ed0c4513147921b301373a0ba666dae8752ebd4",
+      "text_bytes": 7880944,
+      "source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014"
+    },
+    {
+      "mode": "candidate-1",
+      "binary": "<LAB_PATH_0018>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+      "text_sha256": "de6df333875be8248140d4bf860c959882dcce2770d98cd183a1f1d1ed03b6cf",
+      "text_bytes": 7880592,
+      "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b"
+    }
+  ],
+  "method": "One source root and one target directory; forced first local-crate codegen then base/candidate/base/candidate rebuilds. Dependencies reused; all binaries saved before timing. Source restored in finally.",
+  "base_replay_byte_identical": true,
+  "candidate_replay_byte_identical": true,
+  "base_matches_previous": true,
+  "candidate_matches_previous": true,
+  "baseline_source_restored": true,
+  "prior_binaries_unchanged": true
+}

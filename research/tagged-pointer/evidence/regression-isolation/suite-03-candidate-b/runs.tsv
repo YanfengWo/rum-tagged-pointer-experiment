@@ -1,0 +1,2 @@
+engine	status	exit_code	elapsed_seconds	stdout	stderr
+rum	ok	0	5.923749	<EXPERIMENT>/evidence/regression-isolation/suite-03-candidate-b/raw/rum.stdout	<EXPERIMENT>/evidence/regression-isolation/suite-03-candidate-b/raw/rum.stderr

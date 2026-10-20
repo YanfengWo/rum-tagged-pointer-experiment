@@ -1,0 +1,10 @@
+ctxPart = Table[0, {400}];
+ctxResult = Do[ctxPart[[ctxJ]] = ctxJ, {ctxJ, 1, 400}];
+If[SameQ[ctxResult, Null] && (SameQ[ctxPart, Range[400]]), Null, Exit[2]];
+Do[
+  ctxSeconds = First[AbsoluteTiming[ctxResult = Do[ctxPart[[ctxJ]] = ctxJ, {ctxJ, 1, 400}]]];
+  Print[StringJoin["ISO_TIME\t", "exact-part-400-null", "\t", ToString[ctxI], "\t", ToString[ctxSeconds]]];
+  If[SameQ[ctxResult, Null] && (SameQ[ctxPart, Range[400]]), Null, Exit[2]],
+  {ctxI, 1, 11}
+];
+Print["ISO_CONTEXT_PASS"];

@@ -1,0 +1,155 @@
+{
+  "recorded_on": "2026-10-19",
+  "modes": [
+    "base-a",
+    "candidate-a",
+    "base-b",
+    "candidate-b"
+  ],
+  "orders": [
+    [
+      "base-a",
+      "candidate-a",
+      "candidate-b",
+      "base-b"
+    ],
+    [
+      "candidate-a",
+      "base-b",
+      "base-a",
+      "candidate-b"
+    ],
+    [
+      "base-b",
+      "candidate-b",
+      "candidate-a",
+      "base-a"
+    ],
+    [
+      "candidate-b",
+      "base-a",
+      "base-b",
+      "candidate-a"
+    ],
+    [
+      "candidate-b",
+      "base-a",
+      "base-b",
+      "candidate-a"
+    ],
+    [
+      "base-b",
+      "candidate-b",
+      "candidate-a",
+      "base-a"
+    ],
+    [
+      "candidate-a",
+      "base-b",
+      "base-a",
+      "candidate-b"
+    ],
+    [
+      "base-a",
+      "candidate-a",
+      "candidate-b",
+      "base-b"
+    ]
+  ],
+  "blocks": 8,
+  "binaries": {
+    "base-a": {
+      "mode": "base-0",
+      "binary": "<LAB_PATH_0015>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "text_sha256": "9d7141eef3e61aac32c117ef3ed0c4513147921b301373a0ba666dae8752ebd4",
+      "text_bytes": 7880944,
+      "source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014"
+    },
+    "candidate-a": {
+      "mode": "candidate-0",
+      "binary": "<LAB_PATH_0017>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+      "text_sha256": "de6df333875be8248140d4bf860c959882dcce2770d98cd183a1f1d1ed03b6cf",
+      "text_bytes": 7880592,
+      "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b"
+    },
+    "base-b": {
+      "mode": "base-1",
+      "binary": "<LAB_PATH_0016>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138",
+      "text_sha256": "9d7141eef3e61aac32c117ef3ed0c4513147921b301373a0ba666dae8752ebd4",
+      "text_bytes": 7880944,
+      "source_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014"
+    },
+    "candidate-b": {
+      "mode": "candidate-1",
+      "binary": "<LAB_PATH_0018>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f",
+      "text_sha256": "de6df333875be8248140d4bf860c959882dcce2770d98cd183a1f1d1ed03b6cf",
+      "text_bytes": 7880592,
+      "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b"
+    }
+  },
+  "cpu": 0,
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "machine": "x86_64",
+  "aslr": "2",
+  "cpu_model": "AMD Ryzen 7 9800X3D 8-Core Processor",
+  "suite_script_sha256": "9295fa8ebade810474105027cc31593f5f43ff13469cd39bb244184ce01b555b",
+  "scale": 5,
+  "reps": 9,
+  "retained_reps": 11,
+  "within_block_predecessor_counts": {
+    "base-a -> base-b": 2,
+    "base-a -> candidate-a": 2,
+    "base-a -> candidate-b": 2,
+    "base-b -> base-a": 2,
+    "base-b -> candidate-a": 2,
+    "base-b -> candidate-b": 2,
+    "candidate-a -> base-a": 2,
+    "candidate-a -> base-b": 2,
+    "candidate-a -> candidate-b": 2,
+    "candidate-b -> base-a": 2,
+    "candidate-b -> base-b": 2,
+    "candidate-b -> candidate-a": 2
+  },
+  "block_boundary_predecessor_counts": {
+    "base-a -> candidate-a": 1,
+    "base-a -> candidate-b": 1,
+    "base-b -> candidate-a": 1,
+    "candidate-a -> base-b": 1,
+    "candidate-a -> candidate-b": 1,
+    "candidate-b -> base-a": 1,
+    "candidate-b -> base-b": 1
+  },
+  "sources": {
+    "control": {
+      "sha256": "a011c5860c8beb7978868985f95944fe5838cf10b71317da737f185af1bf5583",
+      "labels": [
+        "control-set-part-400",
+        "control-set-part-1600",
+        "control-sort-8000",
+        "control-sort-16000",
+        "control-rewrite-miss-16000",
+        "control-rewrite-hit-16000"
+      ],
+      "sentinel": "ISO_CONTROL_PASS"
+    },
+    "pipeline": {
+      "sha256": "58bb8ec2a0d18108f30f960b9cce0d45e030f0080b02ae3bf3acf28038b59ca8",
+      "labels": [
+        "synthetic-rewrite-heavy-hit-4000",
+        "synthetic-rewrite-heavy-hit-16000",
+        "synthetic-mixed-hit-4000",
+        "synthetic-mixed-hit-16000",
+        "synthetic-mixed-control-4000",
+        "synthetic-mixed-control-16000"
+      ],
+      "sentinel": "ISO_PIPELINE_PASS"
+    }
+  },
+  "started_utc": "2026-10-19T12:45:00.730713+00:00",
+  "method": "Eight serial Williams blocks, fixed CPU, no concurrent project builds. Full unchanged 112-label min9 suite, standalone controls, synthetic end-to-end pipelines. Retained corpus primary is process median; paired implementation ratio uses geometric mean of its two mode medians. Eight independent process blocks, not 176 independent repetitions. All RUM_* cleared then retained GC batches=3.",
+  "limits": "Same host/toolchain, synthetic workloads, no real application distribution. Williams predecessor balance holds within blocks; seven boundary transitions are separately recorded and not balanced. A/A samples expose but do not subtract noise. Source/target replay reproducibility rules out observed repeated-build variation here, not compiled-code layout effects or general compiler nondeterminism."
+}
