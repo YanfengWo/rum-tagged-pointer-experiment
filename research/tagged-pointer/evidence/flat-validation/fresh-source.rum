@@ -1,0 +1,110 @@
+rumMicroScale = 5;
+rumMicroReps = 9;
+rumMicroN[n_Integer] := n * rumMicroScale;
+rumMicroSink = Null;
+
+SetAttributes[rumMicroBench, HoldAll];
+rumMicroEmit[label_String, n_, seconds_] := Print[StringJoin[
+  "RUM_CORE_MICRO\t",
+  label,
+  "\t",
+  ToString[n],
+  "\t",
+  ToString[seconds]
+]];
+
+(* Timing source is AbsoluteTiming, which reads the kernel's MONOTONIC clock
+   (Instant::now). Do NOT go back to differencing AbsoluteTime[], which reads
+   the wall clock (SystemTime::now). A wall clock tracks civil time, so it is
+   exposed to the outside world — NTP/time-daemon correction, manual clock
+   changes, and host clock-hardware behavior can all slew or step it during a
+   measurement window; a monotonic clock exists precisely to measure elapsed
+   intervals and is immune to those. Wall clocks are also coarser on some
+   platforms (microsecond resolution on macOS), which is real quantization
+   noise on the shortest labels here (tens of microseconds). Reading the
+   monotonic clock inside the kernel additionally drops the two per-rep
+   AbsoluteTime[] evaluations from the measured region. Note that timings.tsv
+   produced before this change is not directly comparable with timings.tsv
+   produced after it.
+
+   Min-of-reps: the timed loop runs the bare expression (NO per-iteration
+   assignment — a per-iteration result-equals-expr injects one ownvalue Set
+   plus cache invalidation per iteration, inflating rum time about 57 percent
+   on cheap primitives. We time it
+   rumMicroReps times and report the MINIMUM, which rejects OS scheduling
+   spikes; sub-millisecond labels otherwise jitter 20-78 percent run-to-run.
+   One untimed warm eval precedes the reps so the first timed rep is warm. *)
+rumMicroBench[label_String, nExpr_, expr_] := Module[
+  {i, k, n, seconds, best},
+  n = nExpr;
+  rumMicroSink = expr;
+  best = -1;
+  k = 1;
+  While[k <= rumMicroReps,
+    seconds = First[AbsoluteTiming[
+      Do[
+        expr,
+        {i, 1, n}
+      ]
+    ]];
+    If[best < 0 || seconds < best, best = seconds];
+    k = k + 1
+  ];
+  rumMicroEmit[label, n, best];
+];
+
+gMicroStringTrimLiteralList4000 = StringJoin[
+  "1", StringRepeat["x", 3998], "2"
+];
+gMicroStringTrimLiteralList32000 = StringJoin[
+  "1", StringRepeat["x", 31998], "2"
+];
+gMicroStringTrimSingleLiteral4000 = StringJoin[
+  "1", StringRepeat["x", 3998], "1"
+];
+gMicroStringTrimSingleLiteral32000 = StringJoin[
+  "1", StringRepeat["x", 31998], "1"
+];
+gMicroStringTrimWhitespace4000 = StringJoin[
+  " ", StringRepeat["x", 3998], " "
+];
+gMicroStringTrimWhitespace32000 = StringJoin[
+  " ", StringRepeat["x", 31998], " "
+];
+rumMicroBench[
+  "stringtrim-literal-list-4000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimLiteralList4000, {"1", "2"}]
+];
+If[SameQ[StringLength[rumMicroSink], 3998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-literal-list-32000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimLiteralList32000, {"1", "2"}]
+];
+If[SameQ[StringLength[rumMicroSink], 31998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-single-literal-4000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimSingleLiteral4000, "1"]
+];
+If[SameQ[StringLength[rumMicroSink], 3998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-single-literal-32000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimSingleLiteral32000, "1"]
+];
+If[SameQ[StringLength[rumMicroSink], 31998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-whitespace-4000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimWhitespace4000]
+];
+If[SameQ[StringLength[rumMicroSink], 3998], Null, Exit[2]];
+rumMicroBench[
+  "stringtrim-whitespace-32000",
+  rumMicroN[100],
+  StringTrim[gMicroStringTrimWhitespace32000]
+];
+If[SameQ[StringLength[rumMicroSink], 31998], Null, Exit[2]];
+Print["FRESH_STRINGTRIM_PASS"];

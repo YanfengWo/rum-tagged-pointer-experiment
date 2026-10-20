@@ -1,0 +1,151 @@
+{
+  "status": "PASS",
+  "recorded_on": "2026-10-20",
+  "orders": [
+    [
+      "base-a",
+      "wide-a",
+      "combined-b",
+      "flat-a",
+      "flat-b",
+      "combined-a",
+      "wide-b",
+      "base-b"
+    ],
+    [
+      "wide-a",
+      "flat-a",
+      "base-a",
+      "combined-a",
+      "combined-b",
+      "base-b",
+      "flat-b",
+      "wide-b"
+    ],
+    [
+      "flat-a",
+      "combined-a",
+      "wide-a",
+      "base-b",
+      "base-a",
+      "wide-b",
+      "combined-b",
+      "flat-b"
+    ],
+    [
+      "combined-a",
+      "base-b",
+      "flat-a",
+      "wide-b",
+      "wide-a",
+      "flat-b",
+      "base-a",
+      "combined-b"
+    ],
+    [
+      "base-b",
+      "wide-b",
+      "combined-a",
+      "flat-b",
+      "flat-a",
+      "combined-b",
+      "wide-a",
+      "base-a"
+    ],
+    [
+      "wide-b",
+      "flat-b",
+      "base-b",
+      "combined-b",
+      "combined-a",
+      "base-a",
+      "flat-a",
+      "wide-a"
+    ],
+    [
+      "flat-b",
+      "combined-b",
+      "wide-b",
+      "base-a",
+      "base-b",
+      "wide-a",
+      "combined-a",
+      "flat-a"
+    ],
+    [
+      "combined-b",
+      "base-a",
+      "flat-b",
+      "wide-a",
+      "wide-b",
+      "flat-a",
+      "base-b",
+      "combined-a"
+    ]
+  ],
+  "binaries": {
+    "base-a": {
+      "binary": "<LAB_PATH_0210>",
+      "sha256": "c3c7a01ea266d7fc76d8b35d443d0924789a33a87227f19ef63f70b279080bc2",
+      "implementation": "base"
+    },
+    "wide-a": {
+      "binary": "<LAB_PATH_0216>",
+      "sha256": "76c47cca4d69a3d9537b447a921aa454dc2c9a6e995d44b48ad881fdd459ff43",
+      "implementation": "wide"
+    },
+    "flat-a": {
+      "binary": "<LAB_PATH_0214>",
+      "sha256": "52c3e87bd7aba56144583afd0540cd38ca7f8d101a5fb4e61c8b6808f7576f77",
+      "implementation": "flat"
+    },
+    "combined-a": {
+      "binary": "<LAB_PATH_0212>",
+      "sha256": "16d646826c0b3bb8e07728df1ae2b8e55c23ebaf47bc68b2569d15f2fd053778",
+      "implementation": "combined"
+    },
+    "base-b": {
+      "binary": "<LAB_PATH_0211>",
+      "sha256": "c3c7a01ea266d7fc76d8b35d443d0924789a33a87227f19ef63f70b279080bc2",
+      "implementation": "base"
+    },
+    "wide-b": {
+      "binary": "<LAB_PATH_0217>",
+      "sha256": "76c47cca4d69a3d9537b447a921aa454dc2c9a6e995d44b48ad881fdd459ff43",
+      "implementation": "wide"
+    },
+    "flat-b": {
+      "binary": "<LAB_PATH_0215>",
+      "sha256": "52c3e87bd7aba56144583afd0540cd38ca7f8d101a5fb4e61c8b6808f7576f77",
+      "implementation": "flat"
+    },
+    "combined-b": {
+      "binary": "<LAB_PATH_0213>",
+      "sha256": "16d646826c0b3bb8e07728df1ae2b8e55c23ebaf47bc68b2569d15f2fd053778",
+      "implementation": "combined"
+    }
+  },
+  "cpu": 0,
+  "blocks": 8,
+  "labels": [
+    "stringtrim-literal-list-4000",
+    "stringtrim-literal-list-32000",
+    "stringtrim-single-literal-4000",
+    "stringtrim-single-literal-32000",
+    "stringtrim-whitespace-4000",
+    "stringtrim-whitespace-32000"
+  ],
+  "native_evidence": "<LAB_PATH_0004>",
+  "source_sha256": "2a112223c60f54742aa5663a9bca34bf0f30977423cb50eabaec1cc178ec6d23",
+  "parent_generated_sha256": "2384cc69ad3b43a0e1fcfe6b3c4930056fe5aa3559fbdc031c74d02175cd69e4",
+  "fragment_hashes": {
+    "header": "053ffefb8b2dde2a17499219e7662208b798701d9b2ca8e6ca36592f75042e94",
+    "setup": "c439fb2e43e98ba80d462e9b12061f843e019c234da47a7748ec096f6b6e2c4c",
+    "benchmarks": "3f4bc82c4ee0c60dea5d4c898dd65000a020bcbe47c455d17b09b37bf7843c07"
+  },
+  "primary_plan_sha256": "d6d25300431f13749a980e2f257e6f1e66de8f2b98738d796dccee4360c1f497",
+  "started_utc": "2026-10-20T05:39:17.765115+00:00",
+  "method": "Post-primary diagnostic, selected after StringTrim regressions. Each mode/block starts a fresh process containing only the original six StringTrim setups and unchanged benchmark wrapper/windows: scale5, reps9, 500 inner evaluations, minimum reported. Original length checks retained; complete literal values independently checked in four untimed processes. Eight balanced mode orders and all A/A controls retained. No project builds or exports during timing.",
+  "limits": "Changes session context; does not establish a unique allocator/cache/code-layout cause or supersede the complete-suite gate. Nine raw repetitions are not emitted by the unchanged wrapper; only its six minima per process are retained.",
+  "finished_utc": "2026-10-20T05:40:17.165953+00:00"
+}

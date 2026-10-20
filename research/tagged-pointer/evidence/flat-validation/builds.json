@@ -1,0 +1,217 @@
+{
+  "status": "PASS",
+  "pin": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "toolchain": "1.85.0",
+  "source_root": "<LAB_PATH_0198>",
+  "target_root": "<LAB_PATH_0209>",
+  "jobs": 2,
+  "instrumentation_present": false,
+  "default_checkout_changed": false,
+  "preserved_binaries": [
+    {
+      "path": "<LAB_PATH_0001>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    {
+      "path": "<LAB_PATH_0003>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    },
+    {
+      "path": "<LAB_PATH_0002>",
+      "sha256": "f9e3adcebb3da653c9b6b55391a776bc6952afb73aa37d29ca932e42d115e09c"
+    }
+  ],
+  "prior_binaries_preserved": true,
+  "variants": [
+    {
+      "mode": "base",
+      "status": "PASS",
+      "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patched_files": {},
+      "binary": "<LAB_PATH_0238>",
+      "binary_sha256": "c3c7a01ea266d7fc76d8b35d443d0924789a33a87227f19ef63f70b279080bc2",
+      "workspace": {
+        "passed": 2241,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 216,
+          "memory-after-f2": 68963,
+          "bytecount-f3": 224,
+          "memory-after-f3": 69361,
+          "bytecount-f5": 368,
+          "memory-after-f5": 69903
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 211,
+          "applied": 147
+        }
+      }
+    },
+    {
+      "mode": "wide",
+      "status": "PASS",
+      "source_diff_sha256": "470e138bdd593783f5b545a735e12bd07b3289e05531615011dc0eca543aedfa",
+      "patched_files": {
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b",
+          "bytes": 33425
+        }
+      },
+      "binary": "<LAB_PATH_0244>",
+      "binary_sha256": "76c47cca4d69a3d9537b447a921aa454dc2c9a6e995d44b48ad881fdd459ff43",
+      "workspace": {
+        "passed": 2241,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 216,
+          "memory-after-f2": 68963,
+          "bytecount-f3": 224,
+          "memory-after-f3": 69361,
+          "bytecount-f5": 368,
+          "memory-after-f5": 69903
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 211,
+          "applied": 147
+        }
+      }
+    },
+    {
+      "mode": "flat",
+      "status": "PASS",
+      "source_diff_sha256": "005b3650f64c70ba0a2746eabe554a991abfaa4f7bc937e2756d2f3c797fa03b",
+      "patched_files": {
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "uninstrumented_base_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "source_sha256": "f576a3a6208888c9dbd40a52d59147a6ed6a70b253959921fe0209053c87b0f7",
+          "bytes": 13671
+        }
+      },
+      "binary": "<LAB_PATH_0242>",
+      "binary_sha256": "52c3e87bd7aba56144583afd0540cd38ca7f8d101a5fb4e61c8b6808f7576f77",
+      "workspace": {
+        "passed": 2241,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 152,
+          "memory-after-f2": 68899,
+          "bytecount-f3": 192,
+          "memory-after-f3": 69265,
+          "bytecount-f5": 272,
+          "memory-after-f5": 69711
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 147,
+          "applied": 147
+        }
+      }
+    },
+    {
+      "mode": "combined",
+      "status": "PASS",
+      "source_diff_sha256": "ad7e98c1ce191ccbcad6489962fedc0b00f6cb33845308fe55397b6588189358",
+      "patched_files": {
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "uninstrumented_base_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "source_sha256": "f576a3a6208888c9dbd40a52d59147a6ed6a70b253959921fe0209053c87b0f7",
+          "bytes": 13671
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "source_sha256": "4a903a44e7fbfe8f7ef3c191182993d78215ebdad4606874b972094248b76d1b",
+          "bytes": 33425
+        }
+      },
+      "binary": "<LAB_PATH_0240>",
+      "binary_sha256": "16d646826c0b3bb8e07728df1ae2b8e55c23ebaf47bc68b2569d15f2fd053778",
+      "workspace": {
+        "passed": 2241,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 152,
+          "memory-after-f2": 68899,
+          "bytecount-f3": 192,
+          "memory-after-f3": 69265,
+          "bytecount-f5": 272,
+          "memory-after-f5": 69711
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 147,
+          "applied": 147
+        }
+      }
+    }
+  ],
+  "builder_sha256": "473a179f36b53d6563d57319a653b19762ad63b92fadcd51c1a831a2609c95d8",
+  "stage": "COMPLETE",
+  "source_restored": true
+}

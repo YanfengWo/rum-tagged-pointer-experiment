@@ -1,0 +1,58 @@
+SetAttributes[flatMeasure, HoldAll];
+flatMeasure[label_String, expression_, expected_] := Module[{i, result, resultAlias, seconds},
+  result = expression;
+  If[SameQ[result, expected], Null, Exit[2]];
+  
+  resultAlias = result;
+  result[[1]] = flatResultMutation;
+  If[SameQ[resultAlias, expected], Null, Exit[2]];
+];
+pipelineExpected = {Join[Table[-i,{i,1,1}],Range[10,4008]],Range[9,4008],Reverse[Range[4000]],Reverse[Range[4000]]};
+flatMeasure["synthetic-rewrite-heavy-hit-4000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[4000]]; sourceAlias = source; current = source;
+  Do[current = Replace[current, x_Integer :> x + 1, {1}], {step,1,8}];
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,1}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+pipelineExpected = {Join[Table[-i,{i,1,1}],Range[10,16008]],Range[9,16008],Reverse[Range[16000]],Reverse[Range[16000]]};
+flatMeasure["synthetic-rewrite-heavy-hit-16000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[16000]]; sourceAlias = source; current = source;
+  Do[current = Replace[current, x_Integer :> x + 1, {1}], {step,1,8}];
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,1}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+pipelineExpected = {Join[Table[-i,{i,1,64}],Range[66,4001]],Range[2,4001],Reverse[Range[4000]],Reverse[Range[4000]]};
+flatMeasure["synthetic-mixed-hit-4000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[4000]]; sourceAlias = source; current = source;
+  Do[current = Replace[current, x_Integer :> x + 1, {1}], {step,1,1}];
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,64}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+pipelineExpected = {Join[Table[-i,{i,1,64}],Range[66,16001]],Range[2,16001],Reverse[Range[16000]],Reverse[Range[16000]]};
+flatMeasure["synthetic-mixed-hit-16000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[16000]]; sourceAlias = source; current = source;
+  Do[current = Replace[current, x_Integer :> x + 1, {1}], {step,1,1}];
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,64}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+pipelineExpected = {Join[Table[-i,{i,1,64}],Range[65,4000]],Range[1,4000],Reverse[Range[4000]],Reverse[Range[4000]]};
+flatMeasure["synthetic-mixed-control-4000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[4000]]; sourceAlias = source; current = source;
+  (* No rewrite in the matched control. *)
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,64}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+pipelineExpected = {Join[Table[-i,{i,1,64}],Range[65,16000]],Range[1,16000],Reverse[Range[16000]],Reverse[Range[16000]]};
+flatMeasure["synthetic-mixed-control-16000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[16000]]; sourceAlias = source; current = source;
+  (* No rewrite in the matched control. *)
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,64}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+Print["ISO_PIPELINE_PASS"];

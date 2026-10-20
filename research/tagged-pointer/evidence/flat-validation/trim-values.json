@@ -1,0 +1,143 @@
+{
+  "status": "PASS",
+  "recorded_on": "2026-10-19",
+  "builds_sha256": "7dd398b6ca2d84a523c35bd609e77339b1e769d5c847165860aff3e166c10a89",
+  "script_sha256": "99106287155c23d335def278a9dfff0b53785d64be87f3159e19e0a0303de9a4",
+  "source": {
+    "file": "trim-values.rum",
+    "sha256": "0828572084970f009745ce8f0520f426053e426d727fa48f87525936c5c3ee7e"
+  },
+  "cases": [
+    {
+      "label": "stringtrim-literal-list-4000",
+      "family": "literal-list",
+      "size": 4000,
+      "input_sha256": "298831b23eb0c4e5e908fe2ca285585a5887d86dbf63cfb43b7584fe6404c7f3",
+      "expected_sha256": "e4beaf2fb0d32fd5a253c2c7e3bca7295c33cb8808e951ed0f435dcd89b3c457",
+      "expected_length": 3998
+    },
+    {
+      "label": "stringtrim-literal-list-32000",
+      "family": "literal-list",
+      "size": 32000,
+      "input_sha256": "49fc17dc79c41645738096b4ebb50f6b952119eda2ef496fddccfe6ab960a6dc",
+      "expected_sha256": "68b623a6d3458672b9fc189cbb22f67922255db4673fee16fad53f93d77fa85f",
+      "expected_length": 31998
+    },
+    {
+      "label": "stringtrim-single-literal-4000",
+      "family": "single-literal",
+      "size": 4000,
+      "input_sha256": "be90a144aaff3d473635dd9c044025d1cc38ee99ff1c18d5930bd942cb2d6b47",
+      "expected_sha256": "e4beaf2fb0d32fd5a253c2c7e3bca7295c33cb8808e951ed0f435dcd89b3c457",
+      "expected_length": 3998
+    },
+    {
+      "label": "stringtrim-single-literal-32000",
+      "family": "single-literal",
+      "size": 32000,
+      "input_sha256": "bbb0d6b313d47100055d2a3e663bd43adedf57efef73a4d67108a10a414dd290",
+      "expected_sha256": "68b623a6d3458672b9fc189cbb22f67922255db4673fee16fad53f93d77fa85f",
+      "expected_length": 31998
+    },
+    {
+      "label": "stringtrim-whitespace-4000",
+      "family": "whitespace",
+      "size": 4000,
+      "input_sha256": "83d0cbfd5c7e27d1bfa195f8664b998ab8819b2b2c3cae77ab70f7c17db7c4e7",
+      "expected_sha256": "e4beaf2fb0d32fd5a253c2c7e3bca7295c33cb8808e951ed0f435dcd89b3c457",
+      "expected_length": 3998
+    },
+    {
+      "label": "stringtrim-whitespace-32000",
+      "family": "whitespace",
+      "size": 32000,
+      "input_sha256": "6ac51e69437e9ea0da60a122b459c672dc20a27f054b35074a83771f2c3958a3",
+      "expected_sha256": "68b623a6d3458672b9fc189cbb22f67922255db4673fee16fad53f93d77fa85f",
+      "expected_length": 31998
+    }
+  ],
+  "runs": [
+    {
+      "mode": "base",
+      "binary": "<LAB_PATH_0238>",
+      "binary_sha256": "c3c7a01ea266d7fc76d8b35d443d0924789a33a87227f19ef63f70b279080bc2",
+      "returncode": 0,
+      "stdout": "trim-values-base.stdout",
+      "stderr": "trim-values-base.stderr",
+      "stdout_sha256": "795874ea8db73300d02bdd11ad5306d1d19cf80ceb11f7d4d29a569495c206fe",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "labels": [
+        "stringtrim-literal-list-4000",
+        "stringtrim-literal-list-32000",
+        "stringtrim-single-literal-4000",
+        "stringtrim-single-literal-32000",
+        "stringtrim-whitespace-4000",
+        "stringtrim-whitespace-32000"
+      ],
+      "status": "PASS"
+    },
+    {
+      "mode": "wide",
+      "binary": "<LAB_PATH_0244>",
+      "binary_sha256": "76c47cca4d69a3d9537b447a921aa454dc2c9a6e995d44b48ad881fdd459ff43",
+      "returncode": 0,
+      "stdout": "trim-values-wide.stdout",
+      "stderr": "trim-values-wide.stderr",
+      "stdout_sha256": "795874ea8db73300d02bdd11ad5306d1d19cf80ceb11f7d4d29a569495c206fe",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "labels": [
+        "stringtrim-literal-list-4000",
+        "stringtrim-literal-list-32000",
+        "stringtrim-single-literal-4000",
+        "stringtrim-single-literal-32000",
+        "stringtrim-whitespace-4000",
+        "stringtrim-whitespace-32000"
+      ],
+      "status": "PASS"
+    },
+    {
+      "mode": "flat",
+      "binary": "<LAB_PATH_0242>",
+      "binary_sha256": "52c3e87bd7aba56144583afd0540cd38ca7f8d101a5fb4e61c8b6808f7576f77",
+      "returncode": 0,
+      "stdout": "trim-values-flat.stdout",
+      "stderr": "trim-values-flat.stderr",
+      "stdout_sha256": "795874ea8db73300d02bdd11ad5306d1d19cf80ceb11f7d4d29a569495c206fe",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "labels": [
+        "stringtrim-literal-list-4000",
+        "stringtrim-literal-list-32000",
+        "stringtrim-single-literal-4000",
+        "stringtrim-single-literal-32000",
+        "stringtrim-whitespace-4000",
+        "stringtrim-whitespace-32000"
+      ],
+      "status": "PASS"
+    },
+    {
+      "mode": "combined",
+      "binary": "<LAB_PATH_0240>",
+      "binary_sha256": "16d646826c0b3bb8e07728df1ae2b8e55c23ebaf47bc68b2569d15f2fd053778",
+      "returncode": 0,
+      "stdout": "trim-values-combined.stdout",
+      "stderr": "trim-values-combined.stderr",
+      "stdout_sha256": "795874ea8db73300d02bdd11ad5306d1d19cf80ceb11f7d4d29a569495c206fe",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "labels": [
+        "stringtrim-literal-list-4000",
+        "stringtrim-literal-list-32000",
+        "stringtrim-single-literal-4000",
+        "stringtrim-single-literal-32000",
+        "stringtrim-whitespace-4000",
+        "stringtrim-whitespace-32000"
+      ],
+      "status": "PASS"
+    }
+  ],
+  "processes": 4,
+  "checks": 24,
+  "timing_operations": false,
+  "method": "Six same-family StringTrim inputs per uninstrumented implementation; three complete-literal SameQ assertions check result, input and original string alias. No timing and no original benchmark changes.",
+  "limits": "These checks cover the six exact ASCII inputs, not all StringTrim behavior; they do not establish the cause of measured regressions."
+}

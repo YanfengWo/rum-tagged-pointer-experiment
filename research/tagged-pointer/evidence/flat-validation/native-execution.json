@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "native_evidence": "<LAB_PATH_0005>",
+  "local_evidence": "<EXPERIMENT>/evidence/flat-validation",
+  "started_utc": "2026-10-20T02:49:35.284375+00:00",
+  "idle_seconds_before_timing": 30,
+  "method": "Preflight and all timing sources/live output on Linux storage. No evidence export or project build during timing. Copy retained files to the local workspace only after timing ends.",
+  "finished_utc": "2026-10-20T03:00:16.242670+00:00"
+}

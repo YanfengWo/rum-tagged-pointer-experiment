@@ -1,0 +1,8 @@
+TRIM_VALUE_PASS	stringtrim-literal-list-4000
+TRIM_VALUE_PASS	stringtrim-literal-list-32000
+TRIM_VALUE_PASS	stringtrim-single-literal-4000
+TRIM_VALUE_PASS	stringtrim-single-literal-32000
+TRIM_VALUE_PASS	stringtrim-whitespace-4000
+TRIM_VALUE_PASS	stringtrim-whitespace-32000
+TRIM_VALUES_PASS
+Null

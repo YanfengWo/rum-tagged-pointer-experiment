@@ -1,0 +1,52 @@
+--- a/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
++++ b/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
+@@ -95,6 +95,12 @@
+ }
+ 
+ pub(super) fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> {
++    if args.capacity() == args.len() && !args.iter().any(|arg| {
++        matches!(arg, Expr::Call { head: nested_head, .. } if nested_head.as_ref() == head)
++    }) {
++        return args;
++    }
++
+     let mut flattened = Vec::new();
+ 
+     for arg in args {
+--- a/crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs
++++ b/crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs
+@@ -382,7 +382,6 @@
+             }
+             Expr::Call { head, args } => {
+                 let head = head.into_owned();
+-                let args = args.into_vec();
+                 if include_heads {
+                     let head_result = self.replace_owned(
+                         head,
+@@ -406,7 +405,7 @@
+                             None,
+                         ),
+                         Err(EvalError::InputRequired { request }) => {
+-                            let args = FrozenRewriteQueue::freeze(args);
++                            let args = FrozenRewriteQueue::freeze(args.into_vec());
+                             crate::resume_or_suspend!(insert self, ReplaceChildrenOwnedSuspensionFrame2 { args, rule_plan, levels, child_level, include_heads });
+                             Err(EvalError::InputRequired { request })
+                         }
+@@ -439,7 +438,7 @@
+     fn replace_call_children_owned(
+         &mut self,
+         head: Expr,
+-        args: Vec<Expr>,
++        args: SharedArgs,
+         mut child_index: usize,
+         rule_plan: RewriteRulePlan,
+         levels: CasesLevelSpec,
+@@ -494,7 +493,7 @@
+                 Err(EvalError::InputRequired { request }) => {
+                     let state = SuspendedReplaceCallChildren {
+                         head,
+-                        args: FrozenRewriteQueue::freeze(args),
++                        args: FrozenRewriteQueue::freeze(args.into_vec()),
+                         child_index,
+                         rule_plan,
+                         levels,
