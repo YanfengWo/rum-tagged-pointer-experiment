@@ -8,3 +8,6 @@ rewrite-switch/*.patch whitespace=-blank-at-eol,cr-at-eol
 single-binding/*.patch whitespace=-blank-at-eol,cr-at-eol
 # Retain the exact executed helper, including its harmless extra final newline.
 rewrite-shortcuts/build_support.py whitespace=-blank-at-eof,cr-at-eol
+# Performance archives include exact prelaunch source snapshots.
+evidence/single-binding-performance/** -text
+evidence/rewrite-switch-performance/** -text

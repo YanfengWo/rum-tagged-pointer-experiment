@@ -1,0 +1,16 @@
+{
+  "exit_code": 0,
+  "command": [
+    "python3",
+    "<RUM_ROOT>/scripts/run-bounded.py",
+    "--timeout",
+    "90",
+    "--",
+    "taskset",
+    "-c",
+    "0",
+    "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0266>",
+    "--file",
+    "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0002>"
+  ]
+}

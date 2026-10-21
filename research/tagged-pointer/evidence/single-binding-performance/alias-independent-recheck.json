@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "method": "Independently parsed raw ISO_TIME fields using Fraction; process medians, per-block geometric means and direct single/matcher ratios match four summary values within 1e-14. No timing was performed by this check.",
+  "case_count": 4,
+  "single_over_matcher": {
+    "focus-increment-16000": 0.9239108277175694,
+    "focus-miss-16000": 1.0189915918686343,
+    "synthetic-rewrite-heavy-hit-16000": 0.9336139845222902,
+    "synthetic-mixed-hit-16000": 0.941344460130578
+  },
+  "timing_plan_sha256": "3705f3f5a502a8daeb42676017110bd932a13edfbb6ad4439cc6da109b14f176"
+}

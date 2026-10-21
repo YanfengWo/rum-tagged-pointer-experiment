@@ -1,0 +1,13 @@
+Native evidence: <LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0009>
+PASS: four implementations, full values, aliases and side-effect order; no timings
+Untimed preflight PASS; fixed 30-second idle interval
+block 1 PASS
+block 2 PASS
+block 3 PASS
+block 4 PASS
+block 5 PASS
+block 6 PASS
+block 7 PASS
+block 8 PASS
+PASS: 64 complete suites and 192 focus/pipeline/shape processes
+Native timing complete; retained evidence copied to workspace

@@ -1,0 +1,16 @@
+{
+  "upstream_commit": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "mode": "base",
+  "overlay_path": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0228>",
+  "patched_files": {
+    "crates/rum-runtime/src/runtime/tests/copy_attribution_regression.rs": {
+      "base_sha256": null,
+      "patched_sha256": "2d53d99c16eb0f593be1987bcf742f6ded262d45ea043e1f53de0fce3e856504"
+    },
+    "crates/rum-runtime/src/runtime/tests/mod.rs": {
+      "base_sha256": "651c2eba05080d087ba23a5c3f948d956318577a4c476fc1e92528398a5e85d6",
+      "patched_sha256": "f48a791fcdd6fd7e95b504a634bec826f6f1eb8ee3d0c8b2ec04e55374b095a5"
+    }
+  },
+  "default_source_changed": false
+}

@@ -1,0 +1,17 @@
+{
+  "user_reported_idle": true,
+  "availability_recorded_utc": "2026-10-21T13:57:31.729799+00:00",
+  "client_timezone": "Etc/GMT+4",
+  "save_cutoff_client": "2026-10-21T11:50:00-04:00",
+  "shutdown_before_client": "2026-10-21T11:55:00-04:00",
+  "run_order": [
+    "single-binding",
+    "rewrite-switch"
+  ],
+  "other_project_builds_or_uploads_during_timing": false,
+  "recorded_before_timing": true,
+  "recorded_on": "2026-10-21",
+  "windows_utc": "2026-10-21T13:58:58.290574+00:00",
+  "decision": "Measure serial paired processes under the sampled session state; retain transitions.",
+  "limit": "This is not a randomized lock/unlock causal comparison."
+}

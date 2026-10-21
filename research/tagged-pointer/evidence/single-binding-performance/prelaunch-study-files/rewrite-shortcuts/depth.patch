@@ -1,0 +1,15 @@
+--- a/crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs
++++ b/crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs
+@@ -275,7 +275,11 @@
+         level: usize,
+         include_heads: bool,
+     ) -> Result<ReplaceOutcome, EvalError> {
+-        let depth = if include_heads {
++        // Nonnegative levels cannot select by negative expression depth.
++        // Keep every returned outcome depth exact; only selection uses one.
++        let depth = if levels.min >= 0 {
++            1
++        } else if include_heads {
+             replace_expr_depth_with_heads(&expr)
+         } else {
+             replace_expr_depth(&expr)

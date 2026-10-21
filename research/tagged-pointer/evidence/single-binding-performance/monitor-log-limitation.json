@@ -1,0 +1,7 @@
+{
+  "status": "OUTER_CONSOLE_LIMITATION",
+  "stdout_nul_bytes": 424,
+  "cause": "The native evidence final copy overwrote the initial console snapshots while the outer log handles remained open. This happened after all timing processes ended.",
+  "primary_evidence": "Retain actual console bytes without reconstruction; per-case outputs, timing journal, native-execution and session samples are the audit sources.",
+  "next_monitor_fix": "Place live console files outside the copied evidence directory."
+}

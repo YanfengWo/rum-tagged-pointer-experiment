@@ -1,0 +1,13 @@
+{
+  "user_reported_idle": true,
+  "availability_recorded_utc": "2026-10-21T14:37:26.376048+00:00",
+  "client_timezone": "Etc/GMT+4",
+  "save_cutoff_client": "2026-10-21T11:50:00-04:00",
+  "shutdown_before_client": "2026-10-21T11:55:00-04:00",
+  "selection": "Four predeclared primary hit/pipeline cases plus miss control, size16000; confirmation motivated by directional A/A file-copy differences; no change to the full112 gate or sample removal.",
+  "recorded_before_timing": true,
+  "recorded_on": "2026-10-21",
+  "windows_utc": "2026-10-21T14:37:31.763275+00:00",
+  "decision": "Measure serial paired processes under the sampled session state; retain transitions.",
+  "limit": "This is not a randomized lock/unlock causal comparison."
+}

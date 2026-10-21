@@ -2,7 +2,7 @@
 
 ## Safe rewrite candidates and validation status
 
-The [leaf matcher and positive-level depth candidates](rewrite-shortcuts/README.md) have complete separate-build measurements, with every regression retained. The [same-executable control](rewrite-switch/README.md) and [borrowed single-binding candidate](single-binding/README.md) have passed correctness validation; their performance gates are deferred. No default runtime integration is selected.
+The [leaf matcher and positive-level depth candidates](rewrite-shortcuts/README.md), [same-executable control](rewrite-switch/README.md), and [borrowed single-binding candidate](single-binding/README.md) have completed correctness and performance experiments, with every slower original-suite median retained. The acceptance gate is not cleared. New performance archives are [same-executable](evidence/rewrite-switch-performance/summary.json) and [borrowed binding](evidence/single-binding-performance/summary.json); earlier correctness archives remain exact. No default runtime integration is selected.
 
 ## Uninstrumented Flat validation
 

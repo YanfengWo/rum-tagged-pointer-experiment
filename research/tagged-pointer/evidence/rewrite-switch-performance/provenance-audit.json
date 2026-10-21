@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "stage": "rewrite-switch",
+  "capsule_files_checked": 51,
+  "historical_inventory_files_checked": 15,
+  "changed_since_prelaunch": [
+    "rewrite-switch/README.md",
+    "single-binding/README.md"
+  ],
+  "change_scope": "Only the two post-run results READMEs may differ; all measured study code and patches match prelaunch copies.",
+  "capsule_sha256": "0b82cb311572ee72b71944600d619f0d5b4b5e296a82f4ed52c509c9550631a1",
+  "correctness_sha256": "4b53e6de4b47125deab2360f970afc8f136eaa12e373363766298d2afb0dcc30",
+  "prelaunch_inputs_sha256": "e6c22336ad5c289c53ad61ea4d145bb2adbdfb2d490a9d33cb34c2a71ce41dc1",
+  "executed_monitor_sha256": "f18f73e3a10e7ae63b9f4e27e2cbac69e395ddf2336d39ec891ac67acc8d78ef",
+  "outer_console_nul_bytes": 0,
+  "auditor_sha256": "94bbc1806c7b91e4995905bfbcedc29ff762c4471ffed7978ecde5aa459ba9e3",
+  "limits": "Integrity and finite experiment audit, not a full semantic proof or a timing-noise correction."
+}

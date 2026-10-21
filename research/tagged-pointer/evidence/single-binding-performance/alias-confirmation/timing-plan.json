@@ -1,0 +1,190 @@
+{
+  "recorded_on": "2026-10-21",
+  "blocks": 12,
+  "modes": [
+    "base-a",
+    "matcher-a",
+    "single-a",
+    "base-b",
+    "matcher-b",
+    "single-b"
+  ],
+  "orders": [
+    [
+      "base-a",
+      "matcher-a",
+      "single-b",
+      "single-a",
+      "matcher-b",
+      "base-b"
+    ],
+    [
+      "matcher-a",
+      "single-a",
+      "base-a",
+      "base-b",
+      "single-b",
+      "matcher-b"
+    ],
+    [
+      "single-a",
+      "base-b",
+      "matcher-a",
+      "matcher-b",
+      "base-a",
+      "single-b"
+    ],
+    [
+      "base-b",
+      "matcher-b",
+      "single-a",
+      "single-b",
+      "matcher-a",
+      "base-a"
+    ],
+    [
+      "matcher-b",
+      "single-b",
+      "base-b",
+      "base-a",
+      "single-a",
+      "matcher-a"
+    ],
+    [
+      "single-b",
+      "base-a",
+      "matcher-b",
+      "matcher-a",
+      "base-b",
+      "single-a"
+    ],
+    [
+      "base-a",
+      "matcher-a",
+      "single-b",
+      "single-a",
+      "matcher-b",
+      "base-b"
+    ],
+    [
+      "matcher-a",
+      "single-a",
+      "base-a",
+      "base-b",
+      "single-b",
+      "matcher-b"
+    ],
+    [
+      "single-a",
+      "base-b",
+      "matcher-a",
+      "matcher-b",
+      "base-a",
+      "single-b"
+    ],
+    [
+      "base-b",
+      "matcher-b",
+      "single-a",
+      "single-b",
+      "matcher-a",
+      "base-a"
+    ],
+    [
+      "matcher-b",
+      "single-b",
+      "base-b",
+      "base-a",
+      "single-a",
+      "matcher-a"
+    ],
+    [
+      "single-b",
+      "base-a",
+      "matcher-b",
+      "matcher-a",
+      "base-b",
+      "single-a"
+    ]
+  ],
+  "binaries": {
+    "base-a": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0266>",
+      "sha256": "13959c43b3840d7dff3e16b1f10456584d12513d5ee05e0acbf2f34f87060a7b",
+      "file_identity": [
+        2096,
+        20356
+      ]
+    },
+    "base-b": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0266>",
+      "sha256": "13959c43b3840d7dff3e16b1f10456584d12513d5ee05e0acbf2f34f87060a7b",
+      "file_identity": [
+        2096,
+        20356
+      ]
+    },
+    "matcher-a": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0267>",
+      "sha256": "40eba556df23dee6bbd0ade829d0920574d527222af397b08155d155af2efd96",
+      "file_identity": [
+        2096,
+        651247
+      ]
+    },
+    "matcher-b": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0267>",
+      "sha256": "40eba556df23dee6bbd0ade829d0920574d527222af397b08155d155af2efd96",
+      "file_identity": [
+        2096,
+        651247
+      ]
+    },
+    "single-a": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0268>",
+      "sha256": "1aee145f6005215e8c88f2033f2355d9262c74162375458ddd93b504016b6988",
+      "file_identity": [
+        2096,
+        651271
+      ]
+    },
+    "single-b": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0268>",
+      "sha256": "1aee145f6005215e8c88f2033f2355d9262c74162375458ddd93b504016b6988",
+      "file_identity": [
+        2096,
+        651271
+      ]
+    }
+  },
+  "cpu": 0,
+  "retained_reps": 11,
+  "labels": [
+    "focus-increment-16000",
+    "focus-miss-16000",
+    "synthetic-rewrite-heavy-hit-16000",
+    "synthetic-mixed-hit-16000"
+  ],
+  "bounded": "<RUM_ROOT>/scripts/run-bounded.py",
+  "bounded_sha256": "4ac47151880eaaa7d2299103cf4983298dcdf0cb0f24218e7fbf1abdc16ac0ea",
+  "original_builds_sha256": "59b73f1bb2adea128484de0e3d8bb4c6953fa74e6fdd7ad0a649a5707779e2be",
+  "source_sha256": {
+    "run-alias-confirmation.py": "8bc5d7927f14eab5faf8b965b8272a76373115adde30800404ea96e97e3ad279",
+    "alias_confirmation_analysis.py": "3d12c15452257531968a816668e249acea26f0917296c5c38042ea542b170774",
+    "study-inputs/workloads.py": "0ed75df3d9feedd70c34c6234928fc0b39a655999e936b84d979e1eee48d5e77",
+    "study-inputs/statistics_helpers.py": "384ba98bddc818323b2846e9757bdf5969c829476fad71ef0beaa09263869c2e",
+    "study-inputs/session_audit.py": "95e4aeb1268b80a99191a2ebfe148586f5a36c984d9e8cd133d11016216fe4d6",
+    "original-builds.json": "59b73f1bb2adea128484de0e3d8bb4c6953fa74e6fdd7ad0a649a5707779e2be",
+    "original-timing-plan.json": "5e11fc1d5484b9f600300f72b14d5c5c4b4f646b730bda216abb8ef981f55c10",
+    "session-protocol.json": "e35b8652ccbd96459d4f512a765182e0c013fe975b56f529cf0e5cc82dea57cd",
+    "timed-corpus.rum": "b15e8c958cbcaeb72d487718ae0c194fa5ee891706223b6537689cc09e668a5b",
+    "preflight-corpus.rum": "8a41688c57a4a0797fb1c4708726230e76edfb6b3738329bac548dfc629a1d9a"
+  },
+  "started_utc": "2026-10-21T14:37:51.499236+00:00",
+  "environment": {
+    "remove_prefix": "RUM_",
+    "RUM_CORE_MICRO_RETAINED_MODULE_GC_BATCHES": "3"
+  },
+  "method": "Twelve balanced Williams blocks; a/b share one actual binary file per implementation; fixed original CPU.",
+  "limitations": "Separate focused confirmation; never pooled with the original blocks. Cannot replace the 112-label gate or establish layout, alias-path or lock-state causality. A/A ratios are descriptive controls and are never subtracted. Eleven repetitions are not eleven independent process blocks."
+}

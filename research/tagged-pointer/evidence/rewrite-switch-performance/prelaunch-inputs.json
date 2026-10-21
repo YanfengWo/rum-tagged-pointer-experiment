@@ -1,0 +1,21 @@
+{
+  "study_files_sha256": {
+    "analyze.py": "d9770658af630eda0936a6b7acce958d603b4a17559eaa116334ef63f27745d1",
+    "audit.py": "0952969b6ab022cb204a7fec2606f6016921c2bcf9656be95cc32d901080cb09",
+    "build.py": "36f6d30978e1463d6cee62db041a180f9a20e472d32680bd8d74d611bc9dc367",
+    "build_audit.py": "3234922281e6ada9956127f15a1b010008225b26fe53f4ef47c39654108031be",
+    "build_checks.py": "827c67099d4c5e31e65ab77dfab26e4de59f72e48351a246f83a9dbb5e81b9af",
+    "mode-smoke.py": "afeaeadbb1237ec493031d9688a817ea4a231645aee53acaf8dd09de8aa3ad79",
+    "README.md": "bb8e0ce1a64996005d89e8bdcdf08f85cb375448950d31e98e060a69dbc1302d",
+    "run-native.py": "fd8b9117a9775fe257abde75c03b0fa5bbc879ea2c2df440c6a03004961859fe",
+    "run.py": "38e258e0a0e50ee2e0677313993761b13478e30655b727b0d70a1459e9a6a8c2",
+    "session_audit.py": "95e4aeb1268b80a99191a2ebfe148586f5a36c984d9e8cd133d11016216fe4d6",
+    "shape_workloads.py": "60a50f31a3b3ba59eb74b0593b9fdfd2ebcd49d741afcbb917d4b83e3e8d1e77",
+    "statistics_helpers.py": "7bd0e78b391191fe737db8cede62499cb420727543bb689405a47a9edafec2be",
+    "switch-design.md": "6f42aa02e89698c49fe24e424edc29177b78ea13d1dd1a41cfd2024aa6e242e0",
+    "switch.patch": "66c697f1be565aa44de23e9f63bcfb6c4ad784b00189dca44840f85fecb44913",
+    "workloads.py": "1675260a106e2b7628f49ee56b621feb81ee23cbc18ec9b679890ec8e38e8a5b"
+  },
+  "monitor_sha256": "f18f73e3a10e7ae63b9f4e27e2cbac69e395ddf2336d39ec891ac67acc8d78ef",
+  "timing_started": false
+}

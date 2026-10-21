@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "native_evidence": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0001>",
+  "started_utc": "2026-10-21T14:37:51.499368+00:00",
+  "idle_seconds_before_timing": 30,
+  "formal_timeout_seconds": 900,
+  "finished_utc": "2026-10-21T14:39:52.811909+00:00"
+}

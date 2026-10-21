@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "stage": "single-binding",
+  "capsule_files_checked": 51,
+  "historical_inventory_files_checked": 50,
+  "changed_since_prelaunch": [
+    "rewrite-switch/README.md",
+    "single-binding/README.md"
+  ],
+  "change_scope": "Only the two post-run results READMEs may differ; all measured study code and patches match prelaunch copies.",
+  "capsule_sha256": "f04825c2ef8568160587c99b5d92bea15f2b16aa8e9e2d526094a4566621b86e",
+  "correctness_sha256": "f12b6611b30a7b911b0b4841a70f39677635c5a9088a4792fa028790fd8e2963",
+  "prelaunch_inputs_sha256": "ca3a57d82a92bbbb06b888fabdfc84640fd1979f6eeeece32532cc275d3b6f9d",
+  "executed_monitor_sha256": "25f1ac284ccad67a4d218a167d2c7edde6f7df638c0f437d32916ea56c6317a3",
+  "outer_console_nul_bytes": 424,
+  "auditor_sha256": "94bbc1806c7b91e4995905bfbcedc29ff762c4471ffed7978ecde5aa459ba9e3",
+  "limits": "Integrity and finite experiment audit, not a full semantic proof or a timing-noise correction."
+}

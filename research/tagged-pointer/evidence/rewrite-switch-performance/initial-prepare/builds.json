@@ -1,0 +1,63 @@
+{
+  "status": "FAILED",
+  "pin": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "toolchain": "1.85.0",
+  "jobs": 2,
+  "source_root": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0213>",
+  "target_root": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0214>",
+  "instrumentation_present": false,
+  "same_image_switch": true,
+  "default_base_is_untouched_original": false,
+  "control_boundary": "All modes pay common cached switch queries; fresh process per mode.",
+  "patch_basis": "Independent switch.patch includes matcher and depth logic; no primary patches applied.",
+  "expected_workspace": {
+    "passed": 2256,
+    "ignored": 7,
+    "groups": 29
+  },
+  "default_checkout_changed": false,
+  "preserved_binaries": [
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0002>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0004>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    },
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0003>",
+      "sha256": "f9e3adcebb3da653c9b6b55391a776bc6952afb73aa37d29ca932e42d115e09c"
+    },
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0005>",
+      "sha256": "793ecce9df46878d1f8f0e9b9fb71f9149c6b9bfa253c88b30838d3f61b056bb"
+    },
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0008>",
+      "sha256": "96b4d7762e584b2f01d4bdca3a69708541d3e5e5470dd80107342e899e9bc936"
+    },
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0007>",
+      "sha256": "bdbcf9119cc1ff52c08737b64c6c108d8735af58b45fc179db20ed16940dc546"
+    },
+    {
+      "path": "<LAB_REWRITE_SWITCH_PERFORMANCE_PATH_0006>",
+      "sha256": "95eaa28b236d499e285665828846f92d3b1e43439e86e9533517fb059f078ce1"
+    }
+  ],
+  "prior_binaries_preserved": true,
+  "variants": [],
+  "primary_builds": "<EXPERIMENT>/evidence/rewrite-shortcuts/builds.json",
+  "primary_builds_sha256": "12594903aede6133c28e8b28ab4492f40b5e3a872e6831661d166d27bbb5df62",
+  "builder_sha256": "36a0a5f7f4ac55e1bc8b459cb9d5ac0fe5aec4ea479a235c5c4b948f5671325c",
+  "build_checks_sha256": "827c67099d4c5e31e65ab77dfab26e4de59f72e48351a246f83a9dbb5e81b9af",
+  "overlay_inputs": {
+    "switch.patch": "6f5c98dfc5c01d367e60482bdec76eeaf7c1fac0c715f968200e679f8b611c89",
+    "../rewrite-shortcuts/matcher-tests.rs": "703668915c41a370e50ba8d10b7cd70f9e5d39a5c81c34c7c1be539de42af06f",
+    "../rewrite-shortcuts/depth-tests.rs": "173af0207adb68373ee1902581d00faa36056011226c6278b1b6b51c7aeb7714"
+  },
+  "stage": "prepare",
+  "error_type": "CalledProcessError",
+  "error": "Command '['python3', '<RUM_ROOT>/scripts/run-bounded.py', '--timeout', '30', '--', 'git', 'apply', '--check', '<RUM_ROOT>/research/tagged-pointer/rewrite-switch/switch.patch']' returned non-zero exit status 1."
+}

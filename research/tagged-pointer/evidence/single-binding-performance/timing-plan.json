@@ -1,0 +1,249 @@
+{
+  "recorded_on": "2026-10-21",
+  "modes": [
+    "base-a",
+    "matcher-a",
+    "single-a",
+    "base-b",
+    "matcher-b",
+    "single-b"
+  ],
+  "orders": [
+    [
+      "base-a",
+      "matcher-a",
+      "single-b",
+      "single-a",
+      "matcher-b",
+      "base-b"
+    ],
+    [
+      "matcher-a",
+      "single-a",
+      "base-a",
+      "base-b",
+      "single-b",
+      "matcher-b"
+    ],
+    [
+      "single-a",
+      "base-b",
+      "matcher-a",
+      "matcher-b",
+      "base-a",
+      "single-b"
+    ],
+    [
+      "base-b",
+      "matcher-b",
+      "single-a",
+      "single-b",
+      "matcher-a",
+      "base-a"
+    ],
+    [
+      "matcher-b",
+      "single-b",
+      "base-b",
+      "base-a",
+      "single-a",
+      "matcher-a"
+    ],
+    [
+      "single-b",
+      "base-a",
+      "matcher-b",
+      "matcher-a",
+      "base-b",
+      "single-a"
+    ],
+    [
+      "base-a",
+      "matcher-a",
+      "single-b",
+      "single-a",
+      "matcher-b",
+      "base-b"
+    ],
+    [
+      "matcher-a",
+      "single-a",
+      "base-a",
+      "base-b",
+      "single-b",
+      "matcher-b"
+    ],
+    [
+      "single-a",
+      "base-b",
+      "matcher-a",
+      "matcher-b",
+      "base-a",
+      "single-b"
+    ],
+    [
+      "base-b",
+      "matcher-b",
+      "single-a",
+      "single-b",
+      "matcher-a",
+      "base-a"
+    ],
+    [
+      "matcher-b",
+      "single-b",
+      "base-b",
+      "base-a",
+      "single-a",
+      "matcher-a"
+    ],
+    [
+      "single-b",
+      "base-a",
+      "matcher-b",
+      "matcher-a",
+      "base-b",
+      "single-a"
+    ]
+  ],
+  "blocks": 12,
+  "binaries": {
+    "base-a": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0240>",
+      "sha256": "13959c43b3840d7dff3e16b1f10456584d12513d5ee05e0acbf2f34f87060a7b",
+      "implementation": "base"
+    },
+    "matcher-a": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0242>",
+      "sha256": "40eba556df23dee6bbd0ade829d0920574d527222af397b08155d155af2efd96",
+      "implementation": "matcher"
+    },
+    "single-a": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0244>",
+      "sha256": "1aee145f6005215e8c88f2033f2355d9262c74162375458ddd93b504016b6988",
+      "implementation": "single"
+    },
+    "base-b": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0241>",
+      "sha256": "13959c43b3840d7dff3e16b1f10456584d12513d5ee05e0acbf2f34f87060a7b",
+      "implementation": "base"
+    },
+    "matcher-b": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0243>",
+      "sha256": "40eba556df23dee6bbd0ade829d0920574d527222af397b08155d155af2efd96",
+      "implementation": "matcher"
+    },
+    "single-b": {
+      "binary": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0245>",
+      "sha256": "1aee145f6005215e8c88f2033f2355d9262c74162375458ddd93b504016b6988",
+      "implementation": "single"
+    }
+  },
+  "builds_sha256": "59b73f1bb2adea128484de0e3d8bb4c6953fa74e6fdd7ad0a649a5707779e2be",
+  "cpu": 0,
+  "kernel": "6.18.33.2-microsoft-standard-WSL2",
+  "machine": "x86_64",
+  "aslr": "2",
+  "cpu_model": "AMD Ryzen 7 9800X3D 8-Core Processor",
+  "suite_script_sha256": "9295fa8ebade810474105027cc31593f5f43ff13469cd39bb244184ce01b555b",
+  "scale": 5,
+  "reps": 9,
+  "retained_reps": 11,
+  "within_block_predecessor_counts": {
+    "base-a -> base-b": 2,
+    "base-a -> matcher-a": 2,
+    "base-a -> matcher-b": 2,
+    "base-a -> single-a": 2,
+    "base-a -> single-b": 2,
+    "base-b -> base-a": 2,
+    "base-b -> matcher-a": 2,
+    "base-b -> matcher-b": 2,
+    "base-b -> single-a": 2,
+    "base-b -> single-b": 2,
+    "matcher-a -> base-a": 2,
+    "matcher-a -> base-b": 2,
+    "matcher-a -> matcher-b": 2,
+    "matcher-a -> single-a": 2,
+    "matcher-a -> single-b": 2,
+    "matcher-b -> base-a": 2,
+    "matcher-b -> base-b": 2,
+    "matcher-b -> matcher-a": 2,
+    "matcher-b -> single-a": 2,
+    "matcher-b -> single-b": 2,
+    "single-a -> base-a": 2,
+    "single-a -> base-b": 2,
+    "single-a -> matcher-a": 2,
+    "single-a -> matcher-b": 2,
+    "single-a -> single-b": 2,
+    "single-b -> base-a": 2,
+    "single-b -> base-b": 2,
+    "single-b -> matcher-a": 2,
+    "single-b -> matcher-b": 2,
+    "single-b -> single-a": 2
+  },
+  "block_boundary_predecessor_counts": {
+    "base-a -> matcher-b": 2,
+    "base-b -> matcher-a": 2,
+    "matcher-a -> single-b": 2,
+    "matcher-b -> single-a": 2,
+    "single-a -> base-a": 1,
+    "single-b -> base-b": 2
+  },
+  "sources": {
+    "focus": {
+      "sha256": "7c2f74257f27e15535bc94e4eb183dcb0315967af2fa24712fc753598ed98221",
+      "labels": [
+        "focus-increment-1024",
+        "focus-increment-16000",
+        "focus-increment-reversed-1024",
+        "focus-increment-reversed-16000",
+        "focus-identity-1024",
+        "focus-identity-16000",
+        "focus-miss-1024",
+        "focus-miss-16000",
+        "focus-opaque-body-1024",
+        "focus-opaque-body-16000",
+        "focus-flat-nested-1024",
+        "focus-flat-nested-16000"
+      ],
+      "sentinel": "ISO_FOCUS_PASS",
+      "preflight_sha256": "bf253093dd85f334fdb2b17de4203ade7c3d58b81a06e5ead2b33ddaa5e90b02"
+    },
+    "pipeline": {
+      "sha256": "4a1bce22ae5e811aea356263d3828ae531deb4c6f1d1d7e77b2fd80ed3d14aca",
+      "labels": [
+        "synthetic-rewrite-heavy-hit-4000",
+        "synthetic-rewrite-heavy-hit-16000",
+        "synthetic-mixed-hit-4000",
+        "synthetic-mixed-hit-16000",
+        "synthetic-mixed-control-4000",
+        "synthetic-mixed-control-16000"
+      ],
+      "sentinel": "ISO_PIPELINE_PASS",
+      "preflight_sha256": "3109700b3a3f66db4186aa1d7dd813f5e1c6560974e9f147f5188247856f1009"
+    },
+    "shape": {
+      "sha256": "1b16b5fb52c020425edbd18224f142c96b9578faa421092663d5918c382bb80a",
+      "labels": [
+        "shape-chain-16-positive",
+        "shape-chain-16-negative",
+        "shape-chain-32-positive",
+        "shape-chain-32-negative",
+        "shape-chain-64-positive",
+        "shape-chain-64-negative",
+        "shape-binary-5-positive",
+        "shape-binary-5-negative",
+        "shape-binary-7-positive",
+        "shape-binary-7-negative",
+        "shape-binary-9-positive",
+        "shape-binary-9-negative"
+      ],
+      "sentinel": "ISO_SHAPE_PASS",
+      "preflight_sha256": "5e6065a8d7d1a82772f54c9d64f8eee34db85a084bf13798f621aaca74540d38"
+    }
+  },
+  "semantic_source_sha256": "95d307c02f5ead99d789310efb0eb9cf8f30fa9c8b861dfc323321f4739a3760",
+  "started_utc": "2026-10-21T13:59:50.511224+00:00",
+  "method": "Twelve serial balanced Williams blocks; three uninstrumented implementations with byte-identical A/A copies each; fixed CPU/environment; unchanged 112-label scale5/min9 suite; 11 retained samples per focus/pipeline/shape case. Each process median is one observation; independent units are twelve process blocks. Full per-label gate; no regression exemption or A/A noise subtraction.",
+  "limits": "Same machine/toolchain, synthetic programs. Within-block predecessor balance excludes eleven recorded block boundaries. Byte-identical controls cannot establish compilation-layout causality. No project builds/uploads should run during timing; other host activity and thermal/frequency drift remain possible. Resource observation numbers may differ; value checks do not prove all resource-limit equivalence."
+}

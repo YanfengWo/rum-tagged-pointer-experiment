@@ -1,0 +1,21 @@
+{
+  "study_files_sha256": {
+    "analyze.py": "e59a23122b3b5b146b1b0fd1bae71d22be3870e0347abdc508a7c5201f870eee",
+    "audit.py": "6dcd6b468c319293e39c46f1f26602281549622a3bf4bf50b685f7de44fe20ea",
+    "build.py": "395381ab9ffebd7849b96339259304f66e33abf6f2376ffc5d62f1d74ff45f24",
+    "build_audit.py": "5275dde5b62d5729f369c1de247262828cbe215fda6f79fd871b0bb0d8175055",
+    "build_checks.py": "c9f3d62c44a75336755ab02f5849612e978bc90da76f190345c69dcf51f13f40",
+    "candidate.patch": "6c1e4b87614050416c28633c35f39df606a1c2d3e6758beb45d3a3327e8fc9cd",
+    "README.md": "594cbafbe4c56c36bb547e41275b0a07815f79da71fb77f382b946a73cc9010d",
+    "regression-tests.rs": "b9df0798f60476b456d77c962a37f5262afa221da622007bf14dd6f12437a612",
+    "run-native.py": "77c9e180127eda8c12c6f07fe04ae4167148f2947d3b15984aeaf29fa98ad5d7",
+    "run.py": "3b17c37c71c3ad96d9afb93fc1cc216d6ea8adb6ca9bcbd43914c29fb49776a5",
+    "SEMANTICS.md": "8d96c38e11483a3d6ad85c15c487758db7c4c4bf3ca326fd9baa97278c66f5f3",
+    "session_audit.py": "95e4aeb1268b80a99191a2ebfe148586f5a36c984d9e8cd133d11016216fe4d6",
+    "shape_workloads.py": "b38f169c0f53d2f8a9ad69c4771dcd4b008e3e7fe2c19679d540ec696a1543bd",
+    "statistics_helpers.py": "384ba98bddc818323b2846e9757bdf5969c829476fad71ef0beaa09263869c2e",
+    "workloads.py": "0ed75df3d9feedd70c34c6234928fc0b39a655999e936b84d979e1eee48d5e77"
+  },
+  "monitor_sha256": "25f1ac284ccad67a4d218a167d2c7edde6f7df638c0f437d32916ea56c6317a3",
+  "timing_started": false
+}

@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "native_evidence": "<LAB_SINGLE_BINDING_PERFORMANCE_PATH_0011>",
+  "local_evidence": "<EXPERIMENT>/evidence/single-binding",
+  "started_utc": "2026-10-21T13:59:18.008826+00:00",
+  "idle_seconds_before_timing": 30,
+  "method": "Preflight and all timing sources/live output on Linux storage. No evidence export or project build during timing. Copy retained files to the local workspace only after timing ends.",
+  "finished_utc": "2026-10-21T14:11:17.771697+00:00"
+}

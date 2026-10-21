@@ -1,0 +1,56 @@
+SetAttributes[flatMeasure, HoldAll];
+flatMeasure[label_String, expression_, expected_] := Module[{i, result, resultAlias, seconds},
+  result = expression;
+  If[SameQ[result, expected], Null, Exit[2]];
+  Do[
+    seconds = First[AbsoluteTiming[result = expression]];
+    Print[StringJoin["ISO_TIME\t", label, "\t", ToString[i], "\t", ToString[seconds]]];
+    If[SameQ[result, expected], Null, Exit[2]],
+    {i, 1, 11}
+  ];
+  resultAlias = result;
+  result[[1]] = flatResultMutation;
+  If[SameQ[resultAlias, expected], Null, Exit[2]];
+];
+SetAttributes[focusHead, Flat];
+focusInput = Range[16000]; focusAlias = focusInput;
+focusExpected = Range[2,16001];
+flatMeasure["focus-increment-16000", Replace[focusInput, focusX_Integer :> focusX + 1, {1}], focusExpected];
+If[SameQ[focusInput, Range[16000]] && SameQ[focusAlias, Range[16000]], Null, Exit[2]];
+focusInput = Range[16000]; focusAlias = focusInput;
+focusExpected = Range[16000];
+flatMeasure["focus-miss-16000", Replace[focusInput, focusMissing -> 0, {1}], focusExpected];
+If[SameQ[focusInput, Range[16000]] && SameQ[focusAlias, Range[16000]], Null, Exit[2]];
+Print["ISO_FOCUS_PASS"];
+SetAttributes[flatMeasure, HoldAll];
+flatMeasure[label_String, expression_, expected_] := Module[{i, result, resultAlias, seconds},
+  result = expression;
+  If[SameQ[result, expected], Null, Exit[2]];
+  Do[
+    seconds = First[AbsoluteTiming[result = expression]];
+    Print[StringJoin["ISO_TIME\t", label, "\t", ToString[i], "\t", ToString[seconds]]];
+    If[SameQ[result, expected], Null, Exit[2]],
+    {i, 1, 11}
+  ];
+  resultAlias = result;
+  result[[1]] = flatResultMutation;
+  If[SameQ[resultAlias, expected], Null, Exit[2]];
+];
+pipelineExpected = {Join[Table[-i,{i,1,1}],Range[10,16008]],Range[9,16008],Reverse[Range[16000]],Reverse[Range[16000]]};
+flatMeasure["synthetic-rewrite-heavy-hit-16000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[16000]]; sourceAlias = source; current = source;
+  Do[current = Replace[current, x_Integer :> x + 1, {1}], {step,1,8}];
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,1}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+pipelineExpected = {Join[Table[-i,{i,1,64}],Range[66,16001]],Range[2,16001],Reverse[Range[16000]],Reverse[Range[16000]]};
+flatMeasure["synthetic-mixed-hit-16000", Module[{source, sourceAlias, current, sorted, sortedAlias, i, step, x},
+  source = Reverse[Range[16000]]; sourceAlias = source; current = source;
+  Do[current = Replace[current, x_Integer :> x + 1, {1}], {step,1,1}];
+  sorted = Sort[current]; sortedAlias = sorted;
+  Do[sorted[[i]] = -i, {i,1,64}];
+  {sorted, sortedAlias, source, sourceAlias}
+], pipelineExpected];
+Print["ISO_PIPELINE_PASS"];
+Print["ALIAS_CONFIRM_PASS"];
