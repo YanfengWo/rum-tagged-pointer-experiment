@@ -1,0 +1,541 @@
+--- a/crates/rum-core/src/expr.rs
++++ b/crates/rum-core/src/expr.rs
+@@ -575,18 +575,30 @@
+ 
+ impl SharedExpr {
+     pub fn new(expr: Expr) -> Self {
++        crate::rewrite_work_ledger::event("shared-expr-new", "owner", 1);
+         let shared = Self(Arc::new(expr));
+         record_shared_expr_alloc();
+         shared
+     }
+ 
++    #[track_caller]
+     pub fn into_owned(self) -> Expr {
+         match Arc::try_unwrap(self.0) {
+             Ok(expr) => {
++                crate::rewrite_work_ledger::event(
++                    "into-owned-unique",
++                    std::panic::Location::caller().file(),
++                    1,
++                );
+                 record_into_owned(false);
+                 expr
+             }
+             Err(expr) => {
++                crate::rewrite_work_ledger::event(
++                    "into-owned-copy",
++                    std::panic::Location::caller().file(),
++                    1,
++                );
+                 record_into_owned(true);
+                 expr.as_ref().clone()
+             }
+@@ -639,18 +651,31 @@
+ 
+ impl SharedArgs {
+     pub fn new(args: Vec<Expr>) -> Self {
++        crate::rewrite_work_ledger::event("shared-args-new", "length-slots", args.len());
++        crate::rewrite_work_ledger::event("shared-args-new", "capacity-slots", args.capacity());
+         let shared = Self(Arc::new(args));
+         record_shared_args_alloc();
+         shared
+     }
+ 
++    #[track_caller]
+     pub fn into_vec(self) -> Vec<Expr> {
+         match Arc::try_unwrap(self.0) {
+             Ok(args) => {
++                crate::rewrite_work_ledger::event(
++                    "into-vec-unique",
++                    std::panic::Location::caller().file(),
++                    args.len(),
++                );
+                 record_into_vec(false);
+                 args
+             }
+             Err(args) => {
++                crate::rewrite_work_ledger::event(
++                    "into-vec-copy",
++                    std::panic::Location::caller().file(),
++                    args.len(),
++                );
+                 record_into_vec(true);
+                 args.as_ref().clone()
+             }
+@@ -832,6 +857,7 @@
+         expr.into_owned()
+     }
+ 
++    #[track_caller]
+     pub fn unwrap_shared_args(args: SharedArgs) -> Vec<Expr> {
+         args.into_vec()
+     }
+--- a/crates/rum-core/src/lib.rs
++++ b/crates/rum-core/src/lib.rs
+@@ -18,3 +18,6 @@
+     ReprProfile, record_into_owned, record_into_vec, record_shared_args_alloc,
+     record_shared_expr_alloc, repr_profile_enabled, repr_profile_snapshot,
+ };
++
++#[doc(hidden)]
++pub mod rewrite_work_ledger;
+--- a/crates/rum-core/src/rewrite_work_ledger.rs
++++ b/crates/rum-core/src/rewrite_work_ledger.rs
+@@ -0,0 +1,154 @@
++//! Diagnostic-only, synchronous rewrite work accounting.
++//!
++//! A `replace` scope opens a root; other scopes and events are ignored outside
++//! that root. A suspended operation's later resumption is a separate lifetime:
++//! these counters do not attribute resumed work to an already dropped scope.
++
++use std::cell::RefCell;
++use std::collections::BTreeMap;
++use std::marker::PhantomData;
++use std::rc::Rc;
++use std::sync::atomic::{AtomicU8, Ordering};
++
++// 0 = uninitialized, 1 = disabled, 2 = enabled. No clocks or global counters.
++static ENABLED: AtomicU8 = AtomicU8::new(0);
++
++type RowKey = (String, &'static str, String, usize);
++
++#[derive(Default)]
++struct State {
++    next_id: u64,
++    active_id: Option<u64>,
++    stack: Vec<&'static str>,
++    rows: BTreeMap<RowKey, u64>,
++}
++
++thread_local! {
++    static STATE: RefCell<State> = RefCell::new(State::default());
++}
++
++/// Keeps one synchronous phase active until dropped on its originating thread.
++#[must_use = "keep the scope guard alive for the entire diagnostic phase"]
++pub struct Scope {
++    root_id: Option<u64>,
++    depth: usize,
++    label: &'static str,
++    _same_thread: PhantomData<Rc<()>>,
++}
++
++fn enabled() -> bool {
++    match ENABLED.load(Ordering::Relaxed) {
++        1 => false,
++        2 => true,
++        _ => load_enabled(),
++    }
++}
++
++#[cold]
++fn load_enabled() -> bool {
++    let value = if std::env::var("RUM_REWRITE_WORK_LEDGER").as_deref() == Ok("1") {
++        2
++    } else {
++        1
++    };
++    ENABLED.store(value, Ordering::Relaxed);
++    value == 2
++}
++
++impl State {
++    fn record(&mut self, kind: &'static str, detail: &str, amount: usize) {
++        let key = (self.stack.join("/"), kind, detail.to_owned(), amount);
++        let calls = self.rows.entry(key).or_default();
++        *calls = calls.checked_add(1).expect("rewrite ledger call overflow");
++    }
++}
++
++/// Starts a phase, or an inactive guard if no rewrite root is active.
++pub fn scope(label: &'static str) -> Scope {
++    let mut guard = Scope {
++        root_id: None,
++        depth: 0,
++        label,
++        _same_thread: PhantomData,
++    };
++    if !enabled() {
++        return guard;
++    }
++    STATE.with(|cell| {
++        let mut state = cell.borrow_mut();
++        if state.active_id.is_none() {
++            if label != "replace" {
++                return;
++            }
++            assert!(state.stack.is_empty(), "rewrite ledger stale phase stack");
++            assert!(state.rows.is_empty(), "rewrite ledger stale rows");
++            state.next_id = state
++                .next_id
++                .checked_add(1)
++                .expect("rewrite ledger root ID overflow");
++            state.active_id = Some(state.next_id);
++            eprintln!("rum-work\troot\t{}\tbegin", state.next_id);
++        }
++        state.stack.push(label);
++        guard.root_id = state.active_id;
++        guard.depth = state.stack.len();
++        state.record("scope", label, 0);
++    });
++    guard
++}
++
++/// Records one call with a work amount; callers define the amount's unit.
++pub fn event(kind: &'static str, detail: &str, amount: usize) {
++    if !enabled() {
++        return;
++    }
++    STATE.with(|cell| {
++        let mut state = cell.borrow_mut();
++        if state.active_id.is_some() {
++            state.record(kind, detail, amount);
++        }
++    });
++}
++
++fn hex_detail(detail: &str) -> String {
++    const DIGITS: &[u8; 16] = b"0123456789abcdef";
++    let mut hex = String::with_capacity(detail.len() * 2);
++    for byte in detail.bytes() {
++        hex.push(char::from(DIGITS[usize::from(byte >> 4)]));
++        hex.push(char::from(DIGITS[usize::from(byte & 15)]));
++    }
++    hex
++}
++
++impl Drop for Scope {
++    fn drop(&mut self) {
++        let Some(root_id) = self.root_id else {
++            return;
++        };
++        STATE.with(|cell| {
++            let mut state = cell.borrow_mut();
++            // A mismatched guard lifetime invalidates attribution. Fail loudly
++            // instead of emitting apparently complete but misattributed rows.
++            assert_eq!(
++                state.active_id,
++                Some(root_id),
++                "rewrite ledger root mismatch"
++            );
++            assert_eq!(state.stack.len(), self.depth, "rewrite ledger scope order");
++            assert_eq!(state.stack.last().copied(), Some(self.label));
++            state.stack.pop();
++            if self.depth != 1 {
++                return;
++            }
++            for ((phase, kind, detail, amount), calls) in &state.rows {
++                eprintln!(
++                    "rum-work\trow\t{root_id}\t{phase}\t{kind}\t{}\t{amount}\t{calls}",
++                    hex_detail(detail),
++                );
++            }
++            eprintln!("rum-work\troot\t{root_id}\tend");
++            state.rows.clear();
++            state.active_id = None;
++        });
++    }
++}
+--- a/crates/rum-runtime/src/runtime/arithmetic/canonical.rs
++++ b/crates/rum-runtime/src/runtime/arithmetic/canonical.rs
+@@ -6,9 +6,18 @@
+ 
+ impl Session {
+     pub(super) fn eval_plus(&mut self, head: &Expr, args: &[Expr]) -> Result<Expr, EvalError> {
++        rum_core::rewrite_work_ledger::event("plus-builtin", "calls", 1);
++        rum_core::rewrite_work_ledger::event("plus-builtin", "input-slots", args.len());
+         if let Some(value) = fast_integer_plus(args) {
++            rum_core::rewrite_work_ledger::event("plus-fast-integer", "success", 1);
++            rum_core::rewrite_work_ledger::event(
++                "plus-fast-integer",
++                "success-input-slots",
++                args.len(),
++            );
+             return Ok(value);
+         }
++        rum_core::rewrite_work_ledger::event("plus-fast-integer", "fallback", 1);
+ 
+         self.combine_additive_args(head, args)
+     }
+--- a/crates/rum-runtime/src/runtime/call_preparation.rs
++++ b/crates/rum-runtime/src/runtime/call_preparation.rs
+@@ -357,7 +357,19 @@
+         if attributes.contains(Attribute::Orderless) {
+             let runtime_profile_orderless =
+                 runtime_path_timing_start("prepare_arguments.normalize.orderless");
+-            normalized_args.sort_by(compare_expr_canonical);
++            let ledger_head = expr_as_symbol(head)
++                .map(|symbol| symbol.name())
++                .unwrap_or("<compound>");
++            rum_core::rewrite_work_ledger::event("orderless-sort", ledger_head, 1);
++            rum_core::rewrite_work_ledger::event(
++                "orderless-sort-input-slots",
++                ledger_head,
++                normalized_args.len(),
++            );
++            normalized_args.sort_by(|left, right| {
++                rum_core::rewrite_work_ledger::event("orderless-sort-comparison", ledger_head, 1);
++                compare_expr_canonical(left, right)
++            });
+             record_profile_runtime_path_timing(
+                 runtime_profile_orderless,
+                 RuntimeProfileOutcome::Ok,
+@@ -378,9 +390,26 @@
+         args: SharedArgs,
+         attributes: AttributeSet,
+     ) -> SharedArgs {
++        let _ledger_normalization = rum_core::rewrite_work_ledger::scope("normalization");
++        let ledger_head = expr_as_symbol(head)
++            .map(|symbol| symbol.name())
++            .unwrap_or("<compound>");
++        rum_core::rewrite_work_ledger::event("normalization-request", ledger_head, 1);
+         if attribute_normalization_is_noop(head, args.as_ref(), attributes) {
++            rum_core::rewrite_work_ledger::event("normalization-reuse", ledger_head, 1);
++            rum_core::rewrite_work_ledger::event(
++                "normalization-reuse-slots",
++                ledger_head,
++                args.len(),
++            );
+             return args;
+         }
++        rum_core::rewrite_work_ledger::event("normalization-rebuild", ledger_head, 1);
++        rum_core::rewrite_work_ledger::event(
++            "normalization-rebuild-slots",
++            ledger_head,
++            args.len(),
++        );
+ 
+         SharedArgs::new(self.normalize_call_args_by_attributes(
+             head,
+--- a/crates/rum-runtime/src/runtime/definitions/application/replace_all.rs
++++ b/crates/rum-runtime/src/runtime/definitions/application/replace_all.rs
+@@ -170,6 +170,8 @@
+         rules: RewriteRulePlan,
+         source: RuleApplicationSource,
+     ) -> Result<Option<Expr>, EvalError> {
++        let _ledger_apply = rum_core::rewrite_work_ledger::scope("rule-apply");
++        rum_core::rewrite_work_ledger::event("rule-apply", "request", 1);
+         let normalized_expr = self.normalize_match_expr(&expr);
+         // Replace and ReplaceAt build this indexed, Arc-backed plan once per
+         // traversal; their cloneable applier carries the same plan across
+@@ -448,17 +450,44 @@
+                 &rule.matcher,
+                 &normalized_expr,
+             );
++            rum_core::rewrite_work_ledger::event(
++                "rule-prefilter",
++                if would_reject { "reject" } else { "pass" },
++                1,
++            );
+             record_profile_rewrite_rule_prefilter_candidate(would_reject);
+             if would_reject {
+                 continue;
+             }
+-            let matcher = rule.matcher.clone();
+-
+-            let match_result = self.match_compiled_owned(
+-                matcher,
+-                normalized_expr.clone(),
+-                SymbolExprMap::default(),
+-            );
++            // These two leaf forms cannot evaluate guards or suspend. Reuse
++            // their existing definition matcher without binding snapshots.
++            let has_simple_matcher = match &rule.matcher {
++                MatcherNode::Blank { .. } => true,
++                MatcherNode::Named { inner, .. } => {
++                    matches!(inner.as_ref(), MatcherNode::Blank { .. })
++                }
++                _ => false,
++            };
++            let fast_outcome = if rule.guards.is_empty() && has_simple_matcher {
++                self.try_fast_definition_match_compiled(&rule.matcher, &normalized_expr)
++            } else {
++                None
++            };
++            let match_result = match fast_outcome {
++                Some(outcome) => {
++                    rum_core::rewrite_work_ledger::event(
++                        "rewrite-leaf-match",
++                        if outcome.matched { "hit" } else { "miss" },
++                        1,
++                    );
++                    Ok(outcome)
++                }
++                None => self.match_compiled_owned(
++                    rule.matcher.clone(),
++                    normalized_expr.clone(),
++                    SymbolExprMap::default(),
++                ),
++            };
+ 
+             let outcome = match match_result {
+                 Ok(outcome) => outcome,
+@@ -473,6 +502,11 @@
+                 }
+                 Err(error) => return Err(error),
+             };
++            rum_core::rewrite_work_ledger::event(
++                "rule-match",
++                if outcome.matched { "hit" } else { "miss" },
++                1,
++            );
+             record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
+ 
+             if !outcome.matched {
+--- a/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
++++ b/crates/rum-runtime/src/runtime/expr_runtime_helpers.rs
+@@ -95,6 +95,11 @@
+ }
+ 
+ pub(super) fn flatten_flat_call_args(head: &Expr, args: Vec<Expr>) -> Vec<Expr> {
++    let ledger_head = expr_as_symbol(head)
++        .map(|symbol| symbol.name())
++        .unwrap_or("<compound>");
++    rum_core::rewrite_work_ledger::event("flatten-call", ledger_head, 1);
++    rum_core::rewrite_work_ledger::event("flatten-input-slots", ledger_head, args.len());
+     let mut flattened = Vec::new();
+ 
+     for arg in args {
+@@ -102,11 +107,25 @@
+             Expr::Call {
+                 head: nested_head,
+                 args: nested_args,
+-            } if nested_head.as_ref() == head => flattened.extend(nested_args),
++            } if nested_head.as_ref() == head => {
++                rum_core::rewrite_work_ledger::event("flatten-nested-calls", ledger_head, 1);
++                rum_core::rewrite_work_ledger::event(
++                    "flatten-nested-slots",
++                    ledger_head,
++                    nested_args.len(),
++                );
++                flattened.extend(nested_args);
++            }
+             other => flattened.push(other),
+         }
+     }
+ 
++    rum_core::rewrite_work_ledger::event("flatten-output-slots", ledger_head, flattened.len());
++    rum_core::rewrite_work_ledger::event(
++        "flatten-output-capacity-slots",
++        ledger_head,
++        flattened.capacity(),
++    );
+     flattened
+ }
+ 
+--- a/crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs
++++ b/crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs
+@@ -54,6 +54,7 @@
+         &mut self,
+         args: &SharedArgs,
+     ) -> Result<Expr, EvalError> {
++        let _ledger_replace = rum_core::rewrite_work_ledger::scope("replace");
+         let args_slice = args.as_ref();
+         if args_slice.len() == 1 {
+             return Ok(self.invalid_call("Replace", args_slice));
+@@ -67,7 +68,10 @@
+             return Ok(self.invalid_call_with_arg_range("Replace", args_slice, 2, 3));
+         };
+ 
+-        let target_result = self.evaluate(args_slice[0].clone());
++        let target_result = {
++            let _ledger_target = rum_core::rewrite_work_ledger::scope("target-evaluation");
++            self.evaluate(args_slice[0].clone())
++        };
+         match target_result {
+             Ok(target) => self.resume_replace_after_target(
+                 target,
+@@ -204,12 +208,18 @@
+                 "expected a standard levelspec as the optional third argument",
+             ));
+         };
+-        let replaced_result = self.replace_owned(target, rule_plan, levels, 0, include_heads);
++        let replaced_result = {
++            let _ledger_traversal = rum_core::rewrite_work_ledger::scope("traversal");
++            self.replace_owned(target, rule_plan, levels, 0, include_heads)
++        };
+         crate::resume_or_suspend!(
+             self,
+             replaced_result,
+             ok(outcome) => { let session = self; (|| {
+-                    let evaluated_result = session.evaluate(outcome.expr);
++                    let evaluated_result = {
++                        let _ledger_result = rum_core::rewrite_work_ledger::scope("result-evaluation");
++                        session.evaluate(outcome.expr)
++                    };
+                     crate::resume_or_suspend!(
+             session,
+             evaluated_result,
+@@ -275,12 +285,14 @@
+         level: usize,
+         include_heads: bool,
+     ) -> Result<ReplaceOutcome, EvalError> {
++        rum_core::rewrite_work_ledger::event("replace-node", "entry", 1);
+         let depth = if include_heads {
+             replace_expr_depth_with_heads(&expr)
+         } else {
+             replace_expr_depth(&expr)
+         };
+         if levels.matches(level, depth) {
++            rum_core::rewrite_work_ledger::event("replace-level-selected", "entry", 1);
+             let replaced_result = self.apply_rewrite_rule_plan_once(
+                 expr.clone(),
+                 rule_plan.clone(),
+@@ -800,6 +812,7 @@
+ }
+ 
+ fn replace_expr_depth(expr: &Expr) -> usize {
++    rum_core::rewrite_work_ledger::event("replace-depth-node", "without-heads", 1);
+     match expr {
+         Expr::Atom(_) => 1,
+         Expr::Call { .. } if association_entries_from_expr(expr).is_some() => {
+@@ -818,6 +831,7 @@
+ }
+ 
+ fn replace_expr_depth_with_heads(expr: &Expr) -> usize {
++    rum_core::rewrite_work_ledger::event("replace-depth-node", "with-heads", 1);
+     match expr {
+         Expr::Atom(_) => 1,
+         Expr::Call { head, .. } if association_entries_from_expr(expr).is_some() => {
+--- a/crates/rum-runtime/src/runtime/pattern_matching/core.rs
++++ b/crates/rum-runtime/src/runtime/pattern_matching/core.rs
+@@ -37,6 +37,8 @@
+         value: Expr,
+         bindings: SymbolExprMap,
+     ) -> Result<CompiledMatchOutcome, EvalError> {
++        let _ledger_matcher = rum_core::rewrite_work_ledger::scope("matcher");
++        rum_core::rewrite_work_ledger::event("matcher", "entry", 1);
+         let snapshot = BindingSnapshot::capture(&bindings, &matcher);
+         match self.match_compiled_inner_owned(matcher, value, bindings) {
+             Ok(outcome) => Ok(finish_compiled_match(snapshot, outcome)),
+@@ -550,13 +552,16 @@
+     fn capture(bindings: &SymbolExprMap, matcher: &MatcherNode) -> Self {
+         let mut names = BTreeSet::new();
+         collect_matcher_binding_names(matcher, &mut names);
+-        let entries = names
++        rum_core::rewrite_work_ledger::event("binding-snapshot", "capture", 1);
++        rum_core::rewrite_work_ledger::event("binding-snapshot", "names", names.len());
++        let entries: Vec<_> = names
+             .into_iter()
+             .map(|name| {
+                 let previous = bindings.get(&name).cloned();
+                 (name, previous)
+             })
+             .collect();
++        rum_core::rewrite_work_ledger::event("binding-snapshot", "entries", entries.len());
+         Self { entries }
+     }
+ 
+--- a/crates/rum-runtime/src/runtime/substitution/binding_substitution.rs
++++ b/crates/rum-runtime/src/runtime/substitution/binding_substitution.rs
+@@ -90,6 +90,9 @@
+     bindings: &SymbolExprMap,
+     _may_splice_without_bindings: bool,
+ ) -> Expr {
++    let _ledger_rhs = rum_core::rewrite_work_ledger::scope("rhs");
++    rum_core::rewrite_work_ledger::event("rhs-substitution", "request", 1);
++    rum_core::rewrite_work_ledger::event("rhs-substitution", "bindings", bindings.len());
+     let start = rule_rhs_timing_start();
+     record_substitution_sharing_counter(
+         &RULE_RHS_SUBSTITUTION_REQUEST_COUNT,

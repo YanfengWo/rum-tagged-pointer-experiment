@@ -1,0 +1,7 @@
+   Compiling rum-runtime v0.2.0 (<LAB_REWRITE_SHORTCUTS_PATH_0221>
+   Compiling rum-stdlib v0.2.0 (<LAB_REWRITE_SHORTCUTS_PATH_0222>
+   Compiling rum-host v0.2.0 (<LAB_REWRITE_SHORTCUTS_PATH_0218>
+   Compiling rum-terminal v0.2.0 (<LAB_REWRITE_SHORTCUTS_PATH_0224>
+   Compiling rum-repl v0.2.0 (<LAB_REWRITE_SHORTCUTS_PATH_0220>
+   Compiling rum-cli v0.2.0 (<LAB_REWRITE_SHORTCUTS_PATH_0215>
+    Finished `release` profile [optimized] target(s) in 44.79s

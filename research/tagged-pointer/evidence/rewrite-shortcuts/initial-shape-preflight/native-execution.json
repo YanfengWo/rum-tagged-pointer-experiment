@@ -1,0 +1,11 @@
+{
+  "status": "FAILED",
+  "native_evidence": "<LAB_REWRITE_SHORTCUTS_PATH_0019>",
+  "local_evidence": "<EXPERIMENT>/evidence/rewrite-shortcuts",
+  "started_utc": "2026-10-21T01:53:24.396296+00:00",
+  "idle_seconds_before_timing": 30,
+  "method": "Preflight and all timing sources/live output on Linux storage. No evidence export or project build during timing. Copy retained files to the local workspace only after timing ends.",
+  "error_type": "CalledProcessError",
+  "error": "Command '['python3', '<RUM_ROOT>/scripts/run-bounded.py', '--timeout', '300', '--', 'python3', '<RUM_ROOT>/research/tagged-pointer/rewrite-shortcuts/run.py', '<LAB_REWRITE_SHORTCUTS_PATH_0019>', '--preflight']' returned non-zero exit status 1.",
+  "finished_utc": "2026-10-21T01:53:26.829337+00:00"
+}

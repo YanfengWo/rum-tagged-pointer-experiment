@@ -1,0 +1,9 @@
+(* Deterministic work accounting; no elapsed-time measurements. *)
+SetAttributes[phaseF, Flat];
+phaseInput = Range[8];
+phaseAlias = phaseInput;
+phaseResult = Replace[phaseInput, phaseX_Integer :> phaseF[phaseF[phaseX], 1], {1}];
+If[SameQ[phaseResult, {phaseF[1,1],phaseF[2,1],phaseF[3,1],phaseF[4,1],phaseF[5,1],phaseF[6,1],phaseF[7,1],phaseF[8,1]}], Null, Print["WORK_LEDGER_FAIL\tflat-nested\t8\tresult"]; Exit[2]];
+If[SameQ[phaseInput, {1,2,3,4,5,6,7,8}], Null, Print["WORK_LEDGER_FAIL\tflat-nested\t8\tinput"]; Exit[2]];
+If[SameQ[phaseAlias, {1,2,3,4,5,6,7,8}], Null, Print["WORK_LEDGER_FAIL\tflat-nested\t8\talias"]; Exit[2]];
+Print["WORK_LEDGER_PASS\tflat-nested\t8"];

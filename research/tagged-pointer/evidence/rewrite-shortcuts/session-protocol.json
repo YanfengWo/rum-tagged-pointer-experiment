@@ -1,0 +1,7 @@
+{
+  "recorded_before_timing": true,
+  "windows_utc": "2026-10-21T01:52:56.389714+00:00",
+  "initial_precheck": "locked; first launcher refused before WSL timing started",
+  "decision": "Proceed with serial paired comparisons under the sampled session condition. Do not claim unlocked timing. Retain all lock samples and any transition; do not change Windows locking settings.",
+  "limit": "This measures relative implementations in the observed state, not lock/unlock causal effects."
+}

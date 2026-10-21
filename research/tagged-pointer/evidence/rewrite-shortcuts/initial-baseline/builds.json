@@ -1,0 +1,46 @@
+{
+  "status": "FAILED",
+  "pin": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "toolchain": "1.85.0",
+  "source_root": "<LAB_REWRITE_SHORTCUTS_PATH_0225>",
+  "target_root": "<LAB_REWRITE_SHORTCUTS_PATH_0236>",
+  "jobs": 2,
+  "instrumentation_present": false,
+  "default_checkout_changed": false,
+  "preserved_binaries": [
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0001>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0003>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    },
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0002>",
+      "sha256": "f9e3adcebb3da653c9b6b55391a776bc6952afb73aa37d29ca932e42d115e09c"
+    }
+  ],
+  "prior_binaries_preserved": true,
+  "variants": [
+    {
+      "mode": "base",
+      "status": "RUNNING",
+      "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patched_files": {},
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0253>",
+      "binary_sha256": "ea82229333cb4fcca7b0f89bce60048db952b3bbd061e19981f5716164b71e98"
+    }
+  ],
+  "builder_sha256": "fa23aca2e275c2ee082e8f46d8883b857b18fb93eed51481a26171d2cc8eeb7c",
+  "overlay_inputs": {
+    "matcher.patch": "5f0f958426d4dc1e6b8917fa33739c5b4334e75bc92a5bf8f891d90643c0bbd6",
+    "depth.patch": "41dd29269ae5576e0842d83dde7db2dba7fe50543b4dae91bb2216ec3c5d057b",
+    "matcher-tests.rs": "703668915c41a370e50ba8d10b7cd70f9e5d39a5c81c34c7c1be539de42af06f",
+    "depth-tests.rs": "5c92db2e42d35070fa2d547d1daaf0ab4115190d912db28a19e03fad9da75521"
+  },
+  "stage": "base-workspace",
+  "error_type": "CalledProcessError",
+  "error": "Command '['python3', '<RUM_ROOT>/scripts/run-bounded.py', '--timeout', '1800', '--', 'cargo', '+1.85.0', 'test', '--workspace', '--locked', '--offline', '--', '--test-threads=1']' returned non-zero exit status 101.",
+  "source_restored": true
+}

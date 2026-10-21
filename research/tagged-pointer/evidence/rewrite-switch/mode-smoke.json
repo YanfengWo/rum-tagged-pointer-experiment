@@ -1,0 +1,46 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "label": "unset",
+      "valid": true,
+      "exit_code": 0
+    },
+    {
+      "label": "base",
+      "valid": true,
+      "exit_code": 0
+    },
+    {
+      "label": "matcher",
+      "valid": true,
+      "exit_code": 0
+    },
+    {
+      "label": "depth",
+      "valid": true,
+      "exit_code": 0
+    },
+    {
+      "label": "combined",
+      "valid": true,
+      "exit_code": 0
+    },
+    {
+      "label": "empty",
+      "valid": false,
+      "exit_code": 101
+    },
+    {
+      "label": "unknown",
+      "valid": false,
+      "exit_code": 101
+    },
+    {
+      "label": "spaced",
+      "valid": false,
+      "exit_code": 101
+    }
+  ],
+  "limits": "Independent-process mode handling; no test mutates the selected mode within a process."
+}

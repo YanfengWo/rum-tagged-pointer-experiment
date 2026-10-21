@@ -1,0 +1,8 @@
+(* Deterministic work accounting; no elapsed-time measurements. *)
+phaseInput = Range[64];
+phaseAlias = phaseInput;
+phaseResult = Replace[phaseInput, phaseX_Integer :> phaseF[phaseX], {1}];
+If[SameQ[phaseResult, {phaseF[1],phaseF[2],phaseF[3],phaseF[4],phaseF[5],phaseF[6],phaseF[7],phaseF[8],phaseF[9],phaseF[10],phaseF[11],phaseF[12],phaseF[13],phaseF[14],phaseF[15],phaseF[16],phaseF[17],phaseF[18],phaseF[19],phaseF[20],phaseF[21],phaseF[22],phaseF[23],phaseF[24],phaseF[25],phaseF[26],phaseF[27],phaseF[28],phaseF[29],phaseF[30],phaseF[31],phaseF[32],phaseF[33],phaseF[34],phaseF[35],phaseF[36],phaseF[37],phaseF[38],phaseF[39],phaseF[40],phaseF[41],phaseF[42],phaseF[43],phaseF[44],phaseF[45],phaseF[46],phaseF[47],phaseF[48],phaseF[49],phaseF[50],phaseF[51],phaseF[52],phaseF[53],phaseF[54],phaseF[55],phaseF[56],phaseF[57],phaseF[58],phaseF[59],phaseF[60],phaseF[61],phaseF[62],phaseF[63],phaseF[64]}], Null, Print["WORK_LEDGER_FAIL\topaque-body\t64\tresult"]; Exit[2]];
+If[SameQ[phaseInput, {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64}], Null, Print["WORK_LEDGER_FAIL\topaque-body\t64\tinput"]; Exit[2]];
+If[SameQ[phaseAlias, {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64}], Null, Print["WORK_LEDGER_FAIL\topaque-body\t64\talias"]; Exit[2]];
+Print["WORK_LEDGER_PASS\topaque-body\t64"];

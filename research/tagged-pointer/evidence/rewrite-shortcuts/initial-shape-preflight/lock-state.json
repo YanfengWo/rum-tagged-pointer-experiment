@@ -1,0 +1,41 @@
+{
+  "method": "WTSInfoEx SessionFlags sampled each second around the WSL process lifetime; Windows10+ 0=locked,1=unlocked. No account fields retained.",
+  "samples": [
+    {
+      "utc": "2026-10-21T01:53:06.309685+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:07.314331+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:08.314828+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:09.315161+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:10.315842+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:11.316363+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:12.316715+00:00",
+      "state": "locked"
+    },
+    {
+      "utc": "2026-10-21T01:53:13.317176+00:00",
+      "state": "locked"
+    }
+  ],
+  "interval_seconds": 1,
+  "all_samples_unlocked": false,
+  "exit_code": 1,
+  "limits": "Discrete samples are not continuous coverage. Windows/WSL UTC clocks may differ; lifetime ordering uses the outer process, not cross-clock timestamp subtraction."
+}

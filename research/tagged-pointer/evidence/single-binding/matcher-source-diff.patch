@@ -1,0 +1,38 @@
+--- a/crates/rum-runtime/src/runtime/definitions/application/replace_all.rs
++++ b/crates/rum-runtime/src/runtime/definitions/application/replace_all.rs
+@@ -452,13 +452,28 @@
+             if would_reject {
+                 continue;
+             }
+-            let matcher = rule.matcher.clone();
+-
+-            let match_result = self.match_compiled_owned(
+-                matcher,
+-                normalized_expr.clone(),
+-                SymbolExprMap::default(),
+-            );
++            // These two leaf forms cannot evaluate guards or suspend. Reuse
++            // their existing definition matcher without binding snapshots.
++            let has_simple_matcher = match &rule.matcher {
++                MatcherNode::Blank { .. } => true,
++                MatcherNode::Named { inner, .. } => {
++                    matches!(inner.as_ref(), MatcherNode::Blank { .. })
++                }
++                _ => false,
++            };
++            let fast_outcome = if rule.guards.is_empty() && has_simple_matcher {
++                self.try_fast_definition_match_compiled(&rule.matcher, &normalized_expr)
++            } else {
++                None
++            };
++            let match_result = match fast_outcome {
++                Some(outcome) => Ok(outcome),
++                None => self.match_compiled_owned(
++                    rule.matcher.clone(),
++                    normalized_expr.clone(),
++                    SymbolExprMap::default(),
++                ),
++            };
+ 
+             let outcome = match match_result {
+                 Ok(outcome) => outcome,

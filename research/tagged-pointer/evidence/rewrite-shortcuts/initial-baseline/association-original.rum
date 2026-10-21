@@ -1,0 +1,2 @@
+Print[Replace[Association[1 -> g[2], 3 -> 4], _Integer -> 9, {1, Infinity}]];
+Print[Replace[Association[1 -> g[2], 3 -> 4], _Integer -> 9, {-1}]];

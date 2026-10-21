@@ -1,5 +1,9 @@
 # rum 原版基线与标签表示实验入口
 
+## Safe rewrite candidates and validation status
+
+The [leaf matcher and positive-level depth candidates](rewrite-shortcuts/README.md) have complete separate-build measurements, with every regression retained. The [same-executable control](rewrite-switch/README.md) and [borrowed single-binding candidate](single-binding/README.md) have passed correctness validation; their performance gates are deferred. No default runtime integration is selected.
+
 ## Uninstrumented Flat validation
 
 Four implementations are compared on the same idle WSL host, with complete original-suite labels, per-implementation A/A controls, focused rewrite cases and synthetic pipelines. All observed slower medians and resource-observation boundaries are retained. See [protocol and results](flat-validation/README.md). Default runtime source remains unchanged.

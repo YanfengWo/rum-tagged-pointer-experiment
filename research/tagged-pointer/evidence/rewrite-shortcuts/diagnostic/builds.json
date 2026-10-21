@@ -1,0 +1,270 @@
+{
+  "status": "PASS",
+  "pin": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "source_root": "<LAB_REWRITE_SHORTCUTS_PATH_0004>",
+  "target_root": "<LAB_REWRITE_SHORTCUTS_PATH_0014>",
+  "toolchain": "1.85.0",
+  "jobs": 2,
+  "diagnostic_only": true,
+  "no_clock_measurements": true,
+  "source_hashes": {
+    "rewrite-shortcuts/diagnostic_build.py": "c21de2ce26027e8503ce0d970514e21d130e12b95594b45ed41e41e289678f93",
+    "rewrite-shortcuts/diagnostic_run.py": "2b575229dc67b33b67c94cf3a4ef1581f8bb6769644814c1162169a15947317a",
+    "rewrite-shortcuts/build_support.py": "ff9e5c2dc13a04a0e8ca8eeb326eb4da07c29056548b7e122b2e7968032319be",
+    "rewrite-shortcuts/matcher.patch": "5f0f958426d4dc1e6b8917fa33739c5b4334e75bc92a5bf8f891d90643c0bbd6",
+    "rewrite-shortcuts/depth.patch": "41dd29269ae5576e0842d83dde7db2dba7fe50543b4dae91bb2216ec3c5d057b",
+    "copy-attribution/prepare.py": "0c23b0ffbdbf9cf36bef2da934fb36ecf3de1b840afc60b98b4b996436f5ac07",
+    "copy-attribution/regression-tests.rs": "2d53d99c16eb0f593be1987bcf742f6ded262d45ea043e1f53de0fce3e856504",
+    "rewrite-work-ledger/patch_core.py": "a21de3c1e9aca3caaa25802590beb7d464ae481ef401c340063dab8126ef2532",
+    "rewrite-work-ledger/patch_runtime.py": "a70b717180977678c6c7badb173aea3822f47585abdffecead634b70e5117531",
+    "rewrite-work-ledger/ledger.rs": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea",
+    "rewrite-work-ledger/workloads.py": "12f36591c8256f5f2c5c226a1d41ee5dd9e26e06eb0d41ed8c77854336e714c1",
+    "rewrite-work-ledger/parse_ledger.py": "144f2aa57b578e9d75caf973a25ea75c8a340bf97a02938856b34caca499e0ab"
+  },
+  "preserved_binaries": [
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0001>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0003>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    },
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0002>",
+      "sha256": "f9e3adcebb3da653c9b6b55391a776bc6952afb73aa37d29ca932e42d115e09c"
+    }
+  ],
+  "variants": [
+    {
+      "mode": "base",
+      "status": "PASS",
+      "adaptations": [],
+      "functional_files": [],
+      "source_diff_sha256": "e7445499a5b840fb51ab6938bd5c26ed26e474f2e0dc1bc911328432b1fe94ad",
+      "functional_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "instrumentation_diff_sha256": "e7445499a5b840fb51ab6938bd5c26ed26e474f2e0dc1bc911328432b1fe94ad",
+      "source_files": {
+        "crates/rum-core/src/expr.rs": {
+          "original_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2"
+        },
+        "crates/rum-core/src/lib.rs": {
+          "original_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90"
+        },
+        "crates/rum-core/src/rewrite_work_ledger.rs": {
+          "original_sha256": null,
+          "diagnostic_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "original_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf"
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "original_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da"
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "original_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "b6f4966bde84f7568ba244e3d7cf5536040deb5bb11ef8fc64ff4eb04a73c5c4"
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "original_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "01babd1745a2f08d4a282e98a69c8a47ee22cad1b56a1c09f396c71b75f76a95"
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "original_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "0a9640002564d1f9e61e53674ba9552781833d6364a9ec28a48a6ed694f475cc"
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "original_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de"
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "original_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e"
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0015>",
+      "binary_sha256": "2be9b07831bfc2c217481833279e8394340a7e7c77e2912d93ccabceae61935e"
+    },
+    {
+      "mode": "matcher",
+      "status": "PASS",
+      "adaptations": [
+        "unique-leaf-event"
+      ],
+      "functional_files": [
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs"
+      ],
+      "source_diff_sha256": "505e909531ff5cf726b53a0a36b4175c7e52a1d053c598ed840eba87112d5354",
+      "functional_diff_sha256": "5f0f958426d4dc1e6b8917fa33739c5b4334e75bc92a5bf8f891d90643c0bbd6",
+      "instrumentation_diff_sha256": "730f7491dbe2e215eaff629e445218185a8474c71af54f17d80ee54ce84a89bf",
+      "source_files": {
+        "crates/rum-core/src/expr.rs": {
+          "original_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2"
+        },
+        "crates/rum-core/src/lib.rs": {
+          "original_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90"
+        },
+        "crates/rum-core/src/rewrite_work_ledger.rs": {
+          "original_sha256": null,
+          "diagnostic_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "original_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf"
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "original_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da"
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "original_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "023cca87e94546a6a0a095199d686aef3fe2a7ea4f2397ddef2ed3af4deb302a"
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "original_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "01babd1745a2f08d4a282e98a69c8a47ee22cad1b56a1c09f396c71b75f76a95"
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "original_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "0a9640002564d1f9e61e53674ba9552781833d6364a9ec28a48a6ed694f475cc"
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "original_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de"
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "original_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e"
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0018>",
+      "binary_sha256": "062e5549b3b34e13abdf6cd42fe1698e11117bcec079c3093e153db9e2b92234"
+    },
+    {
+      "mode": "depth",
+      "status": "PASS",
+      "adaptations": [
+        "unique-input-depth"
+      ],
+      "functional_files": [
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs"
+      ],
+      "source_diff_sha256": "3824eb710d57d9b2d346c6e1e80a50686226cc6613d18f67db40d697a5fc7527",
+      "functional_diff_sha256": "41dd29269ae5576e0842d83dde7db2dba7fe50543b4dae91bb2216ec3c5d057b",
+      "instrumentation_diff_sha256": "6ea9d1c26f68dffd6d56388048d75f4e640351795ce68bcdfa55a758d6fb6219",
+      "source_files": {
+        "crates/rum-core/src/expr.rs": {
+          "original_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2"
+        },
+        "crates/rum-core/src/lib.rs": {
+          "original_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90"
+        },
+        "crates/rum-core/src/rewrite_work_ledger.rs": {
+          "original_sha256": null,
+          "diagnostic_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "original_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf"
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "original_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da"
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "original_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "b6f4966bde84f7568ba244e3d7cf5536040deb5bb11ef8fc64ff4eb04a73c5c4"
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "original_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "01babd1745a2f08d4a282e98a69c8a47ee22cad1b56a1c09f396c71b75f76a95"
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "original_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "7fc7c0911304fa7257b348bb1d39fee942d2fd039f169adec05764b8d4cea828"
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "original_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de"
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "original_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e"
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0017>",
+      "binary_sha256": "0e2d8392a0e4631ebe2d8f8ab106575e2efb00ed2d5367fdfcbe25161beca36f"
+    },
+    {
+      "mode": "combined",
+      "status": "PASS",
+      "adaptations": [
+        "unique-leaf-event",
+        "unique-input-depth"
+      ],
+      "functional_files": [
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs",
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs"
+      ],
+      "source_diff_sha256": "e02a2059d4bc952a079861707d91f3d83627bd6b5edb75356b92002baf8ae815",
+      "functional_diff_sha256": "fbc27c500b8f8b3003a36d9a62e6e9623a27a58e74ac2a96855d45a1769d0358",
+      "instrumentation_diff_sha256": "844e42741720e99dc6fad4c0a0a1ecb95e5ce1338d7474abbda58d882d9f4e29",
+      "source_files": {
+        "crates/rum-core/src/expr.rs": {
+          "original_sha256": "8d74114e9a3ad1b69e98a95d4095afc91048b9193894b91f74e00479ed8a67de",
+          "diagnostic_sha256": "5bc86170f9df4f51c3852e083498f95bb2d86aa2e656820676165ff6155c29e2"
+        },
+        "crates/rum-core/src/lib.rs": {
+          "original_sha256": "b54cb2e0cf704d297023053b69a7593e7bf83b779ef848270f323c8f373c3264",
+          "diagnostic_sha256": "3d94108b3f6b20d3fd163895a41a573a1fc0e38076381aeaa9087fffb63a6d90"
+        },
+        "crates/rum-core/src/rewrite_work_ledger.rs": {
+          "original_sha256": null,
+          "diagnostic_sha256": "1409f48ae67b94be24df9f77db690e92ab42bc43a443e4cc96c63ed17cb2edea"
+        },
+        "crates/rum-runtime/src/runtime/arithmetic/canonical.rs": {
+          "original_sha256": "a99abd7c485444d6cbd4ba6f92bfc95603e34d6dd75a109828852b8c038a781a",
+          "diagnostic_sha256": "cc4d8ae656583fc13ce31d7c770ca9e6b775465b2fdc09253c7344b6bd8f7faf"
+        },
+        "crates/rum-runtime/src/runtime/call_preparation.rs": {
+          "original_sha256": "76d7a51aa319fc7ffffd7abf7929507263b08d091083c7b990ec512d97c1f1a8",
+          "diagnostic_sha256": "87e2c63c0407885e6fa69cf09e6b79de1402867a0bd3e22cd45e80b6206456da"
+        },
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "original_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "diagnostic_sha256": "023cca87e94546a6a0a095199d686aef3fe2a7ea4f2397ddef2ed3af4deb302a"
+        },
+        "crates/rum-runtime/src/runtime/expr_runtime_helpers.rs": {
+          "original_sha256": "504b4caccaeef316210c49d7083e7e832ff4224412a202b4ec481be45437a0b3",
+          "diagnostic_sha256": "01babd1745a2f08d4a282e98a69c8a47ee22cad1b56a1c09f396c71b75f76a95"
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "original_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "diagnostic_sha256": "7fc7c0911304fa7257b348bb1d39fee942d2fd039f169adec05764b8d4cea828"
+        },
+        "crates/rum-runtime/src/runtime/pattern_matching/core.rs": {
+          "original_sha256": "d170ddedfc268463f1f8e0f508a91aedac790c650006494286a47ce7db80a460",
+          "diagnostic_sha256": "513a51327923bc2e3367748d480c2df77ea44d7a26111e0a1785b8ba49dd30de"
+        },
+        "crates/rum-runtime/src/runtime/substitution/binding_substitution.rs": {
+          "original_sha256": "b2a5cb279648679d321899f9769d115bc4650ebf8b5f21dd646e31c634b84495",
+          "diagnostic_sha256": "dfda426a4cff4b66d61f5c30c4b17fbfbdd6a297519822660e7b949c0654746e"
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0016>",
+      "binary_sha256": "1f1aecef68912eefbe265bf4f06e917bd1b3de1c728af3b1e3a7c6727e38717c"
+    }
+  ],
+  "default_checkout_changed": false,
+  "stage": "COMPLETE",
+  "source_restored_to_instrumented_base": true,
+  "prior_binaries_preserved": true
+}

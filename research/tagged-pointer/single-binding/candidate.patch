@@ -1,0 +1,227 @@
+--- a/crates/rum-runtime/src/runtime/substitution/binding_substitution.rs
++++ b/crates/rum-runtime/src/runtime/substitution/binding_substitution.rs
+@@ -77,5 +77,36 @@
+ }
+ 
++// RHS-only lookup: the One form never escapes synchronous substitution.
++#[derive(Clone, Copy)]
++pub(in crate::runtime) enum RuleBindingView<'a> {
++    Map(&'a SymbolExprMap),
++    One { name: Symbol, value: &'a Expr },
++}
++
++impl<'a> RuleBindingView<'a> {
++    fn get(self, symbol: &Symbol) -> Option<&'a Expr> {
++        match self {
++            Self::Map(bindings) => bindings.get(symbol),
++            Self::One { name, value } => (name == *symbol).then_some(value),
++        }
++    }
++
++    fn contains_key(self, symbol: &Symbol) -> bool {
++        self.get(symbol).is_some()
++    }
++
++    fn is_empty(self) -> bool {
++        match self {
++            Self::Map(bindings) => bindings.is_empty(),
++            Self::One { .. } => false,
++        }
++    }
++}
++
+ pub(in crate::runtime) fn substitute_rule_bindings(expr: &Expr, bindings: &SymbolExprMap) -> Expr {
++    substitute_rule_bindings_view(expr, RuleBindingView::Map(bindings))
++}
++
++fn substitute_rule_bindings_view(expr: &Expr, bindings: RuleBindingView<'_>) -> Expr {
+     let start = rule_rhs_timing_start();
+     let substituted = substitute_rule_bindings_changed(expr, bindings, &SymbolExprMap::default());
+@@ -89,4 +120,16 @@
+     expr: &Expr,
+     bindings: &SymbolExprMap,
++    _may_splice_without_bindings: bool,
++) -> Expr {
++    substitute_rule_bindings_for_rhs_view(
++        expr,
++        RuleBindingView::Map(bindings),
++        _may_splice_without_bindings,
++    )
++}
++
++pub(in crate::runtime) fn substitute_rule_bindings_for_rhs_view(
++    expr: &Expr,
++    bindings: RuleBindingView<'_>,
+     _may_splice_without_bindings: bool,
+ ) -> Expr {
+@@ -105,5 +148,5 @@
+         result
+     } else {
+-        substitute_rule_bindings(expr, bindings)
++        substitute_rule_bindings_view(expr, bindings)
+     };
+     record_profile_rule_rhs_timing("request", start, None);
+@@ -125,5 +168,5 @@
+ fn substitute_rule_bindings_changed(
+     expr: &Expr,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     alpha_renames: &SymbolExprMap,
+ ) -> Option<Expr> {
+@@ -164,5 +207,5 @@
+     head: &Expr,
+     args: &SharedArgs,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     alpha_renames: &SymbolExprMap,
+ ) -> Option<Expr> {
+@@ -194,5 +237,5 @@
+     head: &Expr,
+     args: &SharedArgs,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     alpha_renames: &SymbolExprMap,
+ ) -> Option<Expr> {
+@@ -244,5 +287,5 @@
+     head: &Expr,
+     args: &SharedArgs,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     alpha_renames: &SymbolExprMap,
+ ) -> Option<Expr> {
+@@ -281,5 +324,5 @@
+     head: &Expr,
+     args: &SharedArgs,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     head_alpha_renames: &SymbolExprMap,
+     mut arg_alpha_renames: F,
+@@ -331,5 +374,5 @@
+ fn substitute_rule_with_binding_list_changed(
+     expr: &Expr,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     alpha_renames: &SymbolExprMap,
+     scoped_alpha_renames: &SymbolExprMap,
+@@ -399,5 +442,5 @@
+ fn substitute_rule_with_binding_item_changed(
+     expr: &Expr,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     rhs_alpha_renames: &SymbolExprMap,
+     scoped_alpha_renames: &SymbolExprMap,
+@@ -506,5 +549,5 @@
+ fn alpha_renames_with_fresh_locals(
+     alpha_renames: &SymbolExprMap,
+-    bindings: &SymbolExprMap,
++    bindings: RuleBindingView<'_>,
+     locals: Vec<Symbol>,
+ ) -> SymbolExprMap {
+--- a/crates/rum-runtime/src/runtime/definitions/application/replace_all.rs
++++ b/crates/rum-runtime/src/runtime/definitions/application/replace_all.rs
+@@ -453,43 +453,60 @@
+                 continue;
+             }
+-            // These two leaf forms cannot evaluate guards or suspend. Reuse
+-            // their existing definition matcher without binding snapshots.
+-            let has_simple_matcher = match &rule.matcher {
+-                MatcherNode::Blank { .. } => true,
+-                MatcherNode::Named { inner, .. } => {
+-                    matches!(inner.as_ref(), MatcherNode::Blank { .. })
+-                }
+-                _ => false,
+-            };
+-            let fast_outcome = if rule.guards.is_empty() && has_simple_matcher {
+-                self.try_fast_definition_match_compiled(&rule.matcher, &normalized_expr)
++            let single_binding = if rule.guards.is_empty() {
++                match &rule.matcher {
++                    MatcherNode::Named { name, inner } => match inner.as_ref() {
++                        MatcherNode::Blank { head_constraint } => {
++                            Some((*name, head_constraint.as_ref()))
++                        }
++                        _ => None,
++                    },
++                    _ => None,
++                }
+             } else {
+                 None
+             };
+-            let match_result = match fast_outcome {
+-                Some(outcome) => Ok(outcome),
+-                None => self.match_compiled_owned(
+-                    rule.matcher.clone(),
+-                    normalized_expr.clone(),
+-                    SymbolExprMap::default(),
+-                ),
++            // The borrowed branch cannot suspend and stores no continuation.
++            // The full outcome owns its map until the shared RHS exit finishes.
++            let full_outcome;
++            let (matched, bindings) = if let Some((name, head_constraint)) = single_binding {
++                (
++                    match_blank(head_constraint, &normalized_expr),
++                    RuleBindingView::One { name, value: &normalized_expr },
++                )
++            } else {
++                // Keep the primary leaf shortcut for unnamed Blank patterns.
++                let fast_outcome = if rule.guards.is_empty()
++                    && matches!(&rule.matcher, MatcherNode::Blank { .. })
++                {
++                    self.try_fast_definition_match_compiled(&rule.matcher, &normalized_expr)
++                } else {
++                    None
++                };
++                let match_result = match fast_outcome {
++                    Some(outcome) => Ok(outcome),
++                    None => self.match_compiled_owned(
++                        rule.matcher.clone(),
++                        normalized_expr.clone(),
++                        SymbolExprMap::default(),
++                    ),
++                };
++                full_outcome = match match_result {
++                    Ok(outcome) => outcome,
++                    Err(EvalError::InputRequired { request }) => {
++                        let state = SuspendedRewriteRuleMatch {
++                            expr,
++                            normalized_expr,
++                            rules,
++                        };
++                        crate::resume_or_suspend!(insert self, ApplyRulesOnceFromListSuspensionFrame { state, source, cursor, index, would_reject });
++                        return Err(EvalError::InputRequired { request });
++                    }
++                    Err(error) => return Err(error),
++                };
++                (full_outcome.matched, RuleBindingView::Map(&full_outcome.bindings))
+             };
+-
+-            let outcome = match match_result {
+-                Ok(outcome) => outcome,
+-                Err(EvalError::InputRequired { request }) => {
+-                    let state = SuspendedRewriteRuleMatch {
+-                        expr,
+-                        normalized_expr,
+-                        rules,
+-                    };
+-                    crate::resume_or_suspend!(insert self, ApplyRulesOnceFromListSuspensionFrame { state, source, cursor, index, would_reject });
+-                    return Err(EvalError::InputRequired { request });
+-                }
+-                Err(error) => return Err(error),
+-            };
+-            record_profile_rewrite_rule_match_outcome(would_reject, outcome.matched);
+-
+-            if !outcome.matched {
++            record_profile_rewrite_rule_match_outcome(would_reject, matched);
++
++            if !matched {
+                 continue;
+             }
+@@ -498,7 +515,7 @@
+                 .get(index)
+                 .expect("rewrite rule should still exist after match");
+-            let replaced = substitute_rule_bindings_for_rhs(
++            let replaced = substitute_rule_bindings_for_rhs_view(
+                 &rule.rhs,
+-                &outcome.bindings,
++                bindings,
+                 rule.rhs_may_splice_without_bindings,
+             );

@@ -1,0 +1,10 @@
+   Compiling rum-syntax v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0018>
+   Compiling rum-core v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0011>
+   Compiling rum-derive v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0012>
+   Compiling rum-runtime v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0016>
+   Compiling rum-stdlib v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0017>
+   Compiling rum-host v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0013>
+   Compiling rum-terminal v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0019>
+   Compiling rum-repl v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0015>
+   Compiling rum-cli v0.2.0 (<LAB_REWRITE_SWITCH_PATH_0010>
+    Finished `release` profile [optimized] target(s) in 50.51s

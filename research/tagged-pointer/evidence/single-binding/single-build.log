@@ -1,0 +1,7 @@
+   Compiling rum-runtime v0.2.0 (<LAB_SINGLE_BINDING_PATH_0015>
+   Compiling rum-stdlib v0.2.0 (<LAB_SINGLE_BINDING_PATH_0016>
+   Compiling rum-host v0.2.0 (<LAB_SINGLE_BINDING_PATH_0012>
+   Compiling rum-terminal v0.2.0 (<LAB_SINGLE_BINDING_PATH_0018>
+   Compiling rum-repl v0.2.0 (<LAB_SINGLE_BINDING_PATH_0014>
+   Compiling rum-cli v0.2.0 (<LAB_SINGLE_BINDING_PATH_0009>
+    Finished `release` profile [optimized] target(s) in 1m 02s

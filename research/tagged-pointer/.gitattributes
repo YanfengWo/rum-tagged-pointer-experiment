@@ -1,0 +1,10 @@
+# Preserve exact source bytes identified by the experiment input hashes.
+rewrite-shortcuts/** -text whitespace=cr-at-eol
+rewrite-switch/** -text whitespace=cr-at-eol
+single-binding/** -text whitespace=cr-at-eol
+# Unified patches represent an empty context line with one required space.
+rewrite-shortcuts/*.patch whitespace=-blank-at-eol,cr-at-eol
+rewrite-switch/*.patch whitespace=-blank-at-eol,cr-at-eol
+single-binding/*.patch whitespace=-blank-at-eol,cr-at-eol
+# Retain the exact executed helper, including its harmless extra final newline.
+rewrite-shortcuts/build_support.py whitespace=-blank-at-eof,cr-at-eol

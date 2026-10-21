@@ -1,0 +1,223 @@
+{
+  "status": "PASS",
+  "pin": "77029938f999b14dbe5b0755bebdf98e51517ae6",
+  "toolchain": "1.85.0",
+  "source_root": "<LAB_REWRITE_SHORTCUTS_PATH_0214>",
+  "target_root": "<LAB_REWRITE_SHORTCUTS_PATH_0254>",
+  "jobs": 2,
+  "instrumentation_present": false,
+  "default_checkout_changed": false,
+  "preserved_binaries": [
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0001>",
+      "sha256": "9327fee2a6859d3aa2eb9fe668bf030a83f9911f2f3bdd2ea72f6a69169ff138"
+    },
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0003>",
+      "sha256": "435719a51a0bd99706a6d2ad4f69d02f3228ed91da8dc259c3018d0cfeca988f"
+    },
+    {
+      "path": "<LAB_REWRITE_SHORTCUTS_PATH_0002>",
+      "sha256": "f9e3adcebb3da653c9b6b55391a776bc6952afb73aa37d29ca932e42d115e09c"
+    }
+  ],
+  "prior_binaries_preserved": true,
+  "variants": [
+    {
+      "mode": "base",
+      "status": "PASS",
+      "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patched_files": {},
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0283>",
+      "binary_sha256": "793ecce9df46878d1f8f0e9b9fb71f9149c6b9bfa253c88b30838d3f61b056bb",
+      "workspace": {
+        "passed": 2256,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 216,
+          "memory-after-f2": 68963,
+          "bytecount-f3": 224,
+          "memory-after-f3": 69361,
+          "bytecount-f5": 368,
+          "memory-after-f5": 69903
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 211,
+          "applied": 147
+        }
+      }
+    },
+    {
+      "mode": "matcher",
+      "status": "PASS",
+      "source_diff_sha256": "5f0f958426d4dc1e6b8917fa33739c5b4334e75bc92a5bf8f891d90643c0bbd6",
+      "patched_files": {
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "uninstrumented_base_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "source_sha256": "3e803ac64b71ddd7799da8e36ab1eb0b07c08aadb68c86f8738c76c7772fcfef",
+          "bytes": 19607
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0286>",
+      "binary_sha256": "96b4d7762e584b2f01d4bdca3a69708541d3e5e5470dd80107342e899e9bc936",
+      "workspace": {
+        "passed": 2256,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 216,
+          "memory-after-f2": 68963,
+          "bytecount-f3": 224,
+          "memory-after-f3": 69361,
+          "bytecount-f5": 368,
+          "memory-after-f5": 69903
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 211,
+          "applied": 147
+        }
+      }
+    },
+    {
+      "mode": "depth",
+      "status": "PASS",
+      "source_diff_sha256": "41dd29269ae5576e0842d83dde7db2dba7fe50543b4dae91bb2216ec3c5d057b",
+      "patched_files": {
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "source_sha256": "0c03a7f906deb14c961e7c83e1abb4ae904e2995afcfdace81c3fe52479c674d",
+          "bytes": 33647
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0285>",
+      "binary_sha256": "bdbcf9119cc1ff52c08737b64c6c108d8735af58b45fc179db20ed16940dc546",
+      "workspace": {
+        "passed": 2256,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 216,
+          "memory-after-f2": 68963,
+          "bytecount-f3": 224,
+          "memory-after-f3": 69361,
+          "bytecount-f5": 368,
+          "memory-after-f5": 69903
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 211,
+          "applied": 147
+        }
+      }
+    },
+    {
+      "mode": "combined",
+      "status": "PASS",
+      "source_diff_sha256": "fbc27c500b8f8b3003a36d9a62e6e9623a27a58e74ac2a96855d45a1769d0358",
+      "patched_files": {
+        "crates/rum-runtime/src/runtime/definitions/application/replace_all.rs": {
+          "uninstrumented_base_sha256": "b7182edae2bfd139142dfab21ecb33a98730a164c1d2a8d7c906a251f5831d38",
+          "source_sha256": "3e803ac64b71ddd7799da8e36ab1eb0b07c08aadb68c86f8738c76c7772fcfef",
+          "bytes": 19607
+        },
+        "crates/rum-runtime/src/runtime/kernel_data/rewrite_data/replace/once.rs": {
+          "uninstrumented_base_sha256": "1adf0da93e406808583b11bd6acf7abba78abf26bb3ae9b9f52e2e1ae67af014",
+          "source_sha256": "0c03a7f906deb14c961e7c83e1abb4ae904e2995afcfdace81c3fe52479c674d",
+          "bytes": 33647
+        }
+      },
+      "binary": "<LAB_REWRITE_SHORTCUTS_PATH_0284>",
+      "binary_sha256": "95eaa28b236d499e285665828846f92d3b1e43439e86e9533517fb059f078ce1",
+      "workspace": {
+        "passed": 2256,
+        "ignored": 7,
+        "groups": 29
+      },
+      "acceptance": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/copy-attribution/acceptance.rum",
+        "source_sha256": "b1b84162ed036f553b7a8bbf0ee8f611ad7fd7b19610a5fad9a2659bc0fadb05",
+        "exit_code": 0
+      },
+      "resource": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/resource-probes.rum",
+        "source_sha256": "6cdcebee82198c4ac760c0f0daa519fcb00f059bd4da5d7ae6c52587dce50dde",
+        "exit_code": 0,
+        "values": {
+          "memory-before": 68411,
+          "bytecount-f2": 216,
+          "memory-after-f2": 68963,
+          "bytecount-f3": 224,
+          "memory-after-f3": 69361,
+          "bytecount-f5": 368,
+          "memory-after-f5": 69903
+        }
+      },
+      "capacity": {
+        "source": "<RUM_ROOT>/research/tagged-pointer/rewrite-work-ledger/capacity-observability.rum",
+        "source_sha256": "ffd5259ed825d55c2301b5e6f384eb14aa5b96a96d706f1e9781ef6199be4ba4",
+        "exit_code": 0,
+        "values": {
+          "literal": 211,
+          "applied": 147
+        }
+      }
+    }
+  ],
+  "builder_sha256": "fa23aca2e275c2ee082e8f46d8883b857b18fb93eed51481a26171d2cc8eeb7c",
+  "overlay_inputs": {
+    "matcher.patch": "5f0f958426d4dc1e6b8917fa33739c5b4334e75bc92a5bf8f891d90643c0bbd6",
+    "depth.patch": "41dd29269ae5576e0842d83dde7db2dba7fe50543b4dae91bb2216ec3c5d057b",
+    "matcher-tests.rs": "703668915c41a370e50ba8d10b7cd70f9e5d39a5c81c34c7c1be539de42af06f",
+    "depth-tests.rs": "173af0207adb68373ee1902581d00faa36056011226c6278b1b6b51c7aeb7714"
+  },
+  "stage": "COMPLETE",
+  "source_restored": true
+}
